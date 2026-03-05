@@ -1,20 +1,20 @@
-import { createBrowserRouter, redirect } from "react-router";
-import App from "./App";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Profile from "./pages/Profile";
-import Report from "./pages/Report";
-import Party from "./pages/Party";
-import Me from "./pages/mypage/Me";
-import MyParty from "./pages/mypage/MyParty";
-import MyHistory from "./pages/mypage/MyHistory";
-import MyReport from "./pages/mypage/MyReport";
-import MyPayment from "./pages/mypage/MyPayment";
+import { createBrowserRouter, redirect } from 'react-router';
+import App from './App';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Profile from './pages/Profile';
+import Report from './pages/Report';
+import Party from './pages/Party';
+import Me from './pages/mypage/Me';
+import MyParty from './pages/mypage/MyParty';
+import MyHistory from './pages/mypage/MyHistory';
+import MyReport from './pages/mypage/MyReport';
+import MyPayment from './pages/mypage/MyPayment';
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: '/',
     Component: App,
     children: [
       {
@@ -23,60 +23,60 @@ const router = createBrowserRouter([
       },
       // 로그인
       {
-        path: "login",
+        path: 'login',
         Component: Login,
       },
       // 회원가입
       {
-        path: "signup",
+        path: 'signup',
         Component: Signup,
       },
       // 유저 페이지 /profile/유저ID
       // 내 아이디일경우 /mypage로 이동?
       {
-        path: "profile/:userId",
+        path: 'profile/:userId',
         Component: Profile,
       },
       // 마이 페이지
 
       {
-        path: "mypage",
+        path: 'mypage',
         Component: Me,
         children: [
           {
             index: true,
-            loader: () => redirect("/mypage/profile"),
+            loader: () => redirect('/mypage/profile'),
           },
           {
-            path: "profile",
+            path: 'profile',
             Component: Profile,
           },
           {
-            path: "party",
+            path: 'party',
             Component: MyParty,
           },
           {
-            path: "history",
+            path: 'history',
             Component: MyHistory,
           },
           {
-            path: "report",
+            path: 'report',
             Component: MyReport,
           },
           {
-            path: "payment",
+            path: 'payment',
             Component: MyPayment,
           },
         ],
       },
       // 신고 페이지
       {
-        path: "report",
+        path: 'report',
         Component: Report,
       },
       // 파티 페이지
       {
-        path: "party/:partyId",
+        path: 'party/:partyId',
         Component: Party,
       },
     ],
