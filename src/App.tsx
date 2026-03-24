@@ -1,13 +1,10 @@
-import { Link, Outlet } from 'react-router';
+import { Outlet } from 'react-router';
+import Navbar from './components/layout/Navbar';
 
 function App() {
   return (
     <>
-      <h1>App Component</h1>
-      <ul className="flex space-x-4 text-primary">
-        <Link to={'/'}>Home</Link>
-        <Link to={'/login'}>Login</Link>
-      </ul>
+      <Navbar />
       <Outlet />
     </>
   );
