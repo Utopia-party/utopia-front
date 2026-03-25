@@ -5,6 +5,7 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import Report from './pages/Report';
 import Party from './pages/Party';
+import Favor from './pages/Favor';
 import Me from './pages/mypage/Me';
 import MyParty from './pages/mypage/MyParty';
 import MyHistory from './pages/mypage/MyHistory';
@@ -14,6 +15,10 @@ import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Landing from './pages/landing/Landing';
 
 const router = createBrowserRouter([
+  {
+    path: '/favor',
+    Component: Favor,
+  },
   {
     path: '/',
     Component: App,
