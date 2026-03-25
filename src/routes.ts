@@ -1,6 +1,5 @@
 import { createBrowserRouter, redirect } from 'react-router';
 import App from './App';
-import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
@@ -12,6 +11,7 @@ import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
+import Landing from './pages/landing/Landing';
 
 const router = createBrowserRouter([
   {
@@ -20,7 +20,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        Component: Home,
+        Component: Landing,
       },
       // 로그인
       {
