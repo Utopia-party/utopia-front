@@ -1,0 +1,320 @@
+import { useEffect, useState, useRef } from 'react';
+import Container from '../../components/layout/Container';
+import {
+  FiClock,
+  FiShield,
+  FiCamera,
+  FiUploadCloud,
+  FiRefreshCw,
+  FiCheckCircle,
+  FiAlertCircle,
+} from 'react-icons/fi';
+import { format } from 'date-fns';
+
+// 🌟 분리한 Slide 컴포넌트 Import
+import Slide from './components/Slide';
+
+// 🌟 이미지 import도 상위 컴포넌트에 유지 (데이터 배열을 만들기 위해)
+import example1 from '../../assets/example1.png';
+import example2 from '../../assets/example2.png';
+import example3 from '../../assets/example3.png';
+import example4 from '../../assets/example4.png';
+import example5 from '../../assets/example5.png';
+
+type Step = 'intro' | 'challenge' | 'evaluating' | 'success' | 'fail';
+
+interface ChallengeData {
+  text: string;
+  pose: string;
+}
+
+const TOTAL_SECONDS = 5 * 60; // 300초
+
+// 🌟 EXAMPLES 배열 유지 (Slide 컴포넌트로 전달할 데이터)
+const EXAMPLES = [
+  { id: 1, image: example1, pose: '주먹 ✊' },
+  { id: 2, image: example2, pose: '손바닥 🖐️' },
+  { id: 3, image: example3, pose: '브이 ✌️' },
+  { id: 4, image: example4, pose: '따봉 👍' },
+  { id: 5, image: example5, pose: '손가락 3개 🤚' },
+];
+
+export default function HandOcrCaptcha() {
+  const [step, setStep] = useState<Step>('intro');
+  const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
+  const [challenge, setChallenge] = useState<ChallengeData | null>(null);
+
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 랜덤 문제 출제 함수 (예시)
+  const generateChallenge = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let randomText = '';
+    for (let i = 0; i < 5; i++) {
+      randomText += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const poses = [
+      '주먹 ✊',
+      '손바닥 🖐️',
+      '브이 ✌️',
+      '따봉 👍',
+      '손가락 4개 🤚',
+    ];
+    const randomPose = poses[Math.floor(Math.random() * poses.length)];
+
+    setChallenge({ text: randomText, pose: randomPose });
+  };
+
+  const handleStart = () => {
+    setTimeLeft(TOTAL_SECONDS); // 시작할 때 300초로 초기화
+    generateChallenge();
+    setPreviewImage(null);
+    setStep('challenge');
+  };
+
+  // 다른 문제 풀기 (시간은 초기화하지 않음)
+  const handleRefreshChallenge = () => {
+    generateChallenge();
+    setPreviewImage(null);
+  };
+
+  // 이미지 업로드 핸들러
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setPreviewImage(imageUrl);
+    }
+  };
+
+  // 제출 및 검증 (데모용)
+  const handleSubmit = () => {
+    if (!previewImage) return;
+    setStep('evaluating');
+
+    // 서버 검증 시간을 흉내 (2초 후 결과)
+    setTimeout(() => {
+      setStep('success'); // 실제로는 서버 결과에 따라 'success' 또는 'fail'
+    }, 2000);
+  };
+
+  // challenge 상태일 때 작동하는 타이머
+  useEffect(() => {
+    if (step !== 'challenge') return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setStep('fail');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [step]);
+
+  const formatTime = (seconds: number) => {
+    const helperDate = new Date(0);
+    helperDate.setSeconds(seconds);
+    console.log(helperDate);
+    return format(helperDate, 'mm:ss');
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
+      <Container className="max-w-xl w-full">
+        {/* 전체 카드 래퍼 */}
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          {/* 상단 헤더 */}
+          <div className="bg-linear-to-r from-purple-600 to-blue-500 p-6 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/20 text-white mb-4 backdrop-blur-sm">
+              <FiShield size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-1">
+              AI 행동 기반 인증
+            </h2>
+            <p className="text-blue-100 text-sm">
+              안전한 서비스 이용을 위해 봇이 아님을 증명해주세요.
+            </p>
+          </div>
+
+          <div className="p-8">
+            {step === 'intro' && (
+              <div className="flex flex-col items-center text-center animate-fadeIn">
+                <div className="bg-gray-50 p-6 rounded-2xl w-full mb-6 border border-gray-100">
+                  <h3 className="font-bold text-gray-900 mb-3">인증 방법</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-6">
+                    화면에 제시되는 5자리 문자를 종이에 적고, <br />
+                    요구하는 손 포즈와 함께 사진을 찍어주세요.
+                  </p>
+
+                  <Slide
+                    examples={EXAMPLES}
+                    onSlideChange={setCurrentExampleIdx}
+                  />
+
+                  {/* 동적으로 변하는 하단 텍스트 */}
+                  <p className="text-xs text-gray-700 bg-blue-50/50 py-2 px-3 rounded-lg font-medium">
+                    💡 예시: [ A1B2C ] 글씨와 [{' '}
+                    {EXAMPLES[currentExampleIdx].pose} ] 포즈가 담긴 사진
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleStart}
+                  className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl"
+                >
+                  문제 풀기 시작
+                </button>
+              </div>
+            )}
+
+            {/* 2. 문제 출제 및 업로드 */}
+            {step === 'challenge' && challenge && (
+              <div className="flex flex-col items-center animate-fadeIn">
+                <div className="flex justify-between items-center w-full mb-6">
+                  {/* 타이머 */}
+                  <div
+                    className={`flex items-center gap-2 font-bold text-lg ${timeLeft <= 60 ? 'text-red-500 animate-pulse' : 'text-gray-700'}`}
+                  >
+                    <FiClock />
+                    <span>{formatTime(timeLeft)}</span>
+                  </div>
+                  {/* 다른 문제 풀기 버튼 (시간 유지) */}
+                  <button
+                    onClick={handleRefreshChallenge}
+                    className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-purple-600 transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200"
+                  >
+                    <FiRefreshCw size={14} />
+                    다른 문제 풀기
+                  </button>
+                </div>
+
+                <div className="w-full bg-linear-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-6 text-center mb-6">
+                  <p className="text-sm text-gray-500 font-medium mb-2">
+                    다음 미션을 수행해주세요
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <div className="bg-white px-4 py-3 rounded-xl shadow-sm font-mono text-3xl font-extrabold text-gray-800 tracking-widest border border-gray-100">
+                      {challenge.text}
+                    </div>
+                    <div className="bg-white px-4 py-3 rounded-xl shadow-sm text-xl font-bold text-blue-600 border border-gray-100">
+                      {challenge.pose}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 사진 촬영/업로드 영역 */}
+                {previewImage ? (
+                  <div className="w-full relative mb-6 rounded-2xl overflow-hidden border-2 border-purple-500">
+                    <img
+                      src={previewImage}
+                      alt="미리보기"
+                      className="w-full h-64 object-cover"
+                    />
+                    <button
+                      onClick={() => setPreviewImage(null)}
+                      className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1.5 rounded-full text-xs hover:bg-black/80 backdrop-blur-sm"
+                    >
+                      다시 선택
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:border-purple-500 hover:bg-purple-50 transition-colors cursor-pointer mb-6"
+                  >
+                    <FiCamera size={40} className="mb-3 text-gray-400" />
+                    <p className="font-medium text-gray-600">
+                      클릭하여 사진 촬영 또는 업로드
+                    </p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                    />
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={!previewImage}
+                  className={`w-full py-4 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2
+                    ${
+                      previewImage
+                        ? 'bg-linear-to-r from-purple-600 to-blue-500 text-white hover:opacity-90'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                >
+                  <FiUploadCloud size={20} />
+                  인증 제출하기
+                </button>
+              </div>
+            )}
+
+            {/* 3. 검증 중 */}
+            {step === 'evaluating' && (
+              <div className="flex flex-col items-center justify-center py-12 animate-fadeIn">
+                <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6"></div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  AI 모델 분석 중...
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  제출하신 사진을 판독하고 있습니다.
+                </p>
+              </div>
+            )}
+
+            {/* 4. 성공 */}
+            {step === 'success' && (
+              <div className="flex flex-col items-center text-center py-8 animate-fadeIn">
+                <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6">
+                  <FiCheckCircle size={40} />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  인증 완료!
+                </h3>
+                <p className="text-gray-600 mb-8">사람으로 확인되었습니다.</p>
+                <button className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors">
+                  다음 단계로 이동
+                </button>
+              </div>
+            )}
+
+            {/* 5. 실패 (시간 초과 포함) */}
+            {step === 'fail' && (
+              <div className="flex flex-col items-center text-center py-8 animate-fadeIn">
+                <div className="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-6">
+                  <FiAlertCircle size={40} />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  인증 실패
+                </h3>
+                <p className="text-gray-600 mb-8">
+                  {timeLeft <= 0
+                    ? '제한 시간(5분)이 초과되었습니다.'
+                    : '제시된 미션과 일치하지 않습니다.'}
+                </p>
+                <button
+                  onClick={handleStart}
+                  className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors"
+                >
+                  다시 시도하기
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </Container>
+    </div>
+  );
+}

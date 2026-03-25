@@ -11,6 +11,7 @@ import MyParty from './pages/mypage/MyParty';
 import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
+import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 
 const router = createBrowserRouter([
   {
@@ -37,8 +38,8 @@ const router = createBrowserRouter([
         path: 'profile/:userId',
         Component: Profile,
       },
-      // 마이 페이지
 
+      // 마이 페이지
       {
         path: 'mypage',
         Component: Me,
@@ -78,6 +79,10 @@ const router = createBrowserRouter([
       {
         path: 'party/:partyId',
         Component: Party,
+      },
+      {
+        path: 'handcaptcha',
+        Component: HandOcrCaptcha,
       },
     ],
   },
