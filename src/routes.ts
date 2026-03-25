@@ -6,6 +6,7 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import Report from './pages/Report';
 import Party from './pages/Party';
+import Favor from './pages/Favor';
 import Me from './pages/mypage/Me';
 import MyParty from './pages/mypage/MyParty';
 import MyHistory from './pages/mypage/MyHistory';
@@ -13,6 +14,10 @@ import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 
 const router = createBrowserRouter([
+  {
+    path: '/favor',
+    Component: Favor,
+  },
   {
     path: '/',
     Component: App,
