@@ -14,12 +14,13 @@ import { format } from 'date-fns';
 // 🌟 분리한 Slide 컴포넌트 Import
 import Slide from './components/Slide';
 
-// 🌟 이미지 import도 상위 컴포넌트에 유지 (데이터 배열을 만들기 위해)
 import example1 from '../../assets/example1.png';
 import example2 from '../../assets/example2.png';
 import example3 from '../../assets/example3.png';
 import example4 from '../../assets/example4.png';
 import example5 from '../../assets/example5.png';
+import { startCaptcha, verifyCaptcha } from '../../apis/captcha';
+import axios from 'axios';
 
 type Step = 'intro' | 'challenge' | 'evaluating' | 'success' | 'fail';
 
@@ -30,7 +31,6 @@ interface ChallengeData {
 
 const TOTAL_SECONDS = 5 * 60; // 300초
 
-// 🌟 EXAMPLES 배열 유지 (Slide 컴포넌트로 전달할 데이터)
 const EXAMPLES = [
   { id: 1, image: example1, pose: '주먹 ✊' },
   { id: 2, image: example2, pose: '손바닥 🖐️' },
@@ -42,67 +42,98 @@ const EXAMPLES = [
 export default function HandOcrCaptcha() {
   const [step, setStep] = useState<Step>('intro');
   const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
-  const [challenge, setChallenge] = useState<ChallengeData | null>(null);
 
+  // 🌟 서버로부터 받을 문제와 세션 ID 상태
+  const [challenge, setChallenge] = useState<ChallengeData | null>(null);
+  const [sessionId, setSessionId] = useState<string>('');
+
+  // 🌟 서버로 전송할 실제 파일 객체 상태 추가
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 랜덤 문제 출제 함수 (예시)
-  const generateChallenge = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let randomText = '';
-    for (let i = 0; i < 5; i++) {
-      randomText += chars.charAt(Math.floor(Math.random() * chars.length));
+  // 🌟 API 호출: 문제 가져오기
+  const fetchChallenge = async () => {
+    try {
+      const data = await startCaptcha();
+      setSessionId(data.sessionId);
+      setChallenge({ text: data.text, pose: data.pose });
+      return true;
+    } catch (error) {
+      console.error('문제 출제 실패:', error);
+
+      // Axios 에러인 경우 서버의 에러 메시지를 활용할 수 있습니다.
+      if (axios.isAxiosError(error) && error.response) {
+        alert(
+          error.response.data?.message || '문제를 불러오는 데 실패했습니다.',
+        );
+      } else {
+        alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      }
+      return false;
     }
-    const poses = [
-      '주먹 ✊',
-      '손바닥 🖐️',
-      '브이 ✌️',
-      '따봉 👍',
-      '손가락 4개 🤚',
-    ];
-    const randomPose = poses[Math.floor(Math.random() * poses.length)];
-
-    setChallenge({ text: randomText, pose: randomPose });
   };
 
-  const handleStart = () => {
-    setTimeLeft(TOTAL_SECONDS); // 시작할 때 300초로 초기화
-    generateChallenge();
+  const handleStart = async () => {
+    setTimeLeft(TOTAL_SECONDS);
     setPreviewImage(null);
-    setStep('challenge');
+    setSelectedFile(null);
+
+    // 서버에서 문제 받아오기
+    const isSuccess = await fetchChallenge();
+
+    if (isSuccess) {
+      setStep('challenge');
+    }
   };
 
-  // 다른 문제 풀기 (시간은 초기화하지 않음)
-  const handleRefreshChallenge = () => {
-    generateChallenge();
+  const handleRefreshChallenge = async () => {
     setPreviewImage(null);
+    setSelectedFile(null);
+
+    // 시간은 초기화하지 않고 문제만 다시 받아오기
+    await fetchChallenge();
   };
 
-  // 이미지 업로드 핸들러
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file); // 서버 전송용 원본 파일 저장
       const imageUrl = URL.createObjectURL(file);
-      setPreviewImage(imageUrl);
+      setPreviewImage(imageUrl); // 화면 표시용 미리보기 URL
     }
   };
 
-  // 제출 및 검증 (데모용)
-  const handleSubmit = () => {
-    if (!previewImage) return;
+  // 🌟 API 호출: 제출 및 검증
+  const handleSubmit = async () => {
+    if (!selectedFile || !sessionId) return;
     setStep('evaluating');
 
-    // 서버 검증 시간을 흉내 (2초 후 결과)
-    setTimeout(() => {
-      setStep('success'); // 실제로는 서버 결과에 따라 'success' 또는 'fail'
-    }, 2000);
+    try {
+      const data = await verifyCaptcha(sessionId, selectedFile);
+
+      if (data.success) {
+        setStep('success');
+      } else {
+        // 서버에서 실패 메시지를 주면 alert나 상태로 띄워줄 수 있습니다.
+        alert(data.message || '인증에 실패했습니다.');
+        setStep('fail');
+      }
+    } catch (error) {
+      console.error('검증 요청 실패:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        alert(
+          error.response.data?.message || '서버 오류로 검증에 실패했습니다.',
+        );
+      }
+      setStep('fail');
+    }
   };
 
-  // challenge 상태일 때 작동하는 타이머
+  // 타이머 로직 유지
   useEffect(() => {
     if (step !== 'challenge') return;
 
@@ -123,7 +154,6 @@ export default function HandOcrCaptcha() {
   const formatTime = (seconds: number) => {
     const helperDate = new Date(0);
     helperDate.setSeconds(seconds);
-    console.log(helperDate);
     return format(helperDate, 'mm:ss');
   };
 
@@ -160,7 +190,6 @@ export default function HandOcrCaptcha() {
                     onSlideChange={setCurrentExampleIdx}
                   />
 
-                  {/* 동적으로 변하는 하단 텍스트 */}
                   <p className="text-xs text-gray-700 bg-blue-50/50 py-2 px-3 rounded-lg font-medium">
                     💡 예시: [ A1B2C ] 글씨와 [{' '}
                     {EXAMPLES[currentExampleIdx].pose} ] 포즈가 담긴 사진
@@ -176,18 +205,15 @@ export default function HandOcrCaptcha() {
               </div>
             )}
 
-            {/* 2. 문제 출제 및 업로드 */}
             {step === 'challenge' && challenge && (
               <div className="flex flex-col items-center animate-fadeIn">
                 <div className="flex justify-between items-center w-full mb-6">
-                  {/* 타이머 */}
                   <div
                     className={`flex items-center gap-2 font-bold text-lg ${timeLeft <= 60 ? 'text-red-500 animate-pulse' : 'text-gray-700'}`}
                   >
                     <FiClock />
                     <span>{formatTime(timeLeft)}</span>
                   </div>
-                  {/* 다른 문제 풀기 버튼 (시간 유지) */}
                   <button
                     onClick={handleRefreshChallenge}
                     className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-purple-600 transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200"
@@ -211,7 +237,6 @@ export default function HandOcrCaptcha() {
                   </div>
                 </div>
 
-                {/* 사진 촬영/업로드 영역 */}
                 {previewImage ? (
                   <div className="w-full relative mb-6 rounded-2xl overflow-hidden border-2 border-purple-500">
                     <img
@@ -220,7 +245,10 @@ export default function HandOcrCaptcha() {
                       className="w-full h-64 object-cover"
                     />
                     <button
-                      onClick={() => setPreviewImage(null)}
+                      onClick={() => {
+                        setPreviewImage(null);
+                        setSelectedFile(null);
+                      }}
                       className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1.5 rounded-full text-xs hover:bg-black/80 backdrop-blur-sm"
                     >
                       다시 선택
@@ -261,7 +289,6 @@ export default function HandOcrCaptcha() {
               </div>
             )}
 
-            {/* 3. 검증 중 */}
             {step === 'evaluating' && (
               <div className="flex flex-col items-center justify-center py-12 animate-fadeIn">
                 <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6"></div>
@@ -274,7 +301,6 @@ export default function HandOcrCaptcha() {
               </div>
             )}
 
-            {/* 4. 성공 */}
             {step === 'success' && (
               <div className="flex flex-col items-center text-center py-8 animate-fadeIn">
                 <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6">
@@ -290,7 +316,6 @@ export default function HandOcrCaptcha() {
               </div>
             )}
 
-            {/* 5. 실패 (시간 초과 포함) */}
             {step === 'fail' && (
               <div className="flex flex-col items-center text-center py-8 animate-fadeIn">
                 <div className="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-6">
@@ -302,7 +327,7 @@ export default function HandOcrCaptcha() {
                 <p className="text-gray-600 mb-8">
                   {timeLeft <= 0
                     ? '제한 시간(5분)이 초과되었습니다.'
-                    : '제시된 미션과 일치하지 않습니다.'}
+                    : '제시된 미션과 일치하지 않거나, 판독할 수 없습니다.'}
                 </p>
                 <button
                   onClick={handleStart}
