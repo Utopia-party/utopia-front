@@ -9,13 +9,20 @@ import { Link } from 'react-router';
 export default function Sidebar() {
   return (
     <aside className="w-64 border-r-2 border-gray-200 bg-card p-6 flex flex-col">
-      <div className="mb-10 text-2xl font-bold text-foreground">
-        Party-Up
-      </div>
+      <div className="mb-10 text-2xl font-bold text-foreground">Party-Up</div>
       <nav className="flex flex-col gap-4 font-medium">
-        <Link to="/" className="hover:text-primary transition">홈</Link>
-        <Link to="/mypage" className="hover:text-primary transition">마이페이지</Link>
-        <Link to="/report" className="hover:text-primary transition">신고</Link>
+        <Link to="/" className="hover:text-primary transition">
+          홈
+        </Link>
+        <Link to="/mypage" className="hover:text-primary transition">
+          마이페이지
+        </Link>
+        <Link to="/report" className="hover:text-primary transition">
+          신고
+        </Link>
+        <Link to="/admin" className="hover:text-primary transition">
+          관리자
+        </Link>
       </nav>
     </aside>
   );

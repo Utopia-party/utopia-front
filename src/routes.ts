@@ -24,6 +24,13 @@ import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 
+// 관리자 페이지 (담당: 영훈)
+import AdminShell from './pages/admin/AdminShell';
+import AdminReports from './pages/admin/AdminReports';
+import AdminReceipts from './pages/admin/AdminReceipts';
+import AdminSettlements from './pages/admin/AdminSettlements';
+import AdminSystemLogs from './pages/admin/AdminSystemLogs';
+
 const router = createBrowserRouter([
   // ── 1. 풀스크린 레이아웃 그룹 (App.tsx 사용) ───────────────────
   // 배경을 꽉 채우거나, 사이드바가 방해되는 페이지들
@@ -110,6 +117,35 @@ const router = createBrowserRouter([
             Component: MyPayment,
           },
         ],
+      },
+    ],
+  },
+
+  // ── 3. 관리자 레이아웃 그룹 (AdminShell 사용) ──────────────
+  // 관리자 전용 사이드바 + 헤더, /admin 하위 라우트
+  {
+    path: '/admin',
+    Component: AdminShell,
+    children: [
+      {
+        index: true,
+        loader: () => redirect('/admin/reports'),
+      },
+      {
+        path: 'reports',
+        Component: AdminReports,
+      },
+      {
+        path: 'receipts',
+        Component: AdminReceipts,
+      },
+      {
+        path: 'settlements',
+        Component: AdminSettlements,
+      },
+      {
+        path: 'logs',
+        Component: AdminSystemLogs,
       },
     ],
   },
