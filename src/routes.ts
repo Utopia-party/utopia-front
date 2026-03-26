@@ -11,6 +11,7 @@ import SocialCallback from './pages/SocialCallback';
 import Favor from './pages/Favor';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
+import CaptchaDemo from './pages/CaptchaDemo';
 
 // 사이드바가 필요한 페이지
 import Profile from './pages/Profile';
@@ -65,6 +66,10 @@ const router = createBrowserRouter([
       {
         path: 'party/:partyId/chat',
         Component: Chat,
+      },
+      {
+        path: 'captcha-demo',
+        Component: CaptchaDemo,
       },
     ],
   },
