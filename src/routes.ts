@@ -17,7 +17,6 @@ import CaptchaDemo from './pages/CaptchaDemo';
 
 // 사이드바가 필요한 페이지
 import Profile from './pages/Profile';
-import Report from './pages/Report';
 import Party from './pages/Party';
 
 // 마이페이지 관련
@@ -33,6 +32,7 @@ import AdminReports from './pages/admin/AdminReports';
 import AdminReceipts from './pages/admin/AdminReceipts';
 import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
+import Report from './pages/report/Report';
 
 const router = createBrowserRouter([
   // ── 1. 풀스크린 레이아웃 그룹 (App.tsx 사용) ───────────────────
