@@ -1,8 +1,10 @@
 import { FiArrowRight, FiZap, FiBox, FiUsers } from 'react-icons/fi';
+import { useNavigate } from 'react-router';
 
 import im from '../../../assets/logo.png';
 
 export default function HeroSection() {
+  const navigate = useNavigate();
   return (
     <section
       id="hero"
@@ -39,7 +41,10 @@ export default function HeroSection() {
 
           {/* 버튼 그룹 */}
           <div className="flex flex-wrap items-center gap-4">
-            <button className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-purple-600 to-blue-500 text-white text-base font-semibold rounded-lg shadow-md hover:opacity-90 transition-opacity">
+            <button
+              onClick={() => navigate('/home')}
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-purple-600 to-blue-500 text-white text-base font-semibold rounded-lg shadow-md hover:opacity-90 transition-opacity"
+            >
               심사위원용 데모 체험 <FiArrowRight />
             </button>
             <button className="inline-flex items-center px-6 py-3.5 bg-white border border-gray-200 text-gray-700 text-base font-semibold rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
