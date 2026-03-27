@@ -40,6 +40,19 @@ export interface BehaviorPayload {
   timestamp: string;
 }
 
+// ── UUID 생성 (HTTP 환경 폴백 포함) ───────────────
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // HTTP 환경 폴백 (crypto.randomUUID는 HTTPS/localhost에서만 동작)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // ── Canvas 핑거프린트 ──────────────────────────────
 function getCanvasHash(): string {
   try {
@@ -104,7 +117,7 @@ function collectEnvInfo(): EnvInfo {
 const MAX_MOUSE_POINTS = 500; // CONTEXT.md: 최대 500포인트
 
 export function useBehaviorCollector() {
-  const sessionId = useRef(crypto.randomUUID());
+  const sessionId = useRef(generateUUID()); // ← 수정된 부분
   const pageLoadTime = useRef(Date.now());
 
   const mouseMoves = useRef<MouseMove[]>([]);
