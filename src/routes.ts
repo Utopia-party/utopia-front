@@ -4,7 +4,6 @@ import { createBrowserRouter, redirect } from 'react-router';
 import App from './App'; // 풀스크린 (Navbar/Footer/Sidebar 없음)
 import AppShell from './AppShell'; // Sidebar + Header 포함 레이아웃
 
-// 일반 페이지 및 성보님 작업 페이지
 import Home from './pages/Home';
 import Landing from './pages/landing/Landing';
 import Login from './pages/Login';
@@ -17,6 +16,7 @@ import CaptchaDemo from './pages/CaptchaDemo';
 
 // 사이드바가 필요한 페이지
 import Report from './pages/Report';
+import Profile from './pages/Profile';
 import Party from './pages/Party';
 
 // 마이페이지 관련
@@ -32,6 +32,7 @@ import AdminReports from './pages/admin/AdminReports';
 import AdminReceipts from './pages/admin/AdminReceipts';
 import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
+import Report from './pages/report/Report';
 
 const router = createBrowserRouter([
   // ── 1. 풀스크린 레이아웃 그룹 (App.tsx 사용) ───────────────────
