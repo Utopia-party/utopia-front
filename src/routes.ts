@@ -16,12 +16,11 @@ import Chat from './pages/Chat';
 import CaptchaDemo from './pages/CaptchaDemo';
 
 // 사이드바가 필요한 페이지
-import Profile from './pages/Profile';
 import Report from './pages/Report';
 import Party from './pages/Party';
 
 // 마이페이지 관련
-import Me from './pages/mypage/Me';
+import Profile from './pages/mypage/Profile';
 import MyParty from './pages/mypage/MyParty';
 import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
@@ -36,14 +35,16 @@ import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 
 const router = createBrowserRouter([
   // ── 1. 풀스크린 레이아웃 그룹 (App.tsx 사용) ───────────────────
+
+  {
+    index: true,
+    Component: Landing, // 팀원의 랜딩 페이지를 인덱스로 설정
+  },
+
   {
     path: '/',
     Component: App,
     children: [
-      {
-        index: true,
-        Component: Landing, // 팀원의 랜딩 페이지를 인덱스로 설정
-      },
       {
         path: 'home', // 성보님의 Home 페이지
         Component: Home,
@@ -85,10 +86,6 @@ const router = createBrowserRouter([
     Component: AppShell,
     children: [
       {
-        path: 'profile/:userId',
-        Component: Profile,
-      },
-      {
         path: 'report',
         Component: Report,
       },
@@ -97,15 +94,15 @@ const router = createBrowserRouter([
         Component: Party,
       },
       {
-        path: 'mypage',
-        Component: Me,
+        path: '/mypage',
+        Component: Profile,
         children: [
           {
             index: true,
             loader: () => redirect('/mypage/profile'),
           },
           {
-            path: 'profile',
+            path: '/mypage/profile',
             Component: Profile,
           },
           {
