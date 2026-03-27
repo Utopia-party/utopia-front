@@ -1,14 +1,17 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import { api } from "../libs/api";
+import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { api } from '../libs/api';
+import { CaptchaWidget } from '../components/captcha';
 
 export default function Login() {
   const navigate = useNavigate();
 
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
   // 로그인 입력 폼
   const [form, setForm] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
     rememberMe: false,
   });
 
@@ -17,7 +20,7 @@ export default function Login() {
     const { name, value, type, checked } = e.target;
     setForm({
       ...form,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
     });
   };
 
@@ -26,16 +29,22 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      await api.post("/login", {
-        email: form.email,
-        password: form.password,
-      });
+      await api.post(
+        '/login',
+        {
+          email: form.email,
+          password: form.password,
+        },
+        {
+          headers: captchaToken ? { 'X-Captcha-Token': captchaToken } : {},
+        },
+      );
 
-      window.dispatchEvent(new Event("auth-changed"));
-      alert("로그인에 성공했습니다!");
-      navigate("/", { replace: true });
+      window.dispatchEvent(new Event('auth-changed'));
+      alert('로그인에 성공했습니다!');
+      navigate('/', { replace: true });
     } catch (error: any) {
-      alert(error.response?.data?.detail || "로그인에 실패했습니다.");
+      alert(error.response?.data?.detail || '로그인에 실패했습니다.');
     }
   };
 
@@ -50,14 +59,14 @@ export default function Login() {
     const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
     const state = createOAuthState();
 
-    sessionStorage.setItem("google_oauth_state", state);
+    sessionStorage.setItem('google_oauth_state', state);
 
     const googleAuthUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
       `?client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=code` +
-      `&scope=${encodeURIComponent("openid email profile")}` +
+      `&scope=${encodeURIComponent('openid email profile')}` +
       `&state=${encodeURIComponent(state)}` +
       `&access_type=online` +
       `&include_granted_scopes=true` +
@@ -72,7 +81,7 @@ export default function Login() {
     const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
     const state = createOAuthState();
 
-    sessionStorage.setItem("kakao_oauth_state", state);
+    sessionStorage.setItem('kakao_oauth_state', state);
 
     const kakaoAuthUrl =
       `https://kauth.kakao.com/oauth/authorize` +
@@ -90,7 +99,7 @@ export default function Login() {
     const redirectUri = import.meta.env.VITE_NAVER_REDIRECT_URI;
     const state = createOAuthState();
 
-    sessionStorage.setItem("naver_oauth_state", state);
+    sessionStorage.setItem('naver_oauth_state', state);
 
     const naverAuthUrl =
       `https://nid.naver.com/oauth2.0/authorize` +
@@ -158,6 +167,14 @@ export default function Login() {
               계정이 없나요? 회원가입
             </Link>
           </div>
+        </div>
+
+        {/* 캡챠 인증 */}
+        <div className="flex justify-center py-1">
+          <CaptchaWidget
+            onSuccess={(token) => setCaptchaToken(token)}
+            triggerType="new_ip_login"
+          />
         </div>
 
         <button
