@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router';
 import AdminSidebar from './components/AdminSidebar';
-// import AdminHeader from './components/AdminHeader';
+
 
 /**
  * 관리자 전용 레이아웃
