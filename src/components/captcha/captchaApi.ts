@@ -3,16 +3,18 @@
  * 실제 백엔드 연동 전까지 Mock 응답 사용
  * CONTEXT.md Section 11 — 엔드포인트 설계 기반
  */
+import { api } from '../../libs/api';
 import type { BehaviorPayload } from './useBehaviorCollector';
 import type {
   CaptchaInitResponse,
   CaptchaChallengeResponse,
+  CaptchaStatusResponse,
   CaptchaVerifyResponse,
 } from './types';
 
 // ── 설정 ───────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_BASE ?? '';
-const USE_MOCK = import.meta.env.VITE_CAPTCHA_MOCK !== 'false'; // 기본: mock 사용
+const USE_MOCK = import.meta.env.VITE_CAPTCHA_MOCK === 'true';
+type CaptchaTriggerType = 'register' | 'new_ip_login' | 'login_fail';
 
 // ── Mock 이미지 데이터 ─────────────────────────────
 // 실제로는 MinIO에서 GAN 생성 이모지 + 실제 동물 사진을 가져옴
@@ -60,7 +62,7 @@ function generateMockPhotos(emojis: ReturnType<typeof generateMockEmojis>) {
   const answerPositions = shuffledPos.slice(0, 3).sort((a, b) => a - b);
 
   // 저장할 정답 인덱스 (mock 검증용)
-  (window as any).__captcha_answer_indices = answerPositions;
+  window.__captcha_answer_indices = answerPositions;
 
   let correctIdx = 0;
   let wrongIdx = 0;
@@ -138,9 +140,7 @@ function mockVerifyResponse(
   sessionId: string,
   selectedIndices: number[],
 ): CaptchaVerifyResponse {
-  const answer = (window as any).__captcha_answer_indices as
-    | number[]
-    | undefined;
+  const answer = window.__captcha_answer_indices;
 
   if (!answer) {
     return {
@@ -174,19 +174,18 @@ function mockVerifyResponse(
 /** POST /api/captcha/init — 행동 데이터 전송 + 비간섭 검증 */
 export async function captchaInit(
   payload: BehaviorPayload,
+  triggerType: CaptchaTriggerType = 'new_ip_login',
 ): Promise<CaptchaInitResponse> {
   if (USE_MOCK) {
     await delay(800); // 네트워크 딜레이 시뮬레이션
     return mockInitResponse(payload);
   }
 
-  const res = await fetch(`${API_BASE}/api/captcha/init`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+  const response = await api.post<CaptchaInitResponse>('/api/captcha/init', {
+    ...payload,
+    trigger_type: triggerType,
   });
-  if (!res.ok) throw new Error(`captcha/init failed: ${res.status}`);
-  return res.json();
+  return response.data;
 }
 
 /** GET /api/captcha/challenge — 이미지 캡챠 세트 출제 */
@@ -198,11 +197,13 @@ export async function captchaChallenge(
     return mockChallengeResponse(sessionId);
   }
 
-  const res = await fetch(
-    `${API_BASE}/api/captcha/challenge?session_id=${sessionId}`,
+  const response = await api.get<CaptchaChallengeResponse>(
+    '/api/captcha/challenge',
+    {
+      params: { session_id: sessionId },
+    },
   );
-  if (!res.ok) throw new Error(`captcha/challenge failed: ${res.status}`);
-  return res.json();
+  return response.data;
 }
 
 /** POST /api/captcha/verify — 정답 검증 + JWT 발급 */
@@ -215,16 +216,28 @@ export async function captchaVerify(
     return mockVerifyResponse(sessionId, selectedIndices);
   }
 
-  const res = await fetch(`${API_BASE}/api/captcha/verify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  const response = await api.post<CaptchaVerifyResponse>(
+    '/api/captcha/verify',
+    {
       session_id: sessionId,
       selected_indices: selectedIndices,
-    }),
-  });
-  if (!res.ok) throw new Error(`captcha/verify failed: ${res.status}`);
-  return res.json();
+    },
+  );
+  return response.data;
+}
+
+/** GET /api/captcha/status — 현재 WAIT / LOCKED / BANNED 상태 확인 */
+export async function captchaStatus(): Promise<CaptchaStatusResponse> {
+  if (USE_MOCK) {
+    await delay(200);
+    return {
+      status: 'NORMAL',
+      message: '캡챠 인증을 진행할 수 있습니다.',
+    };
+  }
+
+  const response = await api.get<CaptchaStatusResponse>('/api/captcha/status');
+  return response.data;
 }
 
 // ── 유틸 ───────────────────────────────────────────

@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  // 프론트 .env가 아직 없더라도 로컬 백엔드(8000번 포트)로 붙도록 기본값을 둡니다.
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000',
   withCredentials: true,
 });
 
@@ -17,5 +18,5 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );

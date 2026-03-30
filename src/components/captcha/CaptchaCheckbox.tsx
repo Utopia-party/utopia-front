@@ -20,87 +20,110 @@ export default function CaptchaCheckbox({
   const isBlocked = phase === 'blocked';
 
   return (
-    <div
+    <button
+      type="button"
       className={`
-        flex items-center gap-3 px-5 py-3.5 rounded-lg border-2 w-full max-w-[320px]
-        select-none transition-all duration-200
+        flex w-full max-w-[360px] items-center gap-4 rounded-2xl border px-4 py-4 text-left
+        shadow-[0_18px_40px_-26px_rgba(15,23,42,0.55)] transition-all duration-200
         ${
           isBlocked
-            ? 'border-red-300 bg-red-50'
+            ? 'border-red-200 bg-red-50/95'
             : isChecked
-              ? 'border-green-400 bg-green-50'
-              : 'border-gray-200 bg-white hover:border-blue-300'
+              ? 'border-emerald-200 bg-emerald-50/90'
+              : 'border-slate-200 bg-white/95'
         }
-        ${isClickable ? 'cursor-pointer' : 'cursor-default'}
+        ${isClickable ? 'cursor-pointer hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-[0_22px_50px_-28px_rgba(37,99,235,0.45)]' : 'cursor-default'}
       `}
       onClick={isClickable ? onClick : undefined}
+      disabled={!isClickable}
     >
-      {/* 체크박스 영역 */}
       <div
         className={`
-          w-6 h-6 rounded border-2 flex items-center justify-center
-          transition-all duration-200 shrink-0
+          flex h-7 w-7 shrink-0 items-center justify-center rounded-md border-[1.5px] transition-all
           ${
             isChecked
-              ? 'bg-green-500 border-green-500'
+              ? 'border-emerald-500 bg-emerald-500 text-white'
               : isLoading
                 ? 'border-blue-400 bg-blue-50'
                 : isBlocked
-                  ? 'border-red-400 bg-red-100'
-                  : 'border-gray-300 bg-white'
+                  ? 'border-red-400 bg-red-100 text-red-500'
+                  : 'border-slate-300 bg-white'
           }
         `}
       >
         {isChecked && (
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
-              d="M2 7L5.5 10.5L12 3.5"
-              stroke="white"
-              strokeWidth="2.5"
+              d="M2 7L5.4 10.4L12 3.8"
+              stroke="currentColor"
+              strokeWidth="2.3"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
         )}
         {isLoading && (
-          <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
         )}
         {isBlocked && (
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M3 3L11 11M11 3L3 11"
-              stroke="#EF4444"
-              strokeWidth="2.5"
+              stroke="currentColor"
+              strokeWidth="2.3"
               strokeLinecap="round"
             />
           </svg>
         )}
       </div>
 
-      {/* 텍스트 */}
-      <div className="flex-1">
-        <span
-          className={`text-sm font-medium ${isBlocked ? 'text-red-600' : 'text-gray-700'}`}
+      <div className="min-w-0 flex-1">
+        <p
+          className={`text-sm font-semibold ${
+            isBlocked
+              ? 'text-red-700'
+              : isChecked
+                ? 'text-emerald-700'
+                : 'text-slate-800'
+          }`}
         >
           {isBlocked
             ? '비정상적인 접근이 감지되었습니다'
             : isChecked
-              ? '인증 완료'
+              ? '인증이 완료되었습니다'
               : isLoading
-                ? '확인 중...'
+                ? '행동 패턴을 확인하고 있습니다'
                 : phase === 'failed'
-                  ? '다시 시도해주세요'
+                  ? '다시 한 번 확인해 주세요'
                   : '로봇이 아닙니다'}
-        </span>
+        </p>
+        <p
+          className={`mt-1 text-xs ${
+            isBlocked
+              ? 'text-red-500'
+              : isChecked
+                ? 'text-emerald-500'
+                : 'text-slate-500'
+          }`}
+        >
+          {isBlocked
+            ? '보안 정책에 따라 이용이 잠시 제한됩니다.'
+            : isChecked
+              ? '원래 작업을 계속 진행할 수 있어요.'
+              : isLoading
+                ? '잠시만 기다리면 자동으로 다음 단계가 열립니다.'
+                : '클릭 후 사람인지 빠르게 검증합니다.'}
+        </p>
       </div>
 
-      {/* 로고 영역 */}
-      <div className="flex flex-col items-center shrink-0">
-        <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center">
-          <span className="text-white text-xs font-bold">P</span>
+      <div className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1d4ed8,#60a5fa)] text-xs font-bold text-white">
+          P
         </div>
-        <span className="text-[9px] text-gray-400 mt-0.5">Party-Up</span>
+        <p className="mt-1 text-[10px] font-semibold tracking-[0.16em] text-slate-400">
+          PARTY
+        </p>
       </div>
-    </div>
+    </button>
   );
 }

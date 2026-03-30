@@ -47,7 +47,7 @@ export default function Signup() {
         alert('사용 가능한 이메일입니다. 이제 인증번호를 요청하세요.');
         setisEmailChecked(true);
       }
-    } catch (_error) {
+    } catch {
       alert('중복 확인 중 오류가 발생했습니다.');
     }
   };
@@ -57,7 +57,7 @@ export default function Signup() {
     try {
       await api.post('/email-request', null, { params: { email: form.email } });
       alert('인증 메일이 발송되었습니다. 메일함을 확인해주세요!');
-    } catch (_error) {
+    } catch {
       alert('인증 메일 발송에 실패했습니다.');
     }
   };
@@ -72,7 +72,7 @@ export default function Signup() {
         alert('이메일 인증에 성공했습니다!');
         setIsEmailVerified(true);
       }
-    } catch (_error) {
+    } catch {
       alert('인증번호가 틀렸거나 만료되었습니다.');
     }
   };
@@ -92,7 +92,7 @@ export default function Signup() {
         alert('사용 가능한 닉네임입니다.');
         setisNicknameChecked(true);
       }
-    } catch (_error) {
+    } catch {
       alert('중복 확인 중 오류가 발생했습니다.');
     }
   };
@@ -302,6 +302,7 @@ export default function Signup() {
         <div className="flex justify-center py-2">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
+            onError={() => setCaptchaToken(null)}
             triggerType="register"
           />
         </div>

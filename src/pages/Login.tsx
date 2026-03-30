@@ -28,6 +28,11 @@ export default function Login() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (!captchaToken) {
+      alert('캡챠 인증을 완료해주세요.');
+      return;
+    }
+
     try {
       await api.post(
         '/login',
@@ -36,7 +41,7 @@ export default function Login() {
           password: form.password,
         },
         {
-          headers: captchaToken ? { 'X-Captcha-Token': captchaToken } : {},
+          headers: { 'X-Captcha-Token': captchaToken },
         },
       );
 
@@ -173,6 +178,7 @@ export default function Login() {
         <div className="flex justify-center py-1">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
+            onError={() => setCaptchaToken(null)}
             triggerType="new_ip_login"
           />
         </div>

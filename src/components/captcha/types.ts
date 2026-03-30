@@ -65,6 +65,19 @@ export interface CaptchaVerifyResponse {
   message?: string;
 }
 
+/** GET /api/captcha/status 응답 */
+export interface CaptchaStatusResponse {
+  /** NORMAL / WAIT / LOCKED / BANNED */
+  status: 'NORMAL' | 'WAIT' | 'LOCKED' | 'BANNED';
+  /** 현재 상태에 대한 서버 메시지 */
+  message: string;
+  /** WAIT / LOCKED / BANNED 상태일 때 남은 시간 */
+  retry_after_seconds?: number;
+  /** 이번 수정: 새로고침/모달 종료 후 이어서 풀어야 하는 challenge 세션 ID */
+  /** 새로고침/모달 종료 후 다시 이어서 풀어야 하는 challenge 세션 */
+  active_session_id?: string;
+}
+
 // ── 위젯 내부 상태 ─────────────────────────────────
 export type CaptchaPhase =
   | 'idle' // 초기: 체크박스만 표시
