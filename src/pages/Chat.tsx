@@ -24,9 +24,9 @@ interface PartyInfo {
   members: Member[];
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
-const WS_BASE = API_BASE
-  .replace('http://', 'ws://')
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+const WS_BASE = API_BASE.replace('http://', 'ws://')
   .replace('https://', 'wss://')
   .replace('/api', '');
 
@@ -38,29 +38,45 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [partyInfo, setPartyInfo] = useState<PartyInfo | null>(null);
   const [connected, setConnected] = useState(false);
-  const [nickname] = useState(() => localStorage.getItem('nickname') ?? '익명');
-  const [userId] = useState(() => localStorage.getItem('user_id') ?? 'guest');
+  const [nickname, setNickname] = useState('익명');
+  const [userId, setUserId] = useState('guest');
+  const [userReady, setUserReady] = useState(false); // ← 유저 정보 로드 완료 여부
 
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const connectedRef = useRef(false);
 
+  // 유저 정보 먼저 가져오기
+  useEffect(() => {
+    api
+      .get('/me')
+      .then(({ data }) => {
+        setNickname(data.nickname);
+        setUserId(data.id);
+        setUserReady(true);
+      })
+      .catch(() => {
+        setUserReady(true); // 실패해도 익명으로 진행
+      });
+  }, []);
+
   useEffect(() => {
     if (!partyId) return;
 
-    // ✅ Fix: chat_rooms 없으므로 party_id로 직접 메시지/멤버 조회
-    api.get(`/chat/parties/${partyId}/messages`)
+    api
+      .get(`/chat/parties/${partyId}/messages`)
       .then(({ data }) => setMessages(data))
       .catch(() => {});
 
-    api.get(`/chat/parties/${partyId}/info`)
+    api
+      .get(`/chat/parties/${partyId}/info`)
       .then(({ data }) => setPartyInfo(data))
       .catch(() => {});
   }, [partyId]);
 
-  // WebSocket 연결
+  // WebSocket 연결 - 유저 정보 로드 후 연결
   useEffect(() => {
-    if (!partyId) return;
+    if (!partyId || !userReady) return; // ← userReady 체크
     if (connectedRef.current) return;
     connectedRef.current = true;
 
@@ -69,9 +85,8 @@ export default function Chat() {
       wsRef.current = null;
     }
 
-    // ✅ Fix: /ws/{party_id} 로 직접 연결
     const ws = new WebSocket(
-      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`
+      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`,
     );
     wsRef.current = ws;
 
@@ -82,7 +97,7 @@ export default function Chat() {
     };
     ws.onmessage = (e) => {
       const msg: Message = JSON.parse(e.data);
-      setMessages(prev => [...prev, msg]);
+      setMessages((prev) => [...prev, msg]);
     };
 
     return () => {
@@ -90,14 +105,19 @@ export default function Chat() {
       wsRef.current = null;
       connectedRef.current = false;
     };
-  }, [partyId, nickname, userId]);
+  }, [partyId, userReady, nickname, userId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const sendMessage = useCallback(() => {
-    if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (
+      !input.trim() ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    )
+      return;
     wsRef.current.send(input.trim());
     setInput('');
   }, [input]);
@@ -134,13 +154,23 @@ export default function Chat() {
     }
 
     return (
-      <div key={i} className={`flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-        {!isMe && <p className="text-xs text-muted-foreground px-2">{msg.nickname}</p>}
-        <div className={`max-w-xs px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}>
+      <div
+        key={i}
+        className={`flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}
+      >
+        {!isMe && (
+          <p className="text-xs text-muted-foreground px-2">{msg.nickname}</p>
+        )}
+        <div
+          className={`max-w-xs px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
+        >
           {msg.content}
         </div>
         <p className="text-[10px] text-muted-foreground px-2">
-          {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+          {new Date(msg.created_at).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </p>
       </div>
     );
@@ -171,7 +201,9 @@ export default function Chat() {
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
             {messages.length === 0 && (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">첫 메시지를 보내보세요!</p>
+                <p className="text-sm text-muted-foreground">
+                  첫 메시지를 보내보세요!
+                </p>
               </div>
             )}
             {messages.map((msg, i) => renderMessage(msg, i))}
@@ -183,8 +215,8 @@ export default function Chat() {
               className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors bg-background"
               placeholder="메시지를 입력하세요..."
               value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             />
             <button
               onClick={sendMessage}
@@ -198,22 +230,31 @@ export default function Chat() {
 
         <div className="w-56 shrink-0 border-l border-border bg-card flex flex-col">
           <div className="px-4 py-3 border-b border-border">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">파티 멤버</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+              파티 멤버
+            </p>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {partyInfo?.members.map(member => (
-              <div key={member.user_id} className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
+            {partyInfo?.members.map((member) => (
+              <div
+                key={member.user_id}
+                className="flex items-center gap-3 px-4 py-3 border-b border-border/50"
+              >
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                   {member.nickname[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{member.nickname}</p>
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {member.nickname}
+                  </p>
                   <p className="text-xs text-muted-foreground">{member.role}</p>
                 </div>
               </div>
             ))}
             {(!partyInfo || partyInfo.members.length === 0) && (
-              <p className="text-xs text-muted-foreground px-4 py-3">멤버 정보 없음</p>
+              <p className="text-xs text-muted-foreground px-4 py-3">
+                멤버 정보 없음
+              </p>
             )}
           </div>
         </div>

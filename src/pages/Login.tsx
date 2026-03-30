@@ -2,31 +2,42 @@ import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api } from '../libs/api';
 import { CaptchaWidget } from '../components/captcha';
+import { useAuthStore } from '../stores/authStore';
+
+type LoginForm = {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+};
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 로그인 입력 폼
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<LoginForm>({
     email: '',
     password: '',
     rememberMe: false,
   });
 
-  // 로그인 폼 입력 핸들러
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setForm({
-      ...form,
+
+    setForm((prev) => ({
+      ...prev,
       [name]: type === 'checkbox' ? checked : value,
-    });
+    }));
   };
 
-  // 일반 로그인 서버 요청
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!form.email.trim() || !form.password.trim()) {
+      alert('이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
 
     if (!captchaToken) {
       alert('캡챠 인증을 완료해주세요.');
@@ -34,10 +45,12 @@ export default function Login() {
     }
 
     try {
-      await api.post(
+      setIsSubmitting(true);
+
+      const response = await api.post(
         '/login',
         {
-          email: form.email,
+          email: form.email.trim(),
           password: form.password,
         },
         {
@@ -45,20 +58,26 @@ export default function Login() {
         },
       );
 
-      window.dispatchEvent(new Event('auth-changed'));
-      alert('로그인에 성공했습니다!');
-      navigate('/', { replace: true });
+      const { checkAuth } = useAuthStore.getState();
+      await checkAuth();
+
+      alert(response.data?.message || '로그인에 성공했습니다.');
+      navigate('/home', { replace: true });
     } catch (error: any) {
-      alert(error.response?.data?.detail || '로그인에 실패했습니다.');
+      const message =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        '로그인에 실패했습니다.';
+      alert(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // OAuth state 생성
   const createOAuthState = () => {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   };
 
-  // 구글 로그인 실행
   const loginWithGoogle = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
@@ -80,7 +99,6 @@ export default function Login() {
     window.location.href = googleAuthUrl;
   };
 
-  // 카카오 로그인 실행
   const loginWithKakao = () => {
     const clientId = import.meta.env.VITE_KAKAO_REST_API_KEY;
     const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
@@ -98,7 +116,6 @@ export default function Login() {
     window.location.href = kakaoAuthUrl;
   };
 
-  // 네이버 로그인 실행
   const loginWithNaver = () => {
     const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
     const redirectUri = import.meta.env.VITE_NAVER_REDIRECT_URI;
@@ -123,14 +140,16 @@ export default function Login() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            아이디(이메일)
+            이메일
           </label>
           <input
             name="email"
             type="email"
+            value={form.email}
             placeholder="example@email.com"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}
+            autoComplete="email"
             required
           />
         </div>
@@ -142,9 +161,11 @@ export default function Login() {
           <input
             name="password"
             type="password"
+            value={form.password}
             placeholder="비밀번호 입력"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}
+            autoComplete="current-password"
             required
           />
         </div>
@@ -154,27 +175,28 @@ export default function Login() {
             <input
               type="checkbox"
               name="rememberMe"
+              checked={form.rememberMe}
               className="h-4 w-4 rounded border-gray-300"
               onChange={handleChange}
             />
             <span>자동 로그인</span>
           </label>
+
           <div className="flex gap-2">
-            <button type="button" className="hover:underline">
+            <Link to="/find-id" className="hover:underline">
               아이디 찾기
-            </button>
+            </Link>
             <span>|</span>
-            <button type="button" className="hover:underline">
+            <Link to="/find-password" className="hover:underline">
               비밀번호 찾기
-            </button>
+            </Link>
             <span>|</span>
             <Link to="/signup" className="hover:underline">
-              계정이 없나요? 회원가입
+              회원가입
             </Link>
           </div>
         </div>
 
-        {/* 캡챠 인증 */}
         <div className="flex justify-center py-1">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
@@ -185,9 +207,10 @@ export default function Login() {
 
         <button
           type="submit"
-          className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700"
+          disabled={isSubmitting}
+          className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          로그인
+          {isSubmitting ? '로그인 중...' : '로그인'}
         </button>
 
         <div className="space-y-3 pt-2">
@@ -196,11 +219,6 @@ export default function Login() {
             onClick={loginWithGoogle}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-300 py-3 text-sm font-medium transition hover:bg-gray-50"
           >
-            <img
-              src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png"
-              alt="Google"
-              className="h-5 w-5"
-            />
             구글 로그인
           </button>
 
@@ -209,11 +227,6 @@ export default function Login() {
             onClick={loginWithKakao}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#FEE500] bg-[#FEE500] py-3 text-sm font-medium text-[#191919] transition hover:bg-[#FADA0A]"
           >
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/e/e3/KakaoTalk_logo.svg"
-              alt="Kakao"
-              className="h-5 w-5"
-            />
             카카오로 계속하기
           </button>
 
@@ -222,7 +235,6 @@ export default function Login() {
             onClick={loginWithNaver}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#03C75A] bg-[#03C75A] py-3 text-sm font-medium text-white transition hover:bg-[#02b350]"
           >
-            <span className="text-lg font-bold">N</span>
             네이버로 계속하기
           </button>
         </div>

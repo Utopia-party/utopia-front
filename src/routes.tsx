@@ -1,18 +1,23 @@
 import { createBrowserRouter, redirect } from 'react-router';
 
 // 레이아웃 컴포넌트
-import App from './App'; // 풀스크린 (Navbar/Footer/Sidebar 없음)
-import AppShell from './AppShell'; // Sidebar + Header 포함 레이아웃
+import App from './App';
+import AppShell from './AppShell';
 
+// 공개 페이지
 import Home from './pages/Home';
 import Landing from './pages/landing/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import SocialCallback from './pages/SocialCallback';
+import SocialSignup from './pages/SocialSignup';
 import Favor from './pages/Favor';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
 import CaptchaDemo from './pages/CaptchaDemo';
+
+// 보호 라우트
+import ProtectedRoute from './components/ProtectedRoute';
 
 // 사이드바가 필요한 페이지
 import Report from './pages/report/Report';
@@ -25,20 +30,21 @@ import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 
-// 관리자 페이지 (팀원 추가분)
+// 관리자 페이지
 import AdminShell from './pages/admin/AdminShell';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminRoles from './pages/admin/AdminRoles';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
 import AdminReceipts from './pages/admin/AdminReceipts';
 import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 
-
 const router = createBrowserRouter([
-  // ── 1. 풀스크린 레이아웃 그룹 (App.tsx 사용) ───────────────────
-
   {
     index: true,
-    Component: Landing, // 팀원의 랜딩 페이지를 인덱스로 설정
+    Component: Landing,
   },
 
   {
@@ -46,7 +52,7 @@ const router = createBrowserRouter([
     Component: App,
     children: [
       {
-        path: 'home', // 성보님의 Home 페이지
+        path: 'home',
         Component: Home,
       },
       {
@@ -70,6 +76,10 @@ const router = createBrowserRouter([
         Component: SocialCallback,
       },
       {
+        path: 'social-signup',
+        Component: SocialSignup,
+      },
+      {
         path: 'party/:partyId/chat',
         Component: Chat,
       },
@@ -80,7 +90,6 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ── 2. 사이드바 + 헤더 레이아웃 그룹 (AppShell.tsx 사용) ──────
   {
     path: '/',
     Component: AppShell,
@@ -94,46 +103,81 @@ const router = createBrowserRouter([
         Component: Party,
       },
       {
-        path: '/mypage',
-        Component: Profile,
+        path: 'mypage',
+        element: (
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        ),
         children: [
           {
             index: true,
             loader: () => redirect('/mypage/profile'),
           },
           {
-            path: '/mypage/profile',
-            Component: Profile,
+            path: 'profile',
+            element: (
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            ),
           },
           {
             path: 'party',
-            Component: MyParty,
+            element: (
+              <ProtectedRoute>
+                <MyParty />
+              </ProtectedRoute>
+            ),
           },
           {
             path: 'history',
-            Component: MyHistory,
+            element: (
+              <ProtectedRoute>
+                <MyHistory />
+              </ProtectedRoute>
+            ),
           },
           {
             path: 'report',
-            Component: MyReport,
+            element: (
+              <ProtectedRoute>
+                <MyReport />
+              </ProtectedRoute>
+            ),
           },
           {
             path: 'payment',
-            Component: MyPayment,
+            element: (
+              <ProtectedRoute>
+                <MyPayment />
+              </ProtectedRoute>
+            ),
           },
         ],
       },
     ],
   },
 
-  // ── 3. 관리자 레이아웃 그룹 (AdminShell 사용) ──────────────
   {
     path: '/admin',
     Component: AdminShell,
     children: [
       {
         index: true,
-        loader: () => redirect('/admin/reports'),
+        Component: AdminDashboard,
+      },
+      {
+        path: 'roles',
+        Component: AdminRoles,
+      },
+      {
+        path: 'users',
+        Component: AdminUsers,
+      },
+      {
+        path: 'parties',
+        Component: AdminParties,
       },
       {
         path: 'reports',

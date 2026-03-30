@@ -40,7 +40,7 @@ export default function AdminSidebar() {
         ))}
         <div className="flex-1" />
         <NavLink
-          to="/"
+          to="/home"
           className="block px-5 py-2.5 text-sm font-medium text-gray-500 no-underline border-l-3 border-transparent hover:bg-gray-50 hover:text-gray-900 transition-all"
         >
           사용자 홈

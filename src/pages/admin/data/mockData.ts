@@ -243,3 +243,214 @@ export const systemLogsData: SystemLog[] = [
     actor: 'api',
   },
 ];
+
+// ===== 통계 대시보드 =====
+export interface DashboardMetric {
+  id: string;
+  label: string;
+  value: string;
+  helper: string;
+}
+
+export interface DashboardSummaryRow {
+  label: string;
+  value: string;
+}
+
+export const dashboardMetricsData: DashboardMetric[] = [
+  {
+    id: 'members',
+    label: '회원 수',
+    value: '1,284',
+    helper: '현재 운영 중인 전체 회원 기준',
+  },
+  {
+    id: 'today',
+    label: '오늘 가입',
+    value: '+12',
+    helper: '오늘 00:00 이후 가입 완료',
+  },
+  {
+    id: 'reports',
+    label: '신고(접수)',
+    value: '7',
+    helper: '실시간 검토 대기 건수',
+  },
+  {
+    id: 'settlements',
+    label: '정산 승인 대기',
+    value: '3',
+    helper: '관리자 승인 대기 상태',
+  },
+];
+
+export const dashboardMemberStatsData: DashboardSummaryRow[] = [
+  { label: '활성 사용자(가입)', value: '612' },
+  { label: '정지 사용자', value: '18' },
+  { label: '영구정지', value: '4' },
+];
+
+export const dashboardSalesStatsData: DashboardSummaryRow[] = [
+  { label: '이번달 승인 금액', value: '₩ 3,240,000' },
+  { label: '대기 금액', value: '₩ 420,000' },
+  { label: '거절 금액', value: '₩ 90,000' },
+];
+
+// ===== 권한 관리 =====
+export interface AdminRoleRecord {
+  id: string;
+  adminId: string;
+  role: 'ROOT' | 'OPS' | 'CS';
+  scope: string;
+  lastUpdated: string;
+  updatedBy: string;
+}
+
+export const adminRolesData: AdminRoleRecord[] = [
+  {
+    id: 'role-001',
+    adminId: 'root_admin',
+    role: 'ROOT',
+    scope: '전체 시스템 / 승인 / 정책',
+    lastUpdated: '2026-03-29 09:10',
+    updatedBy: 'system',
+  },
+  {
+    id: 'role-002',
+    adminId: 'admin_ops',
+    role: 'OPS',
+    scope: '신고 / 정산 / 영수증',
+    lastUpdated: '2026-03-28 14:20',
+    updatedBy: 'root_admin',
+  },
+  {
+    id: 'role-003',
+    adminId: 'admin_cs',
+    role: 'CS',
+    scope: '사용자 문의 / 파티 운영',
+    lastUpdated: '2026-03-27 17:40',
+    updatedBy: 'root_admin',
+  },
+  {
+    id: 'role-004',
+    adminId: 'admin_audit',
+    role: 'OPS',
+    scope: '로그 조회 / 감사 이력',
+    lastUpdated: '2026-03-26 11:05',
+    updatedBy: 'root_admin',
+  },
+];
+
+// ===== 사용자 관리 =====
+export interface AdminUserRecord {
+  id: string;
+  nickname: string;
+  status: '정상' | '주의' | '정지';
+  reportCount: number;
+  partyCount: number;
+  trustScore: number;
+  lastActive: string;
+}
+
+export const adminUsersData: AdminUserRecord[] = [
+  {
+    id: 'user_01',
+    nickname: '파티메이커',
+    status: '정상',
+    reportCount: 0,
+    partyCount: 4,
+    trustScore: 96,
+    lastActive: '10분 전',
+  },
+  {
+    id: 'user_02',
+    nickname: 'ott_holic',
+    status: '주의',
+    reportCount: 3,
+    partyCount: 1,
+    trustScore: 72,
+    lastActive: '1시간 전',
+  },
+  {
+    id: 'user_03',
+    nickname: 'bundle_fan',
+    status: '정상',
+    reportCount: 1,
+    partyCount: 2,
+    trustScore: 88,
+    lastActive: '어제',
+  },
+  {
+    id: 'user_04',
+    nickname: 'late_cancel',
+    status: '정지',
+    reportCount: 5,
+    partyCount: 0,
+    trustScore: 38,
+    lastActive: '2일 전',
+  },
+  {
+    id: 'user_05',
+    nickname: 'musicmate',
+    status: '주의',
+    reportCount: 2,
+    partyCount: 3,
+    trustScore: 67,
+    lastActive: '방금',
+  },
+];
+
+// ===== 파티 관리 =====
+export interface AdminPartyRecord {
+  id: string;
+  service: string;
+  leaderId: string;
+  memberCount: number;
+  status: '운영중' | '모집중' | '위험' | '종료 예정';
+  reportCount: number;
+  monthlyAmount: number;
+  lastPayment: string;
+}
+
+export const adminPartiesData: AdminPartyRecord[] = [
+  {
+    id: 'party_01',
+    service: 'Netflix 프리미엄',
+    leaderId: 'leader_301',
+    memberCount: 4,
+    status: '운영중',
+    reportCount: 0,
+    monthlyAmount: 17000,
+    lastPayment: '정상 납부',
+  },
+  {
+    id: 'party_02',
+    service: 'YouTube Premium',
+    leaderId: 'leader_145',
+    memberCount: 3,
+    status: '모집중',
+    reportCount: 0,
+    monthlyAmount: 14900,
+    lastPayment: '정산 대기',
+  },
+  {
+    id: 'party_03',
+    service: 'Disney+',
+    leaderId: 'leader_219',
+    memberCount: 4,
+    status: '위험',
+    reportCount: 2,
+    monthlyAmount: 13900,
+    lastPayment: '미납 경고',
+  },
+  {
+    id: 'party_04',
+    service: 'Spotify Family',
+    leaderId: 'leader_517',
+    memberCount: 6,
+    status: '종료 예정',
+    reportCount: 1,
+    monthlyAmount: 23900,
+    lastPayment: '이번 주 종료',
+  },
+];

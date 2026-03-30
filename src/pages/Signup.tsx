@@ -52,6 +52,7 @@ export default function Signup() {
     }
   };
 
+  // 이메일 인증 요청
   const handleEmailRequest = async () => {
     if (!isEmailChecked) return alert('먼저 이메일 중복 확인을 해주세요.');
     try {
@@ -62,6 +63,7 @@ export default function Signup() {
     }
   };
 
+  // 이메일 인증 확인
   const handleEmailVerify = async () => {
     if (!form.email_code) return alert('인증번호를 입력해주세요.');
     try {
@@ -79,6 +81,7 @@ export default function Signup() {
 
   const isPasswordMatch = form.password === passwordConfirm;
 
+  // 닉네임 중복검사
   const handleCheckNickname = async () => {
     if (!form.nickname) return alert('닉네임을 입력해주세요.');
     try {

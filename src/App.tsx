@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
+import { useEffect } from 'react';
+import { useAuthStore } from './stores/authStore';
 import Header from './components/Header';
-// import Footer from './components/layout/Footer';
 import Sidebar from './components/Sidebar';
 
 /**
@@ -9,6 +10,12 @@ import Sidebar from './components/Sidebar';
  * Sidebar가 필요한 페이지는 AppShell을 사용합니다.
  */
 function App() {
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -17,7 +24,6 @@ function App() {
         <main className="flex-1">
           <Outlet />
         </main>
-        {/* <Footer /> */}
       </div>
     </div>
   );

@@ -1,4 +1,6 @@
-import { useLocation, Outlet } from 'react-router';
+import { useMemo } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router';
+import { useAuthStore } from '../../stores/authStore';
 
 const summaryCards = [
   {
@@ -49,7 +51,59 @@ const recentActivities = [
   },
 ];
 
+function getProfileInitial(nickname?: string | null) {
+  if (!nickname) return 'PU';
+  return nickname.trim().slice(0, 2).toUpperCase();
+}
+
 function ProfileDashboard() {
+  const navigate = useNavigate();
+  const { user, isLoggedIn, loading } = useAuthStore();
+
+  const nickname = user?.nickname ?? '';
+  const email = user?.email ?? '';
+  const provider = user?.provider ?? '';
+
+  const profileInitial = useMemo(() => getProfileInitial(nickname), [nickname]);
+
+  if (loading) {
+    return (
+      <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+            <p className="text-sm font-semibold text-slate-500">
+              프로필 정보를 불러오는 중...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-xl font-extrabold text-slate-900">
+              로그인이 필요합니다.
+            </h1>
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              마이페이지는 로그인 후 이용할 수 있습니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="mt-5 rounded-full bg-primary px-5 py-2 text-sm font-bold text-white"
+            >
+              로그인 하러가기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
       <div className="mx-auto max-w-6xl">
@@ -67,13 +121,13 @@ function ProfileDashboard() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-extrabold text-white">
-                  PU
+                  {profileInitial}
                 </div>
 
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-[17px] font-extrabold text-slate-900">
-                      홍길동 (닉네임)
+                      {nickname}
                     </h2>
                   </div>
                   <span className="mt-2 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-primary">
@@ -94,80 +148,67 @@ function ProfileDashboard() {
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
                 <p className="text-xs font-semibold text-slate-400">이메일</p>
                 <p className="mt-1 text-sm font-extrabold text-slate-900">
-                  akdjfjj@example.com
+                  {email || '-'}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-                <p className="text-xs font-semibold text-slate-400">전화번호</p>
+                <p className="text-xs font-semibold text-slate-400">
+                  로그인 방식
+                </p>
                 <p className="mt-1 text-sm font-extrabold text-slate-900">
-                  010-1234-5678
+                  {provider || '-'}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-                <p className="text-xs font-semibold text-slate-400">생년월일</p>
-                <p className="mt-1 text-sm font-extrabold text-slate-700">
-                  생년월일 추가
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-                <p className="text-xs font-semibold text-slate-400">가입일</p>
+                <p className="text-xs font-semibold text-slate-400">닉네임</p>
                 <p className="mt-1 text-sm font-extrabold text-slate-900">
-                  2025-11-18 &nbsp; (D+106)
+                  {nickname || '-'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+                <p className="text-xs font-semibold text-slate-400">
+                  가입 상태
+                </p>
+                <p className="mt-1 text-sm font-extrabold text-slate-900">
+                  정상
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4">
-              <p className="text-xs font-semibold text-slate-400">관심사</p>
-              <p className="mt-1 text-sm font-extrabold text-slate-700">
-                관심사 추가
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {summaryCards.map((card) => (
+                <article
+                  key={card.label}
+                  className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-slate-500">
+                      {card.label}
+                    </p>
+                    <span className="text-lg">{card.icon}</span>
+                  </div>
+                  <p className="mt-3 text-2xl font-extrabold text-slate-900">
+                    {card.value}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900">
+                최근 활동 내역
+              </h3>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                최근 계정 활동과 신뢰도 반영 내역입니다.
               </p>
             </div>
-
-            <p className="text-xs font-semibold text-slate-400">
-              * 프로필 이미지는 “이미지 변경” 버튼으로 프로필 미리보기
-              적용됩니다.
-            </p>
-          </div>
-        </section>
-
-        <section className="mt-5 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-extrabold text-slate-900">대시보드</h3>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            {summaryCards.map((card) => (
-              <article
-                key={card.label}
-                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm shadow-sm">
-                    {card.icon}
-                  </div>
-                  <p className="text-sm font-bold text-slate-600">
-                    {card.label}
-                  </p>
-                </div>
-                <p className="text-lg font-extrabold text-slate-900">
-                  {card.value}
-                </p>
-              </article>
-            ))}
-          </div>
-
-          <p className="mt-3 text-xs font-semibold text-slate-400">
-            * 대시보드 항목은 프로젝트 정책에 맞게 변경 가능.
-          </p>
-        </section>
-
-        <section className="mt-5 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <h3 className="text-sm font-extrabold text-slate-900">
-              최근 활동 내역
-            </h3>
 
             <div className="flex items-center gap-2 self-end md:self-auto">
               <button
