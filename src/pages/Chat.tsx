@@ -52,13 +52,13 @@ export default function Chat() {
       .get('/me')
       .then(({ data }) => {
         if (data.is_logged_in && data.user) {
-          setNickname(data.user.nickname ?? '익명');
-          setUserId(data.user.user_id ?? 'guest');
+          setNickname(data.user.nickname);
+          setUserId(data.user.id);
         }
         setUserReady(true);
       })
       .catch(() => {
-        setUserReady(true); // 실패해도 익명으로 진행
+        setUserReady(true);
       });
   }, []);
 
