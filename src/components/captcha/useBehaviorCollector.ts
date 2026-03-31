@@ -42,7 +42,10 @@ export interface BehaviorPayload {
 
 // ── UUID 생성 (HTTP 환경 폴백 포함) ───────────────
 function generateUUID(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
     return crypto.randomUUID();
   }
   // HTTP 환경 폴백 (crypto.randomUUID는 HTTPS/localhost에서만 동작)
@@ -102,8 +105,12 @@ function getWebGLRenderer(): string {
 
 // ── 환경 정보 수집 ─────────────────────────────────
 function collectEnvInfo(): EnvInfo {
+  const navigatorWithWebdriver = navigator as Navigator & {
+    webdriver?: boolean;
+  };
+
   return {
-    webdriver: !!(navigator as any).webdriver,
+    webdriver: !!navigatorWithWebdriver.webdriver,
     plugins_count: navigator.plugins?.length ?? 0,
     canvas_hash: getCanvasHash(),
     webgl_renderer: getWebGLRenderer(),

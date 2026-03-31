@@ -7,6 +7,15 @@ type FindIdForm = {
   phone_number: string;
 };
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+    };
+  };
+};
+
 export default function FindId() {
   const [form, setForm] = useState<FindIdForm>({
     name: '',
@@ -60,10 +69,11 @@ export default function FindId() {
       }
 
       setFoundEmail(maskEmail(email));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
+        apiError?.response?.data?.detail ||
+        apiError?.response?.data?.message ||
         '아이디 찾기에 실패했습니다.';
       alert(message);
     } finally {

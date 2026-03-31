@@ -12,6 +12,15 @@ type SocialState = {
   name: string | null;
 };
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+    };
+  };
+};
+
 export default function SocialSignup() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,10 +73,11 @@ export default function SocialSignup() {
       await checkAuth();
 
       navigate('/home', { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       alert(
-        error?.response?.data?.detail ||
-          error?.response?.data?.message ||
+        apiError?.response?.data?.detail ||
+          apiError?.response?.data?.message ||
           '회원가입에 실패했습니다.',
       );
     } finally {

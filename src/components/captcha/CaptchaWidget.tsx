@@ -1,30 +1,39 @@
 /**
- * CaptchaWidget — 메인 오케스트레이터 컴포넌트
- * CONTEXT.md Section 14:
- *   1. 마운트 시 마우스/클릭/키 입력 수집 시작
- *   2. "로봇이 아닙니다" 체크박스 렌더링
- *   3. 체크박스 클릭 → POST /api/captcha/init
- *   4. challenge 응답 → 3×3 그리드 캡챠 위젯 표시
- *   5. 정답 제출 → POST /api/captcha/verify
- *   6. 통과 → onSuccess(token) 콜백 호출
- *
- * 사용법:
- *   <CaptchaWidget onSuccess={(token) => { ... }} />
+ * CaptchaWidget — 1차 캡챠 메인 오케스트레이터
  */
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type {
-  CaptchaWidgetProps,
-  CaptchaPhase,
   CaptchaChallengeResponse,
+  CaptchaPhase,
+  CaptchaStatusResponse,
+  CaptchaWidgetProps,
 } from './types';
 import { useBehaviorCollector } from './useBehaviorCollector';
-import { captchaInit, captchaChallenge, captchaVerify } from './captchaApi';
+import {
+  captchaChallenge,
+  captchaInit,
+  captchaStatus,
+  captchaVerify,
+} from './captchaApi';
 import CaptchaCheckbox from './CaptchaCheckbox';
 import CaptchaGrid from './CaptchaGrid';
+import CaptchaStatusCard from './CaptchaStatusCard';
+
+function mapStatusToPhase(
+  status: Extract<
+    CaptchaStatusResponse['status'],
+    'WAIT' | 'LOCKED' | 'BANNED'
+  >,
+): Extract<CaptchaPhase, 'wait' | 'locked' | 'banned'> {
+  if (status === 'WAIT') return 'wait';
+  if (status === 'LOCKED') return 'locked';
+  return 'banned';
+}
 
 export default function CaptchaWidget({
   onSuccess,
   onError,
+  triggerType = 'new_ip_login',
 }: CaptchaWidgetProps) {
   const [phase, setPhase] = useState<CaptchaPhase>('idle');
   const [challenge, setChallenge] = useState<CaptchaChallengeResponse | null>(
@@ -33,51 +42,162 @@ export default function CaptchaWidget({
   const [errorMessage, setErrorMessage] = useState<string>();
   const [remainingAttempts, setRemainingAttempts] = useState<number>();
   const [currentSessionId, setCurrentSessionId] = useState<string>();
+  const [securityStatus, setSecurityStatus] =
+    useState<CaptchaStatusResponse | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
-  // 1. 마운트 시 행동 수집 시작
   const { collectPayload } = useBehaviorCollector();
 
-  // 2+3. 체크박스 클릭 → 비간섭 검증
-  const handleCheckboxClick = useCallback(async () => {
-    setPhase('verifying');
+  // ── 이번 수정: challenge UI만 닫고 서버 세션은 유지 ───────────
+  const resetChallengeView = useCallback(() => {
+    setChallenge(null);
+    setErrorMessage(undefined);
+    setRemainingAttempts(undefined);
+  }, []);
+
+  // ── 이번 수정: 새로고침/모달 종료 후 active challenge 복구 ─────
+  const restoreChallenge = useCallback(async (sessionId: string) => {
+    const challengeData = await captchaChallenge(sessionId);
+    setCurrentSessionId(sessionId);
+    setChallenge(challengeData);
+    setErrorMessage(undefined);
+    setRemainingAttempts(undefined);
+    setPhase('challenge');
+  }, []);
+
+  // ── 이번 수정: 서버 상태를 UI와 즉시 맞추는 구간 ─────────────
+  const applySecurityStatus = useCallback(
+    (nextStatus: CaptchaStatusResponse) => {
+      setSecurityStatus(nextStatus);
+
+      if (nextStatus.status === 'NORMAL') {
+        if (!nextStatus.active_session_id) {
+          setPhase((prev) =>
+            prev === 'wait' || prev === 'locked' || prev === 'banned'
+              ? 'idle'
+              : prev,
+          );
+        }
+        return nextStatus;
+      }
+
+      resetChallengeView();
+      setPhase(mapStatusToPhase(nextStatus.status));
+      onError?.(nextStatus.message);
+
+      return nextStatus;
+    },
+    [onError, resetChallengeView],
+  );
+
+  // ── 이번 수정: 마운트/재시도 시 서버 status 먼저 동기화 ───────
+  const syncStatus = useCallback(async () => {
+    const nextStatus = await captchaStatus();
+
+    if (nextStatus.status !== 'NORMAL') {
+      return applySecurityStatus(nextStatus);
+    }
+
+    setSecurityStatus(nextStatus);
+
+    if (nextStatus.active_session_id) {
+      await restoreChallenge(nextStatus.active_session_id);
+    } else {
+      setPhase((prev) =>
+        prev === 'wait' || prev === 'locked' || prev === 'banned'
+          ? 'idle'
+          : prev,
+      );
+    }
+
+    return nextStatus;
+  }, [applySecurityStatus, restoreChallenge]);
+
+  useEffect(() => {
+    void syncStatus();
+  }, [syncStatus]);
+
+  // ── 이번 수정: 체크박스 클릭과 재시도 버튼을 한 흐름으로 통합 ──
+  const startCaptchaFlow = useCallback(async () => {
+    setIsRetrying(true);
     setErrorMessage(undefined);
 
     try {
+      const nextStatus = await syncStatus();
+
+      if (nextStatus.status !== 'NORMAL') {
+        return;
+      }
+
+      if (nextStatus.active_session_id) {
+        return;
+      }
+
+      setPhase('verifying');
+
       const payload = collectPayload();
-      const result = await captchaInit(payload);
+      const result = await captchaInit({
+        ...payload,
+        trigger_type: triggerType,
+      });
 
       switch (result.status) {
         case 'pass':
-          // 비간섭 검증 통과 (70~80%)
+          setSecurityStatus(null);
           setPhase('passed');
-          setTimeout(() => {
+
+          window.setTimeout(() => {
             setPhase('success');
-            if (result.token) onSuccess(result.token);
+            if (result.token) {
+              onSuccess(result.token);
+            }
           }, 500);
           break;
 
         case 'challenge':
-          // 이미지 캡챠 출제 (15~25%)
+          if (!result.session_id) {
+            throw new Error('challenge session_id missing');
+          }
+
           setCurrentSessionId(result.session_id);
-          const challengeData = await captchaChallenge(result.session_id!);
-          setChallenge(challengeData);
-          setPhase('challenge');
+          await restoreChallenge(result.session_id);
           break;
 
-        case 'block':
-          // 즉시 차단 (5~10%)
-          setPhase('blocked');
-          onError?.(result.message ?? '차단되었습니다.');
+        case 'block': {
+          const refreshedStatus = await syncStatus();
+
+          if (refreshedStatus.status === 'NORMAL') {
+            setPhase('wait');
+            setSecurityStatus({
+              status: 'WAIT',
+              message:
+                result.message ??
+                '보안 정책에 따라 이용이 일시 제한되었습니다.',
+              retry_after_seconds: 0,
+            });
+            onError?.(result.message ?? '일시 제한');
+          }
+
           break;
+        }
       }
-    } catch (err) {
+    } catch {
       setPhase('failed');
       setErrorMessage('검증 중 오류가 발생했습니다.');
       onError?.('검증 오류');
+    } finally {
+      setIsRetrying(false);
     }
-  }, [collectPayload, onSuccess, onError]);
+  }, [
+    collectPayload,
+    onError,
+    onSuccess,
+    restoreChallenge,
+    syncStatus,
+    triggerType,
+  ]);
 
-  // 5. 정답 제출 → 검증
+  // ── 정답 제출 ──────────────────────────────────
   const handleGridSubmit = useCallback(
     async (selectedIndices: number[]) => {
       if (!currentSessionId) return;
@@ -89,47 +209,86 @@ export default function CaptchaWidget({
         const result = await captchaVerify(currentSessionId, selectedIndices);
 
         if (result.success) {
-          // 6. 통과 → onSuccess(token)
-          setChallenge(null);
+          resetChallengeView();
+          setSecurityStatus(null);
           setPhase('success');
-          if (result.token) onSuccess(result.token);
-        } else {
-          setRemainingAttempts(result.remaining_attempts);
 
-          if (result.remaining_attempts === 0) {
-            // 5회 실패 → 차단
-            setPhase('blocked');
-            setChallenge(null);
-            onError?.('시도 횟수를 초과했습니다.');
-          } else {
-            // 재시도 가능: 새 문제 출제
-            setErrorMessage(result.message);
-            const newChallenge = await captchaChallenge(currentSessionId);
-            setChallenge(newChallenge);
-            setPhase('challenge');
+          if (result.token) {
+            onSuccess(result.token);
           }
+
+          return;
         }
-      } catch (err) {
+
+        setRemainingAttempts(result.remaining_attempts ?? undefined);
+
+        if ((result.remaining_attempts ?? 0) <= 0) {
+          const nextStatus = await syncStatus();
+
+          if (nextStatus.status === 'NORMAL') {
+            setPhase('locked');
+            setSecurityStatus({
+              status: 'LOCKED',
+              message:
+                result.message ?? '실패 횟수 초과로 잠시 잠금 상태입니다.',
+              retry_after_seconds: 0,
+            });
+            onError?.(result.message ?? '잠금 상태');
+          }
+
+          return;
+        }
+
+        setErrorMessage(
+          result.message ?? '정답이 아닙니다. 다시 시도해주세요.',
+        );
+
+        const nextChallenge = await captchaChallenge(currentSessionId);
+        setChallenge(nextChallenge);
+        setPhase('challenge');
+      } catch {
         setPhase('challenge');
         setErrorMessage('검증 중 오류가 발생했습니다.');
       }
     },
-    [currentSessionId, onSuccess, onError],
+    [currentSessionId, onError, onSuccess, resetChallengeView, syncStatus],
   );
 
-  // 그리드 닫기 (체크박스로 돌아감)
+  // ── 이번 수정: UI를 닫아도 서버 세션은 유지 ─────────────────
   const handleGridCancel = useCallback(() => {
-    setChallenge(null);
+    resetChallengeView();
     setPhase('idle');
-    setErrorMessage(undefined);
-  }, []);
+  }, [resetChallengeView]);
+
+  const visibleStatus:
+    | (CaptchaStatusResponse & { status: 'WAIT' | 'LOCKED' | 'BANNED' })
+    | null =
+    securityStatus && securityStatus.status !== 'NORMAL'
+      ? securityStatus.status === 'WAIT' ||
+        securityStatus.status === 'LOCKED' ||
+        securityStatus.status === 'BANNED'
+        ? {
+            ...securityStatus,
+            status: securityStatus.status,
+          }
+        : null
+      : null;
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* 체크박스는 항상 표시 */}
-      <CaptchaCheckbox phase={phase} onClick={handleCheckboxClick} />
+      <CaptchaCheckbox phase={phase} onClick={startCaptchaFlow} />
 
-      {/* challenge일 때 그리드 표시 */}
+      {visibleStatus && (
+        <CaptchaStatusCard
+          key={`${visibleStatus.status}:${visibleStatus.retry_after_seconds ?? 0}`}
+          status={visibleStatus.status}
+          message={visibleStatus.message}
+          retryAfterSeconds={visibleStatus.retry_after_seconds}
+          onRetry={startCaptchaFlow}
+          isRetrying={isRetrying}
+        />
+      )}
+
       {(phase === 'challenge' || phase === 'submitting') && challenge && (
         <CaptchaGrid
           challenge={challenge}

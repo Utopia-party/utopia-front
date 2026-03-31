@@ -7,6 +7,15 @@ type FindPasswordForm = {
   name: string;
 };
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+    };
+  };
+};
+
 export default function FindPassword() {
   const [form, setForm] = useState<FindPasswordForm>({
     email: '',
@@ -46,10 +55,11 @@ export default function FindPassword() {
           '비밀번호 재설정 안내를 요청했습니다. 이메일을 확인해주세요.',
       );
       setIsRequested(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
+        apiError?.response?.data?.detail ||
+        apiError?.response?.data?.message ||
         '비밀번호 찾기에 실패했습니다.';
       alert(message);
     } finally {

@@ -10,6 +10,15 @@ type LoginForm = {
   rememberMe: boolean;
 };
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+    };
+  };
+};
+
 export default function Login() {
   const navigate = useNavigate();
 
@@ -38,6 +47,12 @@ export default function Login() {
       alert('이메일과 비밀번호를 입력해주세요.');
       return;
     }
+    //--------도상원-------
+    if (!captchaToken) {
+      alert('캡챠 인증을 완료해주세요.');
+      return;
+    }
+    //--------도상원-------
 
     try {
       setIsSubmitting(true);
@@ -58,10 +73,11 @@ export default function Login() {
 
       alert(response.data?.message || '로그인에 성공했습니다.');
       navigate('/home', { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
+        apiError?.response?.data?.detail ||
+        apiError?.response?.data?.message ||
         '로그인에 실패했습니다.';
       alert(message);
     } finally {
@@ -195,6 +211,7 @@ export default function Login() {
         <div className="flex justify-center py-1">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
+            onError={() => setCaptchaToken(null)}
             triggerType="new_ip_login"
           />
         </div>
