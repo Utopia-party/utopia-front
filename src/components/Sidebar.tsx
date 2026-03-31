@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { ChevronDown } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
 
 const mypageMenus = [
   { label: '프로필', to: '/mypage/profile' },
@@ -12,6 +13,8 @@ const mypageMenus = [
 
 export default function Sidebar() {
   const location = useLocation();
+  const { user } = useAuthStore();
+
   const isMypageRoute = useMemo(
     () =>
       location.pathname === '/mypage' ||
@@ -42,7 +45,7 @@ export default function Sidebar() {
         ? 'bg-blue-50 text-primary'
         : 'text-slate-700 hover:bg-slate-100',
     ].join(' ');
-
+  console.log('sidebar user', user);
   return (
     <aside className="flex min-h-screen w-72 flex-col border-r border-slate-200 bg-white px-5 py-8">
       <Link to="/home" className="mb-10 flex items-center gap-3 px-2">
@@ -96,6 +99,23 @@ export default function Sidebar() {
           <span>신고</span>
         </NavLink>
       </nav>
+
+      {user?.role?.toLowerCase() === 'admin' && (
+        <div className="mt-auto pt-6">
+          <div className="mb-2 px-4 text-xs font-bold tracking-wide text-slate-400">
+            관리자
+          </div>
+
+          <nav className="flex flex-col gap-2">
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => getMainLinkClass(isActive)}
+            >
+              관리자 페이지
+            </NavLink>
+          </nav>
+        </div>
+      )}
     </aside>
   );
 }

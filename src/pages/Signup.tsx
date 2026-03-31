@@ -140,7 +140,7 @@ export default function Signup() {
     captchaToken;
 
   return (
-    <div className="mx-auto mt-10 max-w-2xl rounded-xl border border-gray-100 bg-white p-10 shadow-lg">
+    <div className="mx-auto mt-10 mb-12 max-w-2xl rounded-xl border border-gray-100 bg-white p-10 shadow-lg">
       <h1 className="mb-8 text-2xl font-bold text-gray-800">회원가입</h1>
 
       <form className="space-y-6" onSubmit={handleSubmit}>

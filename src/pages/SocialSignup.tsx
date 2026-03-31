@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { api } from '../libs/api';
+import { useAuthStore } from '../stores/authStore';
 
 // 소셜로그인 추가 정보 입력 페이지(닉네임, 전화번호(선택))
 
@@ -14,7 +15,7 @@ type SocialState = {
 export default function SocialSignup() {
   const navigate = useNavigate();
   const location = useLocation();
-
+  const { checkAuth } = useAuthStore();
   const socialData = location.state as SocialState | null;
 
   const [form, setForm] = useState({
@@ -60,7 +61,7 @@ export default function SocialSignup() {
       });
 
       // 로그인 상태 갱신
-      window.dispatchEvent(new Event('auth-changed'));
+      await checkAuth();
 
       navigate('/home', { replace: true });
     } catch (error: any) {

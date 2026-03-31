@@ -16,6 +16,10 @@ import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
 import CaptchaDemo from './pages/CaptchaDemo';
 
+// ✅ 추가된 페이지
+import FindId from './pages/FindId';
+import FindPassword from './pages/FindPassword';
+
 // 보호 라우트
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -63,6 +67,17 @@ const router = createBrowserRouter([
         path: 'signup',
         Component: Signup,
       },
+
+      // ✅ 추가된 라우트
+      {
+        path: 'find-id',
+        Component: FindId,
+      },
+      {
+        path: 'find-password',
+        Component: FindPassword,
+      },
+
       {
         path: 'favor',
         Component: Favor,

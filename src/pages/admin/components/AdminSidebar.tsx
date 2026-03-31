@@ -15,7 +15,7 @@ export default function AdminSidebar() {
   return (
     <aside className="w-[200px] bg-white border-r border-gray-200 py-6 flex flex-col fixed top-0 left-0 bottom-0 z-50">
       <a
-        href="/"
+        href="/home"
         className="flex items-center gap-2.5 px-5 mb-8 text-lg font-bold text-foreground no-underline"
       >
         <span className="w-7 h-7 bg-[#6C9FFF] rounded-full" />

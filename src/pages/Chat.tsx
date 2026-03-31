@@ -40,7 +40,7 @@ export default function Chat() {
   const [connected, setConnected] = useState(false);
   const [nickname, setNickname] = useState('익명');
   const [userId, setUserId] = useState('guest');
-  const [userReady, setUserReady] = useState(false); // ← 유저 정보 로드 완료 여부
+  const [userReady, setUserReady] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -51,8 +51,10 @@ export default function Chat() {
     api
       .get('/me')
       .then(({ data }) => {
-        setNickname(data.nickname);
-        setUserId(data.id);
+        if (data.is_logged_in && data.user) {
+          setNickname(data.user.nickname ?? '익명');
+          setUserId(data.user.user_id ?? 'guest');
+        }
         setUserReady(true);
       })
       .catch(() => {
@@ -76,7 +78,7 @@ export default function Chat() {
 
   // WebSocket 연결 - 유저 정보 로드 후 연결
   useEffect(() => {
-    if (!partyId || !userReady) return; // ← userReady 체크
+    if (!partyId || !userReady) return;
     if (connectedRef.current) return;
     connectedRef.current = true;
 
