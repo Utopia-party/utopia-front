@@ -86,7 +86,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'handcaptcha',
-        Component: HandOcrCaptcha,
+        element: (
+          <ProtectedRoute>
+            <HandOcrCaptcha />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'oauth/callback/:provider',

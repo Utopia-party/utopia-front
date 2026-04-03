@@ -15,23 +15,20 @@ import { format } from 'date-fns';
 // 🌟 분리한 Slide 컴포넌트 Import
 import Slide from './components/Slide';
 
-import example1 from '../../assets/example1.png';
-import example2 from '../../assets/example2.png';
-import example3 from '../../assets/example3.png';
-import example4 from '../../assets/example4.png';
-import example5 from '../../assets/example5.png';
+import v_sign from '../../assets/v_sign.png';
+import fist from '../../assets/fist.png';
+import palm from '../../assets/palm.png';
+import thumbs_up from '../../assets/thumbs_up.png';
 import { startCaptcha, verifyCaptcha } from '../../apis/captcha';
 import axios from 'axios';
+import { getPassToken, setPassToken } from '../../utils/captchaPassToken';
+import { useNavigate } from 'react-router';
 
 type Step = 'intro' | 'challenge' | 'evaluating' | 'success' | 'fail';
 
 interface ChallengeData {
   text: string;
   pose: string;
-}
-
-interface HandOcrCaptchaProps {
-  onSuccess?: (token: string) => void;
 }
 
 interface FailureReason {
@@ -61,14 +58,15 @@ interface VerifyCaptchaResponse {
 const TOTAL_SECONDS = 5 * 60; // 300초
 
 const EXAMPLES = [
-  { id: 1, image: example1, pose: '주먹 ✊' },
-  { id: 2, image: example2, pose: '손바닥 🖐️' },
-  { id: 3, image: example3, pose: '브이 ✌️' },
-  { id: 4, image: example4, pose: '따봉 👍' },
-  { id: 5, image: example5, pose: '손가락 3개 🤚' },
+  { id: 1, image: fist, pose: '주먹 ✊' },
+  { id: 2, image: palm, pose: '손바닥 🖐️' },
+  { id: 3, image: v_sign, pose: '브이 ✌️' },
+  { id: 4, image: thumbs_up, pose: '따봉 👍' },
 ];
 
-export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
+export default function HandOcrCaptcha() {
+  const navigate = useNavigate();
+
   const [step, setStep] = useState<Step>('intro');
   const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
 
@@ -81,7 +79,6 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
-  const [passToken, setPassToken] = useState<string | undefined>(undefined);
 
   const [notice, setNotice] = useState<{
     type: 'error' | 'info' | 'success';
@@ -95,6 +92,14 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const passToken = getPassToken();
+
+    if (passToken) {
+      navigate('/party/create', { replace: true });
+    }
+  }, [navigate]);
 
   const resetForNewChallenge = () => {
     setNotice(null);
@@ -216,23 +221,10 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
         selectedFile,
       )) as VerifyCaptchaResponse;
 
-      if (data.success) {
-        setNotice({
-          type: 'success',
-          title: '인증 완료',
-          message: '사람으로 정상 확인되었습니다.',
-        });
-        console.log(passToken);
+      if (data.success && data.passToken) {
         setPassToken(data.passToken);
-        setFailureDetail(null);
-        setFailMessage('');
-        setStep('success');
-
-        console.log('새로 발급된 토큰:', data.passToken);
-
-        if (onSuccess && data.passToken) {
-          onSuccess(data.passToken);
-        }
+        navigate('/party/create', { replace: true });
+        return;
       } else {
         setNotice({
           type: 'error',
