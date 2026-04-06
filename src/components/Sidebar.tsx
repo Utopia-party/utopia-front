@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 const mypageMenus = [
   { label: '프로필', to: '/mypage/profile' },
   { label: '내 파티', to: '/mypage/party' },
+  { label: '신뢰도 변화', to: '/mypage/my_trust_history' },
   { label: '결제 내역', to: '/mypage/payment' },
   { label: '신고 내역', to: '/mypage/report' },
   { label: '활동 로그', to: '/mypage/history' },

@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router';
 import { api } from '../libs/api';
 import { CaptchaWidget } from '../components/captcha';
 import { useAuthStore } from '../stores/authStore';
+import { FcGoogle } from 'react-icons/fc';
+import { RiKakaoTalkFill } from 'react-icons/ri';
+import { SiNaver } from 'react-icons/si';
 
 type LoginForm = {
   email: string;
@@ -233,7 +236,8 @@ export default function Login() {
             onClick={loginWithGoogle}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-300 py-3 text-sm font-medium transition hover:bg-gray-50"
           >
-            구글 로그인
+            <FcGoogle className="text-lg" />
+            <span>구글 로그인</span>
           </button>
 
           <button
@@ -241,7 +245,8 @@ export default function Login() {
             onClick={loginWithKakao}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#FEE500] bg-[#FEE500] py-3 text-sm font-medium text-[#191919] transition hover:bg-[#FADA0A]"
           >
-            카카오로 계속하기
+            <RiKakaoTalkFill className="text-lg" />
+            <span>카카오로 계속하기</span>
           </button>
 
           <button
@@ -249,7 +254,8 @@ export default function Login() {
             onClick={loginWithNaver}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#03C75A] bg-[#03C75A] py-3 text-sm font-medium text-white transition hover:bg-[#02b350]"
           >
-            네이버로 계속하기
+            <SiNaver className="text-base" />
+            <span>네이버로 계속하기</span>
           </button>
         </div>
       </form>

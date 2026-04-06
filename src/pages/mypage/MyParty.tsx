@@ -116,7 +116,7 @@ export default function MyParty() {
 
                 <button
                   type="button"
-                  className="mt-2 h-16 w-[184px] rounded-full bg-primary text-[16px] font-extrabold text-white transition hover:opacity-90"
+                  className="h-14 rounded-full border border-blue-200 bg-primary text-[16px] font-extrabold text-white text-primary transition hover:opacity-90"
                   onClick={() => navigate('/chat')}
                 >
                   채팅방
