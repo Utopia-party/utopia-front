@@ -38,7 +38,7 @@ export default function MyHistory() {
             마이페이지 - 신뢰도 변화 이력
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            프로필/결제 내역/신고 내역/신뢰도 변화 이력/활동 로그
+            내 결제/신고/신뢰도 변화 이력 활동 로그
           </p>
         </div>
 

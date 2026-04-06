@@ -39,7 +39,7 @@ export default function FindId() {
     e.preventDefault();
 
     if (!form.name.trim() || !form.phone_number.trim()) {
-      alert('이름과 휴대폰 번호를 입력해주세요.');
+      alert('닉네임과 휴대폰 번호를 입력해주세요.');
       return;
     }
 
@@ -64,7 +64,7 @@ export default function FindId() {
       const message =
         error?.response?.data?.detail ||
         error?.response?.data?.message ||
-        '아이디 찾기에 실패했습니다.';
+        '이메일 찾기에 실패했습니다.';
       alert(message);
     } finally {
       setIsSubmitting(false);
@@ -73,21 +73,21 @@ export default function FindId() {
 
   return (
     <div className="mx-auto mt-10 max-w-xl rounded-xl border-2 border-gray-200 bg-white p-10 shadow-lg">
-      <h1 className="mb-2 text-2xl font-bold text-gray-800">아이디 찾기</h1>
+      <h1 className="mb-2 text-2xl font-bold text-gray-800">이메일 찾기</h1>
       <p className="mb-8 text-sm text-gray-500">
-        가입 시 입력한 이름과 휴대폰 번호로 아이디를 확인할 수 있어요.
+        가입 시 입력한 닉네임과 휴대폰 번호로 아이디를 확인할 수 있어요.
       </p>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            이름
+            닉네임
           </label>
           <input
             name="name"
             type="text"
             value={form.name}
-            placeholder="이름 입력"
+            placeholder="닉네임 입력"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}
             required
@@ -114,13 +114,13 @@ export default function FindId() {
           disabled={isSubmitting}
           className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          {isSubmitting ? '확인 중...' : '아이디 찾기'}
+          {isSubmitting ? '확인 중...' : '이메일 찾기'}
         </button>
       </form>
 
       {foundEmail && (
         <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-5">
-          <p className="text-sm text-gray-600">조회된 아이디</p>
+          <p className="text-sm text-gray-600">조회된 이메일</p>
           <p className="mt-2 text-lg font-bold text-gray-800">{foundEmail}</p>
         </div>
       )}

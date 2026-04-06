@@ -35,18 +35,36 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
   return (
     <div className="max-w-xl mx-auto">
       <div className="flex items-center gap-3 bg-white rounded-full px-5 py-3 shadow-lg focus-within:ring-2 focus-within:ring-white/50">
-        <svg className="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <svg
+          className="w-5 h-5 text-slate-400 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
         <input
           className="flex-1 outline-none text-sm text-slate-900 bg-transparent placeholder:text-slate-400"
           placeholder="찾고 있는 서비스나 상품을 검색하세요"
           value={value}
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
         />
         {value && (
-          <button className="text-slate-400 text-sm hover:text-slate-600" onClick={() => { setValue(''); onSearch(''); }}>✕</button>
+          <button
+            className="text-slate-400 text-sm hover:text-slate-600"
+            onClick={() => {
+              setValue('');
+              onSearch('');
+            }}
+          >
+            ✕
+          </button>
         )}
       </div>
     </div>
@@ -54,7 +72,13 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
 }
 
 // ── PartyCard ─────────────────────────────────────────────────────────────
-function PartyCard({ party, onApply }: { party: Party; onApply: (p: Party) => void }) {
+function PartyCard({
+  party,
+  onApply,
+}: {
+  party: Party;
+  onApply: (p: Party) => void;
+}) {
   const navigate = useNavigate();
   const isFull = party.status !== 'recruiting';
 
@@ -62,24 +86,34 @@ function PartyCard({ party, onApply }: { party: Party; onApply: (p: Party) => vo
     <div className="bg-card rounded-2xl p-5 shadow-sm border border-border flex flex-col gap-3 hover:-translate-y-0.5 hover:shadow-md transition-all">
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5 flex-wrap">
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${party.status === 'recruiting' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+          <span
+            className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${party.status === 'recruiting' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}
+          >
             {STATUS_LABEL[party.status ?? ''] || '모집중'}
           </span>
           {party.category_name && (
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${CATEGORY_COLOR[party.category_name] ?? 'bg-slate-100 text-slate-600'}`}>
+            <span
+              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${CATEGORY_COLOR[party.category_name] ?? 'bg-slate-100 text-slate-600'}`}
+            >
               {party.category_name}
             </span>
           )}
         </div>
         {/* ✅ Fix: platform_name → service_name */}
-        <span className="text-xs text-muted-foreground font-medium">{party.service_name}</span>
+        <span className="text-xs text-muted-foreground font-medium">
+          {party.service_name}
+        </span>
       </div>
 
-      <h3 className="text-sm font-bold text-foreground leading-snug h-10 line-clamp-2">{party.title}</h3>
+      <h3 className="text-sm font-bold text-foreground leading-snug h-10 line-clamp-2">
+        {party.title}
+      </h3>
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
         {/* ✅ Fix: max_members 표시 추가 */}
-        <span>👥 {party.member_count}/{party.max_members ?? '?'}명</span>
+        <span>
+          👥 {party.member_count}/{party.max_members ?? '?'}명
+        </span>
         <span>👤 {party.host_nickname || '익명'}</span>
         {/* ✅ Fix: monthly_price 표시 추가 */}
         {party.monthly_price != null && party.monthly_price > 0 && (
@@ -100,7 +134,7 @@ function PartyCard({ party, onApply }: { party: Party; onApply: (p: Party) => vo
           onClick={() => onApply(party)}
           className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${isFull ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground hover:opacity-90'}`}
         >
-          {isFull ? (STATUS_LABEL[party.status ?? ''] || '마감') : '참여 신청'}
+          {isFull ? STATUS_LABEL[party.status ?? ''] || '마감' : '참여 신청'}
         </button>
       </div>
     </div>
@@ -123,31 +157,56 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl p-8 w-full max-w-sm shadow-xl flex flex-col gap-4" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card rounded-2xl p-8 w-full max-w-sm shadow-xl flex flex-col gap-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         {done ? (
           <div className="text-center py-4">
             <div className="text-4xl mb-4">🎉</div>
             <h3 className="font-bold text-foreground mb-1">신청 완료!</h3>
-            <p className="text-sm text-muted-foreground mb-6">파티 참여 신청이 완료되었습니다.</p>
-            <button onClick={onClose} className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-sm font-bold">확인</button>
+            <p className="text-sm text-muted-foreground mb-6">
+              파티 참여 신청이 완료되었습니다.
+            </p>
+            <button
+              onClick={onClose}
+              className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-sm font-bold"
+            >
+              확인
+            </button>
           </div>
         ) : (
           <>
             <h3 className="font-extrabold text-lg">파티 참여 신청</h3>
             <p className="text-sm text-muted-foreground">
               {/* ✅ Fix: platform_name → service_name */}
-              <span className="font-semibold text-foreground">[{party.service_name}] {party.title}</span><br />파티에 참여하시겠습니까?
+              <span className="font-semibold text-foreground">
+                [{party.service_name}] {party.title}
+              </span>
+              <br />
+              파티에 참여하시겠습니까?
             </p>
             <div className="flex flex-col gap-1.5 text-xs text-muted-foreground bg-muted rounded-xl p-3">
-              <span>👥 현재 {party.member_count}/{party.max_members ?? '?'}명 참여 중</span>
+              <span>
+                👥 현재 {party.member_count}/{party.max_members ?? '?'}명 참여
+                중
+              </span>
               <span>👤 호스트: {party.host_nickname}</span>
               {party.monthly_price != null && party.monthly_price > 0 && (
                 <span>💰 월 {party.monthly_price.toLocaleString()}원</span>
               )}
             </div>
             <div className="flex gap-2 mt-2">
-              <button onClick={onClose} className="flex-1 py-3 border border-border rounded-xl text-sm font-semibold hover:bg-muted transition-colors">취소</button>
+              <button
+                onClick={onClose}
+                className="flex-1 py-3 border border-border rounded-xl text-sm font-semibold hover:bg-muted transition-colors"
+              >
+                취소
+              </button>
               <button
                 onClick={() => mutation.mutate()}
                 disabled={mutation.isPending}
@@ -185,7 +244,8 @@ export default function Home() {
     queryKey: partyKeys.list(category, search),
     queryFn: () => fetchParties({ category: category ?? undefined, search }),
   });
-  const parties = (partyData && Array.isArray(partyData.parties)) ? partyData.parties : [];
+  const parties =
+    partyData && Array.isArray(partyData.parties) ? partyData.parties : [];
 
   // 3. 알림
   const { data: noticesRaw } = useQuery<SystemNotification[]>({
@@ -194,13 +254,18 @@ export default function Home() {
     enabled: !noticeDismissed,
   });
   const notices = Array.isArray(noticesRaw) ? noticesRaw : [];
-  const activeNotice = !noticeDismissed && notices.length > 0 ? notices[0] : null;
+  const activeNotice =
+    !noticeDismissed && notices.length > 0 ? notices[0] : null;
 
   return (
     <>
       <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-primary to-blue-500 px-6 py-16 text-center">
-        <h1 className="relative text-3xl font-black text-white mb-2">함께하면 더 저렴하게</h1>
-        <p className="relative text-sm text-white/80 mb-8">구독 서비스부터 공동구매까지, 파티업에서 파티원을 찾아보세요</p>
+        <h1 className="relative text-3xl font-black text-white mb-2">
+          함께하면 더 저렴하게
+        </h1>
+        <p className="relative text-sm text-white/80 mb-8">
+          구독 서비스부터 공동구매까지, 파티업에서 파티원을 찾아보세요
+        </p>
         <SearchBar onSearch={setSearch} />
       </section>
 
@@ -209,10 +274,19 @@ export default function Home() {
           <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5 mt-6">
             <span className="text-lg shrink-0">📢</span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-blue-800">{activeNotice.type}</p>
-              <p className="text-xs text-blue-600 mt-0.5">{activeNotice.content}</p>
+              <p className="text-sm font-bold text-blue-800">
+                {activeNotice.type}
+              </p>
+              <p className="text-xs text-blue-600 mt-0.5">
+                {activeNotice.content}
+              </p>
             </div>
-            <button onClick={() => setNoticeDismissed(true)} className="text-blue-400 hover:text-blue-600">✕</button>
+            <button
+              onClick={() => setNoticeDismissed(true)}
+              className="text-blue-400 hover:text-blue-600"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -220,7 +294,9 @@ export default function Home() {
           {/* 사이드바: 카테고리 필터 */}
           <aside className="w-full md:w-52 shrink-0 flex flex-col gap-4">
             <div className="bg-card border border-border rounded-2xl p-4 sticky top-4">
-              <p className="text-[10px] font-bold text-muted-foreground mb-3 uppercase tracking-widest">CATEGORIES</p>
+              <p className="text-[10px] font-bold text-muted-foreground mb-3 uppercase tracking-widest">
+                CATEGORIES
+              </p>
               <nav className="flex flex-col gap-1">
                 <button
                   onClick={() => setCategory(null)}
@@ -229,7 +305,7 @@ export default function Home() {
                   전체 파티
                 </button>
                 {/* ✅ Fix: cat.category_id가 이제 카테고리 이름 문자열 */}
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <button
                     key={cat.category_id}
                     onClick={() => setCategory(cat.category_id)}
@@ -241,7 +317,8 @@ export default function Home() {
               </nav>
             </div>
             <button
-              onClick={() => navigate('/party/create')}
+              // onClick={() => navigate('/party/create')}
+              onClick={() => navigate('/handcaptcha')} //(임시) 화면연결 중
               className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
             >
               + 파티 생성하기
@@ -252,7 +329,11 @@ export default function Home() {
           <section className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold">
-                {search ? `'${search}' 검색 결과` : category ? `${category} 파티` : '실시간 파티 목록'}
+                {search
+                  ? `'${search}' 검색 결과`
+                  : category
+                    ? `${category} 파티`
+                    : '실시간 파티 목록'}
               </h2>
               <span className="text-xs font-medium px-2 py-1 bg-muted rounded-md">
                 총 {partyData?.total ?? 0}개
@@ -262,19 +343,28 @@ export default function Home() {
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-48 bg-muted animate-pulse rounded-2xl" />
+                  <div
+                    key={i}
+                    className="h-48 bg-muted animate-pulse rounded-2xl"
+                  />
                 ))}
               </div>
             ) : parties.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 bg-muted/30 rounded-3xl border border-dashed">
                 <span className="text-4xl mb-4">🔎</span>
-                <p className="text-muted-foreground text-sm">진행 중인 파티가 없네요. 직접 만들어보세요!</p>
+                <p className="text-muted-foreground text-sm">
+                  진행 중인 파티가 없네요. 직접 만들어보세요!
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {parties.map(party => (
+                {parties.map((party) => (
                   // ✅ Fix: party_id → id
-                  <PartyCard key={party.id} party={party} onApply={setApplyTarget} />
+                  <PartyCard
+                    key={party.id}
+                    party={party}
+                    onApply={setApplyTarget}
+                  />
                 ))}
               </div>
             )}
@@ -283,10 +373,7 @@ export default function Home() {
       </div>
 
       {applyTarget && (
-        <ApplyModal
-          party={applyTarget}
-          onClose={() => setApplyTarget(null)}
-        />
+        <ApplyModal party={applyTarget} onClose={() => setApplyTarget(null)} />
       )}
     </>
   );
