@@ -124,7 +124,11 @@ const router = createBrowserRouter([
     children: [
       {
         path: 'report',
-        Component: Report,
+        element: (
+          <ProtectedRoute>
+            <Report />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'party/:partyId',

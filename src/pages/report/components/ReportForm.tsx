@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import type { ReportTargetType } from '../../../types/report.ts';
+import toast, { Toaster } from 'react-hot-toast';
 
 // 폼 데이터 타입 정의
 interface ReportFormData {
@@ -45,11 +46,22 @@ export default function ReportForm() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log('제출 데이터:', formData);
-    alert('신고가 제출되었습니다.');
+    toast.success('신고가 제출되었습니다.');
+
+    // 요청 추가하기
+
+    setFormData({
+      reportType: '사용자',
+      targetName: '',
+      reason: '욕설/비방',
+      details: '',
+      file: null,
+    });
   };
 
   return (
     <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <Toaster position="top-center" />
       <h2 className="text-xl font-bold mb-6">신고 등록</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
