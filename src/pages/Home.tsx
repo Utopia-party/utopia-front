@@ -11,6 +11,7 @@ import {
   notificationKeys,
   categoryKeys,
 } from '../libs/partyapi';
+import PartyDetailModal from '../components/party/PartyDetail';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -50,7 +51,7 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
         </svg>
         <input
           className="flex-1 outline-none text-sm text-slate-900 bg-transparent placeholder:text-slate-400"
-          placeholder="찾고 있는 서비스나 상품을 검색하세요"
+          placeholder="파티 검색 (예: Netflix, 쿠팡, 헬스...)"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -74,12 +75,13 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
 // ── PartyCard ─────────────────────────────────────────────────────────────
 function PartyCard({
   party,
+  onDetail,
   onApply,
 }: {
   party: Party;
+  onDetail: (p: Party) => void;
   onApply: (p: Party) => void;
 }) {
-  const navigate = useNavigate();
   const isFull = party.status !== 'recruiting';
 
   return (
@@ -99,7 +101,6 @@ function PartyCard({
             </span>
           )}
         </div>
-        {/* ✅ Fix: platform_name → service_name */}
         <span className="text-xs text-muted-foreground font-medium">
           {party.service_name}
         </span>
@@ -110,31 +111,29 @@ function PartyCard({
       </h3>
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        {/* ✅ Fix: max_members 표시 추가 */}
         <span>
           👥 {party.member_count}/{party.max_members ?? '?'}명
         </span>
         <span>👤 {party.host_nickname || '익명'}</span>
-        {/* ✅ Fix: monthly_price 표시 추가 */}
         {party.monthly_price != null && party.monthly_price > 0 && (
           <span>💰 월 {party.monthly_price.toLocaleString()}원</span>
         )}
       </div>
 
       <div className="flex gap-2 mt-1">
-        {/* ✅ Fix: party_id → id */}
+        {/* 상세 보기 버튼 → PartyDetailModal 열기 */}
         <button
-          onClick={() => navigate(`/party/${party.id}/chat`)}
-          className="flex-1 py-2 text-xs font-semibold border border-border rounded-lg hover:bg-accent transition-colors"
+          onClick={() => onDetail(party)}
+          className="flex-1 py-2 text-xs font-semibold border border-border rounded-lg hover:bg-muted transition-colors"
         >
-          채팅방 입장
+          자세히 보기
         </button>
         <button
           disabled={isFull}
           onClick={() => onApply(party)}
           className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${isFull ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground hover:opacity-90'}`}
         >
-          {isFull ? STATUS_LABEL[party.status ?? ''] || '마감' : '참여 신청'}
+          {isFull ? STATUS_LABEL[party.status ?? ''] || '마감' : '참여신청'}
         </button>
       </div>
     </div>
@@ -147,7 +146,6 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
   const [done, setDone] = useState(false);
 
   const mutation = useMutation({
-    // ✅ Fix: party_id → id
     mutationFn: () => applyParty(party.id),
     onSuccess: () => {
       setDone(true);
@@ -183,7 +181,6 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
           <>
             <h3 className="font-extrabold text-lg">파티 참여 신청</h3>
             <p className="text-sm text-muted-foreground">
-              {/* ✅ Fix: platform_name → service_name */}
               <span className="font-semibold text-foreground">
                 [{party.service_name}] {party.title}
               </span>
@@ -225,10 +222,10 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
 // ── Home ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate();
-  // ✅ Fix: categoryId(UUID) → category(문자열) 로 상태명 변경
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
+  const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
 
   // 1. 카테고리 목록
@@ -239,7 +236,6 @@ export default function Home() {
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
 
   // 2. 파티 목록
-  // ✅ Fix: category_id → category 파라미터로 변경
   const { data: partyData, isLoading } = useQuery({
     queryKey: partyKeys.list(category, search),
     queryFn: () => fetchParties({ category: category ?? undefined, search }),
@@ -304,7 +300,6 @@ export default function Home() {
                 >
                   전체 파티
                 </button>
-                {/* ✅ Fix: cat.category_id가 이제 카테고리 이름 문자열 */}
                 {categories.map((cat) => (
                   <button
                     key={cat.category_id}
@@ -316,9 +311,9 @@ export default function Home() {
                 ))}
               </nav>
             </div>
+            {/* 파티 생성 버튼 → 핸드캡챠 후 파티 생성 페이지로 이동 */}
             <button
-              // onClick={() => navigate('/party/create')}
-              onClick={() => navigate('/handcaptcha')} //(임시) 화면연결 중
+              onClick={() => navigate('/handcaptcha')}
               className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
             >
               + 파티 생성하기
@@ -359,10 +354,10 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {parties.map((party) => (
-                  // ✅ Fix: party_id → id
                   <PartyCard
                     key={party.id}
                     party={party}
+                    onDetail={setDetailTarget}
                     onApply={setApplyTarget}
                   />
                 ))}
@@ -372,6 +367,19 @@ export default function Home() {
         </div>
       </div>
 
+      {/* 파티 상세 모달 */}
+      {detailTarget && (
+        <PartyDetailModal
+          party={detailTarget}
+          onClose={() => setDetailTarget(null)}
+          onApply={(p) => {
+            setDetailTarget(null);
+            setApplyTarget(p);
+          }}
+        />
+      )}
+
+      {/* 참여 신청 모달 */}
       {applyTarget && (
         <ApplyModal party={applyTarget} onClose={() => setApplyTarget(null)} />
       )}
