@@ -19,16 +19,14 @@ import example4 from '../../assets/example4.png';
 import example5 from '../../assets/example5.png';
 import { startCaptcha, verifyCaptcha } from '../../apis/captcha';
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
+import { captchaTokenStorage } from '../../apis/captchaToken';
 
 type Step = 'intro' | 'challenge' | 'evaluating' | 'success' | 'fail';
 
 interface ChallengeData {
   text: string;
   pose: string;
-}
-
-interface HandOcrCaptchaProps {
-  onSuccess?: (token: string) => void;
 }
 
 const TOTAL_SECONDS = 5 * 60;
@@ -41,7 +39,7 @@ const EXAMPLES = [
   { id: 5, image: example5, pose: '손가락 3개 🤚' },
 ];
 
-export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
+export default function HandOcrCaptcha() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('intro');
   const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
@@ -50,7 +48,6 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
-  const [passToken, setPassToken] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchChallenge = async () => {
@@ -98,18 +95,21 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
   const handleSubmit = async () => {
     if (!selectedFile || !sessionId) return;
     setStep('evaluating');
+
     try {
       const data = await verifyCaptcha(sessionId, selectedFile);
+
       if (data.success) {
-        console.log('기존 토큰:', passToken);
-        setPassToken(data.passToken);
-        setStep('success');
-        console.log('새로 발급된 토큰:', data.passToken);
-        if (onSuccess && data.passToken) {
-          onSuccess(data.passToken);
+        if (!data.passToken) {
+          toast.error('인증 토큰이 없어 진행할 수 없습니다.');
+          setStep('fail');
+          return;
         }
+
+        captchaTokenStorage.set(data.passToken);
+        navigate('/party/create');
       } else {
-        alert(data.message || '인증에 실패했습니다.');
+        toast.error(data.message || '인증에 실패했습니다.');
         setStep('fail');
       }
     } catch (error) {
@@ -146,6 +146,7 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
+      <Toaster position="top-center" />
       <Container className="max-w-xl w-full">
         <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="bg-linear-to-r from-purple-600 to-blue-500 p-6 text-center">
