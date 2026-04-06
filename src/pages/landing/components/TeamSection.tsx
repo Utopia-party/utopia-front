@@ -1,8 +1,10 @@
-import { FiGithub, FiLinkedin, FiMail } from 'react-icons/fi';
+import { FiGithub, FiMail } from 'react-icons/fi';
 import Avatar from '../../../components/ui/Avatar';
 import image from '../../../assets/logo.png';
 import { useRef } from 'react';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
+import { Link } from 'react-router';
+import toast from 'react-hot-toast';
 
 interface TeamMember {
   name: string;
@@ -10,9 +12,9 @@ interface TeamMember {
   description: string;
   image: string;
   skills: string[];
-  github?: string;
+  github: string;
   linkedin?: string;
-  email?: string;
+  email: string;
 }
 
 export default function TeamSection() {
@@ -26,6 +28,8 @@ export default function TeamSection() {
       description: 'AI 보안 시스템 설계 및 GAN 기반 CAPTCHA 개발 담당',
       image,
       skills: ['Python', 'TensorFlow', 'PyTorch'],
+      github: 'https://github.com/seongbokim',
+      email: 'rkdtlgn0@naver.com',
     },
     {
       name: '박세영',
@@ -33,6 +37,8 @@ export default function TeamSection() {
       description: 'FastAPI 백엔드 아키텍처 설계 및 위험 점수 시스템 구현',
       image,
       skills: ['FastAPI', 'PostgreSQL', 'Redis'],
+      github: 'https://github.com/zerose219',
+      email: 'seyoung.park219@gmail.com',
     },
     {
       name: '도상원',
@@ -40,6 +46,8 @@ export default function TeamSection() {
       description: 'React 기반 UI/UX 구현 및 실시간 채팅 시스템 개발',
       image,
       skills: ['React', 'TypeScript', 'Tailwind'],
+      github: 'https://github.com/aksdkdn',
+      email: 'do123195@gmail.com',
     },
     {
       name: '김영훈',
@@ -47,15 +55,34 @@ export default function TeamSection() {
       description: 'OCR, YOLO, MediaPipe 모델 학습 및 최적화 담당',
       image,
       skills: ['YOLO', 'OpenCV', 'MediaPipe'],
+      github: 'https://github.com/zeroh00n',
+      email: 'ahxh3103@gmail.com',
     },
     {
       name: '정재웅',
-      role: 'Security Specialist',
-      description: '보안 아키텍처 설계 및 침투 테스트, 취약점 분석',
+      role: 'Frontend & Backend',
+      description: 'MediaPipe + OCR을 이용한 Captcha 서비스 구현',
       image,
-      skills: ['Security', 'Penetration Test', 'JWT'],
+      skills: ['React', 'FastAPI', 'MediaPipe', 'PaddleOCR'],
+      github: 'https://github.com/dixk3458',
+      email: 'dixk3458@naver.com',
     },
   ];
+
+  const handleCopyEmail = async (email: string) => {
+    if (!email) {
+      toast.error('등록된 이메일이 없습니다.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(email);
+      toast.success('이메일이 복사되었습니다.');
+    } catch (error) {
+      console.error(error);
+      toast.error('이메일 복사에 실패했습니다.');
+    }
+  };
 
   return (
     <section ref={sectionRef} id="team" className="py-20 md:py-32 bg-white">
@@ -102,13 +129,15 @@ export default function TeamSection() {
             </div>
 
             <div className="flex items-center gap-4 pt-6 border-t border-gray-50 w-full justify-center">
-              <button className={buttonClassName}>
+              <Link to={member.github} target="_blank" className={ln}>
                 <FiGithub size={18} />
-              </button>
-              <button className={buttonClassName}>
-                <FiLinkedin size={18} />
-              </button>
-              <button className={buttonClassName}>
+              </Link>
+              <button
+                type="button"
+                className={ln}
+                onClick={() => handleCopyEmail(member.email)}
+                title="이메일 복사"
+              >
                 <FiMail size={18} />
               </button>
             </div>
@@ -117,13 +146,16 @@ export default function TeamSection() {
 
         <div className="hover-lift bg-linear-to-br from-primary to-secondary rounded-2xl p-8 flex flex-col items-center justify-center text-center text-white shadow-xl shadow-blue-200 will-change-transform">
           <div className="text-5xl mb-6">🏆</div>
-          <h3 className="text-xl font-bold mb-2">경진대회 프로젝트</h3>
+          <h3 className="text-xl font-bold mb-2">
+            카카오 AIaaS 3기 팀 프로젝트
+          </h3>
           <p className="text-sm opacity-90 mb-6">
-            이 프로젝트는 경진대회 출품을 위해 제작되었습니다.
+            이 프로젝트는 ImageNet 활용한 이미지 분류 AI CAPTCHA 서비스 구축을
+            주제로 제작되었습니다.
           </p>
           <div className="space-y-2 text-sm font-medium">
             <p className="flex items-center justify-center gap-2">
-              📅 개발 기간: 2026.01 - 2026.03
+              📅 개발 기간: 2026.03 - 2026.05
             </p>
             <p className="flex items-center justify-center gap-2">
               👥 팀 구성: 5명
@@ -135,5 +167,4 @@ export default function TeamSection() {
   );
 }
 
-const buttonClassName =
-  'p-2 text-gray-400 hover:text-primary transition-colors';
+const ln = 'p-2 text-gray-400 hover:text-primary transition-colors';

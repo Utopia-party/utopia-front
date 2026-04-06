@@ -56,10 +56,9 @@ export default function HeroSection() {
               심사위원용 데모 체험
               <FiArrowRight className="transition-transform duration-300 group-hover:translate-x-1" />
             </button>
-
-            <button className="hero-arch-btn inline-flex items-center px-6 py-3.5 bg-white border border-gray-200 text-gray-700 text-base font-semibold rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300">
+            {/* <button className="hero-arch-btn inline-flex items-center px-6 py-3.5 bg-white border border-gray-200 text-gray-700 text-base font-semibold rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300">
               기술 아키텍처
-            </button>
+            </button> */}
           </div>
 
           <div className="mt-20 pt-10 mx-auto w-full">
