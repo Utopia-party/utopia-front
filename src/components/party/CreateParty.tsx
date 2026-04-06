@@ -16,7 +16,13 @@ export interface CreatePartyFormData {
 
 const MAX_MEMBER_OPTIONS = ['2명', '3명', '4명', '5명', '6명'];
 const PARTY_TYPE_OPTIONS = ['구독', '공동구매', '렌탈', '기타'];
-const PLATFORM_TYPE_OPTIONS = ['OTT', '멤버십/음악', '교육/도서', '생산성', '기타'];
+const PLATFORM_TYPE_OPTIONS = [
+  'OTT',
+  '멤버십/음악',
+  '교육/도서',
+  '생산성',
+  '기타',
+];
 const PRICE_DISPLAY_OPTIONS = ['1인당 표시', '총액 표시', '숨김'];
 
 export default function CreateParty({ onCreate }: CreatePartyProps) {
@@ -40,9 +46,7 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-    >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
         className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -66,7 +70,9 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
               type="text"
               placeholder="예: Netflix 프리미엄 4인"
               value={form.title}
-              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, title: e.target.value }))
+              }
               className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-300"
             />
           </div>
@@ -123,7 +129,9 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
           <p className="text-xs text-slate-400 text-center">
             생성 후: 채팅방 자동 생성 + 멤버/정산/영수증/신고 기능 제공
           </p>
-          <p className="text-xs text-slate-300 text-center">ESC 키로 닫기 불가(데모 UI)</p>
+          <p className="text-xs text-slate-300 text-center">
+            ESC 키로 닫기 불가(데모 UI)
+          </p>
         </div>
       </div>
     </div>

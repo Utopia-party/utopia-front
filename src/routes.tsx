@@ -8,6 +8,8 @@ import AppShell from './AppShell';
 import Home from './pages/Home';
 import Landing from './pages/landing/Landing';
 import Login from './pages/Login';
+import FindId from './pages/FindId';
+import FindPassword from './pages/FindPassword';
 import Signup from './pages/Signup';
 import SocialCallback from './pages/SocialCallback';
 import SocialSignup from './pages/SocialSignup';
@@ -18,10 +20,6 @@ import CreateParty from './components/party/CreateParty';
 //도상원
 // CaptchaDemo import 제거
 //도상원
-
-// ✅ 추가된 페이지
-import FindId from './pages/FindId';
-import FindPassword from './pages/FindPassword';
 
 // 보호 라우트
 import ProtectedRoute from './components/ProtectedRoute';
@@ -36,6 +34,7 @@ import MyParty from './pages/mypage/MyParty';
 import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
+import MyTrustHistory from './pages/mypage/MyTrustHistory';
 
 // 관리자 페이지
 import AdminShell from './pages/admin/AdminShell';
@@ -164,6 +163,14 @@ const router = createBrowserRouter([
             element: (
               <ProtectedRoute>
                 <MyHistory />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'my_trust_history',
+            element: (
+              <ProtectedRoute>
+                <MyTrustHistory />
               </ProtectedRoute>
             ),
           },

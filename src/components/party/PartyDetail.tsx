@@ -15,7 +15,11 @@ const CATEGORY_COLOR: Record<string, string> = {
   기타: 'bg-slate-100 text-slate-600',
 };
 
-export default function PartyDetailModal({ party, onClose, onApply }: PartyDetailModalProps) {
+export default function PartyDetailModal({
+  party,
+  onClose,
+  onApply,
+}: PartyDetailModalProps) {
   const isFull = party.status !== 'recruiting';
   const perPerson =
     party.monthly_price && party.max_members
@@ -23,10 +27,11 @@ export default function PartyDetailModal({ party, onClose, onApply }: PartyDetai
       : null;
 
   // 상세 설명의 \n 처리
-  const descriptionLines = (party as Party & { description?: string }).description
-    ?.replace(/\\n/g, '\n')
-    .split('\n')
-    .filter(Boolean) ?? [];
+  const descriptionLines =
+    (party as Party & { description?: string }).description
+      ?.replace(/\\n/g, '\n')
+      .split('\n')
+      .filter(Boolean) ?? [];
 
   return (
     <div
@@ -42,7 +47,8 @@ export default function PartyDetailModal({ party, onClose, onApply }: PartyDetai
           {party.category_name && (
             <span
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                CATEGORY_COLOR[party.category_name] ?? 'bg-slate-100 text-slate-600'
+                CATEGORY_COLOR[party.category_name] ??
+                'bg-slate-100 text-slate-600'
               }`}
             >
               {party.category_name}
@@ -70,7 +76,8 @@ export default function PartyDetailModal({ party, onClose, onApply }: PartyDetai
             </h2>
             <p className="text-sm text-slate-500 mb-5">
               {party.service_name && `${party.service_name} `}
-              {party.max_members && `${party.max_members}인 파티로 월 구독료 부담을 줄여요.`}
+              {party.max_members &&
+                `${party.max_members}인 파티로 월 구독료 부담을 줄여요.`}
             </p>
 
             {/* 정보 카드 그리드 */}
@@ -153,7 +160,9 @@ export default function PartyDetailModal({ party, onClose, onApply }: PartyDetai
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">1인 부담</span>
                   <span className="font-bold text-primary text-base">
-                    {perPerson != null ? `${perPerson.toLocaleString()}원` : '-'}
+                    {perPerson != null
+                      ? `${perPerson.toLocaleString()}원`
+                      : '-'}
                   </span>
                 </div>
               </div>
@@ -194,7 +203,9 @@ export default function PartyDetailModal({ party, onClose, onApply }: PartyDetai
                 </li>
                 <li className="flex gap-1.5">
                   <span className="shrink-0 mt-0.5">•</span>
-                  <span>정산/환불 규정은 파티 상세 설명과 공지에 따릅니다.</span>
+                  <span>
+                    정산/환불 규정은 파티 상세 설명과 공지에 따릅니다.
+                  </span>
                 </li>
                 <li className="flex gap-1.5">
                   <span className="shrink-0 mt-0.5">•</span>

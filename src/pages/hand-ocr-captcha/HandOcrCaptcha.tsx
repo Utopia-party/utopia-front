@@ -62,7 +62,9 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
     } catch (error) {
       console.error('문제 출제 실패:', error);
       if (axios.isAxiosError(error) && error.response) {
-        alert(error.response.data?.message || '문제를 불러오는 데 실패했습니다.');
+        alert(
+          error.response.data?.message || '문제를 불러오는 데 실패했습니다.',
+        );
       } else {
         alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
       }
@@ -113,7 +115,9 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
     } catch (error) {
       console.error('검증 요청 실패:', error);
       if (axios.isAxiosError(error) && error.response) {
-        alert(error.response.data?.message || '서버 오류로 검증에 실패했습니다.');
+        alert(
+          error.response.data?.message || '서버 오류로 검증에 실패했습니다.',
+        );
       }
       setStep('fail');
     }
@@ -148,8 +152,12 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/20 text-white mb-4 backdrop-blur-sm">
               <FiShield size={24} />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-1">AI 행동 기반 인증</h2>
-            <p className="text-blue-100 text-sm">안전한 서비스 이용을 위해 봇이 아님을 증명해주세요.</p>
+            <h2 className="text-2xl font-bold text-white mb-1">
+              AI 행동 기반 인증
+            </h2>
+            <p className="text-blue-100 text-sm">
+              안전한 서비스 이용을 위해 봇이 아님을 증명해주세요.
+            </p>
           </div>
 
           <div className="p-8">
@@ -161,12 +169,19 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                     화면에 제시되는 5자리 문자를 종이에 적고, <br />
                     요구하는 손 포즈와 함께 사진을 찍어주세요.
                   </p>
-                  <Slide examples={EXAMPLES} onSlideChange={setCurrentExampleIdx} />
+                  <Slide
+                    examples={EXAMPLES}
+                    onSlideChange={setCurrentExampleIdx}
+                  />
                   <p className="text-xs text-gray-700 bg-blue-50/50 py-2 px-3 rounded-lg font-medium">
-                    💡 예시: [ A1B2C ] 글씨와 [ {EXAMPLES[currentExampleIdx].pose} ] 포즈가 담긴 사진
+                    💡 예시: [ A1B2C ] 글씨와 [{' '}
+                    {EXAMPLES[currentExampleIdx].pose} ] 포즈가 담긴 사진
                   </p>
                 </div>
-                <button onClick={handleStart} className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl">
+                <button
+                  onClick={handleStart}
+                  className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl"
+                >
                   문제 풀기 시작
                 </button>
               </div>
@@ -175,7 +190,9 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
             {step === 'challenge' && challenge && (
               <div className="flex flex-col items-center animate-fadeIn">
                 <div className="flex justify-between items-center w-full mb-6">
-                  <div className={`flex items-center gap-2 font-bold text-lg ${timeLeft <= 60 ? 'text-red-500 animate-pulse' : 'text-gray-700'}`}>
+                  <div
+                    className={`flex items-center gap-2 font-bold text-lg ${timeLeft <= 60 ? 'text-red-500 animate-pulse' : 'text-gray-700'}`}
+                  >
                     <FiClock />
                     <span>{formatTime(timeLeft)}</span>
                   </div>
@@ -189,7 +206,9 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                 </div>
 
                 <div className="w-full bg-linear-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-6 text-center mb-6">
-                  <p className="text-sm text-gray-500 font-medium mb-2">다음 미션을 수행해주세요</p>
+                  <p className="text-sm text-gray-500 font-medium mb-2">
+                    다음 미션을 수행해주세요
+                  </p>
                   <div className="flex flex-col gap-3">
                     <div className="bg-white px-4 py-3 rounded-xl shadow-sm font-mono text-3xl font-extrabold text-gray-800 tracking-widest border border-gray-100">
                       {challenge.text}
@@ -202,9 +221,16 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
 
                 {previewImage ? (
                   <div className="w-full relative mb-6 rounded-2xl overflow-hidden border-2 border-purple-500">
-                    <img src={previewImage} alt="미리보기" className="w-full h-64 object-cover" />
+                    <img
+                      src={previewImage}
+                      alt="미리보기"
+                      className="w-full h-64 object-cover"
+                    />
                     <button
-                      onClick={() => { setPreviewImage(null); setSelectedFile(null); }}
+                      onClick={() => {
+                        setPreviewImage(null);
+                        setSelectedFile(null);
+                      }}
                       className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1.5 rounded-full text-xs hover:bg-black/80 backdrop-blur-sm"
                     >
                       다시 선택
@@ -216,8 +242,16 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                     className="w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:border-purple-500 hover:bg-purple-50 transition-colors cursor-pointer mb-6"
                   >
                     <FiCamera size={40} className="mb-3 text-gray-400" />
-                    <p className="font-medium text-gray-600">클릭하여 사진 촬영 또는 업로드</p>
-                    <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                    <p className="font-medium text-gray-600">
+                      클릭하여 사진 촬영 또는 업로드
+                    </p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                    />
                   </div>
                 )}
 
@@ -234,8 +268,12 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
             {step === 'evaluating' && (
               <div className="flex flex-col items-center justify-center py-12 animate-fadeIn">
                 <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6"></div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">AI 모델 분석 중...</h3>
-                <p className="text-gray-500 text-sm">제출하신 사진을 판독하고 있습니다.</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  AI 모델 분석 중...
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  제출하신 사진을 판독하고 있습니다.
+                </p>
               </div>
             )}
 
@@ -244,7 +282,9 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                 <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6">
                   <FiCheckCircle size={40} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">인증 완료!</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  인증 완료!
+                </h3>
                 <p className="text-gray-600 mb-8">사람으로 확인되었습니다.</p>
                 <button
                   onClick={() => navigate('/party/create')}
@@ -260,11 +300,18 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                 <div className="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-6">
                   <FiAlertCircle size={40} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">인증 실패</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  인증 실패
+                </h3>
                 <p className="text-gray-600 mb-8">
-                  {timeLeft <= 0 ? '제한 시간(5분)이 초과되었습니다.' : '제시된 미션과 일치하지 않거나, 판독할 수 없습니다.'}
+                  {timeLeft <= 0
+                    ? '제한 시간(5분)이 초과되었습니다.'
+                    : '제시된 미션과 일치하지 않거나, 판독할 수 없습니다.'}
                 </p>
-                <button onClick={handleStart} className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors">
+                <button
+                  onClick={handleStart}
+                  className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors"
+                >
                   다시 시도하기
                 </button>
               </div>
