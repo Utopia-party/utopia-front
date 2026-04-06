@@ -1,4 +1,4 @@
-import { FiGithub, FiTwitter, FiLinkedin, FiMail } from 'react-icons/fi';
+import { FiGithub, FiFigma } from 'react-icons/fi';
 import Logo from '../ui/Logo'; // 기존에 만드신 Logo 컴포넌트
 import Container from './Container';
 
@@ -9,20 +9,22 @@ export default function Footer() {
     프로젝트: [
       { name: '핵심 기능', href: '#features' },
       { name: '보안 시스템', href: '#security' },
-      { name: '기술 아키텍처', href: '#' },
-      { name: '데모 체험', href: '#' },
     ],
     개발팀: [
       { name: '팀 소개', href: '#team' },
-      { name: 'GitHub', href: 'https://github.com' },
-      { name: '기술 문서', href: '#' },
-      { name: '문의하기', href: '#' },
+      { name: 'GitHub', href: 'https://github.com/Utopia-party' },
+      {
+        name: '기술 문서',
+        href: 'https://www.notion.so/sniperfactory1/8-2f6d8844b387816bb813db23e8e385e8?source=copy_link',
+      },
     ],
     리소스: [
       { name: '프로젝트 발표자료', href: '#' },
       { name: '시연 영상', href: '#' },
-      { name: 'API 문서', href: '#' },
-      { name: '설치 가이드', href: '#' },
+      {
+        name: 'API 문서',
+        href: 'https://www.notion.so/sniperfactory1/API-33ad8844b38780bda9d5cded00ad5c55?source=copy_link',
+      },
     ],
   };
 
@@ -45,13 +47,19 @@ export default function Footer() {
             </p>
             {/* 소셜 아이콘 */}
             <div className="flex gap-4">
-              {[FiGithub, FiTwitter, FiLinkedin, FiMail].map((Icon, index) => (
+              {[
+                { icon: FiGithub, href: 'https://github.com/Utopia-party' },
+                {
+                  icon: FiFigma,
+                  href: 'https://www.figma.com/design/bTs94tvvNYwhQy1qkmPp7H/T1_%ED%8C%8C%ED%8B%B0%EC%97%85_%ED%99%94%EB%A9%B4%EC%84%A4%EA%B3%84?node-id=0-1',
+                },
+              ].map((item, index) => (
                 <a
                   key={index}
                   href="#"
                   className="w-10 h-10 rounded-full bg-gray-800/50 flex items-center justify-center hover:bg-gray-700 hover:text-white transition-all border border-gray-700/50"
                 >
-                  <Icon size={18} />
+                  <item.icon size={18} />
                 </a>
               ))}
             </div>
@@ -67,6 +75,7 @@ export default function Footer() {
                     <a
                       href={link.href}
                       className="hover:text-purple-400 transition-colors"
+                      target="_blank"
                     >
                       {link.name}
                     </a>
@@ -79,10 +88,10 @@ export default function Footer() {
 
         {/* 하단 저작권 영역 */}
         <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium">
-          <p>© {currentYear} Party-Up. 경진대회 제출용 프로젝트입니다.</p>
+          <p>© {currentYear} Party-Up</p>
           <p className="flex items-center gap-1">
             Made with <span className="text-red-500 text-base">❤️</span> by
-            Party-Up Team
+            Party-Up Team Utopia
           </p>
         </div>
       </Container>
