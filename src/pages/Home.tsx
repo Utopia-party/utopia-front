@@ -12,6 +12,7 @@ import {
   categoryKeys,
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
+import QuickMatchForm from '../components/party/QuickMatchForm';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -227,6 +228,7 @@ export default function Home() {
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const [showQuickMatch, setShowQuickMatch] = useState(false);
 
   // 1. 카테고리 목록
   const { data: categoriesRaw } = useQuery({
@@ -252,6 +254,24 @@ export default function Home() {
   const notices = Array.isArray(noticesRaw) ? noticesRaw : [];
   const activeNotice =
     !noticeDismissed && notices.length > 0 ? notices[0] : null;
+
+  const handleQuickMatchSubmit = ({
+    category,
+    serviceId,
+    period,
+  }: {
+    category: string;
+    serviceId: string;
+    period: string;
+  }) => {
+    setShowQuickMatch(false);
+
+    console.log('빠른 매칭 요청:', { category, serviceId, period });
+
+    alert(
+      `빠른 매칭 요청\n카테고리: ${category}\n서비스 ID: ${serviceId}\n기간: ${period || '선택 안 함'}`,
+    );
+  };
 
   return (
     <>
@@ -318,6 +338,12 @@ export default function Home() {
             >
               + 파티 생성하기
             </button>
+            <button
+              onClick={() => setShowQuickMatch(true)}
+              className="w-full py-3.5 bg-indigo-500 text-white rounded-2xl text-sm font-bold shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              ⚡ 빠른 매칭
+            </button>
           </aside>
 
           {/* 파티 목록 */}
@@ -383,6 +409,12 @@ export default function Home() {
       {applyTarget && (
         <ApplyModal party={applyTarget} onClose={() => setApplyTarget(null)} />
       )}
+
+      <QuickMatchForm
+        open={showQuickMatch}
+        onClose={() => setShowQuickMatch(false)}
+        onSubmit={handleQuickMatchSubmit}
+      />
     </>
   );
 }

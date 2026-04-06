@@ -15,7 +15,7 @@ export default function Signup() {
     name: '',
     nickname: '',
     birth_date: '',
-    phone_number: '',
+    phone: '',
   });
 
   const [isEmailChecked, setisEmailChecked] = useState(false);
@@ -130,7 +130,7 @@ export default function Signup() {
           email: form.email,
           nickname: form.nickname,
           password: form.password,
-          phone: form.phone_number || undefined,
+          phone: form.phone || undefined,
         },
         {
           headers: { 'X-Captcha-Token': captchaToken },
@@ -155,7 +155,8 @@ export default function Signup() {
     form.name &&
     form.nickname &&
     isNicknameChecked &&
-    captchaToken;
+    captchaToken &&
+    form.phone;
 
   return (
     <div className="mx-auto mt-10 mb-12 max-w-2xl rounded-xl border border-gray-100 bg-white p-10 shadow-lg">
@@ -291,7 +292,7 @@ export default function Signup() {
             휴대폰 번호
           </label>
           <input
-            name="phone_number"
+            name="phone"
             type="tel"
             placeholder="010-0000-0000"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"

@@ -10,6 +10,7 @@ import Landing from './pages/landing/Landing';
 import Login from './pages/Login';
 import FindId from './pages/FindId';
 import FindPassword from './pages/FindPassword';
+import ResetPassword from './pages/ResetPassword';
 import Signup from './pages/Signup';
 import SocialCallback from './pages/SocialCallback';
 import SocialSignup from './pages/SocialSignup';
@@ -69,8 +70,6 @@ const router = createBrowserRouter([
         path: 'signup',
         Component: Signup,
       },
-
-      // ✅ 추가된 라우트
       {
         path: 'find-id',
         Component: FindId,
@@ -78,6 +77,10 @@ const router = createBrowserRouter([
       {
         path: 'find-password',
         Component: FindPassword,
+      },
+      {
+        path: 'reset-password',
+        Component: ResetPassword,
       },
 
       {

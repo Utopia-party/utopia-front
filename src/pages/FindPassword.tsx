@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { api } from '../libs/api';
@@ -9,6 +10,7 @@ type FindPasswordForm = {
 };
 
 export default function FindPassword() {
+  const navigate = useNavigate();
   const [form, setForm] = useState<FindPasswordForm>({
     email: '',
     name: '',
@@ -31,10 +33,10 @@ export default function FindPassword() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!form.email.trim() || !form.name.trim()) {
-      alert('이메일을 입력해주세요.');
-      return;
-    }
+    // if (!form.email.trim() || !form.name.trim()) {
+    //   alert('이메일을 입력해주세요.');
+    //   return;
+    // }
 
     try {
       setIsSubmitting(true);
@@ -152,9 +154,11 @@ export default function FindPassword() {
         <button
           type="submit"
           disabled={isSubmitting}
+          onClick={() => navigate('/reset-password')}
           className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          {isSubmitting ? '요청 중...' : '비밀번호 재설정 요청'}
+          {/* {isSubmitting ? '요청 중...' : '비밀번호 재설정 요청'} */}
+          비밀번호 재설정 요청
         </button>
       </form>
 
