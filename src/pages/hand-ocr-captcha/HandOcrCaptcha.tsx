@@ -93,7 +93,7 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
     }
   };
 
-  const handleSubmit = async () => {
+  const _handleSubmit = async () => {
     if (!selectedFile || !sessionId) return;
     setStep('evaluating');
     try {
