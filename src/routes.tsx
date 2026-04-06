@@ -14,6 +14,7 @@ import SocialSignup from './pages/SocialSignup';
 import Favor from './pages/Favor';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
+import CreateParty from './components/party/CreateParty';
 //도상원
 // CaptchaDemo import 제거
 //도상원
@@ -69,6 +70,8 @@ const router = createBrowserRouter([
         path: 'signup',
         Component: Signup,
       },
+
+      // ✅ 추가된 라우트
       {
         path: 'find-id',
         Component: FindId,
@@ -84,7 +87,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'handcaptcha',
-        Component: HandOcrCaptcha,
+        element: (
+          <ProtectedRoute>
+            <HandOcrCaptcha />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'oauth/callback/:provider',
@@ -95,9 +102,16 @@ const router = createBrowserRouter([
         Component: SocialSignup,
       },
       {
-        // path: 'party/:partyId/chat',
-        path: 'chat', // (임시) 화면연결용
+        path: 'party/:partyId/chat',
         Component: Chat,
+      },
+      {
+        path: 'party/create',
+        element: (
+          <ProtectedRoute>
+            <CreateParty />
+          </ProtectedRoute>
+        ),
       },
       //도상원
       // captcha-demo 라우트 제거

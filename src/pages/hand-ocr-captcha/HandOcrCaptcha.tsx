@@ -297,7 +297,7 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                 <button
                   // onClick={handleSubmit}
                   // disabled={!previewImage}
-                  onClick={() => navigate('/chat')} // (임시) 화면연결용
+                  onClick={() => navigate('/party/create')} // (임시) 화면연결용
                   // className={`w-full py-4 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2
                   //   ${
                   //     previewImage
