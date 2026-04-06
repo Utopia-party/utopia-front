@@ -196,7 +196,7 @@ export default function Login() {
 
           <div className="flex gap-2">
             <Link to="/find-id" className="hover:underline">
-              아이디 찾기
+              이메일 찾기
             </Link>
             <span>|</span>
             <Link to="/find-password" className="hover:underline">

@@ -112,7 +112,7 @@ function ProfileDashboard() {
             마이페이지 - 프로필
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            프로필 / 대시보드 / 최근 활동 내역
+            회원 정보 / 최근 활동 내역
           </p>
         </div>
 

@@ -69,8 +69,6 @@ const router = createBrowserRouter([
         path: 'signup',
         Component: Signup,
       },
-
-      // ✅ 추가된 라우트
       {
         path: 'find-id',
         Component: FindId,
@@ -86,11 +84,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'handcaptcha',
-        element: (
-          <ProtectedRoute>
-            <HandOcrCaptcha />
-          </ProtectedRoute>
-        ),
+        Component: HandOcrCaptcha,
       },
       {
         path: 'oauth/callback/:provider',
@@ -101,7 +95,8 @@ const router = createBrowserRouter([
         Component: SocialSignup,
       },
       {
-        path: 'party/:partyId/chat',
+        // path: 'party/:partyId/chat',
+        path: 'chat', // (임시) 화면연결용
         Component: Chat,
       },
       //도상원
