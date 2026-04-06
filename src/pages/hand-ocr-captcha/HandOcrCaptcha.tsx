@@ -1,21 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router'; // (임시) 화면연결용
+import { useNavigate } from 'react-router';
 import Container from '../../components/layout/Container';
 import {
   FiClock,
   FiShield,
   FiCamera,
-  FiUploadCloud,
   FiRefreshCw,
   FiCheckCircle,
   FiAlertCircle,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-
-// 🌟 분리한 Slide 컴포넌트 Import
 import Slide from './components/Slide';
-
 import example1 from '../../assets/example1.png';
 import example2 from '../../assets/example2.png';
 import example3 from '../../assets/example3.png';
@@ -35,7 +31,7 @@ interface HandOcrCaptchaProps {
   onSuccess?: (token: string) => void;
 }
 
-const TOTAL_SECONDS = 5 * 60; // 300초
+const TOTAL_SECONDS = 5 * 60;
 
 const EXAMPLES = [
   { id: 1, image: example1, pose: '주먹 ✊' },
@@ -46,25 +42,17 @@ const EXAMPLES = [
 ];
 
 export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('intro');
   const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
-
-  // 🌟 서버로부터 받을 문제와 세션 ID 상태
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
-
-  // 🌟 서버로 전송할 실제 파일 객체 상태 추가
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-
   const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
-
-  // 🌟 Type Error 해결: null 대신 undefined를 기본값으로 사용
   const [passToken, setPassToken] = useState<string | undefined>(undefined);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 🌟 API 호출: 문제 가져오기
   const fetchChallenge = async () => {
     try {
       const data = await startCaptcha();
@@ -73,8 +61,6 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
       return true;
     } catch (error) {
       console.error('문제 출제 실패:', error);
-
-      // Axios 에러인 경우 서버의 에러 메시지를 활용할 수 있습니다.
       if (axios.isAxiosError(error) && error.response) {
         alert(
           error.response.data?.message || '문제를 불러오는 데 실패했습니다.',
@@ -90,55 +76,39 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
     setTimeLeft(TOTAL_SECONDS);
     setPreviewImage(null);
     setSelectedFile(null);
-
-    // 서버에서 문제 받아오기
     const isSuccess = await fetchChallenge();
-
-    if (isSuccess) {
-      setStep('challenge');
-    }
+    if (isSuccess) setStep('challenge');
   };
 
   const handleRefreshChallenge = async () => {
     setPreviewImage(null);
     setSelectedFile(null);
-
-    // 시간은 초기화하지 않고 문제만 다시 받아오기
     await fetchChallenge();
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file); // 서버 전송용 원본 파일 저장
+      setSelectedFile(file);
       const imageUrl = URL.createObjectURL(file);
-      setPreviewImage(imageUrl); // 화면 표시용 미리보기 URL
+      setPreviewImage(imageUrl);
     }
   };
 
-  // 🌟 API 호출: 제출 및 검증
-  const handleSubmit = async () => {
+  const _handleSubmit = async () => {
     if (!selectedFile || !sessionId) return;
     setStep('evaluating');
-
     try {
       const data = await verifyCaptcha(sessionId, selectedFile);
-
       if (data.success) {
-        // 🌟 성공 시 passToken을 안전하게 저장
         console.log('기존 토큰:', passToken);
         setPassToken(data.passToken);
         setStep('success');
-
-        // 🌟 올바른 로그 출력 방식
         console.log('새로 발급된 토큰:', data.passToken);
-
-        // 🌟 부모 컴포넌트가 전달한 onSuccess 콜백 호출
         if (onSuccess && data.passToken) {
           onSuccess(data.passToken);
         }
       } else {
-        // 서버에서 실패 메시지를 주면 alert나 상태로 띄워줄 수 있습니다.
         alert(data.message || '인증에 실패했습니다.');
         setStep('fail');
       }
@@ -153,10 +123,8 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
     }
   };
 
-  // 타이머 로직 유지
   useEffect(() => {
     if (step !== 'challenge') return;
-
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -167,7 +135,6 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, [step]);
 
@@ -177,13 +144,10 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
     return format(helperDate, 'mm:ss');
   };
 
-  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
       <Container className="max-w-xl w-full">
-        {/* 전체 카드 래퍼 */}
         <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-          {/* 상단 헤더 */}
           <div className="bg-linear-to-r from-purple-600 to-blue-500 p-6 text-center">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/20 text-white mb-4 backdrop-blur-sm">
               <FiShield size={24} />
@@ -205,18 +169,15 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                     화면에 제시되는 5자리 문자를 종이에 적고, <br />
                     요구하는 손 포즈와 함께 사진을 찍어주세요.
                   </p>
-
                   <Slide
                     examples={EXAMPLES}
                     onSlideChange={setCurrentExampleIdx}
                   />
-
                   <p className="text-xs text-gray-700 bg-blue-50/50 py-2 px-3 rounded-lg font-medium">
                     💡 예시: [ A1B2C ] 글씨와 [{' '}
                     {EXAMPLES[currentExampleIdx].pose} ] 포즈가 담긴 사진
                   </p>
                 </div>
-
                 <button
                   onClick={handleStart}
                   className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl"
@@ -294,18 +255,11 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                   </div>
                 )}
 
+                {/* (임시) 화면연결용: 실제 연동 시 onClick={handleSubmit} disabled={!previewImage} 로 교체 */}
                 <button
-                  // onClick={handleSubmit}
-                  // disabled={!previewImage}
-                  onClick={() => navigate('/chat')} // (임시) 화면연결용
-                  // className={`w-full py-4 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2
-                  //   ${
-                  //     previewImage
-                  //       ? 'bg-linear-to-r from-purple-600 to-blue-500 text-white hover:opacity-90'
-                  //       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  //   }`}
+                  onClick={() => navigate('/party/create')}
+                  className="w-full py-4 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 bg-linear-to-r from-purple-600 to-blue-500 text-white hover:opacity-90"
                 >
-                  {/* <FiUploadCloud size={20} /> */}
                   인증 제출하기
                 </button>
               </div>
@@ -332,7 +286,10 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                   인증 완료!
                 </h3>
                 <p className="text-gray-600 mb-8">사람으로 확인되었습니다.</p>
-                <button className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors">
+                <button
+                  onClick={() => navigate('/party/create')}
+                  className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors"
+                >
                   다음 단계로 이동
                 </button>
               </div>
