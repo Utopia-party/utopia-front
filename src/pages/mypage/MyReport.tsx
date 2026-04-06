@@ -36,9 +36,7 @@ export default function MyReport() {
           <h1 className="text-[24px] font-extrabold tracking-tight text-slate-900">
             마이페이지 - 신고내역
           </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            프로필/결제 내역/신고 내역/신뢰도 변화 이력/활동 로그
-          </p>
+          <p className="mt-1 text-sm font-medium text-slate-500">내 신고내역</p>
         </div>
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">

@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { api } from '../libs/api';
 import { useNavigate } from 'react-router';
 import { CaptchaWidget } from '../components/captcha';
@@ -20,7 +21,7 @@ export default function Signup() {
   const [isEmailChecked, setisEmailChecked] = useState(false);
   const [isNicknameChecked, setisNicknameChecked] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -87,8 +88,6 @@ export default function Signup() {
     }
   };
 
-  const isPasswordMatch = form.password === passwordConfirm;
-
   // 닉네임 중복검사
   const handleCheckNickname = async () => {
     if (!form.nickname) return alert('닉네임을 입력해주세요.');
@@ -125,17 +124,21 @@ export default function Signup() {
     }
 
     try {
-      const response = await api.post('/api/users', {
-        email: form.email,
-        nickname: form.nickname,
-        password: form.password,
-        phone: form.phone_number || undefined,
-      }, {
-        headers: { 'X-Captcha-Token': captchaToken },
-      });
+      const response = await api.post(
+        '/api/users',
+        {
+          email: form.email,
+          nickname: form.nickname,
+          password: form.password,
+          phone: form.phone_number || undefined,
+        },
+        {
+          headers: { 'X-Captcha-Token': captchaToken },
+        },
+      );
       if (response.status === 200 || response.status === 201) {
-        alert('회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.');
-        navigate('/login');
+        alert('회원가입이 완료되었습니다!');
+        navigate('/favor');
       }
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { detail?: string } } };
@@ -149,8 +152,6 @@ export default function Signup() {
     form.email &&
     isEmailVerified &&
     form.password.length >= 8 &&
-    isPasswordMatch &&
-    passwordConfirm !== '' &&
     form.name &&
     form.nickname &&
     isNicknameChecked &&
@@ -225,44 +226,24 @@ export default function Signup() {
           <label className="mb-1 block text-sm font-medium text-gray-600">
             비밀번호
           </label>
-          <input
-            name="password"
-            type="password"
-            placeholder="8자 이상"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        {/* 비밀번호 재확인 */}
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-600">
-            비밀번호 재확인
-          </label>
-          <input
-            type="password"
-            placeholder="비밀번호 다시 입력"
-            className={`w-full rounded-lg border p-3 focus:outline-none ${
-              passwordConfirm === ''
-                ? 'border-gray-300'
-                : isPasswordMatch
-                  ? 'border-green-500'
-                  : 'border-red-500'
-            }`}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            required
-          />
-          {passwordConfirm !== '' && !isPasswordMatch && (
-            <p className="mt-1 text-xs text-red-500">
-              비밀번호가 일치하지 않습니다.
-            </p>
-          )}
-          {passwordConfirm !== '' && isPasswordMatch && (
-            <p className="mt-1 text-xs text-green-600">
-              비밀번호가 일치합니다.
-            </p>
-          )}
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="8자 이상"
+              className="w-full rounded-lg border border-gray-300 p-3 pr-12 focus:border-blue-500 focus:outline-none"
+              onChange={handleChange}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
         </div>
 
         {/* 이름 */}
@@ -307,7 +288,7 @@ export default function Signup() {
         {/* 휴대폰 번호 (선택) */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            휴대폰 번호 (선택)
+            휴대폰 번호
           </label>
           <input
             name="phone_number"

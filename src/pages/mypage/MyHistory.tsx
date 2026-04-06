@@ -35,10 +35,10 @@ export default function MyHistory() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-7">
           <h1 className="text-[24px] font-extrabold tracking-tight text-slate-900">
-            마이페이지 - 신뢰도 변화 이력
+            마이페이지 - 활동 로그
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            프로필/결제 내역/신고 내역/신뢰도 변화 이력/활동 로그
+            내 파티/결제/신고 이력 활동 로그
           </p>
         </div>
 

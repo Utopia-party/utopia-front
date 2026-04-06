@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router';
+
 const partyCards = [
   {
     category: 'OTT',
@@ -47,15 +49,16 @@ function StatusBadge({ label, isOwner }: { label: string; isOwner: boolean }) {
 }
 
 export default function MyParty() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
       <div className="mx-auto max-w-[1400px]">
         <div className="mb-7">
           <h1 className="text-[24px] font-extrabold tracking-tight text-slate-900">
-            참여중인 파티
+            마이페이지 - 내 파티
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            파티 탈퇴 · (내가 만든 파티) 참여자 강퇴/리더 위임 · 채팅방 이동
+            내 파티 목록
           </p>
         </div>
 
@@ -113,7 +116,8 @@ export default function MyParty() {
 
                 <button
                   type="button"
-                  className="mt-2 h-16 w-[184px] rounded-full bg-primary text-[16px] font-extrabold text-white transition hover:opacity-90"
+                  className="h-14 rounded-full border border-blue-200 bg-primary text-[16px] font-extrabold text-white text-primary transition hover:opacity-90"
+                  onClick={() => navigate('/chat')}
                 >
                   채팅방
                 </button>
