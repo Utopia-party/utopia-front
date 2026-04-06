@@ -23,6 +23,7 @@ export default function ResetPassword() {
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -72,12 +73,31 @@ export default function ResetPassword() {
       });
 
       setIsResetDone(true);
-      alert('비밀번호가 성공적으로 재설정되었습니다.');
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
-        '비밀번호 재설정에 실패했습니다.';
+    } catch (error: unknown) {
+      let message = '비밀번호 재설정에 실패했습니다.';
+
+      if (typeof error === 'object' && error !== null) {
+        const response = (
+          error as {
+            response?: {
+              data?: {
+                detail?: unknown;
+                message?: unknown;
+              };
+            };
+          }
+        ).response;
+
+        const detail = response?.data?.detail;
+        const fallbackMessage = response?.data?.message;
+
+        if (typeof detail === 'string') {
+          message = detail;
+        } else if (typeof fallbackMessage === 'string') {
+          message = fallbackMessage;
+        }
+      }
+
       alert(message);
     } finally {
       setIsSubmitting(false);
@@ -95,68 +115,69 @@ export default function ResetPassword() {
         새로운 비밀번호를 입력하고 저장해주세요.
       </p>
 
-      {/* {!token ? (
+      {!token ? (
         <div className="rounded-xl border border-red-100 bg-red-50 p-5 text-sm text-red-700">
-          유효하지 않거나 만료된 접근입니다. 비밀번호 찾기에서 다시 요청해주세요.
+          유효하지 않거나 만료된 접근입니다. 비밀번호 찾기에서 다시
+          요청해주세요.
         </div>
-      ) : isResetDone ? ( */}
-      <div className="space-y-4">
-        {/* <div className="rounded-xl border border-green-100 bg-green-50 p-5 text-sm text-green-700">
+      ) : isResetDone ? (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-green-100 bg-green-50 p-5 text-sm text-green-700">
             비밀번호가 정상적으로 변경되었습니다. 새 비밀번호로 로그인해주세요.
-          </div> */}
+          </div>
 
-        {/* <button
+          <button
             type="button"
             onClick={handleMoveLogin}
             className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700"
           >
             로그인하러 가기
-          </button> */}
-      </div>
-      {/* ) : ( */}
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-600">
-            새 비밀번호
-          </label>
-          <input
-            name="password"
-            type="password"
-            value={form.password}
-            placeholder="새 비밀번호를 입력하세요"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-            onChange={handleChange}
-            required
-          />
-          <p className="mt-2 ml-1 text-xs text-gray-500">
-            8자 이상으로 입력해주세요.
-          </p>
+          </button>
         </div>
+      ) : (
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-600">
+              새 비밀번호
+            </label>
+            <input
+              name="password"
+              type="password"
+              value={form.password}
+              placeholder="새 비밀번호를 입력하세요"
+              className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+              onChange={handleChange}
+              required
+            />
+            <p className="mt-2 ml-1 text-xs text-gray-500">
+              8자 이상으로 입력해주세요.
+            </p>
+          </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-600">
-            새 비밀번호 확인
-          </label>
-          <input
-            name="password_confirm"
-            type="password"
-            value={form.password_confirm}
-            placeholder="새 비밀번호를 다시 입력하세요"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-            onChange={handleChange}
-            required
-          />
-        </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-600">
+              새 비밀번호 확인
+            </label>
+            <input
+              name="password_confirm"
+              type="password"
+              value={form.password_confirm}
+              placeholder="새 비밀번호를 다시 입력하세요"
+              className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-        >
-          {isSubmitting ? '변경 중...' : '비밀번호 변경'}
-        </button>
-      </form>
-      {/* )} */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+          >
+            {isSubmitting ? '변경 중...' : '비밀번호 변경'}
+          </button>
+        </form>
+      )}
 
       <div className="mt-8 flex justify-center gap-2 text-sm text-gray-500">
         <Link to="/login" className="hover:underline">
