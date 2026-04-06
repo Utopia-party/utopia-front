@@ -93,7 +93,7 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
     }
   };
 
-  const _handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (!selectedFile || !sessionId) return;
     setStep('evaluating');
     try {
@@ -221,10 +221,10 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
                   </div>
                 )}
 
-                {/* (임시) 화면연결용: 실제 연동 시 onClick={handleSubmit} disabled={!previewImage} 로 교체 */}
                 <button
-                  onClick={() => navigate('/party/create')}
-                  className="w-full py-4 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 bg-linear-to-r from-purple-600 to-blue-500 text-white hover:opacity-90"
+                  onClick={handleSubmit}
+                  disabled={!previewImage}
+                  className="w-full py-4 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 bg-linear-to-r from-purple-600 to-blue-500 text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   인증 제출하기
                 </button>
