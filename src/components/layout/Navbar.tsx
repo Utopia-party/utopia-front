@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import Logo from '../ui/Logo';
 import Container from './Container';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavHashLink } from 'react-router-hash-link';
 import { IoClose, IoMenu } from 'react-icons/io5';
 
@@ -11,6 +11,12 @@ interface NavItem {
   label: string;
   href: `#${SectionId}`;
   id: SectionId;
+}
+
+interface SectionState {
+  isIntersecting: boolean;
+  top: number;
+  ratio: number;
 }
 
 export default function Navbar() {
@@ -26,6 +32,8 @@ export default function Navbar() {
     [],
   );
 
+  const sectionStatesRef = useRef<Map<SectionId, SectionState>>(new Map());
+
   const toggleMenu = () => setIsOpen((prev) => !prev);
 
   useEffect(() => {
@@ -35,20 +43,47 @@ export default function Navbar() {
 
     if (sections.length === 0) return;
 
+    const navEl = document.querySelector('nav');
+    const navHeight = navEl instanceof HTMLElement ? navEl.offsetHeight : 0;
+
+    sections.forEach((section) => {
+      sectionStatesRef.current.set(section.id as SectionId, {
+        isIntersecting: false,
+        top: Infinity,
+        ratio: 0,
+      });
+    });
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visibleEntries = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        entries.forEach((entry) => {
+          const id = entry.target.id as SectionId;
 
-        if (visibleEntries.length > 0) {
-          setActiveSection(visibleEntries[0].target.id as SectionId);
+          sectionStatesRef.current.set(id, {
+            isIntersecting: entry.isIntersecting,
+            top: entry.boundingClientRect.top,
+            ratio: entry.intersectionRatio,
+          });
+        });
+
+        const candidates = [...sectionStatesRef.current.entries()]
+          .filter(([, state]) => state.isIntersecting)
+          .sort((a, b) => {
+            const aTop = Math.abs(a[1].top - navHeight);
+            const bTop = Math.abs(b[1].top - navHeight);
+
+            if (aTop !== bTop) return aTop - bTop;
+            return b[1].ratio - a[1].ratio;
+          });
+
+        if (candidates.length > 0) {
+          setActiveSection(candidates[0][0]);
         }
       },
       {
         root: null,
-        rootMargin: '-20% 0px -55% 0px',
-        threshold: [0.2, 0.35, 0.5, 0.7],
+        rootMargin: `-${navHeight + 8}px 0px -55% 0px`,
+        threshold: [0, 0.1, 0.25, 0.4, 0.6, 0.8],
       },
     );
 
