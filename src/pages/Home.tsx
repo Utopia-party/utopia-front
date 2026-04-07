@@ -122,7 +122,6 @@ function PartyCard({
       </div>
 
       <div className="flex gap-2 mt-1">
-        {/* 상세 보기 버튼 → PartyDetailModal 열기 */}
         <button
           onClick={() => onDetail(party)}
           className="flex-1 py-2 text-xs font-semibold border border-border rounded-lg hover:bg-muted transition-colors"
@@ -143,6 +142,7 @@ function PartyCard({
 
 // ── ApplyModal ────────────────────────────────────────────────────────────
 function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
+  const navigate = useNavigate(); // ✅ 추가
   const queryClient = useQueryClient();
   const [done, setDone] = useState(false);
 
@@ -171,8 +171,9 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
             <p className="text-sm text-muted-foreground mb-6">
               파티 참여 신청이 완료되었습니다.
             </p>
+            {/* ✅ onClose → navigate로 변경 */}
             <button
-              onClick={onClose}
+              onClick={() => navigate(`/party/${party.id}/chat`)}
               className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-sm font-bold"
             >
               확인
@@ -265,9 +266,7 @@ export default function Home() {
     period: string;
   }) => {
     setShowQuickMatch(false);
-
     console.log('빠른 매칭 요청:', { category, serviceId, period });
-
     alert(
       `빠른 매칭 요청\n카테고리: ${category}\n서비스 ID: ${serviceId}\n기간: ${period || '선택 안 함'}`,
     );
@@ -331,7 +330,6 @@ export default function Home() {
                 ))}
               </nav>
             </div>
-            {/* 파티 생성 버튼 → 핸드캡챠 후 파티 생성 페이지로 이동 */}
             <button
               onClick={() => navigate('/handcaptcha')}
               className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
