@@ -42,12 +42,11 @@ export default function Login() {
       return;
     }
 
-    //도상원
+    // 상원: 로그인 FR에서는 서버 요청 전에 1차 캡챠 통과 토큰이 있는지 먼저 확인합니다.
     if (!captchaToken) {
       alert('캡챠 인증을 완료해주세요.');
       return;
     }
-    //도상원
 
     try {
       setIsSubmitting(true);
@@ -69,7 +68,7 @@ export default function Login() {
       alert(response.data?.message || '로그인에 성공했습니다.');
       navigate('/home', { replace: true });
     } catch (error: unknown) {
-      //도상원
+      // 상원: 캡챠/인증 실패 메시지를 서버 detail 우선순위로 그대로 보여줍니다.
       const apiError = error as {
         response?: {
           data?: {
@@ -82,7 +81,6 @@ export default function Login() {
         apiError.response?.data?.detail ||
         apiError.response?.data?.message ||
         '로그인에 실패했습니다.';
-      //도상원
       alert(message);
     } finally {
       setIsSubmitting(false);
@@ -215,9 +213,8 @@ export default function Login() {
         <div className="flex justify-center py-1">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
-            //도상원
+            // 상원: 실패 상태에서는 이전에 받은 통과 토큰을 버려서 재사용되지 않게 합니다.
             onError={() => setCaptchaToken(null)}
-            //도상원
             triggerType="new_ip_login"
           />
         </div>

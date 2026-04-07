@@ -2,7 +2,7 @@
  * CaptchaGrid — 3×3 이미지 그리드 캡챠
  * 모달 오버레이 안에서 동작합니다.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react'; // 상원
 import type { CaptchaChallengeResponse } from './types';
 import { ANIMAL_LABELS } from './captchaApi';
 
@@ -23,7 +23,17 @@ export default function CaptchaGrid({
   errorMessage,
   remainingAttempts,
 }: CaptchaGridProps) {
+  // 상원: 사용자가 현재 문제에서 누른 사진 칸 번호들을 순서대로 저장합니다.
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+  // 상원: 새 문제를 받았는지 안전하게 감지하려고 사진 id 목록을 하나의 문자열로 묶습니다.
+  const photoSignature = challenge.photos.map((photo) => photo.id).join('|'); // 상원
+
+  // 상원: 이전 문제에서 누른 1, 2, 3 선택 순서가 새 문제에 남지 않도록 문제 교체 시 초기화합니다.
+  useEffect(() => {
+    // 상원
+    // 상원: 문제 세션이나 사진 구성이 바뀌면 선택 배열을 빈 배열로 되돌립니다.
+    setSelectedIndices([]); // 상원
+  }, [challenge.session_id, photoSignature]); // 상원
 
   const handlePhotoClick = useCallback(
     (index: number) => {
@@ -55,7 +65,7 @@ export default function CaptchaGrid({
 
   return (
     <>
-      {/* //도상원 */}
+      {/* 상원: 1차 캡챠 challenge는 로그인/회원가입 흐름을 끊지 않도록 모달로 표시합니다. */}
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
         onClick={onCancel}
@@ -233,7 +243,7 @@ export default function CaptchaGrid({
           </div>
         </div>
       </div>
-      {/* //도상원 */}
+      {/* 상원: 모달 닫기까지 포함해 현재 challenge 세션 화면만 담당합니다. */}
     </>
   );
 }
