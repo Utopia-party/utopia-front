@@ -25,10 +25,11 @@ interface PartyInfo {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
-const WS_BASE = API_BASE
-  .replace('http://', 'ws://')
-  .replace('https://', 'wss://')
-  .replace('/api', '');
+const WS_BASE = import.meta.env.VITE_WS_BASE_URL ?? 
+  API_BASE
+    .replace('http://', 'ws://')
+    .replace('https://', 'wss://')
+    .replace('/api', '');
 
 const ROLE_LABEL: Record<string, string> = {
   leader: '리더',
@@ -60,12 +61,11 @@ export default function Chat() {
   const connectedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. 유저 정보 로드
   useEffect(() => {
     api.get('/api/me').then(({ data }) => {
       if (data.is_logged_in && data.user) {
         setNickname(data.user.nickname);
-        setUserId(data.user.user_id); // ← user_id로 수정
+        setUserId(data.user.user_id);
       }
       setUserReady(true);
     }).catch(() => {
@@ -73,7 +73,6 @@ export default function Chat() {
     });
   }, []);
 
-  // 2. 초기 메시지 및 파티 정보 로드
   useEffect(() => {
     if (!partyId) return;
 
@@ -91,7 +90,6 @@ export default function Chat() {
       .catch(() => {});
   }, [partyId]);
 
-  // 3. WebSocket 연결
   useEffect(() => {
     if (!partyId || !userReady) return;
     if (connectedRef.current) return;
