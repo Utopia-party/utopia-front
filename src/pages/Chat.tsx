@@ -25,7 +25,7 @@ interface PartyInfo {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
-const WS_BASE = import.meta.env.VITE_WS_BASE_URL ?? 
+const WS_BASE = import.meta.env.VITE_WS_BASE_URL ??
   API_BASE
     .replace('http://', 'ws://')
     .replace('https://', 'wss://')
@@ -53,7 +53,6 @@ export default function Chat() {
   const [nickname, setNickname] = useState('익명');
   const [userId, setUserId] = useState('guest');
   const [userReady, setUserReady] = useState(false);
-
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -92,37 +91,9 @@ export default function Chat() {
 
   useEffect(() => {
     if (!partyId || !userReady) return;
-
-  // 이미 열려있거나 연결 중이면 스킵
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 
     connectedRef.current = true;
-
-    const ws = new WebSocket(
-      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`
-    );
-    wsRef.current = ws;
-
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => {
-      setConnected(false);
-      connectedRef.current = false;
-    };
-    ws.onmessage = (e) => {
-      try {
-        const msg: Message = JSON.parse(e.data);
-        setMessages(prev => [...prev, msg]);
-      } catch (err) {
-        console.error("메시지 파싱 에러:", err);
-      }
-    };
-
-    return () => {
-      ws.close();
-      wsRef.current = null;
-      connectedRef.current = false;
-    };
-  }, [partyId, userReady, nickname, userId]);
 
     const ws = new WebSocket(
       `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`
