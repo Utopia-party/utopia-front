@@ -65,7 +65,7 @@ export default function Chat() {
     api.get('/api/me').then(({ data }) => {
       if (data.is_logged_in && data.user) {
         setNickname(data.user.nickname);
-        setUserId(data.user.id);
+        setUserId(data.user.user_id); // ← user_id로 수정
       }
       setUserReady(true);
     }).catch(() => {
@@ -73,19 +73,17 @@ export default function Chat() {
     });
   }, []);
 
-  // 2. 초기 메시지 및 파티 정보 로드 (수정 포인트)
+  // 2. 초기 메시지 및 파티 정보 로드
   useEffect(() => {
     if (!partyId) return;
 
-    // 메시지 목록 가져오기 - 배열 확인 로직 추가
     api.get(`/chat/parties/${partyId}/messages`)
       .then(({ data }) => {
-        // 백엔드 응답이 배열인지 확인 후 상태 업데이트
         setMessages(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
         console.error("메시지 로딩 실패:", err);
-        setMessages([]); 
+        setMessages([]);
       });
 
     api.get(`/chat/parties/${partyId}/info`)
@@ -209,7 +207,6 @@ export default function Chat() {
             <p className="text-sm font-bold text-foreground">메시지</p>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-3 border border-border rounded-xl mx-5 mb-3 bg-white min-h-0">
-            {/* messages 가 배열일 때만 map 실행 */}
             {Array.isArray(messages) && messages.length > 0 ? (
               messages.map((msg, i) => renderMessage(msg, i))
             ) : (
@@ -257,7 +254,6 @@ export default function Chat() {
                 </tr>
               </thead>
               <tbody>
-                {/* partyInfo.members 도 배열 확인 추가 */}
                 {Array.isArray(partyInfo?.members) && partyInfo.members.map(member => (
                   <tr key={member.user_id} className="border-t border-border/50">
                     <td className="py-2.5 font-medium">{member.nickname}</td>
