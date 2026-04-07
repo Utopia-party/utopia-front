@@ -118,9 +118,7 @@ export default function CaptchaGrid({
                       draggable={false}
                     />
                   </div>
-                  <span className="mt-1 text-xs text-slate-500">
-                    {ANIMAL_LABELS[emoji.category] ?? emoji.category}
-                  </span>
+                  {/* 카테고리명 비표시 — 사용자가 이모지만 보고 판단해야 함 */}
                 </div>
               ))}
             </div>
