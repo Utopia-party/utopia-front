@@ -4,7 +4,6 @@
  */
 import { useState, useCallback, useEffect } from 'react'; // 상원
 import type { CaptchaChallengeResponse } from './types';
-import { ANIMAL_LABELS } from './captchaApi';
 
 interface CaptchaGridProps {
   challenge: CaptchaChallengeResponse;
