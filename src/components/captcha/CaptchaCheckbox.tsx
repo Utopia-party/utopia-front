@@ -12,7 +12,7 @@ export default function CaptchaCheckbox({
   phase,
   onClick,
 }: CaptchaCheckboxProps) {
-  //도상원
+  // 상원: 현재 캡챠 단계에 따라 체크박스의 클릭 가능 여부와 문구를 함께 바꿉니다.
   const isClickable = phase === 'idle' || phase === 'failed';
   const isChecked = phase === 'passed' || phase === 'success';
   const isLoading = phase === 'verifying' || phase === 'submitting';
@@ -33,7 +33,6 @@ export default function CaptchaCheckbox({
               : phase === 'verifying'
                 ? '확인 중...'
                 : '로봇이 아닙니다';
-  //도상원
 
   return (
     <div

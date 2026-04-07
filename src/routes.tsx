@@ -18,9 +18,7 @@ import Favor from './pages/Favor';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
 import CreateParty from './components/party/CreateParty';
-//도상원
-// CaptchaDemo import 제거
-//도상원
+// 상원: 기존 캡챠 데모 라우트는 실제 1차/2차 캡챠 흐름으로 대체되어 import를 제거했습니다.
 
 // 보호 라우트
 import ProtectedRoute from './components/ProtectedRoute';
@@ -115,9 +113,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      //도상원
-      // captcha-demo 라우트 제거
-      //도상원
+      // 상원: 실제 회원가입/로그인 캡챠 흐름을 쓰므로 별도 captcha-demo 라우트는 두지 않습니다.
     ],
   },
 

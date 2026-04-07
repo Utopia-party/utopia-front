@@ -3,9 +3,12 @@ import { Eye, EyeOff } from 'lucide-react';
 import { api } from '../libs/api';
 import { useNavigate } from 'react-router';
 import { CaptchaWidget } from '../components/captcha';
+import { useAuthStore } from '../stores/authStore'; // 상원
 
 export default function Signup() {
   const navigate = useNavigate();
+  // 상원: 회원가입 직후 로그인 상태를 다시 읽어 관심사 저장 페이지가 회원 API를 바로 쓰게 합니다.
+  const { checkAuth } = useAuthStore(); // 상원
 
   const [form, setForm] = useState({
     email: '',
@@ -38,6 +41,7 @@ export default function Signup() {
   const handleCheckEmail = async () => {
     if (!form.email) return alert('이메일을 입력해주세요.');
     try {
+      // 상원: 입력한 이메일이 이미 가입된 계정인지 서버에 확인합니다.
       const response = await api.get('/api/users/check-email', {
         params: { email: form.email },
       });
@@ -48,9 +52,8 @@ export default function Signup() {
         alert('사용 가능한 이메일입니다. 이제 인증번호를 요청하세요.');
         setisEmailChecked(true);
       }
-      //도상원
     } catch {
-      //도상원
+      // 상원: 회원가입 전 이메일 중복 확인 실패는 여기서 한 번에 처리합니다.
       alert('중복 확인 중 오류가 발생했습니다.');
     }
   };
@@ -59,13 +62,13 @@ export default function Signup() {
   const handleEmailRequest = async () => {
     if (!isEmailChecked) return alert('먼저 이메일 중복 확인을 해주세요.');
     try {
+      // 상원: 중복 확인을 통과한 이메일에 인증 메일 발송을 요청합니다.
       await api.post('/api/email-request', null, {
         params: { email: form.email },
       });
       alert('인증 메일이 발송되었습니다. 메일함을 확인해주세요!');
-      //도상원
     } catch {
-      //도상원
+      // 상원: 이메일 인증 요청 실패는 회원가입 흐름을 멈추고 재시도를 유도합니다.
       alert('인증 메일 발송에 실패했습니다.');
     }
   };
@@ -74,6 +77,7 @@ export default function Signup() {
   const handleEmailVerify = async () => {
     if (!form.email_code) return alert('인증번호를 입력해주세요.');
     try {
+      // 상원: 사용자가 입력한 인증번호가 맞는지 서버에서 검증합니다.
       const response = await api.post('/api/email-verify', null, {
         params: { email: form.email, code: form.email_code },
       });
@@ -81,9 +85,8 @@ export default function Signup() {
         alert('이메일 인증에 성공했습니다!');
         setIsEmailVerified(true);
       }
-      //도상원
     } catch {
-      //도상원
+      // 상원: 이메일 인증번호 검증 실패는 인증 상태를 열지 않고 그대로 유지합니다.
       alert('인증번호가 틀렸거나 만료되었습니다.');
     }
   };
@@ -92,6 +95,7 @@ export default function Signup() {
   const handleCheckNickname = async () => {
     if (!form.nickname) return alert('닉네임을 입력해주세요.');
     try {
+      // 상원: 닉네임 중복 여부도 회원가입 제출 전에 서버에서 확인합니다.
       const response = await api.get('/api/users/check-nickname', {
         params: { nickname: form.nickname },
       });
@@ -102,16 +106,15 @@ export default function Signup() {
         alert('사용 가능한 닉네임입니다.');
         setisNicknameChecked(true);
       }
-      //도상원
     } catch {
-      //도상원
+      // 상원: 닉네임 중복 확인 실패도 회원가입 제출 전에 명확히 막습니다.
       alert('중복 확인 중 오류가 발생했습니다.');
     }
   };
 
-  //도상원
+  // 상원: 회원가입 제출은 이메일 인증, 닉네임 확인, 캡챠 통과가 모두 끝난 뒤에만 진행됩니다.
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    //도상원
+    // 상원: 브라우저 기본 제출을 막고 API 기반 회원가입 흐름으로 처리합니다.
     e.preventDefault();
 
     if (!isEmailVerified || !isNicknameChecked) {
@@ -124,19 +127,27 @@ export default function Signup() {
     }
 
     try {
+      // 상원: 회원가입 정보와 1차 캡챠 통과 토큰을 함께 서버로 전송합니다.
       const response = await api.post(
         '/api/users',
         {
+          // 상원: 사용자가 입력한 이메일을 회원가입 요청 바디에 넣습니다.
           email: form.email,
+          // 상원: 사용자가 사용할 닉네임을 회원가입 요청 바디에 넣습니다.
           nickname: form.nickname,
+          // 상원: 비밀번호는 서버에서 해시 저장하도록 평문으로 전달됩니다.
           password: form.password,
+          // 상원: 전화번호는 비어 있으면 undefined로 보내 선택 입력처럼 처리합니다.
           phone: form.phone || undefined,
         },
         {
+          // 상원: 회원가입은 캡챠 통과 토큰이 헤더에 있어야 진행되도록 보냅니다.
           headers: { 'X-Captcha-Token': captchaToken },
         },
       );
       if (response.status === 200 || response.status === 201) {
+        // 상원: 회원가입 성공 직후 인증 상태를 확정해야 /favor 에서 관심사를 DB에 저장할 수 있습니다.
+        await checkAuth(); // 상원
         alert('회원가입이 완료되었습니다!');
         navigate('/favor');
       }
@@ -303,10 +314,10 @@ export default function Signup() {
         {/* 캡챠 인증 */}
         <div className="flex justify-center py-2">
           <CaptchaWidget
+            // 상원: 캡챠 성공 시 발급받은 토큰을 회원가입 제출에 쓸 수 있게 상태에 저장합니다.
             onSuccess={(token) => setCaptchaToken(token)}
-            //도상원
+            // 상원: 회원가입용 캡챠가 실패하면 이전 통과 토큰을 지워서 다시 검증하게 합니다.
             onError={() => setCaptchaToken(null)}
-            //도상원
             triggerType="register"
           />
         </div>

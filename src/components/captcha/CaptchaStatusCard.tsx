@@ -34,11 +34,10 @@ export default function CaptchaStatusCard({
   onRetry,
   isRetrying = false,
 }: CaptchaStatusCardProps) {
-  //도상원
+  // 상원: WAIT/LOCKED 상태는 남은 시간을 1초마다 줄여서 사용자가 재시도 가능 시점을 볼 수 있게 합니다.
   const [secondsLeft, setSecondsLeft] = useState(retryAfterSeconds ?? 0);
-  //도상원
 
-  //도상원
+  // 상원: 서버가 준 retry_after_seconds를 기준으로 프론트에서 카운트다운을 이어갑니다.
   useEffect(() => {
     if (secondsLeft <= 0) return;
 
@@ -48,7 +47,6 @@ export default function CaptchaStatusCard({
 
     return () => window.clearInterval(timer);
   }, [secondsLeft]);
-  //도상원
 
   const title =
     status === 'WAIT'

@@ -49,13 +49,14 @@ export default function CaptchaWidget({
 
   const { collectPayload } = useBehaviorCollector();
 
-  //도상원
+  // 상원: challenge 화면이 끝날 때마다 이전 문제와 에러 상태를 함께 정리합니다.
   const resetChallengeView = useCallback(() => {
     setChallenge(null);
     setErrorMessage(undefined);
     setRemainingAttempts(undefined);
   }, []);
 
+  // 상원: 서버가 기억 중인 active_session_id가 있으면 같은 문제로 복구합니다.
   const restoreChallenge = useCallback(async (sessionId: string) => {
     const challengeData = await captchaChallenge(sessionId);
     setCurrentSessionId(sessionId);
@@ -109,15 +110,13 @@ export default function CaptchaWidget({
 
     return nextStatus;
   }, [applySecurityStatus, restoreChallenge]);
-  //도상원
 
-  //도상원
+  // 상원: 페이지 진입 직후 대기/잠금 상태나 남아 있는 challenge 세션을 먼저 동기화합니다.
   useEffect(() => {
     void syncStatus();
   }, [syncStatus]);
-  //도상원
 
-  //도상원
+  // 상원: 체크박스 클릭 시 행동 데이터를 보내고 pass, challenge, block 세 갈래로 분기합니다.
   const startCaptchaFlow = useCallback(async () => {
     setIsRetrying(true);
     setErrorMessage(undefined);
@@ -194,9 +193,8 @@ export default function CaptchaWidget({
     syncStatus,
     triggerType,
   ]);
-  //도상원
 
-  //도상원
+  // 상원: 사용자가 선택한 3칸을 검증하고, 실패 시에는 같은 세션의 다음 문제를 다시 받아옵니다.
   const handleGridSubmit = useCallback(
     async (selectedIndices: number[]) => {
       if (!currentSessionId) return;
@@ -256,9 +254,8 @@ export default function CaptchaWidget({
     resetChallengeView();
     setPhase('idle');
   }, [resetChallengeView]);
-  //도상원
 
-  //도상원
+  // 상원: WAIT, LOCKED, BANNED 상태 카드가 필요한 경우에만 화면에 노출할 값을 정리합니다.
   let visibleStatus:
     | (CaptchaStatusResponse & { status: 'WAIT' | 'LOCKED' | 'BANNED' })
     | null = null;
@@ -273,7 +270,6 @@ export default function CaptchaWidget({
       status: securityStatus.status,
     };
   }
-  //도상원
 
   return (
     <div className="flex flex-col items-center gap-3">

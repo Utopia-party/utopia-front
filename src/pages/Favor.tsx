@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react'; // 상원
 import { useNavigate } from 'react-router';
 import { FiCheck, FiSearch, FiX } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
+import { getMyInterests, saveMyInterests } from '../apis/userInterests'; // 상원
 import floLogo from '../assets/FLO.png';
 import waveLogo from '../assets/wave.png';
 import appleOneLogo from '../assets/appleone.png';
@@ -19,6 +20,7 @@ import spotifyLogo from '../assets/spotify.png';
 import snowLogo from '../assets/snow.png';
 import tvingLogo from '../assets/tving.png';
 import watchaLogo from '../assets/watcha.jpeg';
+import { useAuthStore } from '../stores/authStore'; // 상원
 
 type CategoryKey = 'all' | 'ott' | 'education' | 'music' | 'other';
 type InterestGroupKey = Exclude<CategoryKey, 'all'>;
@@ -118,6 +120,7 @@ function filterSavedItems(savedItems: unknown) {
 
 export default function Favor() {
   const navigate = useNavigate();
+  const { isLoggedIn, loading } = useAuthStore(); // 상원
 
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
 
@@ -140,6 +143,7 @@ export default function Favor() {
   });
 
   const [query, setQuery] = useState('');
+  const [isSaving, setIsSaving] = useState(false); // 상원
 
   const selectedLookup = new Set(selectedItems);
   const normalizedQuery = query.trim().toLowerCase();
@@ -174,6 +178,59 @@ export default function Favor() {
   const hasResults = visibleGroups.some(
     (group) => group.visibleItems.length > 0,
   );
+
+  // 상원: 로그인 상태라면 서버에 저장된 관심사를 읽어와 현재 선택 상태를 맞춥니다.
+  useEffect(() => {
+    // 상원
+    // 상원: 아직 인증 상태를 확인 중이거나 로그인하지 않았다면 서버 조회를 하지 않습니다.
+    if (loading || !isLoggedIn) {
+      // 상원
+      return; // 상원
+    } // 상원
+
+    // 상원: 비동기 응답이 늦게 돌아올 때 언마운트된 화면에 setState하지 않으려고 플래그를 둡니다.
+    let isMounted = true; // 상원
+
+    // 상원: 실제 관심사 조회 로직을 별도 async 함수로 분리합니다.
+    const loadSavedInterests = async () => {
+      // 상원
+      // 상원: 서버 요청 중 예외가 날 수 있으니 try/catch로 감쌉니다.
+      try {
+        // 상원
+        // 상원: 서버에서 받은 관심사 배열을 화면에서 쓰는 형식으로 한 번 더 정제합니다.
+        const items = filterSavedItems(await getMyInterests()); // 상원
+        // 상원: 화면이 이미 사라졌다면 이후 setState를 막습니다.
+        if (!isMounted) {
+          // 상원
+          return; // 상원
+        } // 상원
+        // 상원: 이미 사용자가 직접 선택을 시작했으면 서버값으로 덮어쓰지 않도록 현재 상태를 확인합니다.
+        setSelectedItems((current) => {
+          // 상원
+          if (current.length > 0) {
+            // 상원
+            return current; // 상원
+          } // 상원
+          // 상원: 서버에서 읽은 관심사를 localStorage에도 넣어 두 경로를 같은 값으로 맞춥니다.
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); // 상원
+          // 상원: 화면 선택 상태도 서버 저장값으로 초기화합니다.
+          return items; // 상원
+        }); // 상원
+      } catch {
+        // 상원
+        // 상원: 관심사 조회 실패 시에는 기존 localStorage 흐름을 유지하고 추가 동작은 하지 않습니다.
+      } // 상원
+    }; // 상원
+
+    // 상원: 정의한 비동기 조회 함수를 즉시 실행합니다.
+    void loadSavedInterests(); // 상원
+
+    // 상원: effect가 끝날 때 isMounted를 내려 늦은 응답이 상태를 건드리지 못하게 합니다.
+    return () => {
+      // 상원
+      isMounted = false; // 상원
+    }; // 상원
+  }, [isLoggedIn, loading]); // 상원
 
   const toggleItem = (item: string) => {
     setSelectedItems((current) => {
@@ -210,17 +267,34 @@ export default function Favor() {
 
   const resetSelection = () => setSelectedItems([]);
 
-  const saveSelection = () => {
+  // 상원: 저장 버튼은 현재 선택값을 서버와 localStorage 둘 다에 반영합니다.
+  const saveSelection = async () => {
+    // 상원
+    // 상원: 아무 것도 고르지 않았으면 저장 API를 부르지 않습니다.
     if (selectedItems.length === 0) {
       return;
     }
 
+    // 상원: 저장 중에는 버튼 중복 클릭을 막고 로딩 상태를 보여주기 위해 try 블록을 시작합니다.
     try {
+      // 상원: 저장 시작 시 버튼을 비활성화할 수 있도록 isSaving을 true로 올립니다.
+      setIsSaving(true); // 상원
+      // 상원: 로그인된 사용자라면 회원 계정 기준 관심사도 함께 갱신합니다.
+      if (isLoggedIn) {
+        // 상원
+        await saveMyInterests(selectedItems); // 상원
+      } // 상원
+      // 상원: 비회원 흐름이나 백업 용도로 localStorage에도 같은 배열을 저장합니다.
       localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedItems));
     } catch {
+      // 상원: 저장 실패 시에는 로딩 상태를 내려 버튼을 다시 누를 수 있게 합니다.
+      setIsSaving(false); // 상원
       return;
     }
 
+    // 상원: 저장 성공 후에도 로딩 상태를 해제합니다.
+    setIsSaving(false); // 상원
+    // 상원: 관심사 저장이 끝났으므로 홈 화면으로 이동합니다.
     navigate('/home');
   };
 
@@ -253,7 +327,7 @@ export default function Favor() {
                   <button
                     type="button"
                     onClick={resetSelection}
-                    disabled={totalSelected === 0}
+                    disabled={totalSelected === 0 || isSaving} // 상원
                     className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     초기화
@@ -268,10 +342,10 @@ export default function Favor() {
                   <button
                     type="button"
                     onClick={saveSelection}
-                    disabled={totalSelected === 0}
+                    disabled={totalSelected === 0 || isSaving} // 상원
                     className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(37,99,235,0.24)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
                   >
-                    저장
+                    {isSaving ? '저장 중...' : '저장'} {/* 상원 */}
                   </button>
                 </div>
               </div>
