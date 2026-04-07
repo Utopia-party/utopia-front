@@ -92,13 +92,37 @@ export default function Chat() {
 
   useEffect(() => {
     if (!partyId || !userReady) return;
-    if (connectedRef.current) return;
+
+  // 이미 열려있거나 연결 중이면 스킵
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
+
     connectedRef.current = true;
 
-    if (wsRef.current) {
-      wsRef.current.close();
+    const ws = new WebSocket(
+      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`
+    );
+    wsRef.current = ws;
+
+    ws.onopen = () => setConnected(true);
+    ws.onclose = () => {
+      setConnected(false);
+      connectedRef.current = false;
+    };
+    ws.onmessage = (e) => {
+      try {
+        const msg: Message = JSON.parse(e.data);
+        setMessages(prev => [...prev, msg]);
+      } catch (err) {
+        console.error("메시지 파싱 에러:", err);
+      }
+    };
+
+    return () => {
+      ws.close();
       wsRef.current = null;
-    }
+      connectedRef.current = false;
+    };
+  }, [partyId, userReady, nickname, userId]);
 
     const ws = new WebSocket(
       `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`
