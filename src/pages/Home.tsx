@@ -68,7 +68,6 @@ function PartyCard({
   const navigate = useNavigate();
   const isFull = party.status !== 'recruiting';
   
-  // ✅ 백엔드에서 준 참여여부 필드 확인
   const isJoined = (party as any).is_joined;
 
   return (
@@ -141,7 +140,7 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
       if (e.response?.status === 400 || e.message?.includes("이미 참여")) {
         navigate(`/party/${party.id}/chat`);
       } else {
-        alert(e.message);
+        alert(e.message || "참여 신청 중 오류가 발생했습니다.");
       }
     },
   });
@@ -159,10 +158,10 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
         ) : (
           <>
             <h3 className="font-extrabold text-lg">파티 참여 신청</h3>
-            <p className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               <span className="font-semibold text-foreground">[{party.service_name}] {party.title}</span><br />
               파티에 참여하시겠습니까?
-            </p>
+            </div>
             <div className="flex flex-col gap-1.5 text-xs text-muted-foreground bg-muted rounded-xl p-3">
               <span>👥 현재 {party.member_count}/{party.max_members ?? '?'}명 참여 중</span>
               <span>👤 호스트: {party.host_nickname}</span>
@@ -191,7 +190,13 @@ export default function Home() {
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
 
-  const { data: categoriesRaw } = useQuery({ queryKey: categoryKeys.all, queryFn: fetchCategories });
+  // ✅ 카테고리 fetch 시 422 에러를 방지하기 위해 데이터 구조를 확인합니다.
+  const { data: categoriesRaw } = useQuery({ 
+    queryKey: categoryKeys.all, 
+    queryFn: fetchCategories 
+  });
+  
+  // 백엔드 응답이 [{id: ..., name: ...}] 형태이므로 이를 안전하게 처리합니다.
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
 
   const { data: partyData, isLoading } = useQuery({
@@ -233,9 +238,20 @@ export default function Home() {
             <div className="bg-card border border-border rounded-2xl p-4 sticky top-4">
               <p className="text-[10px] font-bold text-muted-foreground mb-3 uppercase tracking-widest">CATEGORIES</p>
               <nav className="flex flex-col gap-1">
-                <button onClick={() => setCategory(null)} className={`text-left px-3 py-2 rounded-xl text-sm transition-all ${category === null ? 'bg-primary/10 text-primary font-bold' : 'text-muted-foreground hover:bg-muted'}`}>전체 파티</button>
-                {categories.map((cat) => (
-                  <button key={cat.category_id} onClick={() => setCategory(cat.category_id)} className={`text-left px-3 py-2 rounded-xl text-sm transition-all ${category === cat.category_id ? 'bg-primary/10 text-primary font-bold' : 'text-muted-foreground hover:bg-muted'}`}>{cat.category_name}</button>
+                <button 
+                  onClick={() => setCategory(null)} 
+                  className={`text-left px-3 py-2 rounded-xl text-sm transition-all ${category === null ? 'bg-primary/10 text-primary font-bold' : 'text-muted-foreground hover:bg-muted'}`}
+                >
+                  전체 파티
+                </button>
+                {categories.map((cat: any) => (
+                  <button 
+                    key={cat.id || cat.name} 
+                    onClick={() => setCategory(cat.name)} 
+                    className={`text-left px-3 py-2 rounded-xl text-sm transition-all ${category === cat.name ? 'bg-primary/10 text-primary font-bold' : 'text-muted-foreground hover:bg-muted'}`}
+                  >
+                    {cat.name}
+                  </button>
                 ))}
               </nav>
             </div>
