@@ -23,9 +23,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 const CATEGORY_COLOR: Record<string, string> = {
   OTT: 'bg-blue-100 text-blue-700',
+  음악: 'bg-green-100 text-green-700',
   '멤버십/음악': 'bg-green-100 text-green-700',
   '교육/도서': 'bg-purple-100 text-purple-700',
   생산성: 'bg-pink-100 text-pink-700',
+  '생산성/기타': 'bg-pink-100 text-pink-700',
   기타: 'bg-slate-100 text-slate-600',
 };
 

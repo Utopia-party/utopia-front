@@ -13,32 +13,32 @@ type QuickMatchFormProps = {
 const SERVICE_MAP = {
   OTT: [
     { id: 'ott_tving', name: '티빙' },
-    { id: 'ott_disney_plus', name: '디즈니+' },
-    { id: 'ott_laftel', name: '라프텔' },
-    { id: 'ott_apple_tv_plus', name: '애플TV+' },
     { id: 'ott_netflix', name: '넷플릭스' },
+    { id: 'ott_disney_plus', name: '디즈니플러스' },
     { id: 'ott_wavve', name: '웨이브' },
     { id: 'ott_watcha', name: '왓챠' },
+    { id: 'ott_laftel', name: '라프텔' },
+    { id: 'ott_apple_tv_plus', name: '애플TV+' },
   ],
-  교육: [
+  '교육/도서': [
     { id: 'edu_super_duolingo', name: '슈퍼 듀오링고' },
-    { id: 'edu_millie', name: '밀리의서재' },
+    { id: 'edu_millie', name: '밀리의 서재' },
   ],
   음악: [
-    { id: 'music_spotify_premium', name: '스포티파이 프리미엄' },
-    { id: 'music_apple_music', name: '애플뮤직' },
+    { id: 'music_spotify', name: '스포티파이' },
+    { id: 'music_apple_music', name: '애플 뮤직' },
     { id: 'music_flo', name: 'FLO' },
   ],
-  기타: [
+  '생산성/기타': [
     { id: 'etc_naver_plus', name: '네이버플러스' },
-    { id: 'etc_apple_one', name: '애플ONE' },
-    { id: 'etc_snow_vip', name: '스노우VIP' },
-    { id: 'etc_chatgpt', name: 'ChatGPT' },
-    { id: 'etc_microsoft_365', name: '마이크로소프트365' },
+    { id: 'etc_apple_one', name: '애플 원' },
+    { id: 'etc_snow_vip', name: '스노우 VIP' },
+    { id: 'etc_chatgpt_plus', name: 'ChatGPT Plus' },
+    { id: 'etc_microsoft_365', name: 'Microsoft 365' },
   ],
 } as const;
 
-const CATEGORY_OPTIONS = ['OTT', '교육', '음악', '기타'] as const;
+const CATEGORY_OPTIONS = ['OTT', '교육/도서', '음악', '생산성/기타'] as const;
 
 const PERIOD_OPTIONS = [
   { value: '', label: '기간 선택 안 함' },

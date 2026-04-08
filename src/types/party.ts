@@ -8,11 +8,12 @@ export interface Party {
   title: string;
   status: PartyStatus | null;
   host_nickname: string | null;
-  service_name: string | null;      // platform_name → service_name
+  service_name: string | null; // platform_name → service_name
   category_name: string | null;
-  max_members: number | null;       // 신규 필드
-  monthly_price: number | null;     // 신규 필드
-  logo_image_key: string | null;    // 신규 필드
+  max_members: number | null; // 신규 필드
+  monthly_price: number | null; // 신규 필드
+  logo_image_key: string | null; // 신규 필드
+  logo_image_url: string | null;
   member_count: number;
 }
 
@@ -26,7 +27,7 @@ export interface PartyListResponse {
 export interface Category {
   // ✅ Fix: category_id가 이제 카테고리 이름 문자열 (UUID 아님)
   // 백엔드: CategoryOut { category_id: str, category_name: str }
-  category_id: string;   // ex) "OTT", "생산성"
+  category_id: string; // ex) "OTT", "생산성"
   category_name: string; // ex) "OTT", "생산성" (동일값)
 }
 
