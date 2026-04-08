@@ -2,25 +2,25 @@ import { useEffect, useState } from 'react'; // 상원
 import { useNavigate } from 'react-router';
 import { FiCheck, FiSearch, FiX } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
-import { getMyInterests, saveMyInterests } from '../apis/userInterests'; // 상원
-import floLogo from '../assets/FLO.png';
-import waveLogo from '../assets/wave.png';
-import appleOneLogo from '../assets/appleone.png';
-import appletvLogo from '../assets/apple.png';
-import appleMusicLogo from '../assets/applemusic.png';
-import chatGptLogo from '../assets/chatgpt.jpg';
-import disneyLogo from '../assets/disney.png';
-import duolingoLogo from '../assets/duolingo.jpeg';
-import lafLogo from '../assets/laf.png';
-import microsoft365Logo from '../assets/microsoft 365.jpg';
-import millieLogo from '../assets/mille.png';
-import netflixLogo from '../assets/neflix.png';
-import naverLogo from '../assets/naver.png';
-import spotifyLogo from '../assets/spotify.png';
-import snowLogo from '../assets/snow.png';
-import tvingLogo from '../assets/tving.png';
-import watchaLogo from '../assets/watcha.jpeg';
-import { useAuthStore } from '../stores/authStore'; // 상원
+import { getMyInterests, saveMyInterests } from '../../apis/userInterests'; // 상원
+import floLogo from '../../assets/FLO.png';
+import waveLogo from '../../assets/wave.png';
+import appleOneLogo from '../../assets/appleone.png';
+import appletvLogo from '../../assets/apple.png';
+import appleMusicLogo from '../../assets/applemusic.png';
+import chatGptLogo from '../../assets/chatgpt.jpg';
+import disneyLogo from '../../assets/disney.png';
+import duolingoLogo from '../../assets/duolingo.jpeg';
+import lafLogo from '../../assets/laf.png';
+import microsoft365Logo from '../../assets/microsoft 365.jpg';
+import millieLogo from '../../assets/mille.png';
+import netflixLogo from '../../assets/neflix.png';
+import naverLogo from '../../assets/naver.png';
+import spotifyLogo from '../../assets/spotify.png';
+import snowLogo from '../../assets/snow.png';
+import tvingLogo from '../../assets/tving.png';
+import watchaLogo from '../../assets/watcha.jpeg';
+import { useAuthStore } from '../../stores/authStore'; // 상원
 
 type CategoryKey = 'all' | 'ott' | 'education' | 'music' | 'other';
 type InterestGroupKey = Exclude<CategoryKey, 'all'>;

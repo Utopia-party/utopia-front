@@ -2,7 +2,7 @@
  * Captcha API 서비스
  * 실제 백엔드 1차 캡챠 엔드포인트와 통신합니다.
  */
-import { api } from '../../libs/api';
+import { api } from '../../apis/api';
 import type { BehaviorPayload } from './useBehaviorCollector';
 import type {
   CaptchaChallengeResponse,

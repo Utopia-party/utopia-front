@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import axios from 'axios';
-import { api } from '../libs/api';
-import { useAuthStore } from '../stores/authStore';
+import { api } from '../../apis/api';
+import { useAuthStore } from '../../stores/authStore';
 
 type SocialLoginNeedNicknameResponse = {
   status: 'NEED_NICKNAME';
