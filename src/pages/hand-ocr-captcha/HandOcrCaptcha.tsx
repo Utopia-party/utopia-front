@@ -106,7 +106,11 @@ export default function HandOcrCaptcha() {
         }
 
         captchaTokenStorage.set(data.passToken);
-        navigate('/party/create');
+        setStep('success');
+
+        setTimeout(() => {
+          navigate('/party/create');
+        }, 1000);
       } else {
         toast.error(data.message || '인증에 실패했습니다.');
         setStep('fail');
