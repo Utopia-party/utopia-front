@@ -21,6 +21,7 @@ import CreateParty from './components/party/CreateParty';
 // 상원: 기존 캡챠 데모 라우트는 실제 1차/2차 캡챠 흐름으로 대체되어 import를 제거했습니다.
 
 // 보호 라우트
+import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // 사이드바가 필요한 페이지
@@ -196,7 +197,12 @@ const router = createBrowserRouter([
 
   {
     path: '/admin',
-    Component: AdminShell,
+    // 상원: 관리자 페이지는 직접 URL로 들어와도 인증과 관리자 권한을 먼저 확인합니다.
+    element: (
+      <AdminRoute>
+        <AdminShell />
+      </AdminRoute>
+    ),
     children: [
       {
         index: true,

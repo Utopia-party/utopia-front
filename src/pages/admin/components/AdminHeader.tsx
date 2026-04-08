@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface AdminHeaderProps {
   placeholder?: string;
@@ -11,6 +13,14 @@ export default function AdminHeader({
   onSearch,
   rightContent,
 }: AdminHeaderProps) {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 w-[480px]">
@@ -34,8 +44,11 @@ export default function AdminHeader({
       </div>
       <div className="flex items-center gap-4">
         {rightContent}
-        <button className="px-3.5 py-1.5 border border-gray-300 rounded-md bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition">
-          로그아웃(데모)
+        <button
+          className="px-3.5 py-1.5 border border-gray-300 rounded-md bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition"
+          onClick={() => void handleLogout()}
+        >
+          로그아웃
         </button>
       </div>
     </header>
