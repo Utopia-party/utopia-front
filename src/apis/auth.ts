@@ -11,6 +11,9 @@ import type {
   FindPasswordResponse,
   ResetPasswordPayload,
   ResetPasswordResponse,
+  LoginPayload,
+  LoginResponse,
+  MeResponse,
 } from '../types/auth';
 
 // 회원가입
@@ -105,5 +108,29 @@ export const resetPassword = async (
     '/api/users/reset-password',
     payload,
   );
+  return response.data;
+};
+
+// 일반로그인
+export const login = async (
+  payload: LoginPayload,
+  captchaToken: string,
+): Promise<LoginResponse> => {
+  const response = await api.post<LoginResponse>('/api/login', payload, {
+    headers: { 'X-Captcha-Token': captchaToken },
+  });
+
+  return response.data;
+};
+
+// 로그인 회원 관리
+export const getMe = async (): Promise<MeResponse> => {
+  const response = await api.get<MeResponse>('/api/me');
+  return response.data;
+};
+
+// 로그아웃
+export const logout = async (): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>('/api/logout');
   return response.data;
 };

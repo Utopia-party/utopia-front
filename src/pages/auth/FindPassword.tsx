@@ -4,7 +4,7 @@ import {
   findPassword,
   requestEmailVerification,
   verifyEmailCode,
-} from '../apis/auth';
+} from '../../apis/auth';
 
 type FindPasswordForm = {
   email: string;

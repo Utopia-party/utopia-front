@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { api } from '../apis/api';
-import { useAuthStore } from '../stores/authStore';
+import { api } from '../../apis/api';
+import { useAuthStore } from '../../stores/authStore';
 
 // 소셜로그인 추가 정보 입력 페이지(닉네임, 전화번호(선택))
 

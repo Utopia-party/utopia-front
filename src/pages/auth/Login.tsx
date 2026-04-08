@@ -1,15 +1,14 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { api } from '../apis/api';
-import { CaptchaWidget } from '../components/captcha';
-import { useAuthStore } from '../stores/authStore';
+import { CaptchaWidget } from '../../components/captcha';
+import { useAuthStore } from '../../stores/authStore';
+import { login } from '../../apis/auth';
+import type { AuthErrorResponse, LoginPayload } from '../../types/auth';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
 import { SiNaver } from 'react-icons/si';
 
-type LoginForm = {
-  email: string;
-  password: string;
+type LoginForm = LoginPayload & {
   rememberMe: boolean;
 };
 
@@ -42,7 +41,6 @@ export default function Login() {
       return;
     }
 
-    // 상원: 로그인 FR에서는 서버 요청 전에 1차 캡챠 통과 토큰이 있는지 먼저 확인합니다.
     if (!captchaToken) {
       alert('캡챠 인증을 완료해주세요.');
       return;
@@ -51,36 +49,31 @@ export default function Login() {
     try {
       setIsSubmitting(true);
 
-      const response = await api.post(
-        '/api/login',
+      const response = await login(
         {
           email: form.email.trim(),
           password: form.password,
         },
-        {
-          headers: { 'X-Captcha-Token': captchaToken },
-        },
+        captchaToken,
       );
 
       const { checkAuth } = useAuthStore.getState();
       await checkAuth();
 
-      alert(response.data?.message || '로그인에 성공했습니다.');
+      alert(response.message || '로그인에 성공했습니다.');
       navigate('/home', { replace: true });
     } catch (error: unknown) {
-      // 상원: 캡챠/인증 실패 메시지를 서버 detail 우선순위로 그대로 보여줍니다.
       const apiError = error as {
         response?: {
-          data?: {
-            detail?: string;
-            message?: string;
-          };
+          data?: AuthErrorResponse;
         };
       };
+
       const message =
         apiError.response?.data?.detail ||
         apiError.response?.data?.message ||
         '로그인에 실패했습니다.';
+
       alert(message);
     } finally {
       setIsSubmitting(false);
@@ -213,7 +206,6 @@ export default function Login() {
         <div className="flex justify-center py-1">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
-            // 상원: 실패 상태에서는 이전에 받은 통과 토큰을 버려서 재사용되지 않게 합니다.
             onError={() => setCaptchaToken(null)}
             triggerType="new_ip_login"
           />

@@ -3,6 +3,7 @@
 - 이메일/비밀번호 찾기
 - 일반로그인
 - 소셜 로그인 
+- 회원 전역상태관리
 */
 
 // 회원가입
@@ -65,4 +66,33 @@ export interface ResetPasswordPayload {
 
 export interface ResetPasswordResponse {
   message: string;
+}
+
+// 일반로그인
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  message: string;
+}
+
+export interface AuthErrorResponse {
+  detail?: string;
+  message?: string;
+}
+
+// 로그인 회원 관리
+export interface AuthUser {
+  user_id: string;
+  email: string;
+  nickname: string;
+  provider: string;
+  role: string;
+}
+
+export interface MeResponse {
+  is_logged_in: boolean;
+  user: AuthUser | null;
 }

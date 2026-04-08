@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { resetPassword } from '../apis/auth';
+import { resetPassword } from '../../apis/auth';
 
 type ResetPasswordForm = {
   new_password: string;
@@ -10,6 +10,14 @@ type ResetPasswordForm = {
 type LocationState = {
   email?: string;
 };
+
+type TouchedState = {
+  new_password: boolean;
+  confirm_password: boolean;
+};
+
+const PASSWORD_REGEX =
+  /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -22,7 +30,48 @@ export default function ResetPassword() {
     confirm_password: '',
   });
 
+  const [touched, setTouched] = useState<TouchedState>({
+    new_password: false,
+    confirm_password: false,
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validatePassword = (password: string) => {
+    if (!password.trim()) {
+      return '새 비밀번호를 입력해주세요.';
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      return '비밀번호는 8자 이상이며, 영문/숫자/특수문자를 포함해야 합니다.';
+    }
+
+    return '';
+  };
+
+  const validateConfirmPassword = (
+    password: string,
+    confirmPassword: string,
+  ) => {
+    if (!confirmPassword.trim()) {
+      return '비밀번호 확인을 입력해주세요.';
+    }
+
+    if (password !== confirmPassword) {
+      return '비밀번호가 일치하지 않습니다.';
+    }
+
+    return '';
+  };
+
+  const passwordError = validatePassword(form.new_password);
+  const confirmPasswordError = validateConfirmPassword(
+    form.new_password,
+    form.confirm_password,
+  );
+
+  const isPasswordValid = !passwordError;
+  const isConfirmPasswordValid = !confirmPasswordError;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -30,6 +79,15 @@ export default function ResetPassword() {
     setForm((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleBlur = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
     }));
   };
 
@@ -42,13 +100,12 @@ export default function ResetPassword() {
       return;
     }
 
-    if (!form.new_password.trim()) {
-      alert('새 비밀번호를 입력해주세요.');
-      return;
-    }
+    setTouched({
+      new_password: true,
+      confirm_password: true,
+    });
 
-    if (form.new_password !== form.confirm_password) {
-      alert('비밀번호 확인이 일치하지 않습니다.');
+    if (!isPasswordValid || !isConfirmPasswordValid) {
       return;
     }
 
@@ -90,13 +147,27 @@ export default function ResetPassword() {
             type="password"
             value={form.new_password}
             placeholder="새 비밀번호를 입력해주세요"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+            className={`w-full rounded-lg border p-3 focus:outline-none ${
+              touched.new_password && passwordError
+                ? 'border-red-500 focus:border-red-500'
+                : touched.new_password && isPasswordValid
+                  ? 'border-green-500 focus:border-green-500'
+                  : 'border-gray-300 focus:border-blue-500'
+            }`}
             onChange={handleChange}
+            onBlur={handleBlur}
             required
           />
-          <p className="mt-2 text-xs text-gray-500">
-            8자 이상, 영문/숫자/특수문자를 포함해주세요.
-          </p>
+
+          {touched.new_password && passwordError ? (
+            <p className="mt-2 text-xs font-medium text-red-500">
+              {passwordError}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-gray-500">
+              8자 이상, 영문/숫자/특수문자를 포함해주세요.
+            </p>
+          )}
         </div>
 
         <div>
@@ -108,10 +179,25 @@ export default function ResetPassword() {
             type="password"
             value={form.confirm_password}
             placeholder="비밀번호를 한 번 더 입력해주세요"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+            className={`w-full rounded-lg border p-3 focus:outline-none ${
+              touched.confirm_password && confirmPasswordError
+                ? 'border-red-500 focus:border-red-500'
+                : touched.confirm_password &&
+                    form.confirm_password.trim() &&
+                    !confirmPasswordError
+                  ? 'border-green-500 focus:border-green-500'
+                  : 'border-gray-300 focus:border-blue-500'
+            }`}
             onChange={handleChange}
+            onBlur={handleBlur}
             required
           />
+
+          {touched.confirm_password && confirmPasswordError && (
+            <p className="mt-2 text-xs font-medium text-red-500">
+              {confirmPasswordError}
+            </p>
+          )}
         </div>
 
         <button

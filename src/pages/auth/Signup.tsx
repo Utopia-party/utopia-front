@@ -1,15 +1,15 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { CaptchaWidget } from '../components/captcha';
-import { useAuthStore } from '../stores/authStore';
+import { CaptchaWidget } from '../../components/captcha';
+import { useAuthStore } from '../../stores/authStore';
 import {
   checkEmail,
   requestEmailVerification,
   verifyEmailCode,
   checkNickname,
   signup,
-} from '../apis/auth';
+} from '../../apis/auth';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -187,7 +187,7 @@ export default function Signup() {
 
       await checkAuth();
       alert('회원가입이 완료되었습니다!');
-      navigate('/favor');
+      navigate('/home');
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { detail?: string } } };
       const errorMsg =

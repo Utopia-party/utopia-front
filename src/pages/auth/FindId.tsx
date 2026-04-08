@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { findId } from '../apis/auth';
+import { findId } from '../../apis/auth';
 
 type FindIdForm = {
   name: string;
