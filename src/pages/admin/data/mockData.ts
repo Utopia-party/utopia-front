@@ -300,7 +300,7 @@ export const dashboardSalesStatsData: DashboardSummaryRow[] = [
 export interface AdminRoleRecord {
   id: string;
   adminId: string;
-  role: 'ROOT' | 'OPS' | 'CS';
+  role: 'ROOT' | 'ADMIN';
   scope: string;
   lastUpdated: string;
   updatedBy: string;
@@ -317,25 +317,25 @@ export const adminRolesData: AdminRoleRecord[] = [
   },
   {
     id: 'role-002',
-    adminId: 'admin_ops',
-    role: 'OPS',
-    scope: '신고 / 정산 / 영수증',
+    adminId: 'admin_manager',
+    role: 'ADMIN',
+    scope: '전체 운영 권한',
     lastUpdated: '2026-03-28 14:20',
     updatedBy: 'root_admin',
   },
   {
     id: 'role-003',
-    adminId: 'admin_cs',
-    role: 'CS',
-    scope: '사용자 문의 / 파티 운영',
+    adminId: 'admin_support',
+    role: 'ADMIN',
+    scope: '전체 운영 권한',
     lastUpdated: '2026-03-27 17:40',
     updatedBy: 'root_admin',
   },
   {
     id: 'role-004',
     adminId: 'admin_audit',
-    role: 'OPS',
-    scope: '로그 조회 / 감사 이력',
+    role: 'ADMIN',
+    scope: '전체 운영 권한',
     lastUpdated: '2026-03-26 11:05',
     updatedBy: 'root_admin',
   },

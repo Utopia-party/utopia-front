@@ -1,6 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
-import { systemLogsData } from './data/mockData';
+import {
+  fetchAdminLogs,
+  getAdminErrorMessage,
+  type SystemLogRecord,
+} from '../../apis/admin';
 
 const TYPE_COLOR: Record<string, string> = {
   ERROR: 'text-red-500',
@@ -10,17 +14,70 @@ const TYPE_COLOR: Record<string, string> = {
 
 export default function AdminSystemLogs() {
   const [search, setSearch] = useState('');
+  const [logs, setLogs] = useState<SystemLogRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadLogs = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const nextLogs = await fetchAdminLogs();
+        if (alive) {
+          setLogs(nextLogs);
+        }
+      } catch (err) {
+        if (alive) {
+          setError(getAdminErrorMessage(err));
+        }
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadLogs();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
-    if (!search) return systemLogsData;
+    if (!search) return logs;
     const q = search.toLowerCase();
-    return systemLogsData.filter(
+    return logs.filter(
       (log) =>
         log.type.toLowerCase().includes(q) ||
         log.message.toLowerCase().includes(q) ||
         log.actor.toLowerCase().includes(q),
     );
-  }, [search]);
+  }, [logs, search]);
+
+  const handleExport = () => {
+    const header = ['timestamp', 'type', 'message', 'actor'];
+    const csvRows = [
+      header.join(','),
+      ...filtered.map((log) =>
+        [log.timestamp, log.type, log.message, log.actor]
+          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+          .join(','),
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join('\n')], {
+      type: 'text/csv;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'admin-logs.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <>
@@ -30,7 +87,7 @@ export default function AdminSystemLogs() {
         rightContent={
           <button
             className="px-3.5 py-1.5 border border-gray-300 rounded-md bg-white text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 transition"
-            onClick={() => alert('로그 내보내기 (CSV) - 데모')}
+            onClick={handleExport}
           >
             Export
           </button>
@@ -41,6 +98,18 @@ export default function AdminSystemLogs() {
         <p className="text-sm text-gray-500 mb-6">
           에러 로깅 · 관리자 활동 로그 · 감사(Audit) 추적
         </p>
+
+        {loading && (
+          <div className="mb-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
+            시스템 로그를 불러오는 중입니다.
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
+            {error}
+          </div>
+        )}
 
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full border-collapse">
@@ -90,7 +159,7 @@ export default function AdminSystemLogs() {
             </tbody>
           </table>
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
-            추천: 중요한 변경(상태변경/승인/거절)은 반드시 감사 로그로 남기기
+            현재 검색 결과를 CSV로 바로 내려받을 수 있습니다.
           </div>
         </div>
       </div>
