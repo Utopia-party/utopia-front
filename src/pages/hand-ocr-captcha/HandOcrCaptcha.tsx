@@ -16,7 +16,6 @@ import fist from '../../assets/fist.png';
 import palm from '../../assets/palm.png';
 import v_sign from '../../assets/v_sign.png';
 import thumbs_up from '../../assets/thumbs_up.png';
-import example5 from '../../assets/example5.png';
 import { startCaptcha, verifyCaptcha } from '../../apis/captcha';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
