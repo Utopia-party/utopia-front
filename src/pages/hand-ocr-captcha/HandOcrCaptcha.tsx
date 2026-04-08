@@ -12,10 +12,10 @@ import {
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import Slide from './components/Slide';
-import example1 from '../../assets/example1.png';
-import example2 from '../../assets/example2.png';
-import example3 from '../../assets/example3.png';
-import example4 from '../../assets/example4.png';
+import fist from '../../assets/fist.png';
+import palm from '../../assets/palm.png';
+import v_sign from '../../assets/v_sign.png';
+import thumbs_up from '../../assets/thumbs_up.png';
 import example5 from '../../assets/example5.png';
 import { startCaptcha, verifyCaptcha } from '../../apis/captcha';
 import axios from 'axios';
@@ -32,11 +32,10 @@ interface ChallengeData {
 const TOTAL_SECONDS = 5 * 60;
 
 const EXAMPLES = [
-  { id: 1, image: example1, pose: '주먹 ✊' },
-  { id: 2, image: example2, pose: '손바닥 🖐️' },
-  { id: 3, image: example3, pose: '브이 ✌️' },
-  { id: 4, image: example4, pose: '따봉 👍' },
-  { id: 5, image: example5, pose: '손가락 3개 🤚' },
+  { id: 1, image: fist, pose: '주먹 ✊' },
+  { id: 2, image: palm, pose: '손바닥 🖐️' },
+  { id: 3, image: v_sign, pose: '브이 ✌️' },
+  { id: 4, image: thumbs_up, pose: '따봉 👍' },
 ];
 
 export default function HandOcrCaptcha() {
