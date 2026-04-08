@@ -16,8 +16,8 @@ const STATUS_STYLE: Record<string, string> = {
 
 const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 const formatRate = (value: number) => `${Math.round(value * 100)}%`;
-const getLogoSrc = (logoImageKey?: string | null) =>
-  logoImageKey ? `/${logoImageKey}` : null;
+const getLogoSrc = (service: AdminServiceRecord) =>
+  service.logoImageUrl || null;
 
 const draftFromService = (
   service: AdminServiceRecord,
@@ -304,9 +304,9 @@ export default function AdminServices() {
                           <td className="px-4 py-3.5 text-sm text-gray-700">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                                {getLogoSrc(service.logoImageKey) ? (
+                                {getLogoSrc(service) ? (
                                   <img
-                                    src={getLogoSrc(service.logoImageKey)!}
+                                    src={getLogoSrc(service)!}
                                     alt={service.name}
                                     className="h-full w-full object-cover"
                                   />
@@ -373,11 +373,9 @@ export default function AdminServices() {
                                   <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-3">
                                       <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                                        {getLogoSrc(service.logoImageKey) ? (
+                                        {getLogoSrc(service) ? (
                                           <img
-                                            src={
-                                              getLogoSrc(service.logoImageKey)!
-                                            }
+                                            src={getLogoSrc(service)!}
                                             alt={service.name}
                                             className="h-full w-full object-cover"
                                           />

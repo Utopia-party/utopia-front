@@ -57,6 +57,7 @@ export type AdminServiceRecord = {
   maxMembers: number;
   monthlyPrice: number;
   logoImageKey?: string | null;
+  logoImageUrl?: string | null;
   isActive: boolean;
   createdBy: string;
   createdAt: string;
