@@ -1,3 +1,10 @@
+/*
+- 회원가입
+- 이메일/비밀번호 찾기
+- 일반로그인
+- 소셜 로그인 
+*/
+
 // 회원가입
 export interface SignupPayload {
   email: string;
@@ -34,7 +41,7 @@ export interface SignupResponse {
 // 이메일 찾기
 export interface FindIdPayload {
   name: string;
-  phone_number: string;
+  phone: string;
 }
 
 export interface FindIdResponse {
@@ -42,13 +49,20 @@ export interface FindIdResponse {
   message?: string;
 }
 
-// 비밀번호 찾기 요청
+// 비밀번호
 export interface FindPasswordPayload {
   email: string;
-  name: string;
 }
 
-// 비밀번호 찾기 응답
 export interface FindPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  new_password: string;
+}
+
+export interface ResetPasswordResponse {
   message: string;
 }

@@ -9,6 +9,8 @@ import type {
   FindIdResponse,
   FindPasswordPayload,
   FindPasswordResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse,
 } from '../types/auth';
 
 // 회원가입
@@ -26,12 +28,13 @@ export const checkEmail = async (
 
 export const requestEmailVerification = async (
   email: string,
+  type: 'signup' | 'reset-password' = 'signup',
 ): Promise<EmailRequestResponse> => {
   const response = await api.post<EmailRequestResponse>(
     '/api/email-request',
     null,
     {
-      params: { email },
+      params: { email, type },
     },
   );
   return response.data;
@@ -90,6 +93,16 @@ export const findPassword = async (
 ): Promise<FindPasswordResponse> => {
   const response = await api.post<FindPasswordResponse>(
     '/api/users/find-password',
+    payload,
+  );
+  return response.data;
+};
+
+export const resetPassword = async (
+  payload: ResetPasswordPayload,
+): Promise<ResetPasswordResponse> => {
+  const response = await api.post<ResetPasswordResponse>(
+    '/api/users/reset-password',
     payload,
   );
   return response.data;
