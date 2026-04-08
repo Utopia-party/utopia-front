@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { api } from '../libs/api';
+import { api } from './api';
 
 export type DashboardMetric = {
   id: string;

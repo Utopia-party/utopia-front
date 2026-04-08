@@ -83,7 +83,7 @@ export interface AuthErrorResponse {
   message?: string;
 }
 
-// 로그인 회원 관리
+// 로그인 상테 관리
 export interface AuthUser {
   user_id: string;
   email: string;
