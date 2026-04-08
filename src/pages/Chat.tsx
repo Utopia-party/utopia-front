@@ -26,9 +26,11 @@ interface PartyInfo {
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
-const WS_BASE = API_BASE.replace('http://', 'ws://')
-  .replace('https://', 'wss://')
-  .replace('/api', '');
+const WS_BASE =
+  import.meta.env.VITE_WS_BASE_URL ??
+  API_BASE.replace('http://', 'ws://')
+    .replace('https://', 'wss://')
+    .replace('/api', '');
 
 const ROLE_LABEL: Record<string, string> = {
   leader: '리더',
@@ -52,7 +54,6 @@ export default function Chat() {
   const [nickname, setNickname] = useState('익명');
   const [userId, setUserId] = useState('guest');
   const [userReady, setUserReady] = useState(false);
-
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -60,14 +61,13 @@ export default function Chat() {
   const connectedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. 유저 정보 로드
   useEffect(() => {
     api
       .get('/api/me')
       .then(({ data }) => {
         if (data.is_logged_in && data.user) {
           setNickname(data.user.nickname);
-          setUserId(data.user.id);
+          setUserId(data.user.user_id);
         }
         setUserReady(true);
       })
@@ -76,15 +76,12 @@ export default function Chat() {
       });
   }, []);
 
-  // 2. 초기 메시지 및 파티 정보 로드 (수정 포인트)
   useEffect(() => {
     if (!partyId) return;
 
-    // 메시지 목록 가져오기 - 배열 확인 로직 추가
     api
       .get(`/chat/parties/${partyId}/messages`)
       .then(({ data }) => {
-        // 백엔드 응답이 배열인지 확인 후 상태 업데이트
         setMessages(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
@@ -98,16 +95,16 @@ export default function Chat() {
       .catch(() => {});
   }, [partyId]);
 
-  // 3. WebSocket 연결
   useEffect(() => {
     if (!partyId || !userReady) return;
-    if (connectedRef.current) return;
-    connectedRef.current = true;
+    if (
+      wsRef.current &&
+      (wsRef.current.readyState === WebSocket.OPEN ||
+        wsRef.current.readyState === WebSocket.CONNECTING)
+    )
+      return;
 
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    connectedRef.current = true;
 
     const ws = new WebSocket(
       `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`,
@@ -238,7 +235,6 @@ export default function Chat() {
             <p className="text-sm font-bold text-foreground">메시지</p>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-3 border border-border rounded-xl mx-5 mb-3 bg-white min-h-0">
-            {/* messages 가 배열일 때만 map 실행 */}
             {Array.isArray(messages) && messages.length > 0 ? (
               messages.map((msg, i) => renderMessage(msg, i))
             ) : (
@@ -288,7 +284,6 @@ export default function Chat() {
                 </tr>
               </thead>
               <tbody>
-                {/* partyInfo.members 도 배열 확인 추가 */}
                 {Array.isArray(partyInfo?.members) &&
                   partyInfo.members.map((member) => (
                     <tr
