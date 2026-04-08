@@ -1,13 +1,44 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
+import { fetchMyNotifications, notificationKeys } from '../apis/notifications';
 
 type NotificationItem = {
-  id: number;
-  message: string;
-  createdAt: string;
-  isRead: boolean;
+  id: string;
+  user_id: string | null;
+  type: string | null;
+  title: string | null;
+  message: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  is_read: boolean | null;
+  created_at: string | null;
 };
+
+function formatRelativeTime(dateString: string | null) {
+  if (!dateString) return '';
+
+  const now = new Date();
+  const target = new Date(dateString);
+
+  if (Number.isNaN(target.getTime())) return '';
+
+  const diffMs = now.getTime() - target.getTime();
+
+  if (diffMs < 60 * 1000) return '방금 전';
+
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 60) return `${minutes}분 전`;
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 24) return `${hours}시간 전`;
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (days < 7) return `${days}일 전`;
+
+  return target.toLocaleDateString('ko-KR');
+}
 
 export default function Header() {
   const navigate = useNavigate();
@@ -15,30 +46,18 @@ export default function Header() {
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
-  // 임시 알림 데이터
-  const notifications: NotificationItem[] = [
-    {
-      id: 1,
-      message: '새로운 파티 신청이 도착했어요.',
-      createdAt: '방금 전',
-      isRead: false,
-    },
-    {
-      id: 2,
-      message: '정산 요청이 승인되었어요.',
-      createdAt: '10분 전',
-      isRead: false,
-    },
-    {
-      id: 3,
-      message: '신고 처리 결과가 등록되었어요.',
-      createdAt: '1시간 전',
-      isRead: true,
-    },
-  ];
+  const {
+    data: notifications = [],
+    isLoading: isNotificationsLoading,
+    isError: isNotificationsError,
+  } = useQuery<NotificationItem[]>({
+    queryKey: notificationKeys.me,
+    queryFn: fetchMyNotifications,
+    enabled: isLoggedIn,
+  });
 
   const unreadCount = useMemo(
-    () => notifications.filter((item) => !item.isRead).length,
+    () => notifications.filter((item) => !item.is_read).length,
     [notifications],
   );
 
@@ -53,6 +72,23 @@ export default function Header() {
       alert('로그아웃 되었습니다.');
       navigate('/home', { replace: true });
     }
+  };
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    // 나중에 reference_type / reference_id 기준으로 이동 처리 가능
+    // 예:
+    // if (item.reference_type === 'party' && item.reference_id) {
+    //   navigate(`/party/${item.reference_id}`);
+    //   return;
+    // }
+
+    if (item.reference_type === 'party' && item.reference_id) {
+      navigate(`/party/${item.reference_id}`);
+      setIsNotificationOpen(false);
+      return;
+    }
+
+    setIsNotificationOpen(false);
   };
 
   return (
@@ -101,27 +137,46 @@ export default function Header() {
                   </div>
 
                   <div className="max-h-80 space-y-2 overflow-y-auto">
-                    {notifications.length > 0 ? (
+                    {isNotificationsLoading ? (
+                      <div className="rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                        알림을 불러오는 중...
+                      </div>
+                    ) : isNotificationsError ? (
+                      <div className="rounded-xl bg-red-50 px-4 py-6 text-center text-sm text-red-500">
+                        알림을 불러오지 못했습니다.
+                      </div>
+                    ) : notifications.length > 0 ? (
                       notifications.map((item) => (
                         <button
                           key={item.id}
                           type="button"
+                          onClick={() => handleNotificationClick(item)}
                           className={`w-full rounded-xl border p-3 text-left transition hover:bg-gray-50 ${
-                            item.isRead
+                            item.is_read
                               ? 'border-gray-100 bg-white'
                               : 'border-blue-100 bg-blue-50'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <p className="text-sm text-gray-800">
-                              {item.message}
-                            </p>
-                            {!item.isRead && (
+                            <div className="min-w-0 flex-1">
+                              {item.title && (
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {item.title}
+                                </p>
+                              )}
+
+                              <p className="mt-1 text-sm text-gray-700 break-words">
+                                {item.message ?? '알림 내용이 없습니다.'}
+                              </p>
+                            </div>
+
+                            {!item.is_read && (
                               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
                             )}
                           </div>
+
                           <p className="mt-2 text-xs text-gray-400">
-                            {item.createdAt}
+                            {formatRelativeTime(item.created_at)}
                           </p>
                         </button>
                       ))
