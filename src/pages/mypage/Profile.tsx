@@ -67,7 +67,7 @@ function ProfileDashboard() {
 
   const nickname = user?.nickname ?? '';
   const email = user?.email ?? '';
-  const phone = user?.phone ?? '';
+  // const phone = user?.phone ?? '';
   // 상원: 프로필 화면의 관심사 칸은 닉네임이 아니라 실제 회원 계정에 저장된 관심사 목록을 보여줍니다.
   const interestText = interests.length > 0 ? interests.join(', ') : '-'; // 상원
 
@@ -211,7 +211,7 @@ function ProfileDashboard() {
                     전화번호
                   </p>
                   <p className="mt-1 text-sm font-extrabold text-slate-900">
-                    {phone || '-'}
+                    {/* {phone || '-'} */}-
                   </p>
                 </div>
 
@@ -310,7 +310,7 @@ function ProfileDashboard() {
         initialValues={{
           nickname,
           email,
-          phone,
+          // phone,
         }}
       />
     </>

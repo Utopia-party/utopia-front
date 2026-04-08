@@ -22,7 +22,7 @@ import CreateParty from './components/party/CreateParty';
 
 // 보호 라우트
 import AdminRoute from './components/AdminRoute';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // 사이드바가 필요한 페이지
 import Report from './pages/report/Report';
