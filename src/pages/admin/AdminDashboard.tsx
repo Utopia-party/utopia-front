@@ -1,9 +1,10 @@
+import { useEffect, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import {
-  dashboardMemberStatsData,
-  dashboardMetricsData,
-  dashboardSalesStatsData,
-} from './data/mockData';
+  fetchAdminDashboard,
+  getAdminErrorMessage,
+  type AdminDashboard as AdminDashboardData,
+} from '../../apis/admin';
 
 function SummaryList({
   title,
@@ -38,6 +39,38 @@ function SummaryList({
 }
 
 export default function AdminDashboard() {
+  const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const nextDashboard = await fetchAdminDashboard();
+        if (alive) {
+          setDashboard(nextDashboard);
+        }
+      } catch (err) {
+        if (alive) {
+          setError(getAdminErrorMessage(err));
+        }
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadDashboard();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <>
       <AdminHeader
@@ -58,7 +91,7 @@ export default function AdminDashboard() {
           </section>
 
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {dashboardMetricsData.map((metric) => (
+            {(dashboard?.metrics ?? []).map((metric) => (
               <article
                 key={metric.id}
                 className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
@@ -78,14 +111,26 @@ export default function AdminDashboard() {
             <SummaryList
               title="회원 통계(상태별)"
               subtitle="활성/정지 상태를 빠르게 점검할 수 있습니다."
-              rows={dashboardMemberStatsData}
+              rows={dashboard?.memberStats ?? []}
             />
             <SummaryList
               title="매출/정산 통계(샘플)"
               subtitle="승인, 대기, 거절 금액을 분리해 보여줍니다."
-              rows={dashboardSalesStatsData}
+              rows={dashboard?.salesStats ?? []}
             />
           </section>
+
+          {loading && (
+            <section className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
+              관리자 대시보드를 불러오는 중입니다.
+            </section>
+          )}
+
+          {error && (
+            <section className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
+              {error}
+            </section>
+          )}
 
           <section className="rounded-2xl border border-dashed border-gray-300 bg-white/80 p-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -99,7 +144,7 @@ export default function AdminDashboard() {
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                접수 신고 7건 / 정산 대기 3건 / 실시간 가입 +12
+                {dashboard?.todaySummary ?? '오늘 운영 지표를 집계 중입니다.'}
               </div>
             </div>
           </section>

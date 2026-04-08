@@ -1,7 +1,12 @@
-import { useState, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
-import { settlementsData } from './data/mockData';
+import {
+  fetchAdminSettlements,
+  getAdminErrorMessage,
+  updateAdminSettlementStatus,
+  type SettlementRecord,
+} from '../../apis/admin';
 
 const STATUS_STYLE: Record<string, string> = {
   대기: 'text-amber-500 bg-amber-50',
@@ -16,9 +21,71 @@ const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 export default function AdminSettlements() {
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
+  const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
+  const [expandedSettlementId, setExpandedSettlementId] = useState<
+    string | null
+  >(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busySettlementId, setBusySettlementId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadSettlements = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const nextSettlements = await fetchAdminSettlements();
+        if (alive) {
+          setSettlements(nextSettlements);
+        }
+      } catch (err) {
+        if (alive) {
+          setError(getAdminErrorMessage(err));
+        }
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadSettlements();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const reloadSettlements = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setSettlements(await fetchAdminSettlements());
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSettlementStatus = async (
+    settlementId: string,
+    status: string,
+  ) => {
+    try {
+      setBusySettlementId(settlementId);
+      await updateAdminSettlementStatus(settlementId, status);
+      await reloadSettlements();
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setBusySettlementId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
-    let data = settlementsData;
+    let data = settlements;
     if (activeTab !== '전체') {
       data = data.filter((s) => s.status === activeTab);
     }
@@ -33,7 +100,7 @@ export default function AdminSettlements() {
       );
     }
     return data;
-  }, [activeTab, search]);
+  }, [activeTab, search, settlements]);
 
   return (
     <>
@@ -52,6 +119,18 @@ export default function AdminSettlements() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
+
+        {loading && (
+          <div className="mb-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
+            정산 목록을 불러오는 중입니다.
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
+            {error}
+          </div>
+        )}
 
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full border-collapse">
@@ -84,61 +163,152 @@ export default function AdminSettlements() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((stl) => (
-                <tr
-                  key={stl.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition"
-                >
-                  <td className="px-4 py-3.5 text-sm">{stl.id}</td>
-                  <td className="px-4 py-3.5 text-sm">{stl.partyId}</td>
-                  <td className="px-4 py-3.5 text-sm">{stl.leaderId}</td>
-                  <td className="px-4 py-3.5 text-sm">
-                    {formatWon(stl.totalAmount)}
-                  </td>
-                  <td className="px-4 py-3.5 text-sm">{stl.memberCount}명</td>
-                  <td className="px-4 py-3.5 text-sm">{stl.billingMonth}</td>
-                  <td className="px-4 py-3.5 text-sm">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[stl.status] ?? ''}`}
-                    >
-                      {stl.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-sm">
-                    <div className="flex gap-1.5 items-center">
-                      {stl.status === '대기' ? (
-                        <>
-                          <button
-                            className="px-3 py-1 rounded-md text-xs border border-gray-300 bg-white hover:bg-gray-50 cursor-pointer transition"
-                            onClick={() => alert(`상세: ${stl.id}`)}
-                          >
-                            상세
-                          </button>
-                          <button
-                            className="px-3 py-1 rounded-md text-xs border border-blue-300 text-blue-500 hover:bg-blue-50 cursor-pointer transition"
-                            onClick={() => alert(`승인: ${stl.id}`)}
-                          >
-                            승인
-                          </button>
-                          <button
-                            className="px-3 py-1 rounded-md text-xs border border-red-300 text-red-500 hover:bg-red-50 cursor-pointer transition"
-                            onClick={() => alert(`거절: ${stl.id}`)}
-                          >
-                            거절
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          className="px-3 py-1 rounded-md text-xs border border-gray-300 bg-white hover:bg-gray-50 cursor-pointer transition"
-                          onClick={() => alert(`상세: ${stl.id}`)}
+              {filtered.map((stl) => {
+                const isExpanded = expandedSettlementId === stl.id;
+
+                return (
+                  <Fragment key={stl.id}>
+                    <tr className="border-b border-gray-100 transition hover:bg-gray-50">
+                      <td className="px-4 py-3.5 text-sm">{stl.id}</td>
+                      <td className="px-4 py-3.5 text-sm">{stl.partyId}</td>
+                      <td className="px-4 py-3.5 text-sm">{stl.leaderId}</td>
+                      <td className="px-4 py-3.5 text-sm">
+                        {formatWon(stl.totalAmount)}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm">
+                        {stl.memberCount}명
+                      </td>
+                      <td className="px-4 py-3.5 text-sm">
+                        {stl.billingMonth}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[stl.status] ?? ''}`}
                         >
-                          상세
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                          {stl.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm">
+                        <div className="flex gap-1.5 items-center">
+                          <button
+                            className={`px-3 py-1 rounded-md text-xs border transition ${
+                              isExpanded
+                                ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            }`}
+                            onClick={() =>
+                              setExpandedSettlementId((prev) =>
+                                prev === stl.id ? null : stl.id,
+                              )
+                            }
+                          >
+                            {isExpanded ? '닫기' : '상세'}
+                          </button>
+                          {stl.status === '대기' && (
+                            <>
+                              <button
+                                className="px-3 py-1 rounded-md text-xs border border-blue-300 text-blue-500 hover:bg-blue-50 cursor-pointer transition"
+                                disabled={busySettlementId === stl.id}
+                                onClick={() =>
+                                  void handleSettlementStatus(stl.id, '승인')
+                                }
+                              >
+                                {busySettlementId === stl.id
+                                  ? '처리 중...'
+                                  : '승인'}
+                              </button>
+                              <button
+                                className="px-3 py-1 rounded-md text-xs border border-red-300 text-red-500 hover:bg-red-50 cursor-pointer transition"
+                                disabled={busySettlementId === stl.id}
+                                onClick={() =>
+                                  void handleSettlementStatus(stl.id, '거절')
+                                }
+                              >
+                                거절
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+
+                    {isExpanded && (
+                      <tr className="border-b border-gray-100 bg-slate-50/70">
+                        <td colSpan={8} className="px-4 py-4">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div>
+                                <h3 className="text-base font-semibold text-slate-900">
+                                  정산 상세
+                                </h3>
+                                <p className="mt-1 text-sm text-slate-500">
+                                  파티 정산 내역을 팝업 없이 펼쳐서 확인하고
+                                  바로 승인 또는 거절할 수 있습니다.
+                                </p>
+                              </div>
+                              <span
+                                className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[stl.status] ?? ''}`}
+                              >
+                                {stl.status}
+                              </span>
+                            </div>
+
+                            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                              {[
+                                ['정산 ID', stl.id],
+                                ['파티 ID', stl.partyId],
+                                ['파티장', stl.leaderId],
+                                ['총액', formatWon(stl.totalAmount)],
+                                ['멤버 수', `${stl.memberCount}명`],
+                                ['청구월', stl.billingMonth],
+                                ['상태', stl.status],
+                                ['생성일', stl.createdAt],
+                              ].map(([label, value]) => (
+                                <div
+                                  key={label}
+                                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                >
+                                  <div className="text-xs font-medium text-slate-400">
+                                    {label}
+                                  </div>
+                                  <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                    {value}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {stl.status === '대기' && (
+                              <div className="mt-5 flex flex-wrap gap-2">
+                                <button
+                                  className="rounded-md border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
+                                  disabled={busySettlementId === stl.id}
+                                  onClick={() =>
+                                    void handleSettlementStatus(stl.id, '승인')
+                                  }
+                                >
+                                  {busySettlementId === stl.id
+                                    ? '처리 중...'
+                                    : '승인'}
+                                </button>
+                                <button
+                                  className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+                                  disabled={busySettlementId === stl.id}
+                                  onClick={() =>
+                                    void handleSettlementStatus(stl.id, '거절')
+                                  }
+                                >
+                                  거절
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center text-gray-400 py-8">
@@ -149,7 +319,7 @@ export default function AdminSettlements() {
             </tbody>
           </table>
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
-            승인 시: 파티장 계좌로 정산 처리 + 알림 발송 + 관리자 활동 로그 기록
+            승인과 거절 버튼은 실제 정산 관리자 API를 호출합니다.
           </div>
         </div>
       </div>
