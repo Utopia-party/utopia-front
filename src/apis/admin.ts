@@ -31,10 +31,49 @@ export type AdminRoleRecord = {
   id: string;
   userId: string;
   adminId: string;
-  role: 'ROOT' | 'ADMIN';
-  scope: string;
+  canManageUsers: boolean;
+  canManageParties: boolean;
+  canManageReports: boolean;
+  canManageModeration: boolean;
+  canApproveReceipts: boolean;
+  canApproveSettlements: boolean;
+  canViewLogs: boolean;
+  canManageAdmins: boolean;
   lastUpdated: string;
   updatedBy: string;
+};
+
+export type AdminRoleUpdatePayload = Omit<
+  AdminRoleRecord,
+  'id' | 'userId' | 'adminId' | 'lastUpdated' | 'updatedBy'
+>;
+
+export type AdminPermissions = AdminRoleUpdatePayload;
+
+export type AdminServiceRecord = {
+  id: string;
+  name: string;
+  category: string;
+  maxMembers: number;
+  monthlyPrice: number;
+  logoImageKey?: string | null;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  commissionRate: number;
+  leaderDiscountRate: number;
+  referralDiscountRate: number;
+};
+
+export type AdminServiceUpdatePayload = {
+  maxMembers: number;
+  monthlyPrice: number;
+  logoImageKey?: string | null;
+  isActive: boolean;
+  commissionRate: number;
+  leaderDiscountRate: number;
+  referralDiscountRate: number;
 };
 
 export type AdminUserRecord = {
@@ -128,13 +167,18 @@ export async function fetchAdminRoles(): Promise<AdminRoleRecord[]> {
   return data;
 }
 
+export async function fetchAdminPermissions(): Promise<AdminPermissions> {
+  const { data } = await api.get<AdminPermissions>('/api/admin/me');
+  return data;
+}
+
 export async function updateAdminRole(
   userId: string,
-  role: AdminRoleRecord['role'],
+  payload: AdminRoleUpdatePayload,
 ) {
   const { data } = await api.put<AdminRoleRecord>(
     `/api/admin/roles/${userId}`,
-    { role },
+    payload,
   );
   return data;
 }
@@ -169,6 +213,22 @@ export async function updateAdminUserStatus(
 
 export async function fetchAdminParties(): Promise<AdminPartyRecord[]> {
   const { data } = await api.get<AdminPartyRecord[]>('/api/admin/parties');
+  return data;
+}
+
+export async function fetchAdminServices(): Promise<AdminServiceRecord[]> {
+  const { data } = await api.get<AdminServiceRecord[]>('/api/admin/services');
+  return data;
+}
+
+export async function updateAdminService(
+  serviceId: string,
+  payload: AdminServiceUpdatePayload,
+) {
+  const { data } = await api.patch<AdminServiceRecord>(
+    `/api/admin/services/${serviceId}`,
+    payload,
+  );
   return data;
 }
 

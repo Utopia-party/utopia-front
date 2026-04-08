@@ -88,6 +88,7 @@ export interface AuthUser {
   user_id: string;
   email: string;
   nickname: string;
+  phone?: string | null;
   provider: string;
   role: string;
 }

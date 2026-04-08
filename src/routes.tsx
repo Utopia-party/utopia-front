@@ -14,7 +14,6 @@ import ResetPassword from './pages/auth/ResetPassword';
 import Signup from './pages/auth/Signup';
 import SocialCallback from './pages/auth/SocialCallback';
 import SocialSignup from './pages/auth/SocialSignup';
-import Favor from './pages/auth/Favor';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
 import CreateParty from './components/party/CreateParty';
@@ -41,6 +40,7 @@ import AdminShell from './pages/admin/AdminShell';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminRoles from './pages/admin/AdminRoles';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminServices from './pages/admin/AdminServices';
 import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
 import AdminReceipts from './pages/admin/AdminReceipts';
@@ -82,10 +82,6 @@ const router = createBrowserRouter([
         Component: ResetPassword,
       },
 
-      {
-        path: 'favor',
-        Component: Favor,
-      },
       {
         path: 'handcaptcha',
         element: (
@@ -215,6 +211,10 @@ const router = createBrowserRouter([
       {
         path: 'users',
         Component: AdminUsers,
+      },
+      {
+        path: 'services',
+        Component: AdminServices,
       },
       {
         path: 'parties',
