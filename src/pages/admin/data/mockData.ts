@@ -300,8 +300,14 @@ export const dashboardSalesStatsData: DashboardSummaryRow[] = [
 export interface AdminRoleRecord {
   id: string;
   adminId: string;
-  role: 'ROOT' | 'ADMIN';
-  scope: string;
+  canManageUsers: boolean;
+  canManageParties: boolean;
+  canManageReports: boolean;
+  canManageModeration: boolean;
+  canApproveReceipts: boolean;
+  canApproveSettlements: boolean;
+  canViewLogs: boolean;
+  canManageAdmins: boolean;
   lastUpdated: string;
   updatedBy: string;
 }
@@ -310,32 +316,56 @@ export const adminRolesData: AdminRoleRecord[] = [
   {
     id: 'role-001',
     adminId: 'root_admin',
-    role: 'ROOT',
-    scope: '전체 시스템 / 승인 / 정책',
+    canManageUsers: true,
+    canManageParties: true,
+    canManageReports: true,
+    canManageModeration: true,
+    canApproveReceipts: true,
+    canApproveSettlements: true,
+    canViewLogs: true,
+    canManageAdmins: true,
     lastUpdated: '2026-03-29 09:10',
     updatedBy: 'system',
   },
   {
     id: 'role-002',
     adminId: 'admin_manager',
-    role: 'ADMIN',
-    scope: '전체 운영 권한',
+    canManageUsers: true,
+    canManageParties: true,
+    canManageReports: true,
+    canManageModeration: true,
+    canApproveReceipts: true,
+    canApproveSettlements: true,
+    canViewLogs: true,
+    canManageAdmins: false,
     lastUpdated: '2026-03-28 14:20',
     updatedBy: 'root_admin',
   },
   {
     id: 'role-003',
     adminId: 'admin_support',
-    role: 'ADMIN',
-    scope: '전체 운영 권한',
+    canManageUsers: true,
+    canManageParties: true,
+    canManageReports: true,
+    canManageModeration: true,
+    canApproveReceipts: false,
+    canApproveSettlements: false,
+    canViewLogs: true,
+    canManageAdmins: false,
     lastUpdated: '2026-03-27 17:40',
     updatedBy: 'root_admin',
   },
   {
     id: 'role-004',
     adminId: 'admin_audit',
-    role: 'ADMIN',
-    scope: '전체 운영 권한',
+    canManageUsers: false,
+    canManageParties: false,
+    canManageReports: true,
+    canManageModeration: false,
+    canApproveReceipts: false,
+    canApproveSettlements: false,
+    canViewLogs: true,
+    canManageAdmins: false,
     lastUpdated: '2026-03-26 11:05',
     updatedBy: 'root_admin',
   },

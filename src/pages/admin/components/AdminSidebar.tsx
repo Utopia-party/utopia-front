@@ -1,17 +1,70 @@
 import { NavLink } from 'react-router';
+import type { AdminPermissions } from '../../../apis/admin';
 
-const menuItems = [
+const allMenuItems = [
   { path: '/admin', label: '통계 대시보드', end: true },
-  { path: '/admin/roles', label: '권한관리', end: false },
-  { path: '/admin/users', label: '사용자관리', end: false },
-  { path: '/admin/parties', label: '파티관리', end: false },
-  { path: '/admin/reports', label: '신고관리', end: false },
-  { path: '/admin/receipts', label: '영수증 승인', end: false },
-  { path: '/admin/settlements', label: '정산 승인', end: false },
-  { path: '/admin/logs', label: '시스템 로그', end: false },
-];
+  {
+    path: '/admin/roles',
+    label: '권한관리',
+    end: false,
+    permission: 'canManageAdmins',
+  },
+  {
+    path: '/admin/users',
+    label: '사용자관리',
+    end: false,
+    permission: 'canManageUsers',
+  },
+  {
+    path: '/admin/services',
+    label: '구독 서비스',
+    end: false,
+    permission: 'canManageParties',
+  },
+  {
+    path: '/admin/parties',
+    label: '파티관리',
+    end: false,
+    permission: 'canManageParties',
+  },
+  {
+    path: '/admin/reports',
+    label: '신고관리',
+    end: false,
+    permission: 'canManageReports',
+  },
+  {
+    path: '/admin/receipts',
+    label: '영수증 승인',
+    end: false,
+    permission: 'canApproveReceipts',
+  },
+  {
+    path: '/admin/settlements',
+    label: '정산 승인',
+    end: false,
+    permission: 'canApproveSettlements',
+  },
+  {
+    path: '/admin/logs',
+    label: '시스템 로그',
+    end: false,
+    permission: 'canViewLogs',
+  },
+] as const;
 
-export default function AdminSidebar() {
+export default function AdminSidebar({
+  permissions,
+}: {
+  permissions: AdminPermissions | null;
+}) {
+  const menuItems = allMenuItems.filter((item) => {
+    if (!('permission' in item) || !item.permission) {
+      return true;
+    }
+    return permissions?.[item.permission] ?? false;
+  });
+
   return (
     <aside className="w-[200px] bg-white border-r border-gray-200 py-6 flex flex-col fixed top-0 left-0 bottom-0 z-50">
       <a

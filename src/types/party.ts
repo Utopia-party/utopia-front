@@ -13,6 +13,7 @@ export interface Party {
   max_members: number | null; // 신규 필드
   monthly_price: number | null; // 신규 필드
   logo_image_key: string | null; // 신규 필드
+  logo_image_url: string | null;
   member_count: number;
 }
 

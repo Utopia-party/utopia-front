@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'; // 상원
+import { useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import { getMyInterests } from '../../apis/userInterests'; // 상원
 import { useAuthStore } from '../../stores/authStore';
 import ProfileEditModal from './components/ProfileEditModal';
 
@@ -62,60 +61,13 @@ function ProfileDashboard() {
   const navigate = useNavigate();
   const { user, isLoggedIn, loading } = useAuthStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
-  // 상원: 서버에서 읽은 관심사 배열을 프로필 화면 상태로 유지합니다.
-  const [interests, setInterests] = useState<string[]>([]); // 상원
 
   const nickname = user?.nickname ?? '';
   const email = user?.email ?? '';
-  // const phone = user?.phone ?? '';
-  // 상원: 프로필 화면의 관심사 칸은 닉네임이 아니라 실제 회원 계정에 저장된 관심사 목록을 보여줍니다.
-  const interestText = interests.length > 0 ? interests.join(', ') : '-'; // 상원
+  const phone = user?.phone ?? '';
+  const roleLabel = (user?.role || 'user').toUpperCase();
 
   const profileInitial = useMemo(() => getProfileInitial(nickname), [nickname]);
-
-  // 상원: 로그인된 사용자라면 마이페이지에서 항상 최신 관심사 저장값을 다시 불러옵니다.
-  useEffect(() => {
-    // 상원
-    // 상원: 로그아웃 상태에서는 관심사 칸을 비워 둡니다.
-    if (!isLoggedIn) {
-      // 상원
-      setInterests([]); // 상원
-      return; // 상원
-    } // 상원
-
-    // 상원: 비동기 응답이 늦게 돌아와도 언마운트 뒤 setState하지 않도록 플래그를 둡니다.
-    let isMounted = true; // 상원
-
-    // 상원: 현재 사용자 계정에 저장된 관심사 목록을 서버에서 읽어옵니다.
-    const loadInterests = async () => {
-      // 상원
-      try {
-        // 상원
-        const items = await getMyInterests(); // 상원
-        // 상원: 아직 화면이 살아 있을 때만 서버 응답을 상태에 반영합니다.
-        if (isMounted) {
-          // 상원
-          setInterests(items); // 상원
-        } // 상원
-      } catch {
-        // 상원
-        // 상원: 조회 실패 시에는 빈 배열로 되돌려 잘못된 예전 값이 남지 않게 합니다.
-        if (isMounted) {
-          // 상원
-          setInterests([]); // 상원
-        } // 상원
-      } // 상원
-    }; // 상원
-
-    // 상원: 위에서 정의한 비동기 조회 함수를 즉시 실행합니다.
-    void loadInterests(); // 상원
-
-    // 상원: effect 종료 시 플래그를 내려 늦은 응답이 상태를 건드리지 못하게 합니다.
-    return () => {
-      // 상원
-      isMounted = false; // 상원
-    }; // 상원
-  }, [isLoggedIn]); // 상원
 
   if (loading) {
     return (
@@ -211,21 +163,16 @@ function ProfileDashboard() {
                     전화번호
                   </p>
                   <p className="mt-1 text-sm font-extrabold text-slate-900">
-                    {/* {phone || '-'} */}-
+                    {phone || '-'}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-400">관심사</p>
-                  <p className="mt-1 text-sm font-extrabold text-slate-900">
-                    {interestText} {/* 상원 */}
+                  <p className="text-xs font-semibold text-slate-400">
+                    계정 유형
                   </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-400">가입일</p>
                   <p className="mt-1 text-sm font-extrabold text-slate-900">
-                    정상
+                    {roleLabel}
                   </p>
                 </div>
               </div>
