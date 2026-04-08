@@ -16,7 +16,6 @@ import fist from '../../assets/fist.png';
 import palm from '../../assets/palm.png';
 import v_sign from '../../assets/v_sign.png';
 import thumbs_up from '../../assets/thumbs_up.png';
-import example5 from '../../assets/example5.png';
 import { startCaptcha, verifyCaptcha } from '../../apis/captcha';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
@@ -106,7 +105,11 @@ export default function HandOcrCaptcha() {
         }
 
         captchaTokenStorage.set(data.passToken);
-        navigate('/party/create');
+        setStep('success');
+
+        setTimeout(() => {
+          navigate('/party/create');
+        }, 1000);
       } else {
         toast.error(data.message || '인증에 실패했습니다.');
         setStep('fail');
