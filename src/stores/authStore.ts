@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '../libs/api';
+import { api } from '../apis/api';
 
 /* 전역상태관리파일 */
 

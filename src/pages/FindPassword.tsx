@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { api } from '../libs/api';
+import { api } from '../apis/api';
 
 type FindPasswordForm = {
   email: string;

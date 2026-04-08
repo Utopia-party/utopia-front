@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import axios from 'axios';
-import { api } from '../libs/api';
+import { api } from '../apis/api';
 import { useAuthStore } from '../stores/authStore';
 
 type SocialLoginNeedNicknameResponse = {

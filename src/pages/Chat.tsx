@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { api } from '../libs/api';
+import { api } from '../apis/api';
 
 interface Message {
   type: 'message' | 'system' | 'warning' | 'error';
@@ -24,9 +24,9 @@ interface PartyInfo {
   members: Member[];
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
-const WS_BASE = API_BASE
-  .replace('http://', 'ws://')
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+const WS_BASE = API_BASE.replace('http://', 'ws://')
   .replace('https://', 'wss://')
   .replace('/api', '');
 
@@ -62,15 +62,18 @@ export default function Chat() {
 
   // 1. 유저 정보 로드
   useEffect(() => {
-    api.get('/api/me').then(({ data }) => {
-      if (data.is_logged_in && data.user) {
-        setNickname(data.user.nickname);
-        setUserId(data.user.id);
-      }
-      setUserReady(true);
-    }).catch(() => {
-      setUserReady(true);
-    });
+    api
+      .get('/api/me')
+      .then(({ data }) => {
+        if (data.is_logged_in && data.user) {
+          setNickname(data.user.nickname);
+          setUserId(data.user.id);
+        }
+        setUserReady(true);
+      })
+      .catch(() => {
+        setUserReady(true);
+      });
   }, []);
 
   // 2. 초기 메시지 및 파티 정보 로드 (수정 포인트)
@@ -78,17 +81,19 @@ export default function Chat() {
     if (!partyId) return;
 
     // 메시지 목록 가져오기 - 배열 확인 로직 추가
-    api.get(`/chat/parties/${partyId}/messages`)
+    api
+      .get(`/chat/parties/${partyId}/messages`)
       .then(({ data }) => {
         // 백엔드 응답이 배열인지 확인 후 상태 업데이트
         setMessages(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
-        console.error("메시지 로딩 실패:", err);
-        setMessages([]); 
+        console.error('메시지 로딩 실패:', err);
+        setMessages([]);
       });
 
-    api.get(`/chat/parties/${partyId}/info`)
+    api
+      .get(`/chat/parties/${partyId}/info`)
       .then(({ data }) => setPartyInfo(data))
       .catch(() => {});
   }, [partyId]);
@@ -105,7 +110,7 @@ export default function Chat() {
     }
 
     const ws = new WebSocket(
-      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`
+      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`,
     );
     wsRef.current = ws;
 
@@ -117,9 +122,9 @@ export default function Chat() {
     ws.onmessage = (e) => {
       try {
         const msg: Message = JSON.parse(e.data);
-        setMessages(prev => [...prev, msg]);
+        setMessages((prev) => [...prev, msg]);
       } catch (err) {
-        console.error("메시지 파싱 에러:", err);
+        console.error('메시지 파싱 에러:', err);
       }
     };
 
@@ -135,7 +140,12 @@ export default function Chat() {
   }, [messages]);
 
   const sendMessage = useCallback(() => {
-    if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (
+      !input.trim() ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    )
+      return;
     wsRef.current.send(input.trim());
     setInput('');
   }, [input]);
@@ -169,7 +179,9 @@ export default function Chat() {
       const isError = msg.type === 'error';
       return (
         <div key={i} className="flex justify-center">
-          <span className={`text-xs ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'} border px-3 py-1.5 rounded-xl`}>
+          <span
+            className={`text-xs ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'} border px-3 py-1.5 rounded-xl`}
+          >
             {msg.content}
           </span>
         </div>
@@ -177,13 +189,25 @@ export default function Chat() {
     }
 
     return (
-      <div key={i} className={`flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-        {!isMe && <p className="text-xs text-muted-foreground px-2">{msg.nickname}</p>}
-        <div className={`max-w-xs px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}>
+      <div
+        key={i}
+        className={`flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}
+      >
+        {!isMe && (
+          <p className="text-xs text-muted-foreground px-2">{msg.nickname}</p>
+        )}
+        <div
+          className={`max-w-xs px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
+        >
           {msg.content}
         </div>
         <p className="text-[10px] text-muted-foreground px-2">
-          {msg.created_at ? new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : ''}
+          {msg.created_at
+            ? new Date(msg.created_at).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : ''}
         </p>
       </div>
     );
@@ -192,14 +216,19 @@ export default function Chat() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="bg-card border-b border-border px-6 py-3 flex items-center gap-3 shrink-0">
-        <button onClick={() => navigate('/home')} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <button
+          onClick={() => navigate('/home')}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
           ← 파티 목록
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-extrabold text-foreground truncate">
             {partyInfo?.title ?? '채팅방'}
           </h1>
-          <p className="text-xs text-muted-foreground">정산요청 · 영수증 인증 · 채팅 신고</p>
+          <p className="text-xs text-muted-foreground">
+            정산요청 · 영수증 인증 · 채팅 신고
+          </p>
         </div>
       </div>
 
@@ -213,7 +242,9 @@ export default function Chat() {
             {Array.isArray(messages) && messages.length > 0 ? (
               messages.map((msg, i) => renderMessage(msg, i))
             ) : (
-              <p className="text-xs text-muted-foreground">[시스템] 채팅방이 생성되었습니다.</p>
+              <p className="text-xs text-muted-foreground">
+                [시스템] 채팅방이 생성되었습니다.
+              </p>
             )}
             <div ref={bottomRef} />
           </div>
@@ -223,8 +254,8 @@ export default function Chat() {
               className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm outline-none focus:border-primary bg-background"
               placeholder="메시지 입력"
               value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             />
             <button
               onClick={sendMessage}
@@ -258,28 +289,54 @@ export default function Chat() {
               </thead>
               <tbody>
                 {/* partyInfo.members 도 배열 확인 추가 */}
-                {Array.isArray(partyInfo?.members) && partyInfo.members.map(member => (
-                  <tr key={member.user_id} className="border-t border-border/50">
-                    <td className="py-2.5 font-medium">{member.nickname}</td>
-                    <td className="py-2.5 text-muted-foreground">{ROLE_LABEL[member.role] ?? member.role}</td>
-                    <td className="py-2.5 text-muted-foreground">{STATUS_LABEL[member.status] ?? member.status}</td>
-                  </tr>
-                ))}
+                {Array.isArray(partyInfo?.members) &&
+                  partyInfo.members.map((member) => (
+                    <tr
+                      key={member.user_id}
+                      className="border-t border-border/50"
+                    >
+                      <td className="py-2.5 font-medium">{member.nickname}</td>
+                      <td className="py-2.5 text-muted-foreground">
+                        {ROLE_LABEL[member.role] ?? member.role}
+                      </td>
+                      <td className="py-2.5 text-muted-foreground">
+                        {STATUS_LABEL[member.status] ?? member.status}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
 
           <div className="p-5">
-            <p className="text-sm font-bold text-foreground mb-3">영수증 인증</p>
+            <p className="text-sm font-bold text-foreground mb-3">
+              영수증 인증
+            </p>
             <div className="flex items-center gap-2 mb-1">
-              <button onClick={() => fileInputRef.current?.click()} className="px-3 py-1.5 border border-border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 shrink-0">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 border border-border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 shrink-0"
+              >
                 파일 선택
               </button>
-              <span className="text-xs text-muted-foreground truncate">{receiptFile ? receiptFile.name : '선택된 파일 없음'}</span>
-              <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleReceiptChange} />
+              <span className="text-xs text-muted-foreground truncate">
+                {receiptFile ? receiptFile.name : '선택된 파일 없음'}
+              </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={handleReceiptChange}
+              />
             </div>
-            <p className="text-[11px] text-muted-foreground mb-4">OCR 분석 → 자동 승인 실패 시 관리자 검토</p>
-            <button onClick={handleReceiptSubmit} className="w-full py-3 bg-primary text-primary-foreground rounded-2xl text-sm font-bold active:scale-[0.98]">
+            <p className="text-[11px] text-muted-foreground mb-4">
+              OCR 분석 → 자동 승인 실패 시 관리자 검토
+            </p>
+            <button
+              onClick={handleReceiptSubmit}
+              className="w-full py-3 bg-primary text-primary-foreground rounded-2xl text-sm font-bold active:scale-[0.98]"
+            >
               인증 요청
             </button>
           </div>

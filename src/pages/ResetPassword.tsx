@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { api } from '../libs/api';
+import { api } from '../apis/api';
 
 type ResetPasswordForm = {
   password: string;

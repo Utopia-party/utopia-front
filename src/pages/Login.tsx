@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { api } from '../libs/api';
+import { api } from '../apis/api';
 import { CaptchaWidget } from '../components/captcha';
 import { useAuthStore } from '../stores/authStore';
 import { FcGoogle } from 'react-icons/fc';

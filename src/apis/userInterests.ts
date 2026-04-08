@@ -1,4 +1,4 @@
-import { api } from '../libs/api';
+import { api } from './api';
 
 // 상원: 관심사 관련 API 응답은 items 문자열 배열 하나만 받도록 타입을 정의합니다.
 type UserInterestsResponse = {

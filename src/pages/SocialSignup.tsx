@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { api } from '../libs/api';
+import { api } from '../apis/api';
 import { useAuthStore } from '../stores/authStore';
 
 // 소셜로그인 추가 정보 입력 페이지(닉네임, 전화번호(선택))
@@ -65,7 +65,9 @@ export default function SocialSignup() {
 
       navigate('/home', { replace: true });
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { detail?: string; message?: string } } };
+      const axiosError = error as {
+        response?: { data?: { detail?: string; message?: string } };
+      };
       alert(
         axiosError?.response?.data?.detail ||
           axiosError?.response?.data?.message ||
