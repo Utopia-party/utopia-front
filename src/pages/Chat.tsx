@@ -214,7 +214,11 @@ export default function Chat() {
               placeholder="메시지 입력"
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  sendMessage();
+                }
+              }}
             />
             <button
               onClick={sendMessage}
