@@ -47,7 +47,6 @@ const draftFromService = (
 ): AdminServiceUpdatePayload => ({
   maxMembers: service.maxMembers,
   monthlyPrice: service.monthlyPrice,
-  sellingPrice: service.sellingPrice,
   logoImageKey: service.logoImageKey ?? '',
   isActive: service.isActive,
   commissionRate: service.commissionRate,
@@ -231,8 +230,7 @@ export default function AdminServices() {
               구독 서비스 관리
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              서비스별 정가, 판매가, 할인율과 활성 상태를 토글형 편집으로
-              관리합니다.
+              서비스별 판매가, 할인율과 활성 상태를 토글형 편집으로 관리합니다.
             </p>
           </section>
 
@@ -281,9 +279,6 @@ export default function AdminServices() {
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       최대 인원
-                    </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                      정가
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       판매가
@@ -350,16 +345,13 @@ export default function AdminServices() {
                             {formatWon(service.monthlyPrice)}
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
-                            {formatWon(service.sellingPrice)}
-                          </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
                             {formatRate(service.commissionRate)}
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
                             <DiscountHoverValue
                               rate={service.leaderDiscountRate}
                               discountedPrice={getDiscountedPrice(
-                                service.sellingPrice,
+                                service.monthlyPrice,
                                 service.leaderDiscountRate,
                               )}
                             />
@@ -368,7 +360,7 @@ export default function AdminServices() {
                             <DiscountHoverValue
                               rate={service.referralDiscountRate}
                               discountedPrice={getDiscountedPrice(
-                                service.sellingPrice,
+                                service.monthlyPrice,
                                 service.referralDiscountRate,
                               )}
                             />
@@ -396,7 +388,7 @@ export default function AdminServices() {
 
                         {isExpanded && (
                           <tr className="border-b border-gray-100 bg-slate-50/70">
-                            <td colSpan={10} className="px-4 py-4">
+                            <td colSpan={9} className="px-4 py-4">
                               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
                                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                   <div className="flex items-start justify-between gap-4">
@@ -450,7 +442,7 @@ export default function AdminServices() {
                                     </label>
                                     <label className="flex flex-col gap-2">
                                       <span className="text-sm font-medium text-slate-700">
-                                        정가(월)
+                                        판매가(월)
                                       </span>
                                       <input
                                         type="number"
@@ -460,24 +452,6 @@ export default function AdminServices() {
                                           handleDraftChange(
                                             service.id,
                                             'monthlyPrice',
-                                            Number(event.target.value),
-                                          )
-                                        }
-                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
-                                      />
-                                    </label>
-                                    <label className="flex flex-col gap-2">
-                                      <span className="text-sm font-medium text-slate-700">
-                                        판매가(월)
-                                      </span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={draft.sellingPrice}
-                                        onChange={(event) =>
-                                          handleDraftChange(
-                                            service.id,
-                                            'sellingPrice',
                                             Number(event.target.value),
                                           )
                                         }
@@ -625,15 +599,9 @@ export default function AdminServices() {
                                         </dd>
                                       </div>
                                       <div className="flex items-center justify-between gap-4">
-                                        <dt>현재 정가</dt>
-                                        <dd className="font-medium text-slate-900">
-                                          {formatWon(service.monthlyPrice)}
-                                        </dd>
-                                      </div>
-                                      <div className="flex items-center justify-between gap-4">
                                         <dt>현재 판매가</dt>
                                         <dd className="font-medium text-slate-900">
-                                          {formatWon(service.sellingPrice)}
+                                          {formatWon(service.monthlyPrice)}
                                         </dd>
                                       </div>
                                       <div className="flex items-center justify-between gap-4">
@@ -660,7 +628,7 @@ export default function AdminServices() {
                                         제외할 수 있습니다.
                                       </li>
                                       <li>
-                                        월요금 변경 후 기존 파티 정산 정책은
+                                        판매가 변경 후 기존 파티 정산 정책은
                                         별도 검토가 필요합니다.
                                       </li>
                                     </ul>
@@ -677,7 +645,7 @@ export default function AdminServices() {
                   {!loading && filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={9}
                         className="px-4 py-16 text-center text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.
