@@ -3,9 +3,8 @@ import type { PartyListResponse, Party, Category } from '../types/party';
 
 export const partyKeys = {
   all: ['parties'] as const,
-  // ✅ Fix: categoryId가 이제 카테고리 이름 문자열 (ex: "OTT", "생산성")
-  list: (category: string | null, search: string) =>
-    ['parties', 'list', category, search] as const,
+  list: (category: string | null, search: string, refreshKey?: number) =>
+    ['parties', 'list', category, search, refreshKey ?? 0] as const,
   detail: (id: string) => ['parties', id] as const,
 };
 
