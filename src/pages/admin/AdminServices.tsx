@@ -14,12 +14,33 @@ const STATUS_STYLE: Record<string, string> = {
   비활성: 'bg-slate-100 text-slate-600 border-slate-200',
 };
 
+const MAX_SERVICE_PRICE = 2_147_483_647;
+
 const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 const formatRate = (value: number) => `${Math.round(value * 100)}%`;
 const getLogoSrc = (service: AdminServiceRecord) =>
   service.logoImageUrl || null;
 const getDiscountedPrice = (price: number, discountRate: number) =>
   Math.round(price * (1 - discountRate));
+
+const validateServiceDraft = (draft: AdminServiceUpdatePayload) => {
+  if (!Number.isInteger(draft.maxMembers) || draft.maxMembers < 1) {
+    return '최대 인원은 1명 이상 정수여야 합니다.';
+  }
+  if (!Number.isInteger(draft.originalPrice) || draft.originalPrice < 0) {
+    return '원래 가격은 0원 이상 정수여야 합니다.';
+  }
+  if (!Number.isInteger(draft.monthlyPrice) || draft.monthlyPrice < 0) {
+    return '판매가는 0원 이상 정수여야 합니다.';
+  }
+  if (
+    draft.originalPrice > MAX_SERVICE_PRICE ||
+    draft.monthlyPrice > MAX_SERVICE_PRICE
+  ) {
+    return `가격은 ${formatWon(MAX_SERVICE_PRICE)} 이하여야 합니다.`;
+  }
+  return '';
+};
 
 function DiscountHoverValue({
   rate,
@@ -158,6 +179,12 @@ export default function AdminServices() {
   const handleSave = async (service: AdminServiceRecord) => {
     const draft = drafts[service.id];
     if (!draft) {
+      return;
+    }
+
+    const validationMessage = validateServiceDraft(draft);
+    if (validationMessage) {
+      setError(validationMessage);
       return;
     }
 
@@ -455,6 +482,8 @@ export default function AdminServices() {
                                       <input
                                         type="number"
                                         min={0}
+                                        max={MAX_SERVICE_PRICE}
+                                        step={1}
                                         value={draft.originalPrice}
                                         onChange={(event) =>
                                           handleDraftChange(
@@ -473,6 +502,8 @@ export default function AdminServices() {
                                       <input
                                         type="number"
                                         min={0}
+                                        max={MAX_SERVICE_PRICE}
+                                        step={1}
                                         value={draft.monthlyPrice}
                                         onChange={(event) =>
                                           handleDraftChange(
