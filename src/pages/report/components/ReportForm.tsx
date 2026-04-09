@@ -1,7 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import type { ReportTargetType } from '../../../types/report.ts';
 
-// 폼 데이터 타입 정의
 interface ReportFormData {
   reportType: ReportTargetType;
   targetName: string;
@@ -10,8 +9,9 @@ interface ReportFormData {
   file: File | null;
 }
 
+const REPORT_TYPES: ReportTargetType[] = ['사용자', '파티', '채팅'];
+
 export default function ReportForm() {
-  // 1. 상태 통합
   const [formData, setFormData] = useState<ReportFormData>({
     reportType: '사용자',
     targetName: '',
@@ -20,7 +20,6 @@ export default function ReportForm() {
     file: null,
   });
 
-  // 2. 범용 입력 핸들러 (Input, Select, Textarea 공용)
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
@@ -31,13 +30,11 @@ export default function ReportForm() {
     }));
   };
 
-  // 3. 파일 전용 핸들러
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files ? e.target.files[0] : null;
     setFormData((prev) => ({ ...prev, file: selectedFile }));
   };
 
-  // 4. 신고 유형 변경 (버튼 클릭 전용)
   const handleTypeChange = (type: ReportTargetType) => {
     setFormData((prev) => ({ ...prev, reportType: type }));
   };
@@ -49,53 +46,76 @@ export default function ReportForm() {
   };
 
   return (
-    <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h2 className="text-xl font-bold mb-6">신고 등록</h2>
+    <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm md:p-7">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900">신고 등록</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          신고 대상을 선택하고 구체적인 내용을 작성해주세요.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 1. 신고 대상 유형 (버튼) */}
-        <div className="flex gap-2">
-          {(['사용자', '파티', '채팅'] as ReportTargetType[]).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => handleTypeChange(type)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                formData.reportType === type
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {type} 신고
-            </button>
-          ))}
+        {/* 신고 유형 */}
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-gray-800">
+            신고 대상
+          </label>
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-gray-100 p-1">
+            {REPORT_TYPES.map((type) => {
+              const active = formData.reportType === type;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleTypeChange(type)}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                    active
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {type}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* 2. 닉네임 입력 (name 속성 추가) */}
+        {/* 닉네임 */}
         <div className="space-y-2">
-          <label className="block text-sm font-bold text-gray-800">
-            닉네임
+          <label
+            htmlFor="targetName"
+            className="block text-sm font-semibold text-gray-800"
+          >
+            닉네임 또는 대상명
           </label>
           <input
+            id="targetName"
             type="text"
-            name="targetName" // formData의 키값과 일치
-            placeholder="예: user_02"
+            name="targetName"
+            placeholder="홍길동"
             value={formData.targetName}
             onChange={handleChange}
             required
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
         </div>
 
-        {/* 3. 사유 선택 (name 속성 추가) */}
+        {/* 사유 */}
         <div className="space-y-2">
-          <label className="block text-sm font-bold text-gray-800">사유</label>
+          <label
+            htmlFor="reason"
+            className="block text-sm font-semibold text-gray-800"
+          >
+            신고 사유
+          </label>
           <select
+            id="reason"
             name="reason"
             value={formData.reason}
             onChange={handleChange}
             required
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           >
             <option value="욕설/비방">욕설/비방</option>
             <option value="사기/불이행">사기/불이행</option>
@@ -103,40 +123,59 @@ export default function ReportForm() {
           </select>
         </div>
 
-        {/* 4. 상세 내용 (name 속성 추가) */}
+        {/* 상세 내용 */}
         <div className="space-y-2">
-          <label className="block text-sm font-bold text-gray-800">
+          <label
+            htmlFor="details"
+            className="block text-sm font-semibold text-gray-800"
+          >
             상세 내용
           </label>
           <textarea
+            id="details"
             name="details"
-            placeholder="구체적인 상황을 적어주세요"
+            placeholder="언제, 어떤 상황에서 문제가 발생했는지 구체적으로 작성해주세요."
             value={formData.details}
             onChange={handleChange}
             required
-            className="w-full h-32 px-4 py-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-36 w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
+          <p className="text-xs text-gray-400">
+            허위 신고는 제재 대상이 될 수 있습니다.
+          </p>
         </div>
 
-        {/* 5. 증빙 첨부 */}
+        {/* 파일 첨부 */}
         <div className="space-y-2">
-          <label className="block text-sm font-bold text-gray-800">
-            증빙 첨부(선택)
+          <label className="block text-sm font-semibold text-gray-800">
+            증빙 첨부
           </label>
-          <input
-            type="file"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-100 hover:file:bg-gray-200"
-          />
+
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center transition hover:border-blue-400 hover:bg-blue-50">
+            <span className="text-sm font-medium text-gray-700">
+              파일을 선택해 업로드
+            </span>
+            <span className="mt-1 text-xs text-gray-400">
+              이미지, 캡처, 대화 내역 등을 첨부할 수 있습니다.
+            </span>
+            <input type="file" onChange={handleFileChange} className="hidden" />
+          </label>
+
+          {formData.file && (
+            <div className="rounded-xl bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              첨부된 파일:{' '}
+              <span className="font-medium">{formData.file.name}</span>
+            </div>
+          )}
         </div>
 
         <button
           type="submit"
-          className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors mt-8"
+          className="w-full rounded-2xl bg-blue-600 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100"
         >
           신고 제출
         </button>
       </form>
-    </div>
+    </section>
   );
 }
