@@ -158,7 +158,9 @@ function PartyCard({
 
   const savingPct =
     party.original_price && party.original_price > (party.monthly_price ?? 0)
-      ? Math.round((1 - (party.monthly_price ?? 0) / party.original_price) * 100)
+      ? Math.round(
+          (1 - (party.monthly_price ?? 0) / party.original_price) * 100,
+        )
       : null;
 
   return (
