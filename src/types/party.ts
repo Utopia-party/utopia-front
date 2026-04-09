@@ -30,13 +30,3 @@ export interface Category {
   category_id: string; // ex) "OTT", "생산성"
   category_name: string; // ex) "OTT", "생산성" (동일값)
 }
-
-export interface SystemNotification {
-  // ✅ Fix: notification_id → id
-  id: string;
-  user_id: string | null;
-  type: string | null;
-  content: string | null;
-  is_read: boolean | null;
-  created_at: string | null;
-}

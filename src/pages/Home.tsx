@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Party, SystemNotification } from '../types/party';
+import type { Party } from '../types/party';
 import {
   fetchParties,
-  fetchLatestNotifications,
   fetchCategories,
   applyParty,
   partyKeys,
-  notificationKeys,
   categoryKeys,
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/party/QuickMatchForm';
+import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -134,7 +133,6 @@ function PartyCard({
           자세히 보기
         </button>
 
-        {/* ✅ 참여 여부에 따른 버튼 분기 처리 */}
         {isJoined ? (
           <button
             onClick={() => navigate(`/party/${party.id}/chat`)}
@@ -169,7 +167,6 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
       queryClient.invalidateQueries({ queryKey: partyKeys.all });
     },
     onError: (e: any) => {
-      // ✅ 이미 참여중이라 400 에러가 난 경우에도 채팅방으로 안내
       if (e.response?.status === 400 || e.message?.includes('이미 참여')) {
         navigate(`/party/${party.id}/chat`);
       } else {
@@ -250,33 +247,22 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
-  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
 
-  // ✅ 카테고리 fetch 시 422 에러를 방지하기 위해 데이터 구조를 확인합니다.
   const { data: categoriesRaw } = useQuery({
     queryKey: categoryKeys.all,
     queryFn: fetchCategories,
   });
 
-  // 백엔드 응답이 [{id: ..., name: ...}] 형태이므로 이를 안전하게 처리합니다.
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
 
   const { data: partyData, isLoading } = useQuery({
     queryKey: partyKeys.list(category, search),
     queryFn: () => fetchParties({ category: category ?? undefined, search }),
   });
+
   const parties =
     partyData && Array.isArray(partyData.parties) ? partyData.parties : [];
-
-  const { data: noticesRaw } = useQuery<SystemNotification[]>({
-    queryKey: notificationKeys.latest,
-    queryFn: fetchLatestNotifications,
-    enabled: !noticeDismissed,
-  });
-  const notices = Array.isArray(noticesRaw) ? noticesRaw : [];
-  const activeNotice =
-    !noticeDismissed && notices.length > 0 ? notices[0] : null;
 
   return (
     <>
@@ -291,25 +277,7 @@ export default function Home() {
       </section>
 
       <div className="max-w-6xl mx-auto px-6">
-        {activeNotice && (
-          <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5 mt-6">
-            <span className="text-lg shrink-0">📢</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-blue-800">
-                {activeNotice.type}
-              </p>
-              <p className="text-xs text-blue-600 mt-0.5">
-                {activeNotice.content}
-              </p>
-            </div>
-            <button
-              onClick={() => setNoticeDismissed(true)}
-              className="text-blue-400 hover:text-blue-600"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <SystemNoticeBanner />
 
         <div className="flex flex-col md:flex-row gap-8 py-8">
           <aside className="w-full md:w-52 shrink-0 flex flex-col gap-4">
@@ -335,12 +303,14 @@ export default function Home() {
                 ))}
               </nav>
             </div>
+
             <button
               onClick={() => navigate('/handcaptcha')}
               className="w-full py-3.5 bg-primary text-primary-foreground rounded-2xl text-sm font-bold shadow-lg hover:scale-[1.02] transition-all"
             >
               + 파티 생성하기
             </button>
+
             <button
               onClick={() => setShowQuickMatch(true)}
               className="w-full py-3.5 bg-white border border-border text-foreground rounded-2xl text-sm font-bold shadow-sm hover:bg-muted transition-all"
@@ -405,9 +375,11 @@ export default function Home() {
           }}
         />
       )}
+
       {applyTarget && (
         <ApplyModal party={applyTarget} onClose={() => setApplyTarget(null)} />
       )}
+
       <QuickMatchForm
         open={showQuickMatch}
         onClose={() => setShowQuickMatch(false)}

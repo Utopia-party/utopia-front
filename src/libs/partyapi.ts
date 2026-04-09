@@ -1,10 +1,5 @@
 import { api } from '../apis/api';
-import type {
-  PartyListResponse,
-  Party,
-  SystemNotification,
-  Category,
-} from '../types/party';
+import type { PartyListResponse, Party, Category } from '../types/party';
 
 export const partyKeys = {
   all: ['parties'] as const,
@@ -12,10 +7,6 @@ export const partyKeys = {
   list: (category: string | null, search: string) =>
     ['parties', 'list', category, search] as const,
   detail: (id: string) => ['parties', id] as const,
-};
-
-export const notificationKeys = {
-  latest: ['notifications', 'latest'] as const,
 };
 
 export const categoryKeys = {
@@ -47,12 +38,5 @@ export const applyParty = async (
   partyId: string,
 ): Promise<{ message: string }> => {
   const { data } = await api.post(`/api/parties/${partyId}/join`);
-  return data;
-};
-
-export const fetchLatestNotifications = async (): Promise<
-  SystemNotification[]
-> => {
-  const { data } = await api.get('/api/notifications/latest');
   return data;
 };
