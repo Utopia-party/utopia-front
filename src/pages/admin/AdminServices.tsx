@@ -47,6 +47,7 @@ const draftFromService = (
 ): AdminServiceUpdatePayload => ({
   maxMembers: service.maxMembers,
   monthlyPrice: service.monthlyPrice,
+  originalPrice: service.originalPrice,
   logoImageKey: service.logoImageKey ?? '',
   isActive: service.isActive,
   commissionRate: service.commissionRate,
@@ -230,7 +231,8 @@ export default function AdminServices() {
               구독 서비스 관리
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              서비스별 판매가, 할인율과 활성 상태를 토글형 편집으로 관리합니다.
+              서비스별 원래 가격, 월 판매가, 할인율과 활성 상태를 토글형
+              편집으로 관리합니다.
             </p>
           </section>
 
@@ -279,6 +281,9 @@ export default function AdminServices() {
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       최대 인원
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      원래 가격
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       판매가
@@ -342,6 +347,9 @@ export default function AdminServices() {
                             {service.maxMembers}명
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
+                            {formatWon(service.originalPrice)}
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600">
                             {formatWon(service.monthlyPrice)}
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
@@ -388,7 +396,7 @@ export default function AdminServices() {
 
                         {isExpanded && (
                           <tr className="border-b border-gray-100 bg-slate-50/70">
-                            <td colSpan={9} className="px-4 py-4">
+                            <td colSpan={10} className="px-4 py-4">
                               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
                                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                   <div className="flex items-start justify-between gap-4">
@@ -434,6 +442,24 @@ export default function AdminServices() {
                                           handleDraftChange(
                                             service.id,
                                             'maxMembers',
+                                            Number(event.target.value),
+                                          )
+                                        }
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                      />
+                                    </label>
+                                    <label className="flex flex-col gap-2">
+                                      <span className="text-sm font-medium text-slate-700">
+                                        원래 가격(월)
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={draft.originalPrice}
+                                        onChange={(event) =>
+                                          handleDraftChange(
+                                            service.id,
+                                            'originalPrice',
                                             Number(event.target.value),
                                           )
                                         }
@@ -599,6 +625,12 @@ export default function AdminServices() {
                                         </dd>
                                       </div>
                                       <div className="flex items-center justify-between gap-4">
+                                        <dt>현재 원래 가격</dt>
+                                        <dd className="font-medium text-slate-900">
+                                          {formatWon(service.originalPrice)}
+                                        </dd>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-4">
                                         <dt>현재 판매가</dt>
                                         <dd className="font-medium text-slate-900">
                                           {formatWon(service.monthlyPrice)}
@@ -645,7 +677,7 @@ export default function AdminServices() {
                   {!loading && filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-4 py-16 text-center text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.

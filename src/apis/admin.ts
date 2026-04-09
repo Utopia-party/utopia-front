@@ -56,6 +56,7 @@ export type AdminServiceRecord = {
   category: string;
   maxMembers: number;
   monthlyPrice: number;
+  originalPrice: number;
   logoImageKey?: string | null;
   logoImageUrl?: string | null;
   isActive: boolean;
@@ -70,6 +71,7 @@ export type AdminServiceRecord = {
 export type AdminServiceUpdatePayload = {
   maxMembers: number;
   monthlyPrice: number;
+  originalPrice: number;
   logoImageKey?: string | null;
   isActive: boolean;
   commissionRate: number;
