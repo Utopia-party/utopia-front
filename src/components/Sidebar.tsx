@@ -98,15 +98,6 @@ export default function Sidebar() {
         >
           <span>신고</span>
         </NavLink>
-
-        {user?.role?.toLowerCase() === 'admin' && (
-          <NavLink
-            to="/admin"
-            className={({ isActive }) => getMainLinkClass(isActive)}
-          >
-            <span>관리자 페이지</span>
-          </NavLink>
-        )}
       </nav>
 
       {user?.role?.toLowerCase() === 'admin' && (
