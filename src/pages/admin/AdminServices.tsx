@@ -18,12 +18,36 @@ const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 const formatRate = (value: number) => `${Math.round(value * 100)}%`;
 const getLogoSrc = (service: AdminServiceRecord) =>
   service.logoImageUrl || null;
+const getDiscountedPrice = (price: number, discountRate: number) =>
+  Math.round(price * (1 - discountRate));
+
+function DiscountHoverValue({
+  rate,
+  discountedPrice,
+}: {
+  rate: number;
+  discountedPrice: number;
+}) {
+  return (
+    <span className="inline-flex min-w-[92px]">
+      <span className="group relative inline-flex cursor-help flex-col items-start">
+        <span className="underline decoration-dotted underline-offset-4">
+          {formatRate(rate)}
+        </span>
+        <span className="pointer-events-none absolute left-0 top-full z-10 mt-2 hidden whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg group-hover:block">
+          할인가 {formatWon(discountedPrice)}
+        </span>
+      </span>
+    </span>
+  );
+}
 
 const draftFromService = (
   service: AdminServiceRecord,
 ): AdminServiceUpdatePayload => ({
   maxMembers: service.maxMembers,
   monthlyPrice: service.monthlyPrice,
+  originalPrice: service.originalPrice,
   logoImageKey: service.logoImageKey ?? '',
   isActive: service.isActive,
   commissionRate: service.commissionRate,
@@ -185,19 +209,6 @@ export default function AdminServices() {
         label: '활성 서비스',
         value: `${services.filter((service) => service.isActive).length}`,
       },
-      {
-        label: 'OTT 서비스',
-        value: `${services.filter((service) => service.category.toUpperCase().includes('OTT')).length}`,
-      },
-      {
-        label: '평균 월요금',
-        value: formatWon(
-          Math.round(
-            services.reduce((sum, service) => sum + service.monthlyPrice, 0) /
-              (services.length || 1),
-          ),
-        ),
-      },
     ],
     [services],
   );
@@ -220,12 +231,12 @@ export default function AdminServices() {
               구독 서비스 관리
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              서비스별 월요금, 수수료율, 방장/추천 할인율과 활성 상태를 토글형
+              서비스별 원래 가격, 월 판매가, 할인율과 활성 상태를 토글형
               편집으로 관리합니다.
             </p>
           </section>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {summary.map((item) => (
               <div
                 key={item.label}
@@ -272,7 +283,10 @@ export default function AdminServices() {
                       최대 인원
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                      월요금
+                      원래 가격
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      판매가
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       수수료
@@ -333,16 +347,31 @@ export default function AdminServices() {
                             {service.maxMembers}명
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
+                            {formatWon(service.originalPrice)}
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600">
                             {formatWon(service.monthlyPrice)}
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
                             {formatRate(service.commissionRate)}
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
-                            {formatRate(service.leaderDiscountRate)}
+                            <DiscountHoverValue
+                              rate={service.leaderDiscountRate}
+                              discountedPrice={getDiscountedPrice(
+                                service.monthlyPrice,
+                                service.leaderDiscountRate,
+                              )}
+                            />
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
-                            {formatRate(service.referralDiscountRate)}
+                            <DiscountHoverValue
+                              rate={service.referralDiscountRate}
+                              discountedPrice={getDiscountedPrice(
+                                service.monthlyPrice,
+                                service.referralDiscountRate,
+                              )}
+                            />
                           </td>
                           <td className="px-4 py-3.5 text-sm">
                             <span
@@ -367,7 +396,7 @@ export default function AdminServices() {
 
                         {isExpanded && (
                           <tr className="border-b border-gray-100 bg-slate-50/70">
-                            <td colSpan={9} className="px-4 py-4">
+                            <td colSpan={10} className="px-4 py-4">
                               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
                                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                   <div className="flex items-start justify-between gap-4">
@@ -421,7 +450,25 @@ export default function AdminServices() {
                                     </label>
                                     <label className="flex flex-col gap-2">
                                       <span className="text-sm font-medium text-slate-700">
-                                        월요금
+                                        원래 가격(월)
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={draft.originalPrice}
+                                        onChange={(event) =>
+                                          handleDraftChange(
+                                            service.id,
+                                            'originalPrice',
+                                            Number(event.target.value),
+                                          )
+                                        }
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                      />
+                                    </label>
+                                    <label className="flex flex-col gap-2">
+                                      <span className="text-sm font-medium text-slate-700">
+                                        판매가(월)
                                       </span>
                                       <input
                                         type="number"
@@ -578,7 +625,13 @@ export default function AdminServices() {
                                         </dd>
                                       </div>
                                       <div className="flex items-center justify-between gap-4">
-                                        <dt>현재 월요금</dt>
+                                        <dt>현재 원래 가격</dt>
+                                        <dd className="font-medium text-slate-900">
+                                          {formatWon(service.originalPrice)}
+                                        </dd>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-4">
+                                        <dt>현재 판매가</dt>
                                         <dd className="font-medium text-slate-900">
                                           {formatWon(service.monthlyPrice)}
                                         </dd>
@@ -599,11 +652,15 @@ export default function AdminServices() {
                                     <ul className="mt-3 space-y-2 leading-6">
                                       <li>`0.10`은 10%를 뜻합니다.</li>
                                       <li>
+                                        할인율에 마우스를 올리면 현재 판매가
+                                        기준 할인가가 표시됩니다.
+                                      </li>
+                                      <li>
                                         비활성으로 전환하면 신규 파티 생성에서
                                         제외할 수 있습니다.
                                       </li>
                                       <li>
-                                        월요금 변경 후 기존 파티 정산 정책은
+                                        판매가 변경 후 기존 파티 정산 정책은
                                         별도 검토가 필요합니다.
                                       </li>
                                     </ul>
@@ -620,7 +677,7 @@ export default function AdminServices() {
                   {!loading && filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-4 py-16 text-center text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.
