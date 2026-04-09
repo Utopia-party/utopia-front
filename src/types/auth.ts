@@ -83,14 +83,18 @@ export interface AuthErrorResponse {
   message?: string;
 }
 
-// 로그인 상테 관리
+// 회원 정보 및 로그인 상태 관리
 export interface AuthUser {
   user_id: string;
   email: string;
   nickname: string;
-  phone?: string | null;
+  phone?: string;
   provider: string;
   role: string;
+  trust_score: number;
+  updated_at?: string;
+  created_at?: string;
+  profile_image?: string | null;
 }
 
 export interface MeResponse {
