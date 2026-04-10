@@ -10,13 +10,12 @@ import {
 
 const STATUS_STYLE: Record<string, string> = {
   접수: 'text-amber-500 bg-amber-50',
+  검토중: 'text-violet-500 bg-violet-50',
   처리: 'text-blue-500 bg-blue-50',
   기각: 'text-red-500 bg-red-50',
-  이의제기: 'text-violet-500 bg-violet-50',
-  AI처리: 'text-blue-500 bg-blue-50',
 };
 
-const FILTER_TABS = ['전체', '접수', '처리', '기각', '이의제기', 'AI처리'];
+const FILTER_TABS = ['전체', '접수', '검토중', '처리', '기각'];
 
 export default function AdminReports() {
   const [activeTab, setActiveTab] = useState('전체');

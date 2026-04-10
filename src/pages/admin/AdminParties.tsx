@@ -12,10 +12,14 @@ const STATUS_STYLE: Record<string, string> = {
   운영중: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   모집중: 'bg-blue-50 text-blue-600 border-blue-100',
   위험: 'bg-amber-50 text-amber-600 border-amber-100',
-  '종료 예정': 'bg-red-50 text-red-600 border-red-100',
+  // 파티 종료 수정
+  종료됨: 'bg-red-50 text-red-600 border-red-100',
+  // 파티 종료 수정
 };
 
-const FILTER_TABS = ['전체', '운영중', '모집중', '위험', '종료 예정'];
+// 파티 종료 수정
+const FILTER_TABS = ['전체', '운영중', '모집중', '위험', '종료됨'];
+// 파티 종료 수정
 
 const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 
@@ -108,6 +112,7 @@ export default function AdminParties() {
       data = data.filter(
         (party) =>
           party.id.toLowerCase().includes(q) ||
+          party.title.toLowerCase().includes(q) ||
           party.service.toLowerCase().includes(q) ||
           party.leaderId.toLowerCase().includes(q) ||
           party.status.toLowerCase().includes(q),
@@ -129,8 +134,10 @@ export default function AdminParties() {
         value: `${parties.filter((party) => party.status === '위험').length}`,
       },
       {
-        label: '종료 예정',
-        value: `${parties.filter((party) => party.status === '종료 예정').length}`,
+        // 파티 종료 수정
+        label: '종료됨',
+        value: `${parties.filter((party) => party.status === '종료됨').length}`,
+        // 파티 종료 수정
       },
     ],
     [parties],
@@ -139,7 +146,7 @@ export default function AdminParties() {
   return (
     <>
       <AdminHeader
-        placeholder="파티 검색 (파티 ID/서비스/리더)..."
+        placeholder="파티 검색 (파티명/서비스/리더)..."
         onSearch={setSearch}
         rightContent={
           <button
@@ -239,7 +246,7 @@ export default function AdminParties() {
                       <Fragment key={party.id}>
                         <tr className="border-b border-gray-100 transition hover:bg-gray-50">
                           <td className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                            {party.id}
+                            {party.title}
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
                             <div>{party.service}</div>
@@ -284,7 +291,8 @@ export default function AdminParties() {
                               >
                                 정산
                               </button>
-                              {party.status !== '종료 예정' && (
+                              {/* 파티 종료 수정 */}
+                              {party.status !== '종료됨' && (
                                 <button
                                   className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50"
                                   disabled={busyPartyId === party.id}
@@ -295,6 +303,7 @@ export default function AdminParties() {
                                     : '강제 종료'}
                                 </button>
                               )}
+                              {/* 파티 종료 수정 */}
                             </div>
                           </td>
                         </tr>
@@ -307,7 +316,7 @@ export default function AdminParties() {
                                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
                                       <h3 className="text-base font-semibold text-slate-900">
-                                        {party.service} 파티
+                                        {party.title}
                                       </h3>
                                       <p className="mt-1 text-sm text-slate-500">
                                         운영 상태, 정산 메모, 리스크 지표를 한
@@ -323,7 +332,7 @@ export default function AdminParties() {
 
                                   <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                                     {[
-                                      ['파티 ID', party.id],
+                                      ['파티명', party.title],
                                       ['서비스', party.service],
                                       ['리더', party.leaderId],
                                       ['멤버 수', `${party.memberCount}명`],

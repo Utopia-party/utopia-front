@@ -81,6 +81,7 @@ export type AdminServiceUpdatePayload = {
 
 export type AdminUserRecord = {
   id: string;
+  name?: string | null;
   nickname: string;
   status: '정상' | '주의' | '정지';
   reportCount: number;
@@ -106,10 +107,13 @@ export type AdminUserDetail = {
 
 export type AdminPartyRecord = {
   id: string;
+  title: string;
   service: string;
   leaderId: string;
   memberCount: number;
-  status: '운영중' | '모집중' | '위험' | '종료 예정';
+  // 파티 종료 수정
+  status: '운영중' | '모집중' | '위험' | '종료됨';
+  // 파티 종료 수정
   reportCount: number;
   monthlyAmount: number;
   lastPayment: string;
