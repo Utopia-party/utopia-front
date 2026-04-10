@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { Users, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { api } from '../apis/api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -38,10 +39,14 @@ interface Member {
 interface PartyInfo {
   party_id: string;
   title: string;
+  description?: string | null;
   status?: string;
-  max_members?: number;
-  member_count?: number;
+  max_members?: number | null;
+  member_count?: number | null;
   monthly_price?: number | null;
+  monthly_per_person?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
   category_name?: string | null;
   service_name?: string | null;
   host_nickname?: string | null;
@@ -60,11 +65,12 @@ const WS_BASE =
     .replace('/api', '');
 
 const PORTONE_STORE_ID = 'store-b7fa4153-0590-4d36-9750-6c2fb830a292';
-const PORTONE_CHANNEL_KEY = 'channel-key-ea16ef59-fabb-44d6-be05-e54d3c197582'; 
+const PORTONE_CHANNEL_KEY = 'channel-key-ea16ef59-fabb-44d6-be05-e54d3c197582';
+
 const BANK_INFO = {
   bank: '신한은행',
   account: '110-612-944408',
-  holder: '김성보(Party-Up)',
+  holder: '김성보',
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -80,6 +86,14 @@ const STATUS_LABEL: Record<string, string> = {
   full: '모집완료',
   completed: '완료',
   canceled: '취소',
+};
+
+const CATEGORY_COLOR: Record<string, string> = {
+  OTT: 'bg-blue-100 text-blue-700',
+  '멤버십/음악': 'bg-green-100 text-green-700',
+  '교육/도서': 'bg-purple-100 text-purple-700',
+  생산성: 'bg-pink-100 text-pink-700',
+  기타: 'bg-slate-100 text-slate-600',
 };
 
 // 프로필 이니셜
@@ -100,18 +114,10 @@ function Avatar({
 }) {
   const [imgError, setImgError] = useState(false);
   const sizeClass = size === 'sm' ? 'w-7 h-7 text-[10px]' : 'w-9 h-9 text-xs';
-
   return (
-    <div
-      className={`${sizeClass} rounded-full bg-primary text-white font-extrabold flex items-center justify-center overflow-hidden shrink-0`}
-    >
+    <div className={`${sizeClass} rounded-full bg-primary text-white font-extrabold flex items-center justify-center overflow-hidden shrink-0`}>
       {profileImage && !imgError ? (
-        <img
-          src={profileImage}
-          alt=""
-          onError={() => setImgError(true)}
-          className="w-full h-full object-cover"
-        />
+        <img src={profileImage} alt="" onError={() => setImgError(true)} className="w-full h-full object-cover" />
       ) : (
         getProfileInitial(nickname)
       )}
@@ -119,18 +125,22 @@ function Avatar({
   );
 }
 
+function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
+      <div className="shrink-0 text-slate-500">{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] text-slate-400 font-medium">{label}</p>
+        <p className="text-xs font-bold text-slate-800 truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 // ────────────────────────────────────────────────
 // 결제 모달
 // ────────────────────────────────────────────────
-function PaymentModal({
-  onClose,
-  partyTitle,
-  nickname,
-}: {
-  onClose: () => void;
-  partyTitle: string;
-  nickname: string;
-}) {
+function PaymentModal({ onClose, partyTitle, nickname }: { onClose: () => void; partyTitle: string; nickname: string }) {
   const [step, setStep] = useState<PaymentStep>('select');
   const [method, setMethod] = useState<PaymentMethod>(null);
   const [ocrFile, setOcrFile] = useState<File | null>(null);
@@ -151,10 +161,7 @@ function PaymentModal({
   }, []);
 
   const handleCardPayment = async () => {
-    if (!window.PortOne) {
-      alert('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.');
-      return;
-    }
+    if (!window.PortOne) { alert('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return; }
     setIsLoading(true);
     const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     try {
@@ -212,35 +219,23 @@ function PaymentModal({
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-xl font-light">✕</button>
         </div>
-
         <div className="p-6">
           {step === 'select' && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-slate-600 font-medium">결제 수단을 선택해주세요</p>
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => { setMethod('card'); setStep('card'); }} className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                    <span className="text-2xl">💳</span>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">카드 결제</p>
-                    <p className="text-xs text-slate-400 mt-0.5">1원 테스트</p>
-                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center"><span className="text-2xl">💳</span></div>
+                  <div className="text-center"><p className="text-sm font-bold text-slate-800">카드 결제</p><p className="text-xs text-slate-400 mt-0.5">1원 테스트</p></div>
                 </button>
                 <button onClick={() => { setMethod('transfer'); setStep('transfer'); }} className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                    <span className="text-2xl">🏦</span>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">계좌 입금</p>
-                    <p className="text-xs text-slate-400 mt-0.5">OCR 인증</p>
-                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center"><span className="text-2xl">🏦</span></div>
+                  <div className="text-center"><p className="text-sm font-bold text-slate-800">계좌 입금</p><p className="text-xs text-slate-400 mt-0.5">OCR 인증</p></div>
                 </button>
               </div>
               <p className="text-xs text-slate-400 text-center">결제 완료 후 영수증/이체확인서로 OCR 인증을 진행합니다</p>
             </div>
           )}
-
           {step === 'card' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
@@ -260,7 +255,6 @@ function PaymentModal({
               </div>
             </div>
           )}
-
           {step === 'transfer' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-3">
@@ -270,7 +264,7 @@ function PaymentModal({
                   <span className="text-slate-500">계좌번호</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-slate-800">{BANK_INFO.account}</span>
-                    <button onClick={handleCopyAccount} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20 transition-colors">{copied ? '복사됨 ✓' : '복사'}</button>
+                    <button onClick={handleCopyAccount} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20">{copied ? '복사됨 ✓' : '복사'}</button>
                   </div>
                 </div>
                 <div className="flex justify-between text-sm"><span className="text-slate-500">예금주</span><span className="font-semibold">{BANK_INFO.holder}</span></div>
@@ -285,7 +279,6 @@ function PaymentModal({
               </div>
             </div>
           )}
-
           {step === 'ocr' && (
             <div className="flex flex-col gap-5">
               {paymentDone && (
@@ -301,7 +294,9 @@ function PaymentModal({
                 <p className="text-sm font-bold text-slate-800 mb-1">{method === 'card' ? '결제 영수증' : '이체확인서'} 업로드</p>
                 <p className="text-xs text-slate-500 mb-3">OCR로 자동 분석 → 실패 시 관리자 검토</p>
                 <div onClick={() => ocrFileRef.current?.click()} className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
-                  {ocrPreview ? <img src={ocrPreview} alt="미리보기" className="max-h-32 rounded-lg object-contain" /> : <><span className="text-3xl">📄</span><p className="text-sm text-slate-500 font-medium">파일 선택 또는 드래그</p><p className="text-xs text-slate-400">이미지, PDF 가능</p></>}
+                  {ocrPreview
+                    ? <img src={ocrPreview} alt="미리보기" className="max-h-32 rounded-lg object-contain" />
+                    : <><span className="text-3xl">📄</span><p className="text-sm text-slate-500 font-medium">파일 선택 또는 드래그</p><p className="text-xs text-slate-400">이미지, PDF 가능</p></>}
                 </div>
                 {ocrFile && <p className="text-xs text-slate-500 mt-2 text-center truncate">선택됨: {ocrFile.name}</p>}
                 <input ref={ocrFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleOcrFileChange} />
@@ -333,16 +328,13 @@ export default function Chat() {
   const [userReady, setUserReady] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  // authStore에서 유저 정보 가져옴
   const nickname = user?.nickname ?? '익명';
   const userId = user?.user_id ?? 'guest';
   const myProfileImage = user?.profile_image ?? null;
 
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const connectedRef = useRef(false);
 
-  // authStore 로딩 완료 감지
   useEffect(() => {
     if (!user) {
       const t = setTimeout(() => setUserReady(true), 500);
@@ -353,33 +345,24 @@ export default function Chat() {
 
   useEffect(() => {
     if (!partyId) return;
-
-    api
-      .get(`/chat/parties/${partyId}/messages`)
+    api.get(`/chat/parties/${partyId}/messages`)
       .then(({ data }) => setMessages(Array.isArray(data) ? data : []))
       .catch(() => setMessages([]));
-
-    api
-      .get(`/chat/parties/${partyId}/info`)
+    api.get(`/chat/parties/${partyId}/info`)
       .then(({ data }) => setPartyInfo(data))
       .catch(() => {});
   }, [partyId]);
 
   useEffect(() => {
     if (!partyId || !userReady) return;
-    if (
-      wsRef.current &&
-      (wsRef.current.readyState === WebSocket.OPEN ||
-        wsRef.current.readyState === WebSocket.CONNECTING)
-    ) return;
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 
-    connectedRef.current = true;
     const ws = new WebSocket(
       `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`,
     );
     wsRef.current = ws;
     ws.onopen = () => setConnected(true);
-    ws.onclose = () => { setConnected(false); connectedRef.current = false; };
+    ws.onclose = () => setConnected(false);
     ws.onmessage = (e) => {
       try {
         const msg: Message = JSON.parse(e.data);
@@ -388,7 +371,7 @@ export default function Chat() {
         console.error('메시지 파싱 에러:', err);
       }
     };
-    return () => { ws.close(); wsRef.current = null; connectedRef.current = false; };
+    return () => { ws.close(); wsRef.current = null; };
   }, [partyId, userReady, nickname, userId]);
 
   useEffect(() => {
@@ -415,7 +398,7 @@ export default function Chat() {
       const isError = msg.type === 'error';
       return (
         <div key={i} className="flex justify-center">
-          <span className={`text-xs ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'} border px-3 py-1.5 rounded-xl`}>
+          <span className={`text-xs border px-3 py-1.5 rounded-xl ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'}`}>
             {msg.content}
           </span>
         </div>
@@ -423,7 +406,6 @@ export default function Chat() {
     }
 
     const senderImage = isMe ? myProfileImage : (msg.profile_image ?? null);
-
     return (
       <div key={i} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="shrink-0 mt-1">
@@ -442,19 +424,16 @@ export default function Chat() {
     );
   };
 
-  const perPerson =
-    partyInfo?.monthly_price && partyInfo?.max_members
-      ? Math.round(partyInfo.monthly_price / partyInfo.max_members)
-      : null;
+  // 날짜 포맷
+  const formatDate = (d?: string | null) => {
+    if (!d) return '-';
+    return new Date(d).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace('.', '');
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {showPaymentModal && (
-        <PaymentModal
-          onClose={() => setShowPaymentModal(false)}
-          partyTitle={partyInfo?.title ?? '파티'}
-          nickname={nickname}
-        />
+        <PaymentModal onClose={() => setShowPaymentModal(false)} partyTitle={partyInfo?.title ?? '파티'} nickname={nickname} />
       )}
 
       {/* 헤더 */}
@@ -475,14 +454,11 @@ export default function Chat() {
             <p className="text-sm font-bold text-foreground">메시지</p>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-3 border border-border rounded-xl mx-5 mb-3 bg-white min-h-0">
-            {Array.isArray(messages) && messages.length > 0 ? (
-              messages.map((msg, i) => renderMessage(msg, i))
-            ) : (
-              <p className="text-xs text-muted-foreground">[시스템] 채팅방이 생성되었습니다.</p>
-            )}
+            {messages.length > 0
+              ? messages.map((msg, i) => renderMessage(msg, i))
+              : <p className="text-xs text-muted-foreground">[시스템] 채팅방이 생성되었습니다.</p>}
             <div ref={bottomRef} />
           </div>
-
           <div className="mx-5 mb-3 flex gap-2">
             <input
               className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm outline-none focus:border-primary bg-background"
@@ -491,25 +467,13 @@ export default function Chat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendMessage(); }}
             />
-            <button
-              onClick={sendMessage}
-              disabled={!connected || !input.trim()}
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-bold disabled:opacity-40"
-            >
+            <button onClick={sendMessage} disabled={!connected || !input.trim()} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-bold disabled:opacity-40">
               전송
             </button>
           </div>
-
           <div className="mx-5 mb-4 flex gap-3">
-            <button className="flex-1 py-3 border border-border rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">
-              채팅 신고
-            </button>
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              className="flex-1 py-3 border-2 border-primary rounded-2xl text-sm font-bold text-primary hover:bg-primary/5"
-            >
-              결제
-            </button>
+            <button className="flex-1 py-3 border border-border rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">채팅 신고</button>
+            <button onClick={() => setShowPaymentModal(true)} className="flex-1 py-3 border-2 border-primary rounded-2xl text-sm font-bold text-primary hover:bg-primary/5">결제</button>
           </div>
         </div>
 
@@ -520,7 +484,7 @@ export default function Chat() {
           <div className="p-5 border-b border-border">
             <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
             {Array.isArray(partyInfo?.members) && partyInfo.members.length > 0 ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
                 {partyInfo.members.map((member) => (
                   <div key={member.user_id} className="flex items-center gap-2.5 py-1.5">
                     <Avatar nickname={member.nickname} profileImage={member.profile_image} size="sm" />
@@ -543,58 +507,85 @@ export default function Chat() {
             )}
           </div>
 
-          {/* 파티 정보 */}
+          {/* 파티 정보 — PartyDetailModal 스타일 */}
           <div className="p-5">
-            <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
-            <div className="flex flex-col gap-2.5">
-              {partyInfo?.category_name && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">카테고리</span>
-                  <span className="font-medium text-foreground">{partyInfo.category_name}</span>
-                </div>
-              )}
-              {partyInfo?.service_name && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">서비스</span>
-                  <span className="font-medium text-foreground">{partyInfo.service_name}</span>
-                </div>
-              )}
-              {partyInfo?.host_nickname && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">호스트</span>
-                  <span className="font-medium text-foreground">{partyInfo.host_nickname}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">인원</span>
-                <span className="font-medium text-foreground">
-                  {partyInfo?.member_count ?? '-'} / {partyInfo?.max_members ?? '-'}명
+            {/* 카테고리 태그 */}
+            {partyInfo?.category_name && (
+              <div className="mb-3">
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'}`}>
+                  {partyInfo.category_name}
                 </span>
               </div>
-              {partyInfo?.status && (
+            )}
+
+            <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
+
+            {/* InfoCard 그리드 */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <InfoCard
+                icon={<Users size={14} />}
+                label="모집 인원"
+                value={`${partyInfo?.member_count ?? '-'} / ${partyInfo?.max_members ?? '-'}`}
+              />
+              <InfoCard
+                icon={<Calendar size={14} />}
+                label="시작일"
+                value={formatDate(partyInfo?.start_date)}
+              />
+              <InfoCard
+                icon={<Clock size={14} />}
+                label="모집 마감"
+                value={formatDate(partyInfo?.end_date)}
+              />
+              <InfoCard
+                icon={<RefreshCw size={14} />}
+                label="정산 주기"
+                value="매월 1일"
+              />
+            </div>
+
+            {/* 정산 요약 */}
+            <div className="border-t border-slate-100 pt-3 mb-3">
+              <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">정산 요약</p>
+              <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">상태</span>
-                  <span className={`font-medium ${partyInfo.status === 'recruiting' ? 'text-primary' : 'text-muted-foreground'}`}>
-                    {STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
+                  <span className="text-slate-500">총 비용</span>
+                  <span className="font-semibold text-slate-900">
+                    {partyInfo?.monthly_price != null ? `${partyInfo.monthly_price.toLocaleString()}원` : '-'}
                   </span>
                 </div>
-              )}
-              {partyInfo?.monthly_price != null && (
-                <>
-                  <div className="border-t border-border pt-2 mt-1" />
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">총 비용</span>
-                    <span className="font-medium text-foreground">{partyInfo.monthly_price.toLocaleString()}원</span>
-                  </div>
-                  {perPerson != null && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">1인 부담</span>
-                      <span className="font-bold text-primary">{perPerson.toLocaleString()}원</span>
-                    </div>
-                  )}
-                </>
-              )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">1인 부담</span>
+                  <span className="font-bold text-primary">
+                    {partyInfo?.monthly_per_person != null ? `${partyInfo.monthly_per_person.toLocaleString()}원` : '-'}
+                  </span>
+                </div>
+              </div>
             </div>
+
+            {/* 호스트 */}
+            {partyInfo?.host_nickname && (
+              <div className="border-t border-slate-100 pt-3">
+                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">호스트</p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">닉네임</span>
+                  <span className="font-semibold text-slate-900">{partyInfo.host_nickname}</span>
+                </div>
+              </div>
+            )}
+
+            {/* 상태 */}
+            {partyInfo?.status && (
+              <div className="mt-3">
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                  partyInfo.status === 'recruiting' ? 'bg-orange-100 text-orange-600'
+                  : partyInfo.status === 'full' ? 'bg-slate-100 text-slate-600'
+                  : 'bg-green-100 text-green-700'
+                }`}>
+                  {STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
+                </span>
+              </div>
+            )}
           </div>
 
         </div>
