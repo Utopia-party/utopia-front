@@ -1,15 +1,14 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { api } from '../libs/api';
-import { CaptchaWidget } from '../components/captcha';
-import { useAuthStore } from '../stores/authStore';
+import { CaptchaWidget } from '../../components/captcha';
+import { useAuthStore } from '../../stores/authStore';
+import { login } from '../../apis/auth';
+import type { AuthErrorResponse, LoginPayload } from '../../types/auth';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
 import { SiNaver } from 'react-icons/si';
 
-type LoginForm = {
-  email: string;
-  password: string;
+type LoginForm = LoginPayload & {
   rememberMe: boolean;
 };
 
@@ -42,47 +41,39 @@ export default function Login() {
       return;
     }
 
-    //도상원
     if (!captchaToken) {
       alert('캡챠 인증을 완료해주세요.');
       return;
     }
-    //도상원
 
     try {
       setIsSubmitting(true);
 
-      const response = await api.post(
-        '/api/login',
+      const response = await login(
         {
           email: form.email.trim(),
           password: form.password,
         },
-        {
-          headers: { 'X-Captcha-Token': captchaToken },
-        },
+        captchaToken,
       );
 
       const { checkAuth } = useAuthStore.getState();
       await checkAuth();
 
-      alert(response.data?.message || '로그인에 성공했습니다.');
+      alert(response.message || '로그인에 성공했습니다.');
       navigate('/home', { replace: true });
     } catch (error: unknown) {
-      //도상원
       const apiError = error as {
         response?: {
-          data?: {
-            detail?: string;
-            message?: string;
-          };
+          data?: AuthErrorResponse;
         };
       };
+
       const message =
         apiError.response?.data?.detail ||
         apiError.response?.data?.message ||
         '로그인에 실패했습니다.';
-      //도상원
+
       alert(message);
     } finally {
       setIsSubmitting(false);
@@ -215,9 +206,7 @@ export default function Login() {
         <div className="flex justify-center py-1">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
-            //도상원
             onError={() => setCaptchaToken(null)}
-            //도상원
             triggerType="new_ip_login"
           />
         </div>

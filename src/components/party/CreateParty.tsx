@@ -1,6 +1,8 @@
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { captchaTokenStorage } from '../../apis/captchaToken';
+import toast from 'react-hot-toast';
 
 interface CreatePartyProps {
   onCreate?: (data: CreatePartyFormData) => void;
@@ -12,6 +14,7 @@ export interface CreatePartyFormData {
   partyType: string;
   platformType: string;
   priceDisplay: string;
+  passToken: string;
 }
 
 const MAX_MEMBER_OPTIONS = ['2명', '3명', '4명', '5명', '6명'];
@@ -28,7 +31,8 @@ const PRICE_DISPLAY_OPTIONS = ['1인당 표시', '총액 표시', '숨김'];
 export default function CreateParty({ onCreate }: CreatePartyProps) {
   const navigate = useNavigate();
   const goBack = () => navigate(-1);
-  const [form, setForm] = useState<CreatePartyFormData>({
+
+  const [form, setForm] = useState({
     title: '',
     maxMembers: '4명',
     partyType: '구독',
@@ -36,12 +40,33 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
     priceDisplay: '1인당 표시',
   });
 
+  useEffect(() => {
+    if (!captchaTokenStorage.has()) {
+      toast.error('캡챠 인증 후 이용 가능합니다.');
+      navigate('/handcaptcha');
+    }
+  }, [navigate]);
+
   const handleSubmit = () => {
+    const passToken = captchaTokenStorage.get();
+
+    if (!passToken) {
+      alert('유효한 인증 토큰이 없습니다. 다시 인증해주세요.');
+      navigate('/captcha');
+      return;
+    }
+
     if (!form.title.trim()) {
       alert('파티명을 입력해주세요.');
       return;
     }
-    onCreate?.(form);
+
+    onCreate?.({
+      ...form,
+      passToken,
+    });
+
+    captchaTokenStorage.clear();
     goBack();
   };
 

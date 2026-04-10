@@ -107,14 +107,12 @@ function getWebGLRenderer(): string {
 
 // ── 환경 정보 수집 ─────────────────────────────────
 function collectEnvInfo(): EnvInfo {
-  //도상원
+  // 상원: webdriver 속성은 기본 Navigator 타입에 없어 안전 캐스팅 후 자동화 브라우저 여부를 읽습니다.
   const safeNavigator = navigator as NavigatorWithWebdriver;
-  //도상원
 
   return {
-    //도상원
+    // 상원: FR-113 환경 일관성 검증에 쓰이는 webdriver 값을 행동 페이로드에 포함합니다.
     webdriver: !!safeNavigator.webdriver,
-    //도상원
     plugins_count: navigator.plugins?.length ?? 0,
     canvas_hash: getCanvasHash(),
     webgl_renderer: getWebGLRenderer(),

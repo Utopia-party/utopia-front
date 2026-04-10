@@ -12,13 +12,14 @@ import {
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import Slide from './components/Slide';
-import example1 from '../../assets/example1.png';
-import example2 from '../../assets/example2.png';
-import example3 from '../../assets/example3.png';
-import example4 from '../../assets/example4.png';
-import example5 from '../../assets/example5.png';
+import fist from '../../assets/fist.png';
+import palm from '../../assets/palm.png';
+import v_sign from '../../assets/v_sign.png';
+import thumbs_up from '../../assets/thumbs_up.png';
 import { startCaptcha, verifyCaptcha } from '../../apis/captcha';
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
+import { captchaTokenStorage } from '../../apis/captchaToken';
 
 type Step = 'intro' | 'challenge' | 'evaluating' | 'success' | 'fail';
 
@@ -27,21 +28,16 @@ interface ChallengeData {
   pose: string;
 }
 
-interface HandOcrCaptchaProps {
-  onSuccess?: (token: string) => void;
-}
-
 const TOTAL_SECONDS = 5 * 60;
 
 const EXAMPLES = [
-  { id: 1, image: example1, pose: '주먹 ✊' },
-  { id: 2, image: example2, pose: '손바닥 🖐️' },
-  { id: 3, image: example3, pose: '브이 ✌️' },
-  { id: 4, image: example4, pose: '따봉 👍' },
-  { id: 5, image: example5, pose: '손가락 3개 🤚' },
+  { id: 1, image: fist, pose: '주먹 ✊' },
+  { id: 2, image: palm, pose: '손바닥 🖐️' },
+  { id: 3, image: v_sign, pose: '브이 ✌️' },
+  { id: 4, image: thumbs_up, pose: '따봉 👍' },
 ];
 
-export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
+export default function HandOcrCaptcha() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('intro');
   const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
@@ -50,7 +46,6 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
-  const [passToken, setPassToken] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchChallenge = async () => {
@@ -98,18 +93,25 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
   const handleSubmit = async () => {
     if (!selectedFile || !sessionId) return;
     setStep('evaluating');
+
     try {
       const data = await verifyCaptcha(sessionId, selectedFile);
+
       if (data.success) {
-        console.log('기존 토큰:', passToken);
-        setPassToken(data.passToken);
-        setStep('success');
-        console.log('새로 발급된 토큰:', data.passToken);
-        if (onSuccess && data.passToken) {
-          onSuccess(data.passToken);
+        if (!data.passToken) {
+          toast.error('인증 토큰이 없어 진행할 수 없습니다.');
+          setStep('fail');
+          return;
         }
+
+        captchaTokenStorage.set(data.passToken);
+        setStep('success');
+
+        setTimeout(() => {
+          navigate('/party/create');
+        }, 1000);
       } else {
-        alert(data.message || '인증에 실패했습니다.');
+        toast.error(data.message || '인증에 실패했습니다.');
         setStep('fail');
       }
     } catch (error) {
@@ -146,6 +148,7 @@ export default function HandOcrCaptcha({ onSuccess }: HandOcrCaptchaProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
+      <Toaster position="top-center" />
       <Container className="max-w-xl w-full">
         <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="bg-linear-to-r from-purple-600 to-blue-500 p-6 text-center">

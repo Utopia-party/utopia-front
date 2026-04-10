@@ -1,16 +1,16 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { api } from '../libs/api';
+import { findId } from '../../apis/auth';
 
 type FindIdForm = {
   name: string;
-  phone_number: string;
+  phone: string;
 };
 
 export default function FindId() {
   const [form, setForm] = useState<FindIdForm>({
     name: '',
-    phone_number: '',
+    phone: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,27 +18,30 @@ export default function FindId() {
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
 
-  const maskEmail = (email: string) => {
-    const [id, domain] = email.split('@');
-    if (!domain) return email;
+    let newValue = value;
 
-    if (id.length <= 2) {
-      return `${id[0] ?? ''}*@${domain}`;
+    if (name === 'phone') {
+      newValue = value.replace(/[^0-9]/g, '');
     }
 
-    return `${id.slice(0, 2)}${'*'.repeat(Math.max(id.length - 2, 1))}@${domain}`;
+    setForm((prev) => ({ ...prev, [name]: newValue }));
+  };
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/[^0-9]/g, '');
+
+    if (numbers.length < 4) return numbers;
+    if (numbers.length < 8) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    }
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!form.name.trim() || !form.phone_number.trim()) {
+    if (!form.name.trim() || !form.phone.trim()) {
       alert('닉네임과 휴대폰 번호를 입력해주세요.');
       return;
     }
@@ -47,23 +50,23 @@ export default function FindId() {
       setIsSubmitting(true);
       setFoundEmail(null);
 
-      const response = await api.post('/users/find-id', {
+      const response = await findId({
         name: form.name.trim(),
-        phone_number: form.phone_number.trim(),
+        phone: form.phone.trim(),
       });
 
-      const email = response.data?.email;
+      const email = response.email;
 
       if (!email) {
-        alert(response.data?.message || '일치하는 계정을 찾지 못했습니다.');
+        alert(response?.message || '일치하는 계정을 찾지 못했습니다.');
         return;
       }
 
-      setFoundEmail(maskEmail(email));
+      setFoundEmail(email);
     } catch (error: any) {
       const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
+        error?.response?.detail ||
+        error?.response?.message ||
         '이메일 찾기에 실패했습니다.';
       alert(message);
     } finally {
@@ -99,9 +102,9 @@ export default function FindId() {
             휴대폰 번호
           </label>
           <input
-            name="phone_number"
+            name="phone"
             type="tel"
-            value={form.phone_number}
+            value={formatPhone(form.phone)}
             placeholder="010-0000-0000"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}

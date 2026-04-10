@@ -7,22 +7,21 @@ import AppShell from './AppShell';
 // 공개 페이지
 import Home from './pages/Home';
 import Landing from './pages/landing/Landing';
-import Login from './pages/Login';
-import FindId from './pages/FindId';
-import FindPassword from './pages/FindPassword';
-import Signup from './pages/Signup';
-import SocialCallback from './pages/SocialCallback';
-import SocialSignup from './pages/SocialSignup';
-import Favor from './pages/Favor';
+import Login from './pages/auth/Login';
+import FindId from './pages/auth/FindId';
+import FindPassword from './pages/auth/FindPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+import Signup from './pages/auth/Signup';
+import SocialCallback from './pages/auth/SocialCallback';
+import SocialSignup from './pages/auth/SocialSignup';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
 import CreateParty from './components/party/CreateParty';
-//도상원
-// CaptchaDemo import 제거
-//도상원
+// 상원: 기존 캡챠 데모 라우트는 실제 1차/2차 캡챠 흐름으로 대체되어 import를 제거했습니다.
 
 // 보호 라우트
-import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // 사이드바가 필요한 페이지
 import Report from './pages/report/Report';
@@ -41,6 +40,7 @@ import AdminShell from './pages/admin/AdminShell';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminRoles from './pages/admin/AdminRoles';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminServices from './pages/admin/AdminServices';
 import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
 import AdminReceipts from './pages/admin/AdminReceipts';
@@ -69,8 +69,6 @@ const router = createBrowserRouter([
         path: 'signup',
         Component: Signup,
       },
-
-      // ✅ 추가된 라우트
       {
         path: 'find-id',
         Component: FindId,
@@ -79,11 +77,11 @@ const router = createBrowserRouter([
         path: 'find-password',
         Component: FindPassword,
       },
-
       {
-        path: 'favor',
-        Component: Favor,
+        path: 'reset-password',
+        Component: ResetPassword,
       },
+
       {
         path: 'handcaptcha',
         element: (
@@ -112,9 +110,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      //도상원
-      // captcha-demo 라우트 제거
-      //도상원
+      // 상원: 실제 회원가입/로그인 캡챠 흐름을 쓰므로 별도 captcha-demo 라우트는 두지 않습니다.
     ],
   },
 
@@ -201,7 +197,12 @@ const router = createBrowserRouter([
 
   {
     path: '/admin',
-    Component: AdminShell,
+    // 상원: 관리자 페이지는 직접 URL로 들어와도 인증과 관리자 권한을 먼저 확인합니다.
+    element: (
+      <AdminRoute>
+        <AdminShell />
+      </AdminRoute>
+    ),
     children: [
       {
         index: true,
@@ -214,6 +215,10 @@ const router = createBrowserRouter([
       {
         path: 'users',
         Component: AdminUsers,
+      },
+      {
+        path: 'services',
+        Component: AdminServices,
       },
       {
         path: 'parties',

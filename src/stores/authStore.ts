@@ -1,22 +1,14 @@
 import { create } from 'zustand';
-import { api } from '../libs/api';
-
-/* 전역상태관리파일 */
-
-type User = {
-  user_id: string;
-  email: string;
-  nickname: string;
-  provider: string;
-  role: string;
-};
+import { getMe, logout as logoutApi } from '../apis/auth';
+import type { AuthUser } from '../types/auth';
 
 type AuthState = {
-  user: User | null;
+  user: AuthUser | null;
   isLoggedIn: boolean;
   loading: boolean;
 
-  setUser: (user: User) => void;
+  setUser: (user: AuthUser | null) => void;
+  updateUser: (partialUser: Partial<AuthUser>) => void;
   clearUser: () => void;
   checkAuth: () => Promise<void>;
   logout: () => Promise<void>;
@@ -30,24 +22,29 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) =>
     set({
       user,
-      isLoggedIn: true,
+      isLoggedIn: !!user,
       loading: false,
     }),
 
-  clearUser: () =>
-    set({
-      user: null,
-      isLoggedIn: false,
-      loading: false,
+  updateUser: (partialUser) =>
+    set((state) => {
+      if (!state.user) return state;
+
+      return {
+        user: {
+          ...state.user,
+          ...partialUser,
+        },
+      };
     }),
 
   checkAuth: async () => {
     try {
-      const res = await api.get('/api/me');
+      const res = await getMe();
 
-      if (res.data?.is_logged_in && res.data.user) {
+      if (res.is_logged_in && res.user) {
         set({
-          user: res.data.user,
+          user: res.user,
           isLoggedIn: true,
           loading: false,
         });
@@ -69,7 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
-      await api.post('/api/logout');
+      await logoutApi();
     } catch (e) {
       console.error(e);
     }
@@ -80,4 +77,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       loading: false,
     });
   },
+
+  clearUser: () =>
+    set({
+      user: null,
+      isLoggedIn: false,
+      loading: false,
+    }),
 }));

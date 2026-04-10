@@ -1,145 +1,193 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { api } from '../libs/api';
 import { useNavigate } from 'react-router';
-import { CaptchaWidget } from '../components/captcha';
+import { CaptchaWidget } from '../../components/captcha';
+import { useAuthStore } from '../../stores/authStore';
+import {
+  checkEmail,
+  requestEmailVerification,
+  verifyEmailCode,
+  checkNickname,
+  signup,
+} from '../../apis/auth';
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { checkAuth } = useAuthStore();
 
   const [form, setForm] = useState({
     email: '',
     email_code: '',
     password: '',
-    confirm_password: '',
     name: '',
     nickname: '',
     birth_date: '',
-    phone_number: '',
+    phone: '',
+    referrer: '',
   });
 
-  const [isEmailChecked, setisEmailChecked] = useState(false);
-  const [isNicknameChecked, setisNicknameChecked] = useState(false);
+  const [isEmailChecked, setIsEmailChecked] = useState(false);
+  const [isNicknameChecked, setIsNicknameChecked] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState('');
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+
+    let newValue = value;
+
+    if (name === 'phone') {
+      newValue = value.replace(/[^0-9]/g, '');
+    }
+
+    setForm((prev) => ({ ...prev, [name]: newValue }));
 
     if (name === 'email') {
-      setisEmailChecked(false);
+      setIsEmailChecked(false);
       setIsEmailVerified(false);
     }
-    if (name === 'nickname') setisNicknameChecked(false);
+
+    if (name === 'password') {
+      if (!validatePassword(value)) {
+        setPasswordError('8자 이상, 영문/숫자/특수문자를 포함해야 합니다.');
+      } else {
+        setPasswordError('');
+      }
+    }
+
+    if (name === 'nickname') {
+      setIsNicknameChecked(false);
+    }
   };
 
   const handleCheckEmail = async () => {
-    if (!form.email) return alert('이메일을 입력해주세요.');
+    if (!form.email) {
+      alert('이메일을 입력해주세요.');
+      return;
+    }
+
     try {
-      const response = await api.get('/api/users/check-email', {
-        params: { email: form.email },
-      });
-      if (response.data.exists) {
+      const data = await checkEmail(form.email);
+
+      if (data.exists) {
         alert('이미 사용 중인 이메일입니다.');
-        setisEmailChecked(false);
+        setIsEmailChecked(false);
       } else {
         alert('사용 가능한 이메일입니다. 이제 인증번호를 요청하세요.');
-        setisEmailChecked(true);
+        setIsEmailChecked(true);
       }
-      //도상원
     } catch {
-      //도상원
       alert('중복 확인 중 오류가 발생했습니다.');
     }
   };
 
-  // 이메일 인증 요청
   const handleEmailRequest = async () => {
-    if (!isEmailChecked) return alert('먼저 이메일 중복 확인을 해주세요.');
+    if (!isEmailChecked) {
+      alert('먼저 이메일 중복 확인을 해주세요.');
+      return;
+    }
+
     try {
-      await api.post('/api/email-request', null, {
-        params: { email: form.email },
-      });
+      await requestEmailVerification(form.email);
       alert('인증 메일이 발송되었습니다. 메일함을 확인해주세요!');
-      //도상원
     } catch {
-      //도상원
       alert('인증 메일 발송에 실패했습니다.');
     }
   };
 
-  // 이메일 인증 확인
   const handleEmailVerify = async () => {
-    if (!form.email_code) return alert('인증번호를 입력해주세요.');
+    if (!form.email_code) {
+      alert('인증번호를 입력해주세요.');
+      return;
+    }
+
     try {
-      const response = await api.post('/api/email-verify', null, {
-        params: { email: form.email, code: form.email_code },
-      });
-      if (response.data.success) {
+      const data = await verifyEmailCode(form.email, form.email_code);
+
+      if (data.success) {
         alert('이메일 인증에 성공했습니다!');
         setIsEmailVerified(true);
       }
-      //도상원
     } catch {
-      //도상원
       alert('인증번호가 틀렸거나 만료되었습니다.');
     }
   };
 
-  // 닉네임 중복검사
+  const validatePassword = (password: string) => {
+    // 최소 8자 + 영문 + 숫자 + 특수문자
+    const regex =
+      /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
+
+    return regex.test(password);
+  };
+
   const handleCheckNickname = async () => {
-    if (!form.nickname) return alert('닉네임을 입력해주세요.');
+    if (!form.nickname) {
+      alert('닉네임을 입력해주세요.');
+      return;
+    }
+
     try {
-      const response = await api.get('/api/users/check-nickname', {
-        params: { nickname: form.nickname },
-      });
-      if (response.data.exists) {
+      const data = await checkNickname(form.nickname);
+
+      if (data.exists) {
         alert('이미 사용 중인 닉네임입니다.');
-        setisNicknameChecked(false);
+        setIsNicknameChecked(false);
       } else {
         alert('사용 가능한 닉네임입니다.');
-        setisNicknameChecked(true);
+        setIsNicknameChecked(true);
       }
-      //도상원
     } catch {
-      //도상원
       alert('중복 확인 중 오류가 발생했습니다.');
     }
   };
 
-  //도상원
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/[^0-9]/g, '');
+
+    if (numbers.length < 4) return numbers;
+    if (numbers.length < 8) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    }
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    //도상원
     e.preventDefault();
 
     if (!isEmailVerified || !isNicknameChecked) {
       alert('이메일 인증과 닉네임 중복 확인을 완료해주세요.');
       return;
     }
+
+    if (!validatePassword(form.password)) {
+      alert('비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.');
+      return;
+    }
+
     if (!captchaToken) {
       alert('캡챠 인증을 완료해주세요.');
       return;
     }
 
     try {
-      const response = await api.post(
-        '/api/users',
+      await signup(
         {
           email: form.email,
-          nickname: form.nickname,
           password: form.password,
-          phone: form.phone_number || undefined,
+          name: form.name,
+          nickname: form.nickname,
+          phone: form.phone,
+          referrer: form.referrer || undefined,
         },
-        {
-          headers: { 'X-Captcha-Token': captchaToken },
-        },
+        captchaToken,
       );
-      if (response.status === 200 || response.status === 201) {
-        alert('회원가입이 완료되었습니다!');
-        navigate('/favor');
-      }
+
+      await checkAuth();
+      alert('회원가입이 완료되었습니다!');
+      navigate('/home');
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { detail?: string } } };
       const errorMsg =
@@ -151,28 +199,32 @@ export default function Signup() {
   const isFormValid =
     form.email &&
     isEmailVerified &&
-    form.password.length >= 8 &&
+    validatePassword(form.password) &&
     form.name &&
     form.nickname &&
     isNicknameChecked &&
-    captchaToken;
+    captchaToken &&
+    form.phone;
 
   return (
     <div className="mx-auto mt-10 mb-12 max-w-2xl rounded-xl border border-gray-100 bg-white p-10 shadow-lg">
       <h1 className="mb-8 text-2xl font-bold text-gray-800">회원가입</h1>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {/* 이메일 */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            이메일
+            이메일 <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-2">
             <input
               name="email"
               type="email"
               placeholder="name@email.com"
-              className={`w-full rounded-lg border p-3 focus:outline-none ${isEmailVerified ? 'border-green-500 bg-green-50' : 'border-gray-300 focus:border-blue-500'}`}
+              className={`w-full rounded-lg border p-3 focus:outline-none ${
+                isEmailVerified
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-300 focus:border-blue-500'
+              }`}
               onChange={handleChange}
               disabled={isEmailVerified}
               required
@@ -189,14 +241,13 @@ export default function Signup() {
               type="button"
               onClick={handleEmailRequest}
               disabled={!isEmailChecked || isEmailVerified}
-              className="shrink-0 rounded-lg bg-gray-800 text-white px-4 py-2 font-medium hover:bg-gray-700 disabled:bg-gray-300"
+              className="shrink-0 rounded-lg bg-gray-800 px-4 py-2 font-medium text-white hover:bg-gray-700 disabled:bg-gray-300"
             >
               인증요청
             </button>
           </div>
         </div>
 
-        {/* 이메일 인증번호 */}
         {!isEmailVerified && isEmailChecked && (
           <div className="flex gap-2">
             <input
@@ -209,22 +260,22 @@ export default function Signup() {
             <button
               type="button"
               onClick={handleEmailVerify}
-              className="shrink-0 rounded-lg bg-blue-600 text-white px-4 py-2 font-medium hover:bg-blue-700"
+              className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
             >
               인증확인
             </button>
           </div>
         )}
+
         {isEmailVerified && (
-          <p className="text-xs text-green-600 font-medium ml-1">
+          <p className="ml-1 text-xs font-medium text-green-600">
             이메일 인증이 완료되었습니다.
           </p>
         )}
 
-        {/* 비밀번호 */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            비밀번호
+            비밀번호 <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -244,12 +295,14 @@ export default function Signup() {
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
+          {passwordError && (
+            <p className="mt-1 text-xs text-red-500">{passwordError}</p>
+          )}
         </div>
 
-        {/* 이름 */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            이름
+            이름 <span className="text-red-500">*</span>
           </label>
           <input
             name="name"
@@ -261,17 +314,20 @@ export default function Signup() {
           />
         </div>
 
-        {/* 닉네임 */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            닉네임
+            닉네임 <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-2">
             <input
               name="nickname"
               type="text"
               placeholder="닉네임 입력"
-              className={`w-full rounded-lg border p-3 focus:outline-none ${isNicknameChecked ? 'border-green-500' : 'border-gray-300 focus:border-blue-500'}`}
+              className={`w-full rounded-lg border p-3 focus:outline-none ${
+                isNicknameChecked
+                  ? 'border-green-500'
+                  : 'border-gray-300 focus:border-blue-500'
+              }`}
               onChange={handleChange}
               required
             />
@@ -285,44 +341,65 @@ export default function Signup() {
           </div>
         </div>
 
-        {/* 휴대폰 번호 (선택) */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            휴대폰 번호
+            휴대폰 번호 <span className="text-red-500">*</span>
           </label>
           <input
-            name="phone_number"
+            name="phone"
             type="tel"
             placeholder="010-0000-0000"
+            value={formatPhone(form.phone)}
+            maxLength={13}
+            inputMode="numeric"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}
+            required
           />
         </div>
 
-        {/* 캡챠 인증 */}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-600">
+            추천인 입력 (선택)
+          </label>
+          <div className="w-full">
+            <input
+              name="referrer"
+              type="text"
+              placeholder="추천인 닉네임 입력 (선택)"
+              className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+              onChange={handleChange}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              &nbsp;추천인은 가입 후 변경할 수 없습니다.
+            </p>
+          </div>
+        </div>
+
         <div className="flex justify-center py-2">
           <CaptchaWidget
             onSuccess={(token) => setCaptchaToken(token)}
-            //도상원
             onError={() => setCaptchaToken(null)}
-            //도상원
             triggerType="register"
           />
         </div>
 
-        {/* 버튼 */}
         <div className="space-y-3 pt-4">
           <button
             type="submit"
             disabled={!isFormValid}
-            className={`w-full rounded-xl py-4 font-bold text-white transition ${isFormValid ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
+            className={`w-full rounded-xl py-4 font-bold text-white transition ${
+              isFormValid
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'cursor-not-allowed bg-gray-300'
+            }`}
           >
             회원가입 완료
           </button>
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="w-full rounded-xl border border-blue-600 py-4 font-bold text-blue-600 hover:bg-blue-50 transition"
+            className="w-full rounded-xl border border-blue-600 py-4 font-bold text-blue-600 transition hover:bg-blue-50"
           >
             이미 계정이 있어요(로그인)
           </button>
