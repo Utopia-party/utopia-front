@@ -1,7 +1,15 @@
 export interface StartCaptchaResponse {
-  sessionId: string;
-  text: string;
-  pose: string;
+  success: boolean;
+  sessionId?: string;
+  text?: string;
+  pose?: string;
+  reused?: boolean;
+  remainingSeconds?: number;
+  message?: string;
+  failureReason?: {
+    type?: string;
+    retryAfterSeconds?: number;
+  };
 }
 
 export interface VerifyCaptchaResponse {
