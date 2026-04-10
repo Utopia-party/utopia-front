@@ -1,5 +1,12 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react';
 import { updateMyProfile } from '../../../apis/user';
+import { useAuthStore } from '../../../stores/authStore';
 
 type ProfileEditModalProps = {
   open: boolean;
@@ -8,6 +15,7 @@ type ProfileEditModalProps = {
     nickname?: string | null;
     email?: string | null;
     phone?: string | null;
+    profileImage?: string | null;
   };
 };
 
@@ -26,6 +34,8 @@ export default function ProfileEditModal({
   onClose,
   initialValues,
 }: ProfileEditModalProps) {
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+
   const [form, setForm] = useState<ProfileEditForm>({
     nickname: initialValues.nickname ?? '',
     phone: initialValues.phone ?? '',
@@ -37,6 +47,28 @@ export default function ProfileEditModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setForm({
+      nickname: initialValues.nickname ?? '',
+      phone: initialValues.phone ?? '',
+    });
+    setImagePreview(initialValues.profileImage ?? null);
+    setSelectedImageFile(null);
+    setImageName('');
+    setRemoveImage(false);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [
+    open,
+    initialValues.nickname,
+    initialValues.phone,
+    initialValues.profileImage,
+  ]);
 
   if (!open) return null;
 
@@ -104,9 +136,10 @@ export default function ProfileEditModal({
         removeProfileImage: removeImage,
       });
 
+      await checkAuth();
+
       alert('프로필이 저장되었습니다.');
       onClose();
-      window.location.reload();
     } catch (error) {
       console.error(error);
       alert('프로필 수정에 실패했습니다.');
