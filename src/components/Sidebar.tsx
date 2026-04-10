@@ -33,7 +33,7 @@ export default function Sidebar() {
 
   const getMainLinkClass = (isActive: boolean) =>
     [
-      'flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition',
+      'flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition',
       isActive
         ? 'bg-blue-50 text-primary'
         : 'text-slate-800 hover:bg-slate-100',
@@ -41,13 +41,14 @@ export default function Sidebar() {
 
   const getSubLinkClass = (isActive: boolean) =>
     [
-      'block rounded-2xl px-4 py-3 text-sm font-semibold transition',
+      'block rounded-xl px-3 py-2.5 text-sm font-medium transition',
       isActive
         ? 'bg-blue-50 text-primary'
         : 'text-slate-700 hover:bg-slate-100',
     ].join(' ');
+
   return (
-    <aside className="flex min-h-screen w-72 flex-col border-r border-slate-200 bg-white px-5 py-8">
+    <aside className="flex min-h-screen w-56 flex-col border-r border-slate-200 bg-white px-4 py-6">
       <Link to="/home" className="mb-10 flex items-center gap-3 px-2">
         <div className="h-8 w-8 rounded-xl bg-primary" />
         <span className="text-[20px] font-extrabold tracking-tight text-slate-900">
@@ -78,7 +79,7 @@ export default function Sidebar() {
           </button>
 
           {isMypageOpen ? (
-            <div className="mt-2 flex flex-col gap-1 pl-3">
+            <div className="mt-2 flex flex-col gap-1 pl-2">
               {mypageMenus.map((menu) => (
                 <NavLink
                   key={menu.to}

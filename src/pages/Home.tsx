@@ -55,8 +55,18 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/95 px-5 py-3 shadow-2xl backdrop-blur-md transition focus-within:-translate-y-0.5 focus-within:shadow-white/10">
-        <svg className="h-5 w-5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <svg
+          className="h-5 w-5 shrink-0 text-slate-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
         <input
           className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
@@ -68,7 +78,10 @@ function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
         {value ? (
           <button
             className="rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-            onClick={() => { setValue(''); onSearch(''); }}
+            onClick={() => {
+              setValue('');
+              onSearch('');
+            }}
           >
             ✕
           </button>
@@ -101,11 +114,21 @@ function KeywordChips({ onPick }: { onPick: (keyword: string) => void }) {
   );
 }
 
-function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+function SectionTitle({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <div>
-      <h2 className="text-lg font-extrabold tracking-tight text-slate-900">{title}</h2>
-      {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+      <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
+        {title}
+      </h2>
+      {subtitle ? (
+        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+      ) : null}
     </div>
   );
 }
@@ -124,11 +147,16 @@ function PartyCard({
   const isJoined = (party as any).is_joined;
   const categoryName = party.category_name || '기타';
   const categoryIcon = CATEGORY_ICON[categoryName] ?? '✨';
-  const spotsLeft = Math.max((party.max_members ?? 0) - (party.member_count ?? 0), 0);
+  const spotsLeft = Math.max(
+    (party.max_members ?? 0) - (party.member_count ?? 0),
+    0,
+  );
 
   const savingPct =
     party.original_price && party.original_price > (party.monthly_price ?? 0)
-      ? Math.round((1 - (party.monthly_price ?? 0) / party.original_price) * 100)
+      ? Math.round(
+          (1 - (party.monthly_price ?? 0) / party.original_price) * 100,
+        )
       : null;
 
   return (
@@ -142,10 +170,14 @@ function PartyCard({
           </div>
           <div className="min-w-0">
             <div className="mb-1 flex flex-wrap gap-1.5">
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${party.status === 'recruiting' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200/80'}`}>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${party.status === 'recruiting' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200/80'}`}
+              >
                 {STATUS_LABEL[party.status ?? ''] || '모집중'}
               </span>
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${CATEGORY_COLOR[categoryName] ?? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'}`}>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${CATEGORY_COLOR[categoryName] ?? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'}`}
+              >
                 {categoryName}
               </span>
             </div>
@@ -199,7 +231,11 @@ function PartyCard({
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
           <span>호스트 {party.host_nickname || '익명'}</span>
-          <span>{party.status === 'recruiting' ? `남은 자리 ${spotsLeft}개` : '모집 종료'}</span>
+          <span>
+            {party.status === 'recruiting'
+              ? `남은 자리 ${spotsLeft}개`
+              : '모집 종료'}
+          </span>
         </div>
       </div>
 
@@ -223,7 +259,9 @@ function PartyCard({
             onClick={() => onApply(party)}
             className={`flex-1 rounded-2xl px-4 py-3 text-sm font-bold transition ${isClosed ? 'cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
           >
-            {isClosed ? STATUS_LABEL[party.status ?? ''] || '마감' : '참여 신청'}
+            {isClosed
+              ? STATUS_LABEL[party.status ?? ''] || '마감'
+              : '참여 신청'}
           </button>
         )}
       </div>
@@ -265,7 +303,9 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
             <div className="mb-4 text-5xl">🎉</div>
             <h3 className="text-xl font-black text-slate-900">신청 완료!</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              파티 참여 신청이 정상적으로 완료되었습니다.<br />바로 채팅방으로 이동해보세요.
+              파티 참여 신청이 정상적으로 완료되었습니다.
+              <br />
+              바로 채팅방으로 이동해보세요.
             </p>
             <button
               onClick={() => navigate(`/party/${party.id}/chat`)}
@@ -277,14 +317,25 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
         ) : (
           <>
             <div className="mb-5">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-500">Join party</p>
-              <h3 className="mt-2 text-xl font-black text-slate-900">파티 참여 신청</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-500">아래 내용을 확인한 뒤 참여를 진행해주세요.</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-500">
+                Join party
+              </p>
+              <h3 className="mt-2 text-xl font-black text-slate-900">
+                파티 참여 신청
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                아래 내용을 확인한 뒤 참여를 진행해주세요.
+              </p>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-              <p className="text-sm font-bold text-slate-900">[{party.service_name}] {party.title}</p>
+              <p className="text-sm font-bold text-slate-900">
+                [{party.service_name}] {party.title}
+              </p>
               <div className="mt-3 space-y-1.5 text-xs text-slate-500">
-                <p>👥 현재 {party.member_count}/{party.max_members ?? '?'}명 참여 중</p>
+                <p>
+                  👥 현재 {party.member_count}/{party.max_members ?? '?'}명 참여
+                  중
+                </p>
                 <p>👤 호스트: {party.host_nickname || '익명'}</p>
                 {party.monthly_price != null && party.monthly_price > 0 ? (
                   <p>💰 월 {party.monthly_price.toLocaleString()}원</p>
@@ -331,9 +382,15 @@ function CategorySidebar({
       <div className="sticky top-4 space-y-4">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-4 py-4">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Browse</p>
-            <h3 className="mt-2 text-lg font-extrabold text-slate-900">카테고리</h3>
-            <p className="mt-1 text-sm text-slate-500">원하는 서비스 유형만 빠르게 골라보세요.</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+              Browse
+            </p>
+            <h3 className="mt-2 text-lg font-extrabold text-slate-900">
+              카테고리
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              원하는 서비스 유형만 빠르게 골라보세요.
+            </p>
           </div>
           <nav className="flex flex-col gap-1 p-3">
             <button
@@ -366,9 +423,13 @@ function CategorySidebar({
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Create</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">
+                Create
+              </p>
               <p className="mt-1 text-base font-extrabold">+ 파티 생성하기</p>
-              <p className="mt-1 text-sm text-white/70">직접 모집글을 올리고 멤버를 모아보세요.</p>
+              <p className="mt-1 text-sm text-white/70">
+                직접 모집글을 올리고 멤버를 모아보세요.
+              </p>
             </div>
             <span className="text-2xl">🚀</span>
           </div>
@@ -380,9 +441,15 @@ function CategorySidebar({
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Quick match</p>
-              <p className="mt-1 text-base font-extrabold text-slate-900">빠른 매칭</p>
-              <p className="mt-1 text-sm text-slate-500">조건만 입력하면 맞는 파티를 더 빠르게 찾아드려요.</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                Quick match
+              </p>
+              <p className="mt-1 text-base font-extrabold text-slate-900">
+                빠른 매칭
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                조건만 입력하면 맞는 파티를 더 빠르게 찾아드려요.
+              </p>
             </div>
             <span className="text-2xl">⚡</span>
           </div>
@@ -410,11 +477,12 @@ export default function Home() {
 
   const { data: partyData, isLoading } = useQuery({
     queryKey: partyKeys.list(category, search, refreshKey),
-    queryFn: () => fetchParties({
-      category: category ?? undefined,
-      search,
-      size: 6,
-    }),
+    queryFn: () =>
+      fetchParties({
+        category: category ?? undefined,
+        search,
+        size: 6,
+      }),
   });
 
   const parties =
@@ -434,20 +502,25 @@ export default function Home() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.18),_transparent_28%),linear-gradient(135deg,#4f46e5_0%,#6366f1_42%,#0ea5e9_100%)] px-6 pb-14 pt-16 text-center">
+      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#4f46e5_0%,#6366f1_42%,#0ea5e9_100%)] px-6 pb-10 pt-10 text-center">
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(15,23,42,0.08))]" />
-        <div className="relative mx-auto max-w-4xl">
+        <div className="relative mx-auto max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 backdrop-blur-sm">
             <span>✨</span>
             <span>함께 쓰면 더 저렴한 구독 생활</span>
           </div>
-          <h1 className="relative mt-5 text-3xl font-black tracking-tight text-white md:text-5xl">
-            같이 구독하고,<br className="hidden md:block" />부담은 더 가볍게
+
+          <h1 className="relative mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">
+            같이 구독하고,
+            <br className="hidden md:block" />
+            부담은 더 가볍게
           </h1>
-          <p className="relative mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/80 md:text-base">
+
+          <p className="relative mx-auto mt-3 max-w-xl text-sm leading-6 text-white/80 md:text-base">
             구독 서비스부터 공동구매까지, 원하는 파티를 찾고 바로 참여해보세요.
           </p>
-          <div className="relative mt-8">
+
+          <div className="relative mt-6">
             <SearchBar onSearch={setSearch} />
             <KeywordChips onPick={setSearch} />
           </div>
@@ -475,18 +548,29 @@ export default function Home() {
                 <SectionTitle title={titleText} subtitle={subtitleText} />
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setRefreshKey(k => k + 1)}
+                    onClick={() => setRefreshKey((k) => k + 1)}
                     className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95"
                   >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                     새로고침
                   </button>
                   <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
                     <span className="text-slate-400">총</span>
-                    <span className="text-base font-black text-slate-900">{partyData?.total ?? 0}</span>
+                    <span className="text-base font-black text-slate-900">
+                      {partyData?.total ?? 0}
+                    </span>
                     <span className="text-slate-400">개</span>
                   </div>
                 </div>
@@ -495,15 +579,23 @@ export default function Home() {
               {isLoading ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="h-72 animate-pulse rounded-3xl border border-slate-200 bg-white" />
+                    <div
+                      key={i}
+                      className="h-72 animate-pulse rounded-3xl border border-slate-200 bg-white"
+                    />
                   ))}
                 </div>
               ) : parties.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center shadow-sm">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">🔎</div>
-                  <h3 className="text-lg font-extrabold text-slate-900">조건에 맞는 파티가 아직 없어요</h3>
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
+                    🔎
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-900">
+                    조건에 맞는 파티가 아직 없어요
+                  </h3>
                   <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-                    검색어를 바꿔보거나, 직접 새 파티를 만들어 멤버를 모집해보세요.
+                    검색어를 바꿔보거나, 직접 새 파티를 만들어 멤버를
+                    모집해보세요.
                   </p>
                   <div className="mt-6 flex flex-col gap-2 sm:flex-row">
                     <button
@@ -541,7 +633,10 @@ export default function Home() {
         <PartyDetailModal
           party={detailTarget}
           onClose={() => setDetailTarget(null)}
-          onApply={(p) => { setDetailTarget(null); setApplyTarget(p); }}
+          onApply={(p) => {
+            setDetailTarget(null);
+            setApplyTarget(p);
+          }}
         />
       ) : null}
 
