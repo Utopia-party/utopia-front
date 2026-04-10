@@ -128,7 +128,9 @@ export default function Header() {
               {isNotificationOpen && (
                 <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-gray-800">알림</h3>
+                    <h3 className="text-sm font-bold text-gray-800">
+                      (세영)알림
+                    </h3>
                     {unreadCount > 0 && (
                       <span className="text-xs font-medium text-red-500">
                         읽지 않음 {unreadCount}개
