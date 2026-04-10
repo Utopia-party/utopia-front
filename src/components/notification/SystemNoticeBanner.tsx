@@ -8,10 +8,11 @@ import type { NotificationItem } from '../../types/notifications';
 
 export default function SystemNoticeBanner() {
   const [dismissed, setDismissed] = useState(false);
+  const limit = 10;
 
   const { data: notices = [] } = useQuery<NotificationItem[]>({
-    queryKey: notificationKeys.latest,
-    queryFn: fetchLatestNotifications,
+    queryKey: notificationKeys.latest(limit),
+    queryFn: () => fetchLatestNotifications(limit),
     enabled: !dismissed,
   });
 

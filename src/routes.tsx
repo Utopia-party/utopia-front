@@ -1,4 +1,4 @@
-import { createBrowserRouter, redirect } from 'react-router';
+import { createBrowserRouter, redirect, Outlet } from 'react-router';
 
 // 레이아웃 컴포넌트
 import App from './App';
@@ -17,7 +17,6 @@ import SocialSignup from './pages/auth/SocialSignup';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
 import Chat from './pages/Chat';
 import CreateParty from './components/party/CreateParty';
-// 상원: 기존 캡챠 데모 라우트는 실제 1차/2차 캡챠 흐름으로 대체되어 import를 제거했습니다.
 
 // 보호 라우트
 import AdminRoute from './components/AdminRoute';
@@ -81,7 +80,6 @@ const router = createBrowserRouter([
         path: 'reset-password',
         Component: ResetPassword,
       },
-
       {
         path: 'handcaptcha',
         element: (
@@ -110,7 +108,6 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      // 상원: 실제 회원가입/로그인 캡챠 흐름을 쓰므로 별도 captcha-demo 라우트는 두지 않습니다.
     ],
   },
 
@@ -134,7 +131,7 @@ const router = createBrowserRouter([
         path: 'mypage',
         element: (
           <ProtectedRoute>
-            <Profile />
+            <Outlet />
           </ProtectedRoute>
         ),
         children: [
@@ -144,51 +141,27 @@ const router = createBrowserRouter([
           },
           {
             path: 'profile',
-            element: (
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            ),
+            element: <Profile />,
           },
           {
             path: 'party',
-            element: (
-              <ProtectedRoute>
-                <MyParty />
-              </ProtectedRoute>
-            ),
+            element: <MyParty />,
           },
           {
             path: 'history',
-            element: (
-              <ProtectedRoute>
-                <MyHistory />
-              </ProtectedRoute>
-            ),
+            element: <MyHistory />,
           },
           {
             path: 'my_trust_history',
-            element: (
-              <ProtectedRoute>
-                <MyTrustHistory />
-              </ProtectedRoute>
-            ),
+            element: <MyTrustHistory />,
           },
           {
-            path: 'report',
-            element: (
-              <ProtectedRoute>
-                <MyReport />
-              </ProtectedRoute>
-            ),
+            path: 'myreport',
+            element: <MyReport />,
           },
           {
             path: 'payment',
-            element: (
-              <ProtectedRoute>
-                <MyPayment />
-              </ProtectedRoute>
-            ),
+            element: <MyPayment />,
           },
         ],
       },
@@ -197,7 +170,6 @@ const router = createBrowserRouter([
 
   {
     path: '/admin',
-    // 상원: 관리자 페이지는 직접 URL로 들어와도 인증과 관리자 권한을 먼저 확인합니다.
     element: (
       <AdminRoute>
         <AdminShell />

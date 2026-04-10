@@ -1,20 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
-import { fetchMyNotifications, notificationKeys } from '../apis/notifications';
-
-type NotificationItem = {
-  id: string;
-  user_id: string | null;
-  type: string | null;
-  title: string | null;
-  message: string | null;
-  reference_type: string | null;
-  reference_id: string | null;
-  is_read: boolean | null;
-  created_at: string | null;
-};
+import {
+  fetchMyNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+  notificationKeys,
+} from '../apis/notifications';
+import type { NotificationItem } from '../types/notifications';
 
 function formatRelativeTime(dateString: string | null) {
   if (!dateString) return '';
@@ -40,8 +34,69 @@ function formatRelativeTime(dateString: string | null) {
   return target.toLocaleDateString('ko-KR');
 }
 
+function getNotificationBadge(item: NotificationItem) {
+  const refType = item.reference_type?.toLowerCase();
+  const type = item.type?.toLowerCase();
+
+  if (refType === 'report' || type === 'report') {
+    return {
+      label: '신고',
+      className: 'border-rose-200 bg-rose-50 text-rose-700',
+    };
+  }
+
+  if (
+    refType === 'settlement' ||
+    refType === 'payment' ||
+    type === 'settlement' ||
+    type === 'payment'
+  ) {
+    return {
+      label: '결제',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    };
+  }
+
+  if (refType === 'party' || type?.includes('party')) {
+    return {
+      label: '파티',
+      className: 'border-blue-200 bg-blue-50 text-blue-700',
+    };
+  }
+
+  return {
+    label: '알림',
+    className: 'border-slate-200 bg-slate-50 text-slate-700',
+  };
+}
+
+function getNotificationTargetPath(item: NotificationItem) {
+  const refType = item.reference_type?.toLowerCase();
+  const type = item.type?.toLowerCase();
+
+  if (refType === 'report' || type === 'report') {
+    return '/mypage/myreport';
+  }
+
+  if (
+    refType === 'settlement' ||
+    refType === 'payment' ||
+    type === 'settlement' ||
+    type === 'payment'
+  ) {
+    return '/mypage/payment';
+  }
+
+  if (refType === 'party' || type?.includes('party')) {
+    return '/mypage/party';
+  }
+
+  return null;
+}
+
 export default function Header() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isLoggedIn, loading, logout, user } = useAuthStore();
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -55,6 +110,43 @@ export default function Header() {
     queryFn: fetchMyNotifications,
     enabled: isLoggedIn,
   });
+
+  const markOneAsReadMutation = useMutation({
+    mutationFn: (notificationId: string) =>
+      markNotificationAsRead(notificationId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: notificationKeys.me }),
+        queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: notificationKeys.unreadCount,
+        }),
+      ]);
+    },
+  });
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: markAllNotificationsAsRead,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: notificationKeys.me }),
+        queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: notificationKeys.unreadCount,
+        }),
+      ]);
+    },
+  });
+
+  const latestNotifications = useMemo(() => {
+    return [...notifications]
+      .sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+      })
+      .slice(0, 10);
+  }, [notifications]);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.is_read).length,
@@ -74,21 +166,30 @@ export default function Header() {
     }
   };
 
-  const handleNotificationClick = (item: NotificationItem) => {
-    // 나중에 reference_type / reference_id 기준으로 이동 처리 가능
-    // 예:
-    // if (item.reference_type === 'party' && item.reference_id) {
-    //   navigate(`/party/${item.reference_id}`);
-    //   return;
-    // }
+  const handleNotificationClick = async (item: NotificationItem) => {
+    const targetPath = getNotificationTargetPath(item);
 
-    if (item.reference_type === 'party' && item.reference_id) {
-      navigate(`/party/${item.reference_id}`);
-      setIsNotificationOpen(false);
-      return;
+    try {
+      if (!item.is_read) {
+        await markOneAsReadMutation.mutateAsync(String(item.id));
+      }
+    } catch (error) {
+      console.error('개별 알림 읽음 처리 실패', error);
     }
 
     setIsNotificationOpen(false);
+
+    if (targetPath) {
+      navigate(targetPath);
+    }
+  };
+
+  const handleReadAllNotifications = async () => {
+    try {
+      await markAllAsReadMutation.mutateAsync();
+    } catch (error) {
+      console.error('전체 알림 읽음 처리 실패', error);
+    }
   };
 
   return (
@@ -126,19 +227,34 @@ export default function Header() {
               </button>
 
               {isNotificationOpen && (
-                <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-gray-800">
-                      (세영)알림
-                    </h3>
-                    {unreadCount > 0 && (
-                      <span className="text-xs font-medium text-red-500">
-                        읽지 않음 {unreadCount}개
-                      </span>
-                    )}
+                <div className="absolute right-0 top-12 z-50 w-96 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-800">
+                        {user?.nickname ?? '사용자'}님 알림
+                      </h3>
+                      {unreadCount > 0 && (
+                        <p className="mt-0.5 text-xs font-medium text-red-500">
+                          읽지 않음 {unreadCount}개
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleReadAllNotifications}
+                      disabled={
+                        unreadCount === 0 || markAllAsReadMutation.isPending
+                      }
+                      className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {markAllAsReadMutation.isPending
+                        ? '처리 중...'
+                        : '전체 읽음'}
+                    </button>
                   </div>
 
-                  <div className="max-h-80 space-y-2 overflow-y-auto">
+                  <div className="max-h-96 space-y-2 overflow-y-auto">
                     {isNotificationsLoading ? (
                       <div className="rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
                         알림을 불러오는 중...
@@ -147,41 +263,53 @@ export default function Header() {
                       <div className="rounded-xl bg-red-50 px-4 py-6 text-center text-sm text-red-500">
                         알림을 불러오지 못했습니다.
                       </div>
-                    ) : notifications.length > 0 ? (
-                      notifications.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => handleNotificationClick(item)}
-                          className={`w-full rounded-xl border p-3 text-left transition hover:bg-gray-50 ${
-                            item.is_read
-                              ? 'border-gray-100 bg-white'
-                              : 'border-blue-100 bg-blue-50'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              {item.title && (
-                                <p className="text-sm font-semibold text-gray-800">
-                                  {item.title}
-                                </p>
-                              )}
+                    ) : latestNotifications.length > 0 ? (
+                      latestNotifications.map((item) => {
+                        const badge = getNotificationBadge(item);
 
-                              <p className="mt-1 text-sm text-gray-700 break-words">
-                                {item.message ?? '알림 내용이 없습니다.'}
-                              </p>
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNotificationClick(item)}
+                            className={`w-full rounded-xl border p-3 text-left transition hover:bg-gray-50 ${
+                              item.is_read
+                                ? 'border-gray-100 bg-white'
+                                : 'border-blue-100 bg-blue-50'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${badge.className}`}
+                                  >
+                                    {badge.label}
+                                  </span>
+
+                                  {item.title && (
+                                    <p className="truncate text-sm font-semibold text-gray-800">
+                                      {item.title}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <p className="mt-1 break-words text-sm text-gray-700">
+                                  {item.message ?? '알림 내용이 없습니다.'}
+                                </p>
+                              </div>
+
+                              {!item.is_read && (
+                                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                              )}
                             </div>
 
-                            {!item.is_read && (
-                              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
-                            )}
-                          </div>
-
-                          <p className="mt-2 text-xs text-gray-400">
-                            {formatRelativeTime(item.created_at)}
-                          </p>
-                        </button>
-                      ))
+                            <p className="mt-2 text-xs text-gray-400">
+                              {formatRelativeTime(item.created_at)}
+                            </p>
+                          </button>
+                        );
+                      })
                     ) : (
                       <div className="rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
                         새 알림이 없습니다.

@@ -19,8 +19,8 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState<LoginForm>({
-    email: '',
-    password: '',
+    email: 'partyup1234@utopia.com',
+    password: 'rhksflwk1234',
     rememberMe: false,
   });
 
