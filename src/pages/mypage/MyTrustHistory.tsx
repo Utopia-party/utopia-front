@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useAuthStore } from '../../stores/authStore';
 
 type TrustHistoryItem = {
   id: number;
@@ -39,7 +40,7 @@ const historyData: TrustHistoryItem[] = [
   },
 ];
 
-const cumulativeGraphData = [
+const baseCumulativeGraphData = [
   { label: '02/01', value: 82 },
   { label: '02/24', value: 84 },
   { label: '02/26', value: 79 },
@@ -59,6 +60,11 @@ function getScoreBadgeClass(score: number) {
 function getScoreText(score: number) {
   if (score > 0) return `+${score}`;
   return `${score}`;
+}
+
+function formatTrustScore(score?: number | null) {
+  if (score === null || score === undefined) return '-';
+  return `${score}점`;
 }
 
 function TrustScoreLineChart({
@@ -167,10 +173,40 @@ function TrustScoreLineChart({
   );
 }
 
+function formatDateToMMDD(dateString?: string) {
+  if (!dateString) return '';
+
+  const date = new Date(dateString);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${month}/${day}`;
+}
+
 export default function MyTrustHistory() {
+  const { user } = useAuthStore();
   const [category, setCategory] = useState('전체');
   const [period, setPeriod] = useState('최근 3개월');
   const [keyword, setKeyword] = useState('');
+
+  const currentTrustScore = user?.trust_score;
+
+  console.log(user?.updated_at);
+  const cumulativeGraphData = useMemo(() => {
+    if (currentTrustScore === null || currentTrustScore === undefined) {
+      return baseCumulativeGraphData;
+    }
+
+    return baseCumulativeGraphData.map((item, index, array) => {
+      if (index === array.length - 1) {
+        return {
+          label: formatDateToMMDD(user?.updated_at),
+          value: currentTrustScore,
+        };
+      }
+      return item;
+    });
+  }, [currentTrustScore, user?.updated_at]);
 
   const filteredHistory = useMemo(() => {
     return historyData.filter((item) => {
@@ -213,7 +249,7 @@ export default function MyTrustHistory() {
               </div>
 
               <div className="inline-flex rounded-full bg-blue-50 px-4 py-2 text-sm font-extrabold text-primary">
-                현재 신뢰도 82점
+                현재 신뢰도 {formatTrustScore(currentTrustScore)}
               </div>
             </div>
 

@@ -1,4 +1,5 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { updateMyProfile } from '../../../apis/user';
 
 type ProfileEditModalProps = {
   open: boolean;
@@ -15,6 +16,11 @@ type ProfileEditForm = {
   phone: string;
 };
 
+function getProfileInitial(nickname?: string | null) {
+  if (!nickname) return 'PU';
+  return nickname.trim().slice(0, 2).toUpperCase();
+}
+
 export default function ProfileEditModal({
   open,
   onClose,
@@ -24,21 +30,89 @@ export default function ProfileEditModal({
     nickname: initialValues.nickname ?? '',
     phone: initialValues.phone ?? '',
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imageName, setImageName] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!open) return null;
 
+  const profileInitial = getProfileInitial(form.nickname);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleImageButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      setImagePreview(typeof reader.result === 'string' ? reader.result : null);
+      setSelectedImageFile(file);
+      setImageName(file.name);
+      setRemoveImage(false);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageRemove = () => {
+    setImagePreview(null);
+    setSelectedImageFile(null);
+    setImageName('');
+    setRemoveImage(true);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    alert('저장 (프로필 수정 API 연결 전입니다.)');
-    onClose();
+
+    if (isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+
+      await updateMyProfile({
+        nickname: form.nickname.trim(),
+        phone: form.phone.trim(),
+        profileImage: selectedImageFile,
+        removeProfileImage: removeImage,
+      });
+
+      alert('프로필이 저장되었습니다.');
+      onClose();
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      alert('프로필 수정에 실패했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -61,15 +135,60 @@ export default function ProfileEditModal({
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-600">
-              이메일
+            <label className="mb-3 block text-sm font-semibold text-slate-600">
+              프로필 이미지
             </label>
-            <input
-              type="email"
-              value={initialValues.email ?? ''}
-              disabled
-              className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-500 outline-none"
-            />
+
+            <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-primary text-lg font-extrabold text-white">
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="프로필 미리보기"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  profileInitial
+                )}
+              </div>
+
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-700">
+                  {imageName || '선택된 이미지가 없습니다.'}
+                </p>
+                <p className="mt-1 text-xs font-medium text-slate-400">
+                  JPG, PNG, WEBP 등 이미지 파일 업로드 가능
+                </p>
+
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleImageButtonClick}
+                    className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-primary transition hover:bg-blue-100"
+                  >
+                    이미지 선택
+                  </button>
+
+                  {(imagePreview || selectedImageFile) && (
+                    <button
+                      type="button"
+                      onClick={handleImageRemove}
+                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      삭제
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -110,9 +229,10 @@ export default function ProfileEditModal({
             </button>
             <button
               type="submit"
-              className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-white transition hover:opacity-90"
+              disabled={isSubmitting}
+              className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              저장
+              {isSubmitting ? '저장 중...' : '저장'}
             </button>
           </div>
         </form>

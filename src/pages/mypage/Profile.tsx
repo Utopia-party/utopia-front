@@ -1,25 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../stores/authStore';
 import ProfileEditModal from './components/ProfileEditModal';
-
-const summaryCards = [
-  {
-    label: '신뢰도 점수',
-    value: '82점',
-    icon: '🚨',
-  },
-  {
-    label: '누적파티참여',
-    value: '2회',
-    icon: '✅',
-  },
-  {
-    label: '참여파티 수',
-    value: '1개',
-    icon: '🗂️',
-  },
-];
 
 const recentActivities = [
   {
@@ -57,17 +39,54 @@ function getProfileInitial(nickname?: string | null) {
   return nickname.trim().slice(0, 2).toUpperCase();
 }
 
+function formatPhoneNumber(phone?: string | null) {
+  if (!phone) return '';
+
+  const numbers = phone.replace(/\D/g, '');
+
+  if (numbers.length === 11) {
+    return numbers.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  }
+
+  if (numbers.length === 10) {
+    if (numbers.startsWith('02')) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
+    }
+
+    return numbers.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+  }
+
+  if (numbers.length === 9 && numbers.startsWith('02')) {
+    return numbers.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
+  }
+
+  return phone;
+}
+
+function formatTrustScore(score?: number | null) {
+  if (score === null || score === undefined) return '-';
+  return `${score}점`;
+}
+
 function ProfileDashboard() {
   const navigate = useNavigate();
   const { user, isLoggedIn, loading } = useAuthStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const nickname = user?.nickname ?? '';
-  const email = user?.email ?? '';
-  const phone = user?.phone ?? '';
-  const roleLabel = (user?.role || 'user').toUpperCase();
+  const rawPhone = user?.phone ?? '';
+  const phone = formatPhoneNumber(rawPhone);
+  const trustScore = formatTrustScore(user?.trust_score);
+  const profileImageUrl = user?.profile_image ?? null;
 
   const profileInitial = useMemo(() => getProfileInitial(nickname), [nickname]);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [profileImageUrl]);
+
+  const showProfileImage = Boolean(profileImageUrl) && !imageError;
 
   if (loading) {
     return (
@@ -124,8 +143,17 @@ function ProfileDashboard() {
             <div className="flex flex-col gap-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-extrabold text-white">
-                    {profileInitial}
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-extrabold text-white">
+                    {showProfileImage ? (
+                      <img
+                        src={profileImageUrl!}
+                        alt=""
+                        onError={() => setImageError(true)}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      profileInitial
+                    )}
                   </div>
 
                   <div>
@@ -152,13 +180,6 @@ function ProfileDashboard() {
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-400">이메일</p>
-                  <p className="mt-1 text-sm font-extrabold text-slate-900">
-                    {email || '-'}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
                   <p className="text-xs font-semibold text-slate-400">
                     전화번호
                   </p>
@@ -166,34 +187,44 @@ function ProfileDashboard() {
                     {phone || '-'}
                   </p>
                 </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-400">
-                    계정 유형
-                  </p>
-                  <p className="mt-1 text-sm font-extrabold text-slate-900">
-                    {roleLabel}
-                  </p>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {summaryCards.map((card) => (
-                  <article
-                    key={card.label}
-                    className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-slate-500">
-                        {card.label}
-                      </p>
-                      <span className="text-lg">{card.icon}</span>
-                    </div>
-                    <p className="mt-3 text-2xl font-extrabold text-slate-900">
-                      {card.value}
+                <article className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-slate-500">
+                      신뢰도 점수
                     </p>
-                  </article>
-                ))}
+                    <span className="text-lg">🚨</span>
+                  </div>
+                  <p className="mt-3 text-2xl font-extrabold text-slate-900">
+                    {trustScore}
+                  </p>
+                </article>
+
+                <article className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-slate-500">
+                      누적파티참여
+                    </p>
+                    <span className="text-lg">✅</span>
+                  </div>
+                  <p className="mt-3 text-2xl font-extrabold text-slate-900">
+                    2회
+                  </p>
+                </article>
+
+                <article className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-slate-500">
+                      참여파티 수
+                    </p>
+                    <span className="text-lg">🗂️</span>
+                  </div>
+                  <p className="mt-3 text-2xl font-extrabold text-slate-900">
+                    1개
+                  </p>
+                </article>
               </div>
             </div>
           </section>
@@ -256,8 +287,7 @@ function ProfileDashboard() {
         onClose={() => setIsEditOpen(false)}
         initialValues={{
           nickname,
-          email,
-          // phone,
+          phone,
         }}
       />
     </>
