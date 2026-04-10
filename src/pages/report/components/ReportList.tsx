@@ -30,19 +30,6 @@ const getStatusLabel = (status: ReportStatus) => {
   }
 };
 
-const getTargetTypeLabel = (targetType: ReportItem['target_type']) => {
-  switch (targetType) {
-    case 'USER':
-      return '사용자';
-    case 'PARTY':
-      return '파티';
-    case 'CHAT':
-      return '채팅';
-    default:
-      return targetType;
-  }
-};
-
 const getCategoryLabel = (category: ReportItem['category']) => {
   switch (category) {
     case 'PROFANITY':
@@ -103,7 +90,7 @@ export default function ReportList() {
         <div>
           <h2 className="text-xl font-bold text-gray-900">내 신고 목록</h2>
           <p className="mt-1 text-sm text-gray-500">
-            최근 신고 내역과 현재 처리 상태를 확인할 수 있습니다.
+            최근 사용자 신고 내역과 현재 처리 상태를 확인할 수 있습니다.
           </p>
         </div>
 
@@ -149,9 +136,9 @@ export default function ReportList() {
             <table className="w-full min-w-160 border-collapse text-left">
               <thead className="bg-gray-50">
                 <tr className="text-sm text-gray-500">
-                  <th className="px-5 py-4 font-semibold">유형</th>
-                  <th className="px-5 py-4 font-semibold">대상</th>
+                  <th className="px-5 py-4 font-semibold">신고 대상</th>
                   <th className="px-5 py-4 font-semibold">사유</th>
+                  <th className="px-5 py-4 font-semibold">신고일</th>
                   <th className="px-5 py-4 text-center font-semibold">상태</th>
                 </tr>
               </thead>
@@ -162,13 +149,13 @@ export default function ReportList() {
                     className="border-t border-gray-100 text-sm transition hover:bg-gray-50"
                   >
                     <td className="px-5 py-4 font-medium text-gray-800">
-                      {getTargetTypeLabel(report.target_type)}
-                    </td>
-                    <td className="px-5 py-4 text-gray-700">
                       {report.target_snapshot_name ?? report.target_id}
                     </td>
                     <td className="px-5 py-4 text-gray-700">
                       {getCategoryLabel(report.category)}
+                    </td>
+                    <td className="px-5 py-4 text-gray-700">
+                      {new Date(report.created_at).toLocaleDateString('ko-KR')}
                     </td>
                     <td className="px-5 py-4 text-center">
                       <span
