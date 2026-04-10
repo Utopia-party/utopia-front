@@ -48,37 +48,71 @@ export default function HandOcrCaptcha() {
   const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchChallenge = async () => {
+  const fetchChallenge = async (): Promise<boolean> => {
     try {
       const data = await startCaptcha();
+
+      if (!data.success) {
+        if (data.failureReason?.type === 'IP_BLOCKED') {
+          toast.error(
+            data.message ||
+              `요청이 차단되었습니다. ${data.failureReason.retryAfterSeconds ?? 0}초 후 다시 시도해주세요.`,
+          );
+        } else {
+          toast.error(data.message || '문제를 불러오는 데 실패했습니다.');
+        }
+        return false;
+      }
+
+      if (!data.sessionId || !data.text || !data.pose) {
+        toast.error('문제 정보가 올바르지 않습니다.');
+        return false;
+      }
+
       setSessionId(data.sessionId);
       setChallenge({ text: data.text, pose: data.pose });
+
+      if (data.reused) {
+        toast('기존 진행 중인 문제를 다시 불러왔습니다.');
+      }
+
       return true;
     } catch (error) {
       console.error('문제 출제 실패:', error);
       if (axios.isAxiosError(error) && error.response) {
-        alert(
+        toast.error(
           error.response.data?.message || '문제를 불러오는 데 실패했습니다.',
         );
       } else {
-        alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+        toast.error('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
       }
       return false;
     }
   };
 
   const handleStart = async () => {
+    setChallenge(null);
+    setSessionId('');
     setTimeLeft(TOTAL_SECONDS);
     setPreviewImage(null);
     setSelectedFile(null);
+
     const isSuccess = await fetchChallenge();
-    if (isSuccess) setStep('challenge');
+    if (isSuccess) {
+      setStep('challenge');
+    } else {
+      setStep('intro');
+    }
   };
 
   const handleRefreshChallenge = async () => {
     setPreviewImage(null);
     setSelectedFile(null);
-    await fetchChallenge();
+
+    const isSuccess = await fetchChallenge();
+    if (!isSuccess) {
+      setStep('intro');
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
