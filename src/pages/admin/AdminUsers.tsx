@@ -186,6 +186,7 @@ export default function AdminUsers() {
       data = data.filter(
         (user) =>
           user.id.toLowerCase().includes(q) ||
+          (user.name || '').toLowerCase().includes(q) ||
           user.nickname.toLowerCase().includes(q) ||
           user.status.toLowerCase().includes(q),
       );
@@ -216,7 +217,7 @@ export default function AdminUsers() {
   return (
     <>
       <AdminHeader
-        placeholder="사용자 검색 (ID/닉네임/상태)..."
+        placeholder="사용자 검색 (이름/닉네임/상태)..."
         onSearch={setSearch}
         rightContent={
           <button
@@ -311,17 +312,24 @@ export default function AdminUsers() {
                     const detail = userDetails[user.id];
                     const isDetailLoading = detailLoadingId === user.id;
                     const isCurrentAdmin = currentUserId === user.id;
+                    const primaryLabel = user.name?.trim() || user.nickname;
+                    const secondaryLabel =
+                      user.name && user.name !== user.nickname
+                        ? user.nickname
+                        : '';
 
                     return (
                       <Fragment key={user.id}>
                         <tr className="border-b border-gray-100 transition hover:bg-gray-50">
                           <td className="px-4 py-3.5">
                             <div className="text-sm font-medium text-gray-900">
-                              {user.id}
+                              {primaryLabel}
                             </div>
-                            <div className="text-xs text-gray-400">
-                              {user.nickname}
-                            </div>
+                            {secondaryLabel && (
+                              <div className="text-xs text-gray-400">
+                                {secondaryLabel}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3.5 text-sm">
                             <span

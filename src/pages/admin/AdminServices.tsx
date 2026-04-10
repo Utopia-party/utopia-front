@@ -243,7 +243,7 @@ export default function AdminServices() {
   return (
     <>
       <AdminHeader
-        placeholder="서비스 검색 (ID/이름/카테고리)..."
+        placeholder="서비스 검색 (이름/카테고리)..."
         onSearch={setSearch}
         rightContent={
           <span className="rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600">
@@ -360,9 +360,6 @@ export default function AdminServices() {
                               <div>
                                 <div className="font-semibold text-gray-900">
                                   {service.name}
-                                </div>
-                                <div className="mt-1 text-xs text-gray-400">
-                                  {service.id}
                                 </div>
                               </div>
                             </div>
