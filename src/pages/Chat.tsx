@@ -51,9 +51,9 @@ const WS_BASE =
     .replace('/api', '');
 
 // PortOne V2 테스트 Store ID (실제 값으로 교체 필요)
-const PORTONE_STORE_ID = 'store-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+const PORTONE_STORE_ID = 'store-b7fa4153-0590-4d36-9750-6c2fb830a292';
 // 사용할 채널 키 (포트원 콘솔 > 연동 정보 > 채널 관리에서 확인)
-const PORTONE_CHANNEL_KEY = 'channel-key-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+const PORTONE_CHANNEL_KEY = 'channel-key-ea16ef59-fabb-44d6-be05-e54d3c197582';
 
 // 계좌 입금 테스트용 정보
 const BANK_INFO = {
