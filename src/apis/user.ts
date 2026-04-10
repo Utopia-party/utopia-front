@@ -24,11 +24,6 @@ export async function updateMyProfile(
   const { data } = await api.patch<UpdateMyProfileResponse>(
     '/api/users/me/profile',
     formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    },
   );
 
   return data;

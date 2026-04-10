@@ -2,14 +2,13 @@ import { create } from 'zustand';
 import { getMe, logout as logoutApi } from '../apis/auth';
 import type { AuthUser } from '../types/auth';
 
-/* 로그인 상태 전역 관리 */
-
 type AuthState = {
   user: AuthUser | null;
-  isLoggedIn: boolean; // 로그인 여부 : true -> 로그인성공 , false -> 로그인 실패
-  loading: boolean; // 로그인 상태 확인중 : true -> 아직 확인중 , false -> 확인완료
+  isLoggedIn: boolean;
+  loading: boolean;
 
-  setUser: (user: AuthUser) => void;
+  setUser: (user: AuthUser | null) => void;
+  updateUser: (partialUser: Partial<AuthUser>) => void;
   clearUser: () => void;
   checkAuth: () => Promise<void>;
   logout: () => Promise<void>;
@@ -20,15 +19,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoggedIn: false,
   loading: true,
 
-  // 앱 시작시 실행
   setUser: (user) =>
     set({
       user,
-      isLoggedIn: true,
+      isLoggedIn: !!user,
       loading: false,
     }),
 
-  // 현재 로그인(/me) 상태 판단
+  updateUser: (partialUser) =>
+    set((state) => {
+      if (!state.user) return state;
+
+      return {
+        user: {
+          ...state.user,
+          ...partialUser,
+        },
+      };
+    }),
+
   checkAuth: async () => {
     try {
       const res = await getMe();
@@ -55,7 +64,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  // 사용자 로그아웃 시 로그인 상태 초기화
   logout: async () => {
     try {
       await logoutApi();
@@ -70,7 +78,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
-  // 강제 로그아웃 및 인증 실패 시 로그인 상태 초기화
   clearUser: () =>
     set({
       user: null,

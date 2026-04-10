@@ -288,6 +288,7 @@ function ProfileDashboard() {
         initialValues={{
           nickname,
           phone,
+          profileImage: profileImageUrl,
         }}
       />
     </>
