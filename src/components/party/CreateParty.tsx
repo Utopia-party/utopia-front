@@ -67,7 +67,7 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
     });
 
     captchaTokenStorage.clear();
-    goBack();
+    navigate('/home');
   };
 
   return (
