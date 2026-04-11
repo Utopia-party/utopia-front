@@ -193,7 +193,7 @@ export default function Header() {
   };
 
   return (
-    <header className="flex h-16 items-center justify-end border-b-2 border-gray-200 bg-card px-8">
+    <header className="flex h-16 items-center justify-end border-b border-gray-200 bg-card px-6">
       <div className="flex items-center gap-3">
         {isLoggedIn ? (
           <>
