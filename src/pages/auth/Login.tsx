@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
 import { useAuthStore } from '../../stores/authStore';
@@ -17,6 +18,7 @@ export default function Login() {
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState<LoginForm>({
     email: 'partyup1234@utopia.com',
@@ -164,16 +166,26 @@ export default function Login() {
           <label className="mb-1 block text-sm font-medium text-gray-600">
             비밀번호
           </label>
-          <input
-            name="password"
-            type="password"
-            value={form.password}
-            placeholder="비밀번호 입력"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-            onChange={handleChange}
-            autoComplete="current-password"
-            required
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              placeholder="비밀번호 입력"
+              className="w-full rounded-lg border border-gray-300 p-3 pr-12 focus:border-blue-500 focus:outline-none"
+              onChange={handleChange}
+              autoComplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between text-xs text-gray-500">

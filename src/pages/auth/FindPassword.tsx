@@ -180,13 +180,13 @@ export default function FindPassword() {
           disabled={isSubmitting}
           className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          {isSubmitting ? '요청 중...' : '비밀번호 재설정 요청'}
+          {isSubmitting ? '요청 중...' : '비밀번호 재설정'}
         </button>
       </form>
 
       {isRequested && (
         <div className="mt-6 rounded-xl border border-green-100 bg-green-50 p-5 text-sm text-green-700">
-          비밀번호 재설정 요청이 완료되었습니다. 다음 단계로 이동합니다.
+          비밀번호 재설정이 완료되었습니다. 다음 단계로 이동합니다.
         </div>
       )}
 

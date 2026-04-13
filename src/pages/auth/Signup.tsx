@@ -396,13 +396,13 @@ export default function Signup() {
           >
             회원가입 완료
           </button>
-          <button
+          {/* <button
             type="button"
             onClick={() => navigate('/login')}
             className="w-full rounded-xl border border-blue-600 py-4 font-bold text-blue-600 transition hover:bg-blue-50"
           >
             이미 계정이 있어요(로그인)
-          </button>
+          </button> */}
         </div>
       </form>
     </div>
