@@ -75,7 +75,7 @@ function getNotificationTargetPath(item: NotificationItem) {
   const type = item.type?.toLowerCase();
 
   if (refType === 'report' || type === 'report') {
-    return '/mypage/myreport';
+    return '/mypage/report';
   }
 
   if (

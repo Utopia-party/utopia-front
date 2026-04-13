@@ -126,7 +126,7 @@ export default function FindPassword() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            이메일
+            이메일 <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-2">
             <input

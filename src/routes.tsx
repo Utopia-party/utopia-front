@@ -156,7 +156,7 @@ const router = createBrowserRouter([
             element: <MyTrustHistory />,
           },
           {
-            path: 'myreport',
+            path: '/mypage/report',
             element: <MyReport />,
           },
           {
