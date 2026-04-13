@@ -26,12 +26,33 @@ export default function Login() {
     rememberMe: false,
   });
 
+  const DEMO_ACCOUNTS = {
+    user: {
+      email: 'dixk3458@naver.com',
+      password: 'dixk3458@',
+    },
+    admin: {
+      email: 'partyup1234@utopia.com',
+      password: 'rhksflwk1234',
+    },
+  } as const;
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
 
     setForm((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const fillDemoAccount = (type: 'user' | 'admin') => {
+    const account = DEMO_ACCOUNTS[type];
+
+    setForm((prev) => ({
+      ...prev,
+      email: account.email,
+      password: account.password,
     }));
   };
 
@@ -143,7 +164,26 @@ export default function Login() {
 
   return (
     <div className="mx-auto mt-10 mb-12 max-w-xl rounded-xl border-2 border-gray-200 bg-white p-10 shadow-lg">
-      <h1 className="mb-8 text-2xl font-bold text-gray-800">로그인</h1>
+      <div className="flex justify-between mb-4">
+        <h1 className=" text-2xl font-bold text-gray-800">로그인</h1>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => fillDemoAccount('user')}
+            className="px-2 py-4 rounded-xl border border-gray-300 bg-gray-50 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+          >
+            일반 유저 체험 계정 입력
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fillDemoAccount('admin')}
+            className="px-2 py-4 rounded-xl border border-purple-300 bg-purple-50 text-sm font-semibold text-purple-700 transition hover:bg-purple-100"
+          >
+            관리자 체험 계정 입력
+          </button>
+        </div>
+      </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
