@@ -1,75 +1,130 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { captchaTokenStorage } from '../../apis/captchaToken';
 import toast from 'react-hot-toast';
 
-interface CreatePartyProps {
-  onCreate?: (data: CreatePartyFormData) => void;
+// ── 타입 ─────────────────────────────────────────────────────
+interface Service {
+  id: string;
+  name: string;
+  category: string;
+  max_members: number;
+  monthly_price: number;
+  logo_image_url: string | null;
 }
 
 export interface CreatePartyFormData {
+  service_id: string;
   title: string;
-  maxMembers: string;
-  partyType: string;
-  platformType: string;
-  priceDisplay: string;
-  passToken: string;
+  description?: string;
+  max_members: number;
+  monthly_per_person: number;
+  min_trust_score: number;
 }
 
-const MAX_MEMBER_OPTIONS = ['2명', '3명', '4명', '5명', '6명'];
-const PARTY_TYPE_OPTIONS = ['구독', '공동구매', '렌탈', '기타'];
-const PLATFORM_TYPE_OPTIONS = [
-  'OTT',
-  '멤버십/음악',
-  '교육/도서',
-  '생산성',
-  '기타',
-];
-const PRICE_DISPLAY_OPTIONS = ['1인당 표시', '총액 표시', '숨김'];
+interface CreatePartyProps {
+  onCreate?: (data: CreatePartyFormData) => Promise<void>;
+}
 
+// ── 컴포넌트 ─────────────────────────────────────────────────
 export default function CreateParty({ onCreate }: CreatePartyProps) {
   const navigate = useNavigate();
-  const goBack = () => navigate(-1);
 
-  const [form, setForm] = useState({
-    title: '',
-    maxMembers: '4명',
-    partyType: '구독',
-    platformType: 'OTT',
-    priceDisplay: '1인당 표시',
-  });
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [maxMembers, setMaxMembers] = useState<number>(2);
+  const [monthlyPerPerson, setMonthlyPerPerson] = useState<number>(0);
+  const [minTrustScore, setMinTrustScore] = useState<number>(0);
+
+  // 선택된 서비스 객체
+  const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
+
+  // ── 서비스 목록 로드 ────────────────────────────────────────
   useEffect(() => {
-    if (!captchaTokenStorage.has()) {
-      toast.error('캡챠 인증 후 이용 가능합니다.');
-      navigate('/handcaptcha');
+    const fetchServices = async () => {
+      try {
+        const res = await fetch('/api/parties/services', { credentials: 'include' });
+        if (!res.ok) throw new Error('서비스 목록 로드 실패');
+        const data: Service[] = await res.json();
+        setServices(data);
+        if (data.length > 0) {
+          setSelectedServiceId(data[0].id);
+          setMaxMembers(data[0].max_members);
+          setMonthlyPerPerson(data[0].monthly_price);
+        }
+      } catch {
+        toast.error('서비스 목록을 불러오지 못했습니다.');
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  // 서비스 변경 시 max_members, monthly_per_person 자동 채우기
+  useEffect(() => {
+    if (selectedService) {
+      setMaxMembers(selectedService.max_members);
+      setMonthlyPerPerson(selectedService.monthly_price);
     }
-  }, [navigate]);
+  }, [selectedServiceId]);
 
-  const handleSubmit = () => {
-    const passToken = captchaTokenStorage.get();
-
-    if (!passToken) {
-      alert('유효한 인증 토큰이 없습니다. 다시 인증해주세요.');
-      navigate('/captcha');
+  // ── 제출 ───────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!selectedServiceId) {
+      toast.error('서비스를 선택해주세요.');
+      return;
+    }
+    if (!title.trim()) {
+      toast.error('파티명을 입력해주세요.');
+      return;
+    }
+    if (title.trim().length < 2) {
+      toast.error('파티명은 2자 이상 입력해주세요.');
       return;
     }
 
-    if (!form.title.trim()) {
-      alert('파티명을 입력해주세요.');
-      return;
+    const payload: CreatePartyFormData = {
+      service_id: selectedServiceId,
+      title: title.trim(),
+      description: description.trim() || undefined,
+      max_members: maxMembers,
+      monthly_per_person: monthlyPerPerson,
+      min_trust_score: minTrustScore,
+    };
+
+    try {
+      setSubmitting(true);
+      if (onCreate) {
+        await onCreate(payload);
+      } else {
+        // onCreate 없을 때 직접 호출
+        const res = await fetch('/api/parties', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail ?? '파티 생성에 실패했습니다.');
+        }
+      }
+      toast.success('파티가 생성되었습니다!');
+      navigate('/home');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '파티 생성에 실패했습니다.');
+    } finally {
+      setSubmitting(false);
     }
-
-    onCreate?.({
-      ...form,
-      passToken,
-    });
-
-    captchaTokenStorage.clear();
-    navigate('/home');
   };
 
+  // ── 렌더 ───────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
@@ -80,121 +135,179 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
         <div className="bg-slate-900 px-6 py-5">
           <h2 className="text-lg font-extrabold text-white">파티 생성</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            인원 / 파티 유형 / 플랫폼 유형 / 가격 표시 선택
+            서비스 선택 후 파티 정보를 입력해주세요
           </p>
         </div>
 
-        {/* 폼 */}
-        <div className="px-6 py-6 flex flex-col gap-5">
-          {/* 파티명 */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-              파티명
-            </label>
-            <input
-              type="text"
-              placeholder="예: Netflix 프리미엄 4인"
-              value={form.title}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, title: e.target.value }))
-              }
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-300"
-            />
+        {loadingServices ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="animate-spin text-slate-400" size={28} />
           </div>
+        ) : (
+          <>
+            {/* 폼 */}
+            <div className="px-6 py-6 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
 
-          {/* 인원 체크 */}
-          <SelectField
-            label="인원 체크(정원)"
-            value={form.maxMembers}
-            options={MAX_MEMBER_OPTIONS}
-            onChange={(v) => setForm((prev) => ({ ...prev, maxMembers: v }))}
-          />
+              {/* 서비스 선택 */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  서비스 선택
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedServiceId}
+                    onChange={(e) => setSelectedServiceId(e.target.value)}
+                    className="w-full appearance-none border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-white cursor-pointer"
+                  >
+                    {services.map((svc) => (
+                      <option key={svc.id} value={svc.id}>
+                        {svc.name} ({svc.category})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  />
+                </div>
+                {/* 선택된 서비스 정보 */}
+                {selectedService && (
+                  <p className="text-xs text-slate-400 pl-1">
+                    최대 {selectedService.max_members}명 · 월{' '}
+                    {selectedService.monthly_price.toLocaleString()}원
+                  </p>
+                )}
+              </div>
 
-          {/* 파티 유형 */}
-          <SelectField
-            label="파티 유형"
-            value={form.partyType}
-            options={PARTY_TYPE_OPTIONS}
-            onChange={(v) => setForm((prev) => ({ ...prev, partyType: v }))}
-          />
+              {/* 파티명 */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  파티명
+                </label>
+                <input
+                  type="text"
+                  placeholder="예: Netflix 프리미엄 같이해요"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={100}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-300"
+                />
+              </div>
 
-          {/* 플랫폼 유형 */}
-          <SelectField
-            label="플랫폼 유형"
-            value={form.platformType}
-            options={PLATFORM_TYPE_OPTIONS}
-            onChange={(v) => setForm((prev) => ({ ...prev, platformType: v }))}
-          />
+              {/* 설명 (선택) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  설명 <span className="text-slate-300 normal-case">(선택)</span>
+                </label>
+                <textarea
+                  placeholder="파티에 대해 간략히 설명해주세요"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  maxLength={1000}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-300 resize-none"
+                />
+              </div>
 
-          {/* 가격 표시 */}
-          <SelectField
-            label="가격 표시"
-            value={form.priceDisplay}
-            options={PRICE_DISPLAY_OPTIONS}
-            onChange={(v) => setForm((prev) => ({ ...prev, priceDisplay: v }))}
-          />
-        </div>
+              {/* 최대 인원 */}
+              <NumberField
+                label="최대 인원"
+                value={maxMembers}
+                min={2}
+                max={selectedService?.max_members ?? 10}
+                onChange={setMaxMembers}
+                suffix="명"
+              />
 
-        {/* 하단 버튼 */}
-        <div className="px-6 pb-6 flex flex-col gap-3">
-          <div className="flex gap-3">
-            <button
-              onClick={goBack}
-              className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              닫기
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 active:scale-[0.98] transition-all"
-            >
-              생성 완료
-            </button>
-          </div>
-          <p className="text-xs text-slate-400 text-center">
-            생성 후: 채팅방 자동 생성 + 멤버/정산/영수증/신고 기능 제공
-          </p>
-          <p className="text-xs text-slate-300 text-center">
-            ESC 키로 닫기 불가(데모 UI)
-          </p>
-        </div>
+              {/* 1인당 월 금액 */}
+              <NumberField
+                label="1인당 월 금액 (원)"
+                value={monthlyPerPerson}
+                min={0}
+                max={999999}
+                onChange={setMonthlyPerPerson}
+                suffix="원"
+              />
+
+              {/* 최소 신뢰 점수 */}
+              <NumberField
+                label="최소 신뢰 점수"
+                value={minTrustScore}
+                min={0}
+                max={100}
+                onChange={setMinTrustScore}
+                suffix="점"
+              />
+            </div>
+
+            {/* 하단 버튼 */}
+            <div className="px-6 pb-6 flex flex-col gap-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => navigate(-1)}
+                  disabled={submitting}
+                  className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  닫기
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {submitting && <Loader2 size={14} className="animate-spin" />}
+                  생성 완료
+                </button>
+              </div>
+              <p className="text-xs text-slate-400 text-center">
+                생성 후: 채팅방 자동 생성 + 멤버/정산/영수증/신고 기능 제공
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function SelectField({
+// ── 숫자 입력 필드 ────────────────────────────────────────────
+function NumberField({
   label,
   value,
-  options,
+  min,
+  max,
   onChange,
+  suffix,
 }: {
   label: string;
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  suffix?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
         {label}
       </label>
-      <div className="relative">
-        <select
+      <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+        <input
+          type="number"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-white cursor-pointer"
-        >
-          {options.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={16}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          min={min}
+          max={max}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)));
+          }}
+          className="flex-1 px-4 py-3 text-sm outline-none bg-white"
         />
+        {suffix && (
+          <span className="px-3 text-sm text-slate-400 bg-slate-50 border-l border-slate-200 py-3">
+            {suffix}
+          </span>
+        )}
       </div>
     </div>
   );
