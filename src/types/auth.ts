@@ -41,7 +41,7 @@ export interface SignupResponse {
 
 // 이메일 찾기
 export interface FindIdPayload {
-  name: string;
+  nickname: string;
   phone: string;
 }
 

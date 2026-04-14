@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
@@ -32,6 +32,25 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState('');
+  const [nicknameError, setNicknameError] = useState('');
+  const [nicknameSuccess, setNicknameSuccess] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [nameError, setNameError] = useState('');
+
+  const validateEmail = (email: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
+  const validateName = (name: string) => {
+    const regex = /^[A-Za-z가-힣]{2,20}$/;
+    return regex.test(name);
+  };
+
+  const validateNickname = (nickname: string) => {
+    const regex = /^[A-Za-z0-9가-힣]{2,10}$/;
+    return regex.test(nickname);
+  };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,7 +58,7 @@ export default function Signup() {
     let newValue = value;
 
     if (name === 'phone') {
-      newValue = value.replace(/[^0-9]/g, '');
+      newValue = value.replace(/[^0-9]/g, '').slice(0, 11);
     }
 
     setForm((prev) => ({ ...prev, [name]: newValue }));
@@ -47,6 +66,14 @@ export default function Signup() {
     if (name === 'email') {
       setIsEmailChecked(false);
       setIsEmailVerified(false);
+
+      if (!value) {
+        setEmailError('');
+      } else if (!validateEmail(value)) {
+        setEmailError('올바른 이메일 형식을 입력해주세요.');
+      } else {
+        setEmailError('');
+      }
     }
 
     if (name === 'password') {
@@ -57,14 +84,81 @@ export default function Signup() {
       }
     }
 
+    if (name === 'name') {
+      if (!value) {
+        setNameError('');
+      } else if (!validateName(value)) {
+        setNameError('이름은 2~20자, 한글/영문만 입력할 수 있습니다.');
+      } else {
+        setNameError('');
+      }
+    }
+
     if (name === 'nickname') {
       setIsNicknameChecked(false);
+      setNicknameSuccess('');
+
+      if (!value) {
+        setNicknameError('');
+      } else if (!validateNickname(value)) {
+        setNicknameError(
+          '닉네임은 2~10자, 한글/영문/숫자만 사용할 수 있습니다.',
+        );
+      } else {
+        setNicknameError('');
+      }
     }
   };
+
+  useEffect(() => {
+    if (!form.nickname) {
+      setNicknameError('');
+      setNicknameSuccess('');
+      setIsNicknameChecked(false);
+      return;
+    }
+
+    if (!validateNickname(form.nickname)) {
+      setNicknameSuccess('');
+      setIsNicknameChecked(false);
+      return;
+    }
+
+    const currentNickname = form.nickname;
+    const timer = setTimeout(async () => {
+      try {
+        const data = await checkNickname(currentNickname);
+
+        if (currentNickname !== form.nickname) return;
+
+        if (data.exists) {
+          setNicknameError('이미 사용 중인 닉네임입니다.');
+          setNicknameSuccess('');
+          setIsNicknameChecked(false);
+        } else {
+          setNicknameError('');
+          setNicknameSuccess('사용 가능한 닉네임입니다.');
+          setIsNicknameChecked(true);
+        }
+      } catch {
+        if (currentNickname !== form.nickname) return;
+        setNicknameError('중복 확인 중 오류가 발생했습니다.');
+        setNicknameSuccess('');
+        setIsNicknameChecked(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [form.nickname]);
 
   const handleCheckEmail = async () => {
     if (!form.email) {
       alert('이메일을 입력해주세요.');
+      return;
+    }
+
+    if (!validateEmail(form.email)) {
+      setEmailError('올바른 이메일 형식을 입력해주세요.');
       return;
     }
 
@@ -123,29 +217,8 @@ export default function Signup() {
     return regex.test(password);
   };
 
-  const handleCheckNickname = async () => {
-    if (!form.nickname) {
-      alert('닉네임을 입력해주세요.');
-      return;
-    }
-
-    try {
-      const data = await checkNickname(form.nickname);
-
-      if (data.exists) {
-        alert('이미 사용 중인 닉네임입니다.');
-        setIsNicknameChecked(false);
-      } else {
-        alert('사용 가능한 닉네임입니다.');
-        setIsNicknameChecked(true);
-      }
-    } catch {
-      alert('중복 확인 중 오류가 발생했습니다.');
-    }
-  };
-
   const formatPhone = (value: string) => {
-    const numbers = value.replace(/[^0-9]/g, '');
+    const numbers = value.replace(/[^0-9]/g, '').slice(0, 11);
 
     if (numbers.length < 4) return numbers;
     if (numbers.length < 8) {
@@ -164,6 +237,21 @@ export default function Signup() {
 
     if (!validatePassword(form.password)) {
       alert('비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.');
+      return;
+    }
+
+    if (!validateEmail(form.email)) {
+      setEmailError('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+
+    if (!validateName(form.name)) {
+      setNameError('이름은 2~20자, 한글/영문만 입력할 수 있습니다.');
+      return;
+    }
+
+    if (!validateNickname(form.nickname)) {
+      setNicknameError('닉네임은 2~10자, 한글/영문/숫자만 사용할 수 있습니다.');
       return;
     }
 
@@ -198,10 +286,13 @@ export default function Signup() {
 
   const isFormValid =
     form.email &&
+    !emailError &&
     isEmailVerified &&
     validatePassword(form.password) &&
     form.name &&
+    !nameError &&
     form.nickname &&
+    !nicknameError &&
     isNicknameChecked &&
     captchaToken &&
     form.phone;
@@ -223,7 +314,9 @@ export default function Signup() {
               className={`w-full rounded-lg border p-3 focus:outline-none ${
                 isEmailVerified
                   ? 'border-green-500 bg-green-50'
-                  : 'border-gray-300 focus:border-blue-500'
+                  : emailError
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:border-blue-500'
               }`}
               onChange={handleChange}
               disabled={isEmailVerified}
@@ -232,7 +325,7 @@ export default function Signup() {
             <button
               type="button"
               onClick={handleCheckEmail}
-              disabled={isEmailVerified}
+              disabled={isEmailVerified || !!emailError}
               className="shrink-0 rounded-lg border border-gray-300 px-4 py-2 font-medium hover:bg-gray-50 disabled:opacity-50"
             >
               중복검사
@@ -246,6 +339,9 @@ export default function Signup() {
               인증요청
             </button>
           </div>
+          {emailError && (
+            <p className="mt-1 text-xs text-red-500">{emailError}</p>
+          )}
         </div>
 
         {!isEmailVerified && isEmailChecked && (
@@ -312,6 +408,9 @@ export default function Signup() {
             onChange={handleChange}
             required
           />
+          {nameError && (
+            <p className="mt-1 text-xs text-red-500">{nameError}</p>
+          )}
         </div>
 
         <div>
@@ -323,22 +422,17 @@ export default function Signup() {
               name="nickname"
               type="text"
               placeholder="닉네임 입력"
-              className={`w-full rounded-lg border p-3 focus:outline-none ${
-                isNicknameChecked
-                  ? 'border-green-500'
-                  : 'border-gray-300 focus:border-blue-500'
-              }`}
+              className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
               onChange={handleChange}
               required
             />
-            <button
-              type="button"
-              onClick={handleCheckNickname}
-              className="shrink-0 rounded-lg border border-gray-300 px-4 py-2 font-medium hover:bg-gray-50"
-            >
-              중복검사
-            </button>
           </div>
+          {nicknameError && (
+            <p className="mt-1 text-xs text-red-500">{nicknameError}</p>
+          )}
+          {!nicknameError && nicknameSuccess && (
+            <p className="mt-1 text-xs text-green-600">{nicknameSuccess}</p>
+          )}
         </div>
 
         <div>
@@ -396,13 +490,13 @@ export default function Signup() {
           >
             회원가입 완료
           </button>
-          <button
+          {/* <button
             type="button"
             onClick={() => navigate('/login')}
             className="w-full rounded-xl border border-blue-600 py-4 font-bold text-blue-600 transition hover:bg-blue-50"
           >
             이미 계정이 있어요(로그인)
-          </button>
+          </button> */}
         </div>
       </form>
     </div>
