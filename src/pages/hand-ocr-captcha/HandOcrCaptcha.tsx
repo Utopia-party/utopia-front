@@ -71,6 +71,11 @@ export default function HandOcrCaptcha() {
 
       setSessionId(data.sessionId);
       setChallenge({ text: data.text, pose: data.pose });
+      setTimeLeft(
+        typeof data.remainingSeconds === 'number'
+          ? data.remainingSeconds
+          : TOTAL_SECONDS,
+      );
 
       if (data.reused) {
         toast('기존 진행 중인 문제를 다시 불러왔습니다.');
@@ -93,7 +98,6 @@ export default function HandOcrCaptcha() {
   const handleStart = async () => {
     setChallenge(null);
     setSessionId('');
-    setTimeLeft(TOTAL_SECONDS);
     setPreviewImage(null);
     setSelectedFile(null);
 
@@ -158,6 +162,13 @@ export default function HandOcrCaptcha() {
       setStep('fail');
     }
   };
+
+  useEffect(() => {
+    const passToken = captchaTokenStorage.get?.();
+    if (passToken) {
+      navigate('/party/create', { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (step !== 'challenge') return;
