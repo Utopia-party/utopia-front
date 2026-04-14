@@ -12,7 +12,6 @@ interface Service {
   monthly_price: number;
   logo_image_url: string | null;
 }
-
 export interface CreatePartyFormData {
   service_id: string;
   title: string;
@@ -108,7 +107,8 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
     const passToken = captchaTokenStorage.get();
 
     if (!passToken) {
-      redirectToCaptcha('캡챠 인증이 만료되었습니다. 다시 인증해주세요.');
+      toast.error('캡챠 인증이 만료되었습니다. 다시 인증해주세요.');
+      navigate('/captcha/handocr', { replace: true });
       return;
     }
 
