@@ -2,6 +2,7 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
+import { captchaTokenStorage } from '../../apis/captchaToken';
 
 interface Service {
   id: string;
@@ -18,11 +19,14 @@ export interface CreatePartyFormData {
   description?: string;
   max_members: number;
   min_trust_score: number;
+  captcha_pass_token: string;
 }
 
 interface CreatePartyProps {
   onCreate?: (data: CreatePartyFormData) => Promise<void>;
 }
+
+const CAPTCHA_ROUTE = '/handcaptcha';
 
 export default function CreateParty({ onCreate }: CreatePartyProps) {
   const navigate = useNavigate();
@@ -37,16 +41,39 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
   const [maxMembers, setMaxMembers] = useState<number>(2);
   const [minTrustScore, setMinTrustScore] = useState<number>(0);
 
-  const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
+  const selectedService =
+    services.find((s) => s.id === selectedServiceId) ?? null;
 
-  // 서비스 목록 로드
+  const redirectToCaptcha = (message?: string) => {
+    captchaTokenStorage.clear();
+    if (message) {
+      toast.error(message);
+    }
+    navigate(CAPTCHA_ROUTE, { replace: true });
+  };
+
   useEffect(() => {
+    const passToken = captchaTokenStorage.get();
+
+    if (!passToken) {
+      redirectToCaptcha('캡챠 인증 후 3분 내에 다시 시도해주세요.');
+      setLoadingServices(false);
+      return;
+    }
+
     const fetchServices = async () => {
       try {
-        const res = await fetch('/api/parties/services', { credentials: 'include' });
-        if (!res.ok) throw new Error();
+        const res = await fetch('/api/parties/services', {
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          throw new Error();
+        }
+
         const data: Service[] = await res.json();
         setServices(data);
+
         if (data.length > 0) {
           setSelectedServiceId(data[0].id);
           setMaxMembers(data[0].max_members);
@@ -57,23 +84,31 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
         setLoadingServices(false);
       }
     };
-    fetchServices();
-  }, []);
 
-  // 서비스 변경 시 max_members 자동 갱신
+    fetchServices();
+  }, [navigate]);
+
   useEffect(() => {
     if (selectedService) {
       setMaxMembers(selectedService.max_members);
     }
-  }, [selectedServiceId]);
+  }, [selectedService]);
 
   const handleSubmit = async () => {
     if (!selectedServiceId) {
       toast.error('서비스를 선택해주세요.');
       return;
     }
+
     if (title.trim().length < 2) {
       toast.error('파티명을 2자 이상 입력해주세요.');
+      return;
+    }
+
+    const passToken = captchaTokenStorage.get();
+
+    if (!passToken) {
+      redirectToCaptcha('캡챠 인증이 만료되었습니다. 다시 인증해주세요.');
       return;
     }
 
@@ -83,10 +118,12 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
       description: description.trim() || undefined,
       max_members: maxMembers,
       min_trust_score: minTrustScore,
+      captcha_pass_token: passToken,
     };
 
     try {
       setSubmitting(true);
+
       if (onCreate) {
         await onCreate(payload);
       } else {
@@ -96,11 +133,22 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.detail ?? '파티 생성에 실패했습니다.');
+          const detail =
+            err.detail ?? err.message ?? '파티 생성에 실패했습니다.';
+
+          if (res.status === 403) {
+            redirectToCaptcha(detail);
+            return;
+          }
+
+          throw new Error(detail);
         }
       }
+
+      captchaTokenStorage.clear();
       toast.success('파티가 생성되었습니다!');
       navigate('/home');
     } catch (e: unknown) {
@@ -116,7 +164,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
         className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 헤더 */}
         <div className="bg-slate-900 px-6 py-5">
           <h2 className="text-lg font-extrabold text-white">파티 생성</h2>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -131,8 +178,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
         ) : (
           <>
             <div className="px-6 py-6 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
-
-              {/* 서비스 선택 */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   서비스 선택
@@ -154,7 +199,7 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                 </div>
-                {/* 서비스 정보 요약 — 1인당 금액은 여기서 표시만 */}
+
                 {selectedService && (
                   <div className="flex gap-3 px-1">
                     <span className="text-xs text-slate-400">
@@ -162,13 +207,13 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                     </span>
                     <span className="text-xs text-slate-400">·</span>
                     <span className="text-xs text-slate-400">
-                      월 {selectedService.monthly_price.toLocaleString()}원 / 1인
+                      월 {selectedService.monthly_price.toLocaleString()}원 /
+                      1인
                     </span>
                   </div>
                 )}
               </div>
 
-              {/* 파티명 */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   파티명
@@ -183,11 +228,12 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                 />
               </div>
 
-              {/* 설명 (선택) */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   설명{' '}
-                  <span className="text-slate-300 normal-case font-normal">(선택)</span>
+                  <span className="text-slate-300 normal-case font-normal">
+                    (선택)
+                  </span>
                 </label>
                 <textarea
                   placeholder="파티에 대해 간략히 설명해주세요"
@@ -199,7 +245,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                 />
               </div>
 
-              {/* 최대 인원 */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   최대 인원
@@ -213,7 +258,9 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                     onChange={(e) => {
                       const v = Number(e.target.value);
                       const max = selectedService?.max_members ?? 10;
-                      if (!isNaN(v)) setMaxMembers(Math.min(max, Math.max(2, v)));
+                      if (!Number.isNaN(v)) {
+                        setMaxMembers(Math.min(max, Math.max(2, v)));
+                      }
                     }}
                     className="flex-1 px-4 py-3 text-sm outline-none bg-white"
                   />
@@ -223,11 +270,12 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                 </div>
               </div>
 
-              {/* 최소 신뢰 점수 */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   최소 신뢰 점수{' '}
-                  <span className="text-slate-300 normal-case font-normal">(0 = 제한 없음)</span>
+                  <span className="text-slate-300 normal-case font-normal">
+                    (0 = 제한 없음)
+                  </span>
                 </label>
                 <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                   <input
@@ -237,7 +285,9 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                     max={100}
                     onChange={(e) => {
                       const v = Number(e.target.value);
-                      if (!isNaN(v)) setMinTrustScore(Math.min(100, Math.max(0, v)));
+                      if (!Number.isNaN(v)) {
+                        setMinTrustScore(Math.min(100, Math.max(0, v)));
+                      }
                     }}
                     className="flex-1 px-4 py-3 text-sm outline-none bg-white"
                   />
@@ -248,7 +298,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
               </div>
             </div>
 
-            {/* 하단 버튼 */}
             <div className="px-6 pb-6 flex flex-col gap-3">
               <div className="flex gap-3">
                 <button
