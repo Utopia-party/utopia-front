@@ -1,20 +1,51 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  applyNotificationSocketMessage,
   fetchLatestNotifications,
   notificationKeys,
+  subscribeNotificationSocket,
 } from '../../apis/notifications';
-import type { NotificationItem } from '../../types/notifications';
+import type {
+  NotificationItem,
+  NotificationSocketMessage,
+} from '../../types/notifications';
+
+/**
+ * 헤더 최신알림 조회
+ */
 
 export default function SystemNoticeBanner() {
   const [dismissed, setDismissed] = useState(false);
   const limit = 10;
+  const queryClient = useQueryClient();
 
+  // 최신 알림 조회
   const { data: notices = [] } = useQuery<NotificationItem[]>({
     queryKey: notificationKeys.latest(limit),
     queryFn: () => fetchLatestNotifications(limit),
     enabled: !dismissed,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
   });
+
+  useEffect(() => {
+    if (dismissed) return;
+
+    const unsubscribe = subscribeNotificationSocket(
+      (socketMessage: NotificationSocketMessage) => {
+        queryClient.setQueryData<NotificationItem[]>(
+          notificationKeys.latest(limit),
+          (prev = []) => {
+            const next = applyNotificationSocketMessage(prev, socketMessage);
+            return next.slice(0, limit);
+          },
+        );
+      },
+    );
+
+    return unsubscribe;
+  }, [dismissed, limit, queryClient]);
 
   const activeNotice = !dismissed && notices.length > 0 ? notices[0] : null;
 

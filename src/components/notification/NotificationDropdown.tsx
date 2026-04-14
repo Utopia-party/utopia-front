@@ -1,13 +1,24 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  applyNotificationSocketMessage,
+  countUnreadNotifications,
   fetchMyNotifications,
-  markNotificationAsRead,
   markAllNotificationsAsRead,
+  markAllNotificationsReadInList,
+  markNotificationAsRead,
+  markNotificationReadInList,
   notificationKeys,
+  subscribeNotificationSocket,
 } from '../../apis/notifications';
-import type { NotificationItem } from '../../types/notifications';
+import type {
+  NotificationItem,
+  NotificationSocketMessage,
+} from '../../types/notifications';
 
+/**
+ * 전체 알림 목록
+ */
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -16,41 +27,80 @@ type Props = {
 export default function NotificationDropdown({ open, onClose }: Props) {
   const queryClient = useQueryClient();
 
+  // 알림 목록 조회
   const { data: notifications = [], isLoading } = useQuery<NotificationItem[]>({
     queryKey: notificationKeys.me,
     queryFn: fetchMyNotifications,
     enabled: open,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
   });
+
+  // 웹소켓 구독
+  useEffect(() => {
+    if (!open) return;
+
+    const unsubscribe = subscribeNotificationSocket(
+      (socketMessage: NotificationSocketMessage) => {
+        queryClient.setQueryData<NotificationItem[]>(
+          notificationKeys.me,
+          (prev = []) => {
+            const next = applyNotificationSocketMessage(prev, socketMessage);
+
+            queryClient.setQueryData(
+              notificationKeys.unreadCount,
+              socketMessage.unread_count ?? countUnreadNotifications(next),
+            );
+
+            return next;
+          },
+        );
+      },
+    );
+
+    return unsubscribe;
+  }, [open, queryClient]);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.is_read).length,
     [notifications],
   );
 
+  // 개별읽음
   const readOneMutation = useMutation({
     mutationFn: (notificationId: string) =>
       markNotificationAsRead(notificationId),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: notificationKeys.me }),
-        queryClient.invalidateQueries({
-          queryKey: notificationKeys.unreadCount,
-        }),
-        queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
-      ]);
+    onSuccess: (_, notificationId) => {
+      queryClient.setQueryData<NotificationItem[]>(
+        notificationKeys.me,
+        (prev = []) => {
+          const next = markNotificationReadInList(prev, notificationId);
+
+          queryClient.setQueryData(
+            notificationKeys.unreadCount,
+            countUnreadNotifications(next),
+          );
+
+          return next;
+        },
+      );
     },
   });
 
+  // 전체읽음
   const readAllMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: notificationKeys.me }),
-        queryClient.invalidateQueries({
-          queryKey: notificationKeys.unreadCount,
-        }),
-        queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
-      ]);
+    onSuccess: () => {
+      queryClient.setQueryData<NotificationItem[]>(
+        notificationKeys.me,
+        (prev = []) => {
+          const next = markAllNotificationsReadInList(prev);
+
+          queryClient.setQueryData(notificationKeys.unreadCount, 0);
+
+          return next;
+        },
+      );
     },
   });
 
@@ -59,12 +109,6 @@ export default function NotificationDropdown({ open, onClose }: Props) {
       if (!item.is_read) {
         await readOneMutation.mutateAsync(item.id);
       }
-
-      // reference_type / reference_id 기준으로 이동하고 싶으면 여기서 분기
-      // 예:
-      // if (item.reference_type === 'REPORT' && item.reference_id) {
-      //   navigate(`/report/${item.reference_id}`);
-      // }
 
       onClose();
     } catch (error) {
@@ -141,7 +185,7 @@ export default function NotificationDropdown({ open, onClose }: Props) {
                       <p className="mt-1 text-sm font-semibold text-slate-900">
                         {item.title}
                       </p>
-                      <p className="mt-1 line-clamp-2 text-xs text-slate-600">
+                      <p className="mt-1 whitespace-pre-line text-xs text-slate-600">
                         {item.message}
                       </p>
                     </div>

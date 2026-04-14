@@ -1,14 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
 import {
+  applyNotificationSocketMessage,
+  countUnreadNotifications,
   fetchMyNotifications,
   markAllNotificationsAsRead,
+  markAllNotificationsReadInList,
   markNotificationAsRead,
+  markNotificationReadInList,
   notificationKeys,
+  subscribeNotificationSocket,
 } from '../apis/notifications';
-import type { NotificationItem } from '../types/notifications';
+import type {
+  NotificationItem,
+  NotificationSocketMessage,
+} from '../types/notifications';
 
 function formatRelativeTime(dateString: string | null) {
   if (!dateString) return '';
@@ -70,14 +78,17 @@ function getNotificationBadge(item: NotificationItem) {
   };
 }
 
+// 알림 클릭 시 이동 페이지
 function getNotificationTargetPath(item: NotificationItem) {
   const refType = item.reference_type?.toLowerCase();
   const type = item.type?.toLowerCase();
 
+  // 신고
   if (refType === 'report' || type === 'report') {
     return '/mypage/report';
   }
 
+  // 정산, 결제
   if (
     refType === 'settlement' ||
     refType === 'payment' ||
@@ -87,6 +98,7 @@ function getNotificationTargetPath(item: NotificationItem) {
     return '/mypage/payment';
   }
 
+  // 파티
   if (refType === 'party' || type?.includes('party')) {
     return '/mypage/party';
   }
@@ -109,32 +121,70 @@ export default function Header() {
     queryKey: notificationKeys.me,
     queryFn: fetchMyNotifications,
     enabled: isLoggedIn,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
   });
 
+  // 웹소켓 실시간 반영
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const unsubscribe = subscribeNotificationSocket(
+      (socketMessage: NotificationSocketMessage) => {
+        queryClient.setQueryData<NotificationItem[]>(
+          notificationKeys.me,
+          (prev = []) => {
+            const next = applyNotificationSocketMessage(prev, socketMessage);
+
+            queryClient.setQueryData(
+              notificationKeys.unreadCount,
+              socketMessage.unread_count ?? countUnreadNotifications(next),
+            );
+
+            return next;
+          },
+        );
+      },
+    );
+
+    return unsubscribe;
+  }, [isLoggedIn, queryClient]);
+
+  // 개별 읽음 처리
   const markOneAsReadMutation = useMutation({
     mutationFn: (notificationId: string) =>
       markNotificationAsRead(notificationId),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: notificationKeys.me }),
-        queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
-        queryClient.invalidateQueries({
-          queryKey: notificationKeys.unreadCount,
-        }),
-      ]);
+    onSuccess: (_, notificationId) => {
+      queryClient.setQueryData<NotificationItem[]>(
+        notificationKeys.me,
+        (prev = []) => {
+          const next = markNotificationReadInList(prev, notificationId);
+
+          queryClient.setQueryData(
+            notificationKeys.unreadCount,
+            countUnreadNotifications(next),
+          );
+
+          return next;
+        },
+      );
     },
   });
 
+  // 전체 읽음 처리
   const markAllAsReadMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: notificationKeys.me }),
-        queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
-        queryClient.invalidateQueries({
-          queryKey: notificationKeys.unreadCount,
-        }),
-      ]);
+    onSuccess: () => {
+      queryClient.setQueryData<NotificationItem[]>(
+        notificationKeys.me,
+        (prev = []) => {
+          const next = markAllNotificationsReadInList(prev);
+
+          queryClient.setQueryData(notificationKeys.unreadCount, 0);
+
+          return next;
+        },
+      );
     },
   });
 
@@ -294,7 +344,7 @@ export default function Header() {
                                   )}
                                 </div>
 
-                                <p className="mt-1 break-words text-sm text-gray-700">
+                                <p className="mt-1 break-words whitespace-pre-line text-sm text-gray-700">
                                   {item.message ?? '알림 내용이 없습니다.'}
                                 </p>
                               </div>
