@@ -71,10 +71,7 @@ export default function HandOcrCaptcha() {
 
       setSessionId(data.sessionId);
       setChallenge({ text: data.text, pose: data.pose });
-
-      if (data.reused) {
-        toast('기존 진행 중인 문제를 다시 불러왔습니다.');
-      }
+      setTimeLeft(TOTAL_SECONDS);
 
       return true;
     } catch (error) {
@@ -106,11 +103,16 @@ export default function HandOcrCaptcha() {
   };
 
   const handleRefreshChallenge = async () => {
+    setChallenge(null);
+    setSessionId('');
+    setTimeLeft(TOTAL_SECONDS);
     setPreviewImage(null);
     setSelectedFile(null);
 
     const isSuccess = await fetchChallenge();
-    if (!isSuccess) {
+    if (isSuccess) {
+      setStep('challenge');
+    } else {
       setStep('intro');
     }
   };
@@ -144,10 +146,22 @@ export default function HandOcrCaptcha() {
         setTimeout(() => {
           navigate('/party/create');
         }, 1000);
-      } else {
-        toast.error(data.message || '인증에 실패했습니다.');
-        setStep('fail');
+        return;
       }
+
+      if (data.failureReason?.type === 'SESSION_EXPIRED') {
+        toast.error('세션이 만료되었습니다. 새 문제로 다시 시도해주세요.');
+        setStep('intro');
+        setChallenge(null);
+        setSessionId('');
+        setTimeLeft(TOTAL_SECONDS);
+        setPreviewImage(null);
+        setSelectedFile(null);
+        return;
+      }
+
+      toast.error(data.message || '인증에 실패했습니다.');
+      setStep('fail');
     } catch (error) {
       console.error('검증 요청 실패:', error);
       if (axios.isAxiosError(error) && error.response) {
@@ -158,6 +172,12 @@ export default function HandOcrCaptcha() {
       setStep('fail');
     }
   };
+  useEffect(() => {
+    const passToken = captchaTokenStorage.get?.();
+    if (passToken) {
+      navigate('/party/create', { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (step !== 'challenge') return;
