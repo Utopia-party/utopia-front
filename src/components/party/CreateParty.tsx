@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 
-// ── 타입 ─────────────────────────────────────────────────────
 interface Service {
   id: string;
   name: string;
@@ -18,7 +17,6 @@ export interface CreatePartyFormData {
   title: string;
   description?: string;
   max_members: number;
-  monthly_per_person: number;
   min_trust_score: number;
 }
 
@@ -26,7 +24,6 @@ interface CreatePartyProps {
   onCreate?: (data: CreatePartyFormData) => Promise<void>;
 }
 
-// ── 컴포넌트 ─────────────────────────────────────────────────
 export default function CreateParty({ onCreate }: CreatePartyProps) {
   const navigate = useNavigate();
 
@@ -38,24 +35,21 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [maxMembers, setMaxMembers] = useState<number>(2);
-  const [monthlyPerPerson, setMonthlyPerPerson] = useState<number>(0);
   const [minTrustScore, setMinTrustScore] = useState<number>(0);
 
-  // 선택된 서비스 객체
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
 
-  // ── 서비스 목록 로드 ────────────────────────────────────────
+  // 서비스 목록 로드
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const res = await fetch('/api/parties/services', { credentials: 'include' });
-        if (!res.ok) throw new Error('서비스 목록 로드 실패');
+        if (!res.ok) throw new Error();
         const data: Service[] = await res.json();
         setServices(data);
         if (data.length > 0) {
           setSelectedServiceId(data[0].id);
           setMaxMembers(data[0].max_members);
-          setMonthlyPerPerson(data[0].monthly_price);
         }
       } catch {
         toast.error('서비스 목록을 불러오지 못했습니다.');
@@ -66,26 +60,20 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
     fetchServices();
   }, []);
 
-  // 서비스 변경 시 max_members, monthly_per_person 자동 채우기
+  // 서비스 변경 시 max_members 자동 갱신
   useEffect(() => {
     if (selectedService) {
       setMaxMembers(selectedService.max_members);
-      setMonthlyPerPerson(selectedService.monthly_price);
     }
   }, [selectedServiceId]);
 
-  // ── 제출 ───────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!selectedServiceId) {
       toast.error('서비스를 선택해주세요.');
       return;
     }
-    if (!title.trim()) {
-      toast.error('파티명을 입력해주세요.');
-      return;
-    }
     if (title.trim().length < 2) {
-      toast.error('파티명은 2자 이상 입력해주세요.');
+      toast.error('파티명을 2자 이상 입력해주세요.');
       return;
     }
 
@@ -94,7 +82,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
       title: title.trim(),
       description: description.trim() || undefined,
       max_members: maxMembers,
-      monthly_per_person: monthlyPerPerson,
       min_trust_score: minTrustScore,
     };
 
@@ -103,7 +90,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
       if (onCreate) {
         await onCreate(payload);
       } else {
-        // onCreate 없을 때 직접 호출
         const res = await fetch('/api/parties', {
           method: 'POST',
           credentials: 'include',
@@ -124,7 +110,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
     }
   };
 
-  // ── 렌더 ───────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
@@ -135,7 +120,7 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
         <div className="bg-slate-900 px-6 py-5">
           <h2 className="text-lg font-extrabold text-white">파티 생성</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            서비스 선택 후 파티 정보를 입력해주세요
+            서비스를 선택하고 파티 정보를 입력해주세요
           </p>
         </div>
 
@@ -145,7 +130,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
           </div>
         ) : (
           <>
-            {/* 폼 */}
             <div className="px-6 py-6 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
 
               {/* 서비스 선택 */}
@@ -170,12 +154,17 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                 </div>
-                {/* 선택된 서비스 정보 */}
+                {/* 서비스 정보 요약 — 1인당 금액은 여기서 표시만 */}
                 {selectedService && (
-                  <p className="text-xs text-slate-400 pl-1">
-                    최대 {selectedService.max_members}명 · 월{' '}
-                    {selectedService.monthly_price.toLocaleString()}원
-                  </p>
+                  <div className="flex gap-3 px-1">
+                    <span className="text-xs text-slate-400">
+                      최대 {selectedService.max_members}명
+                    </span>
+                    <span className="text-xs text-slate-400">·</span>
+                    <span className="text-xs text-slate-400">
+                      월 {selectedService.monthly_price.toLocaleString()}원 / 1인
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -186,7 +175,7 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
                 </label>
                 <input
                   type="text"
-                  placeholder="예: Netflix 프리미엄 같이해요"
+                  placeholder="예: Netflix 같이 봐요"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}
@@ -197,7 +186,8 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
               {/* 설명 (선택) */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  설명 <span className="text-slate-300 normal-case">(선택)</span>
+                  설명{' '}
+                  <span className="text-slate-300 normal-case font-normal">(선택)</span>
                 </label>
                 <textarea
                   placeholder="파티에 대해 간략히 설명해주세요"
@@ -210,34 +200,52 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
               </div>
 
               {/* 최대 인원 */}
-              <NumberField
-                label="최대 인원"
-                value={maxMembers}
-                min={2}
-                max={selectedService?.max_members ?? 10}
-                onChange={setMaxMembers}
-                suffix="명"
-              />
-
-              {/* 1인당 월 금액 */}
-              <NumberField
-                label="1인당 월 금액 (원)"
-                value={monthlyPerPerson}
-                min={0}
-                max={999999}
-                onChange={setMonthlyPerPerson}
-                suffix="원"
-              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  최대 인원
+                </label>
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                  <input
+                    type="number"
+                    value={maxMembers}
+                    min={2}
+                    max={selectedService?.max_members ?? 10}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      const max = selectedService?.max_members ?? 10;
+                      if (!isNaN(v)) setMaxMembers(Math.min(max, Math.max(2, v)));
+                    }}
+                    className="flex-1 px-4 py-3 text-sm outline-none bg-white"
+                  />
+                  <span className="px-3 text-sm text-slate-400 bg-slate-50 border-l border-slate-200 py-3">
+                    명
+                  </span>
+                </div>
+              </div>
 
               {/* 최소 신뢰 점수 */}
-              <NumberField
-                label="최소 신뢰 점수"
-                value={minTrustScore}
-                min={0}
-                max={100}
-                onChange={setMinTrustScore}
-                suffix="점"
-              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  최소 신뢰 점수{' '}
+                  <span className="text-slate-300 normal-case font-normal">(0 = 제한 없음)</span>
+                </label>
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                  <input
+                    type="number"
+                    value={minTrustScore}
+                    min={0}
+                    max={100}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (!isNaN(v)) setMinTrustScore(Math.min(100, Math.max(0, v)));
+                    }}
+                    className="flex-1 px-4 py-3 text-sm outline-none bg-white"
+                  />
+                  <span className="px-3 text-sm text-slate-400 bg-slate-50 border-l border-slate-200 py-3">
+                    점
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* 하단 버튼 */}
@@ -264,49 +272,6 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
               </p>
             </div>
           </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── 숫자 입력 필드 ────────────────────────────────────────────
-function NumberField({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-  suffix,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (v: number) => void;
-  suffix?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-        {label}
-      </label>
-      <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-        <input
-          type="number"
-          value={value}
-          min={min}
-          max={max}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)));
-          }}
-          className="flex-1 px-4 py-3 text-sm outline-none bg-white"
-        />
-        {suffix && (
-          <span className="px-3 text-sm text-slate-400 bg-slate-50 border-l border-slate-200 py-3">
-            {suffix}
-          </span>
         )}
       </div>
     </div>
