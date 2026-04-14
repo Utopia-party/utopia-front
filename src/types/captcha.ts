@@ -1,19 +1,21 @@
+export interface CaptchaFailureReason {
+  type?: string;
+  retryAfterSeconds?: number;
+  [key: string]: unknown;
+}
+
 export interface StartCaptchaResponse {
   success: boolean;
   sessionId?: string;
   text?: string;
   pose?: string;
-  reused?: boolean;
-  remainingSeconds?: number;
   message?: string;
-  failureReason?: {
-    type?: string;
-    retryAfterSeconds?: number;
-  };
+  failureReason?: CaptchaFailureReason;
 }
 
 export interface VerifyCaptchaResponse {
   success: boolean;
   message: string;
   passToken?: string;
+  failureReason?: CaptchaFailureReason;
 }
