@@ -21,12 +21,7 @@ export default function PartyDetailModal({
   onApply,
 }: PartyDetailModalProps) {
   const isFull = party.status !== 'recruiting';
-  const perPerson =
-    party.monthly_price && party.max_members
-      ? Math.round(party.monthly_price / party.max_members)
-      : null;
 
-  // 상세 설명의 \n 처리
   const descriptionLines =
     (party as Party & { description?: string }).description
       ?.replace(/\\n/g, '\n')
@@ -105,7 +100,7 @@ export default function PartyDetailModal({
             </div>
 
             {/* 상세 설명 */}
-            {descriptionLines.length > 0 && (
+            {descriptionLines.length > 0 ? (
               <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-700 leading-relaxed">
                 {descriptionLines.map((line, i) => (
                   <p key={i} className="flex gap-1.5">
@@ -114,9 +109,7 @@ export default function PartyDetailModal({
                   </p>
                 ))}
               </div>
-            )}
-
-            {descriptionLines.length === 0 && (
+            ) : (
               <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-500 italic">
                 상세 설명이 없습니다.
               </div>
@@ -152,16 +145,16 @@ export default function PartyDetailModal({
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">총 비용</span>
                   <span className="font-semibold text-slate-900">
-                    {party.monthly_price != null
-                      ? `${party.monthly_price.toLocaleString()}원`
+                    {party.original_price != null
+                      ? `${party.original_price.toLocaleString()}원`
                       : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">1인 부담</span>
                   <span className="font-bold text-primary text-base">
-                    {perPerson != null
-                      ? `${perPerson.toLocaleString()}원`
+                    {party.monthly_price != null
+                      ? `${party.monthly_price.toLocaleString()}원`
                       : '-'}
                   </span>
                 </div>
@@ -184,7 +177,11 @@ export default function PartyDetailModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">신뢰도</span>
-                  <span className="font-semibold text-slate-900">38점</span>
+                  <span className="font-semibold text-slate-900">
+                    {party.host_trust_score != null
+                      ? `${party.host_trust_score}점`
+                      : '-'}
+                  </span>
                 </div>
               </div>
             </div>
