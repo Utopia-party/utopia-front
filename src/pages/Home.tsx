@@ -11,7 +11,7 @@ import {
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/party/QuickMatchForm';
-import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
+// import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -479,7 +479,7 @@ export default function Home() {
     queryKey: partyKeys.list(category, search, refreshKey),
     queryFn: () =>
       fetchParties({
-        category_name: category ?? undefined,  // category → category_name
+        category_name: category ?? undefined, // category → category_name
         search,
         size: 6,
       }),
@@ -529,7 +529,7 @@ export default function Home() {
 
       <div className="min-h-screen bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-8">
-          <SystemNoticeBanner />
+          {/* <SystemNoticeBanner /> */}
 
           <div className="mt-6 flex flex-col gap-8 md:flex-row">
             <CategorySidebar
