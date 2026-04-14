@@ -18,7 +18,7 @@ export const fetchCategories = async (): Promise<Category[]> => {
 };
 
 export const fetchParties = async (params: {
-  category?: string;
+  category_name?: string;
   service_id?: string;
   search?: string;
   page?: number;
