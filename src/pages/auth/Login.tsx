@@ -21,8 +21,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState<LoginForm>({
-    email: 'partyup1234@utopia.com',
-    password: 'rhksflwk1234',
+    email: '',
+    password: '',
     rememberMe: false,
   });
 
