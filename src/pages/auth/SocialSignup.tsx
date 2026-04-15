@@ -9,7 +9,7 @@ type SocialState = {
   oauth: string;
   oauth_id: string;
   email: string | null;
-  name: string | null;
+  nickname: string | null;
 };
 
 export default function SocialSignup() {
@@ -34,10 +34,23 @@ export default function SocialSignup() {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    let newValue = value;
+
+    if (name === 'phone') {
+      newValue = value.replace(/[^0-9]/g, '').slice(0, 11);
+    }
+
+    setForm((prev) => ({ ...prev, [name]: newValue }));
+  };
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/[^0-9]/g, '');
+
+    if (numbers.length < 4) return numbers;
+    if (numbers.length < 8) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    }
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -55,7 +68,7 @@ export default function SocialSignup() {
         oauth: socialData.oauth,
         oauth_id: socialData.oauth_id,
         email: socialData.email,
-        name: socialData.name,
+        name: socialData.nickname,
         nickname: form.nickname.trim(),
         phone: form.phone || null,
       });
@@ -111,7 +124,7 @@ export default function SocialSignup() {
           <input
             name="phone"
             type="text"
-            value={form.phone}
+            value={formatPhone(form.phone)}
             placeholder="010-1234-5678"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}

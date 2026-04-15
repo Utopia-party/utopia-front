@@ -11,6 +11,7 @@ import {
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/party/QuickMatchForm';
+import { useQuickMatch } from '../hooks/useQuickMatch';
 // import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -467,6 +468,7 @@ export default function Home() {
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
+  const quickMatchMutation = useQuickMatch();
 
   const { data: categoriesRaw } = useQuery({
     queryKey: categoryKeys.all,
@@ -499,6 +501,34 @@ export default function Home() {
     if (category) return '선택한 카테고리의 모집 중인 파티를 확인해보세요.';
     return '지금 바로 참여할 수 있는 파티를 한눈에 확인해보세요.';
   }, [category, search]);
+
+  const handleQuickMatchSubmit = (payload: {
+    category: string;
+    serviceId: string;
+    period: string;
+  }) => {
+    quickMatchMutation.mutate(
+      {
+        service_id: payload.serviceId,
+      },
+      {
+        onSuccess: (response) => {
+          console.log('빠른 매칭 성공:', response);
+          alert(response.message || '빠른 매칭 요청이 완료되었습니다.');
+          setShowQuickMatch(false);
+        },
+        onError: (error: any) => {
+          console.error('빠른 매칭 실패:', error?.response?.data || error);
+          alert(
+            error?.response?.data?.message ||
+              JSON.stringify(error?.response?.data) ||
+              error?.message ||
+              '빠른 매칭 요청 중 오류가 발생했습니다.',
+          );
+        },
+      },
+    );
+  };
 
   return (
     <>
@@ -647,7 +677,7 @@ export default function Home() {
       <QuickMatchForm
         open={showQuickMatch}
         onClose={() => setShowQuickMatch(false)}
-        onSubmit={() => {}}
+        onSubmit={handleQuickMatchSubmit}
       />
     </>
   );
