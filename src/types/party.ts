@@ -31,3 +31,24 @@ export interface Category {
   category_id: string; // ex) "OTT", "생산성"
   category_name: string; // ex) "OTT", "생산성" (동일값)
 }
+
+// ---- v2: 내 파티 / 멤버 관리 ----
+
+export interface MyParty extends Party {
+  is_owner: boolean;
+}
+
+export interface MyPartyListResponse {
+  parties: MyParty[];
+}
+
+export interface PartyMember {
+  user_id: string;
+  nickname: string | null;
+  role: 'leader' | 'member' | string;
+  is_current_user: boolean;
+}
+
+export interface PartyMembersResponse {
+  members: PartyMember[];
+}
