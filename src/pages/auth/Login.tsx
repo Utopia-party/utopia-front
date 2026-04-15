@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
 import { useAuthStore } from '../../stores/authStore';
@@ -17,6 +18,7 @@ export default function Login() {
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -24,12 +26,33 @@ export default function Login() {
     rememberMe: false,
   });
 
+  const DEMO_ACCOUNTS = {
+    user: {
+      email: 'dixk3458@naver.com',
+      password: 'dixk3458@',
+    },
+    admin: {
+      email: 'partyup1234@utopia.com',
+      password: 'rhksflwk1234',
+    },
+  } as const;
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
 
     setForm((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const fillDemoAccount = (type: 'user' | 'admin') => {
+    const account = DEMO_ACCOUNTS[type];
+
+    setForm((prev) => ({
+      ...prev,
+      email: account.email,
+      password: account.password,
     }));
   };
 
@@ -141,7 +164,26 @@ export default function Login() {
 
   return (
     <div className="mx-auto mt-10 mb-12 max-w-xl rounded-xl border-2 border-gray-200 bg-white p-10 shadow-lg">
-      <h1 className="mb-8 text-2xl font-bold text-gray-800">로그인</h1>
+      <div className="flex justify-between mb-4">
+        <h1 className=" text-2xl font-bold text-gray-800">로그인</h1>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => fillDemoAccount('user')}
+            className="px-2 py-4 rounded-xl border border-gray-300 bg-gray-50 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+          >
+            일반 유저 체험 계정 입력
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fillDemoAccount('admin')}
+            className="px-2 py-4 rounded-xl border border-purple-300 bg-purple-50 text-sm font-semibold text-purple-700 transition hover:bg-purple-100"
+          >
+            관리자 체험 계정 입력
+          </button>
+        </div>
+      </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
@@ -164,16 +206,26 @@ export default function Login() {
           <label className="mb-1 block text-sm font-medium text-gray-600">
             비밀번호
           </label>
-          <input
-            name="password"
-            type="password"
-            value={form.password}
-            placeholder="비밀번호 입력"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-            onChange={handleChange}
-            autoComplete="current-password"
-            required
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              placeholder="비밀번호 입력"
+              className="w-full rounded-lg border border-gray-300 p-3 pr-12 focus:border-blue-500 focus:outline-none"
+              onChange={handleChange}
+              autoComplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between text-xs text-gray-500">

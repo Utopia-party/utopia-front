@@ -11,7 +11,7 @@ import {
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/party/QuickMatchForm';
-import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
+// import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -403,7 +403,7 @@ function CategorySidebar({
               const name = cat.name;
               return (
                 <button
-                  key={cat.id || name}
+                  key={name}
                   onClick={() => setCategory(name)}
                   className={`flex items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${category === name ? 'bg-indigo-50 font-bold text-indigo-700 ring-1 ring-indigo-100' : 'text-slate-600 hover:bg-slate-50'}`}
                 >
@@ -479,7 +479,7 @@ export default function Home() {
     queryKey: partyKeys.list(category, search, refreshKey),
     queryFn: () =>
       fetchParties({
-        category: category ?? undefined,
+        category_name: category ?? undefined, // category → category_name
         search,
         size: 6,
       }),
@@ -529,7 +529,7 @@ export default function Home() {
 
       <div className="min-h-screen bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-8">
-          <SystemNoticeBanner />
+          {/* <SystemNoticeBanner /> */}
 
           <div className="mt-6 flex flex-col gap-8 md:flex-row">
             <CategorySidebar
@@ -537,7 +537,7 @@ export default function Home() {
               category={category}
               setCategory={(val) => {
                 setCategory(val);
-                setRefreshKey(0); // 카테고리 바꾸면 refreshKey 초기화
+                setRefreshKey(0);
               }}
               onCreate={() => navigate('/handcaptcha')}
               onQuickMatch={() => setShowQuickMatch(true)}

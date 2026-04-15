@@ -3,13 +3,13 @@ import { Link } from 'react-router';
 import { findId } from '../../apis/auth';
 
 type FindIdForm = {
-  name: string;
+  nickname: string;
   phone: string;
 };
 
 export default function FindId() {
   const [form, setForm] = useState<FindIdForm>({
-    name: '',
+    nickname: '',
     phone: '',
   });
 
@@ -22,7 +22,7 @@ export default function FindId() {
     let newValue = value;
 
     if (name === 'phone') {
-      newValue = value.replace(/[^0-9]/g, '');
+      newValue = value.replace(/[^0-9]/g, '').slice(0, 11);
     }
 
     setForm((prev) => ({ ...prev, [name]: newValue }));
@@ -41,7 +41,7 @@ export default function FindId() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!form.name.trim() || !form.phone.trim()) {
+    if (!form.nickname.trim() || !form.phone.trim()) {
       alert('닉네임과 휴대폰 번호를 입력해주세요.');
       return;
     }
@@ -51,7 +51,7 @@ export default function FindId() {
       setFoundEmail(null);
 
       const response = await findId({
-        name: form.name.trim(),
+        nickname: form.nickname.trim(),
         phone: form.phone.trim(),
       });
 
@@ -65,8 +65,8 @@ export default function FindId() {
       setFoundEmail(email);
     } catch (error: any) {
       const message =
-        error?.response?.detail ||
-        error?.response?.message ||
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
         '이메일 찾기에 실패했습니다.';
       alert(message);
     } finally {
@@ -84,12 +84,12 @@ export default function FindId() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            닉네임
+            닉네임 <span className="text-red-500">*</span>
           </label>
           <input
-            name="name"
+            name="nickname"
             type="text"
-            value={form.name}
+            value={form.nickname}
             placeholder="닉네임 입력"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}
@@ -99,7 +99,7 @@ export default function FindId() {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
-            휴대폰 번호
+            휴대폰 번호 <span className="text-red-500">*</span>
           </label>
           <input
             name="phone"

@@ -5,7 +5,6 @@ import type {
 } from '../types/captcha';
 
 export const startCaptcha = async (): Promise<StartCaptchaResponse> => {
-  // axios는 응답 결과를 .data 안에 담아줍니다.
   const response = await api.post<StartCaptchaResponse>(
     '/api/captcha/handocr/start',
   );
@@ -25,7 +24,7 @@ export const verifyCaptcha = async (
     formData,
     {
       headers: {
-        'Content-Type': 'multipart/form-data', // 🌟 파일 전송을 위한 헤더 설정
+        'Content-Type': 'multipart/form-data',
       },
     },
   );
