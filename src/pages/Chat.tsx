@@ -196,7 +196,7 @@ function PaymentModal({
         channelKey: PORTONE_CHANNEL_KEY,
         paymentId: orderId,
         orderName: `${partyTitle} 정산`,
-        totalAmount: 1,
+        totalAmount: 100,
         currency: 'CURRENCY_KRW',
         payMethod: 'CARD',
         customer: { fullName: nickname },
@@ -279,7 +279,7 @@ function PaymentModal({
                     <p className="text-sm font-bold text-slate-800">
                       카드 결제
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">1원 테스트</p>
+                    <p className="text-xs text-slate-400 mt-0.5">100원 테스트</p>
                   </div>
                 </button>
                 <button
@@ -323,7 +323,7 @@ function PaymentModal({
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">결제 금액</span>
                   <span className="font-extrabold text-primary text-base">
-                    1원 (테스트)
+                    100원 (테스트)
                   </span>
                 </div>
               </div>
@@ -332,7 +332,7 @@ function PaymentModal({
                   ⚠️ 테스트 결제
                 </p>
                 <p className="text-xs text-amber-600 mt-0.5">
-                  포트원 테스트 환경에서 실제 결제는 발생하지 않습니다.
+                  테스트 환경에서 실제 결제는 발생하지 않습니다.
                 </p>
               </div>
               <div className="flex gap-3">
