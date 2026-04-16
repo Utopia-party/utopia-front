@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ReportForm from './components/ReportForm';
 import ReportList from './components/ReportList';
 import { fetchMyReportSummary, type ReportSummary } from '../../apis/report';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const INITIAL_SUMMARY: ReportSummary = {
   pending: 0,
@@ -12,6 +13,8 @@ const INITIAL_SUMMARY: ReportSummary = {
 
 export default function Report() {
   const [summary, setSummary] = useState<ReportSummary>(INITIAL_SUMMARY);
+
+  usePageTitle('신고');
 
   useEffect(() => {
     const loadSummary = async () => {

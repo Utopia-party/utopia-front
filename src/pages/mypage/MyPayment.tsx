@@ -1,3 +1,5 @@
+import { usePageTitle } from '../../hooks/usePageTitle';
+
 const paymentRows = [
   {
     date: '2026-03-02',
@@ -34,6 +36,8 @@ const paymentRows = [
 ];
 
 export default function MyPayment() {
+  usePageTitle('결제 내역');
+
   return (
     <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
       <div className="mx-auto max-w-6xl">
