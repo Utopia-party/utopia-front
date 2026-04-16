@@ -376,6 +376,23 @@ export default function MyParty() {
 
   const parties: MyParty[] = data?.parties ?? [];
 
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const categories = useMemo(() => {
+    const names = parties
+      .map((p) => p.category_name)
+      .filter((c): c is string => c != null);
+    return [...new Set(names)].sort();
+  }, [parties]);
+
+  const filteredParties = useMemo(
+    () =>
+      selectedCategory
+        ? parties.filter((p) => p.category_name === selectedCategory)
+        : parties,
+    [parties, selectedCategory],
+  );
+
   const closeModal = () => setModal(null);
 
   return (
@@ -390,6 +407,43 @@ export default function MyParty() {
           </p>
         </div>
 
+        {parties.length > 0 && categories.length > 0 && (
+          <div className="mb-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={[
+                'rounded-full px-5 py-2 text-sm font-extrabold transition',
+                selectedCategory === null
+                  ? 'bg-primary text-white'
+                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+              ].join(' ')}
+              onClick={() => setSelectedCategory(null)}
+            >
+              전체 ({parties.length})
+            </button>
+            {categories.map((cat) => {
+              const count = parties.filter(
+                (p) => p.category_name === cat,
+              ).length;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  className={[
+                    'rounded-full px-5 py-2 text-sm font-extrabold transition',
+                    selectedCategory === cat
+                      ? 'bg-primary text-white'
+                      : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+                  ].join(' ')}
+                  onClick={() => setSelectedCategory(cat)}
+                >
+                  {cat} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="rounded-[30px] bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
             불러오는 중…
@@ -402,9 +456,13 @@ export default function MyParty() {
           <div className="rounded-[30px] bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
             참여 중인 파티가 없습니다.
           </div>
+        ) : filteredParties.length === 0 ? (
+          <div className="rounded-[30px] bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
+            해당 카테고리의 파티가 없습니다.
+          </div>
         ) : (
           <section className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-            {parties.map((party) => {
+            {filteredParties.map((party) => {
               const isOwner = party.is_owner;
               const statusLabel = isOwner ? '내가 만든 파티' : '참여중';
               const priceLabel =
