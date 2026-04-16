@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 type TrustHistoryItem = {
   id: number;
@@ -148,6 +149,8 @@ function TrustScoreLineChart({
       />
     );
   });
+
+  usePageTitle('신뢰도 변화');
 
   return (
     <div className="overflow-x-auto">
