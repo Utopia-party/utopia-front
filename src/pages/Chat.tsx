@@ -279,7 +279,9 @@ function PaymentModal({
                     <p className="text-sm font-bold text-slate-800">
                       카드 결제
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">100원 테스트</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      100원 테스트
+                    </p>
                   </div>
                 </button>
                 <button

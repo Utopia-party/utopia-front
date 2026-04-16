@@ -38,11 +38,10 @@ const SERVICE_MAP = {
 const CATEGORY_OPTIONS = ['OTT', '교육/도서', '음악', '생산성/기타'] as const;
 
 const PERIOD_OPTIONS = [
-  { value: '', label: '기간 선택 안 함' },
-  { value: '1개월', label: '1개월' },
-  { value: '3개월', label: '3개월' },
-  { value: '6개월', label: '6개월' },
-  { value: '12개월', label: '12개월' },
+  { value: '', label: '상관없음' },
+  { value: '1개월', label: '1~3개월 이용' },
+  { value: '3개월', label: '3~6개월 이용' },
+  { value: '6개월', label: '6개월 이상 이용' },
 ];
 
 export default function QuickMatchForm({
@@ -152,7 +151,7 @@ export default function QuickMatchForm({
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-800">
-              기간 <span className="text-slate-400">(선택)</span>
+              선호 기간 <span className="text-slate-400">(선택)</span>
             </label>
             <select
               value={period}
