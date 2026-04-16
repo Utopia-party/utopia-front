@@ -145,6 +145,7 @@ function PartyCard({
   const navigate = useNavigate();
   const isClosed = party.status !== 'recruiting';
   const isJoined = (party as any).is_joined;
+  const myStatus: string | null = (party as any).my_member_status ?? null;
   const categoryName = party.category_name || '기타';
   const categoryIcon = CATEGORY_ICON[categoryName] ?? '✨';
   const spotsLeft = Math.max(
@@ -253,6 +254,20 @@ function PartyCard({
           >
             채팅방 입장
           </button>
+        ) : myStatus === 'pending' ? (
+          <button
+            disabled
+            className="flex-1 cursor-not-allowed rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-700"
+          >
+            승인 대기중
+          </button>
+        ) : myStatus === 'kicked' ? (
+          <button
+            disabled
+            className="flex-1 cursor-not-allowed rounded-2xl bg-rose-100 px-4 py-3 text-sm font-bold text-rose-700"
+          >
+            참여 불가 (강퇴)
+          </button>
         ) : (
           <button
             disabled={isClosed}
@@ -261,7 +276,9 @@ function PartyCard({
           >
             {isClosed
               ? STATUS_LABEL[party.status ?? ''] || '마감'
-              : '참여 신청'}
+              : myStatus === 'rejected'
+                ? '재신청'
+                : '참여 신청'}
           </button>
         )}
       </div>
@@ -281,11 +298,8 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
       queryClient.invalidateQueries({ queryKey: partyKeys.all });
     },
     onError: (e: any) => {
-      if (e.response?.status === 400 || e.message?.includes('이미 참여')) {
-        navigate(`/party/${party.id}/chat`);
-      } else {
-        alert(e.message || '참여 신청 중 오류가 발생했습니다.');
-      }
+      const detail = e?.response?.data?.detail ?? e?.message;
+      alert(detail || '참여 신청 중 오류가 발생했습니다.');
     },
   });
 
@@ -300,18 +314,18 @@ function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
       >
         {done ? (
           <div className="py-4 text-center">
-            <div className="mb-4 text-5xl">🎉</div>
+            <div className="mb-4 text-5xl">📨</div>
             <h3 className="text-xl font-black text-slate-900">신청 완료!</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              파티 참여 신청이 정상적으로 완료되었습니다.
+              참여 신청이 접수되었습니다.
               <br />
-              바로 채팅방으로 이동해보세요.
+              파티 리더의 승인을 기다려주세요.
             </p>
             <button
-              onClick={() => navigate(`/party/${party.id}/chat`)}
+              onClick={onClose}
               className="mt-6 w-full rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
             >
-              채팅방으로 이동
+              확인
             </button>
           </div>
         ) : (

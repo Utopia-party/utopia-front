@@ -49,3 +49,45 @@ export async function transferLeader(
   );
   return data;
 }
+
+// 파티 참여 신청 (status='pending'으로 생성, 리더 승인 필요)
+export async function applyToParty(
+  partyId: string,
+): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>(
+    `/api/parties/${partyId}/join`,
+  );
+  return data;
+}
+
+// 대기 중 신청자 목록 조회 (리더 전용)
+export async function getPartyApplications(
+  partyId: string,
+): Promise<PartyMembersResponse> {
+  const { data } = await api.get<PartyMembersResponse>(
+    `/api/parties/${partyId}/applications`,
+  );
+  return data;
+}
+
+// 참여 신청 승인 (리더 전용)
+export async function approveApplication(
+  partyId: string,
+  userId: string,
+): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>(
+    `/api/parties/${partyId}/applications/${userId}/approve`,
+  );
+  return data;
+}
+
+// 참여 신청 거절 (리더 전용)
+export async function rejectApplication(
+  partyId: string,
+  userId: string,
+): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>(
+    `/api/parties/${partyId}/applications/${userId}/reject`,
+  );
+  return data;
+}
