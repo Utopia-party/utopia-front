@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router';
 import { Users, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { api } from '../apis/api';
 import { useAuthStore } from '../stores/authStore';
-import { usePageTitle } from '../hooks/usePageTitle';
 
 // PortOne V2 SDK 타입 선언
 declare global {
