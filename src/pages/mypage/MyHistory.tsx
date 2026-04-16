@@ -1,3 +1,5 @@
+import { usePageTitle } from '../../hooks/usePageTitle';
+
 const historyRows = [
   {
     title: '정산 승인 완료',
@@ -30,6 +32,8 @@ const historyRows = [
 ];
 
 export default function MyHistory() {
+  usePageTitle('활동 로그');
+
   return (
     <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
       <div className="mx-auto max-w-6xl">

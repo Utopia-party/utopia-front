@@ -287,7 +287,6 @@ function PartyCard({
 }
 
 function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [done, setDone] = useState(false);
 

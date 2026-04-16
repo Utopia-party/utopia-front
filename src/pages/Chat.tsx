@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { Users, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { api } from '../apis/api';
 import { useAuthStore } from '../stores/authStore';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 // PortOne V2 SDK 타입 선언
 declare global {
@@ -279,7 +280,9 @@ function PaymentModal({
                     <p className="text-sm font-bold text-slate-800">
                       카드 결제
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">100원 테스트</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      100원 테스트
+                    </p>
                   </div>
                 </button>
                 <button
@@ -517,6 +520,8 @@ export default function Chat() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  usePageTitle(partyInfo?.title ?? '');
 
   useEffect(() => {
     if (!user) {

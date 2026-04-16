@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../stores/authStore';
 import ProfileEditModal from './components/ProfileEditModal';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const recentActivities = [
   {
@@ -299,6 +300,8 @@ export default function Profile() {
   const location = useLocation();
   const isProfilePage =
     location.pathname === '/mypage' || location.pathname === '/mypage/profile';
+
+  usePageTitle('프로필');
 
   if (isProfilePage) {
     return <ProfileDashboard />;

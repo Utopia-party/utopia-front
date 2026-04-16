@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 import {
   approveApplication,
@@ -356,6 +357,9 @@ function ApplicationsModal({ partyId, onClose }: ApplicationsModalProps) {
 
 export default function MyParty() {
   const navigate = useNavigate();
+
+  usePageTitle('내 파티');
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['my-parties'],
     queryFn: getMyParties,
