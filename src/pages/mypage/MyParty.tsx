@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const partyCards = [
   {
@@ -50,6 +51,9 @@ function StatusBadge({ label, isOwner }: { label: string; isOwner: boolean }) {
 
 export default function MyParty() {
   const navigate = useNavigate();
+
+  usePageTitle('내 파티');
+
   return (
     <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
       <div className="mx-auto max-w-[1400px]">

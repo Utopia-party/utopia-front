@@ -6,6 +6,7 @@ import {
   type ReportStatus as ApiReportStatus,
 } from '../../apis/report';
 import type { ReportItem, ReportStatus } from '../../types/report';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 type FilterStatus = 'ALL' | ReportStatus;
 type PeriodFilter = '3MONTHS' | 'ALL';
@@ -89,6 +90,8 @@ export default function MyReport() {
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('3MONTHS');
   const [searchKeyword, setSearchKeyword] = useState('');
+
+  usePageTitle('신고 내역');
 
   useEffect(() => {
     let isMounted = true;
