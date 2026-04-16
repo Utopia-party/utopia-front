@@ -465,10 +465,12 @@ export default function MyParty() {
             {filteredParties.map((party) => {
               const isOwner = party.is_owner;
               const statusLabel = isOwner ? '내가 만든 파티' : '참여중';
-              const priceLabel =
-                party.monthly_price != null
-                  ? `총액 ₩ ${party.monthly_price.toLocaleString()}`
-                  : '가격 정보 없음';
+              const perPersonPrice = party.monthly_price;
+              const serviceTotalPrice = party.service_total_price;
+              const refundAmount =
+                isOwner && serviceTotalPrice != null && perPersonPrice != null
+                  ? serviceTotalPrice - perPersonPrice
+                  : null;
 
               return (
                 <article
@@ -492,8 +494,16 @@ export default function MyParty() {
                     </p>
                     <p className="text-[16px] font-bold">📍 온라인</p>
                     <p className="text-[16px] font-extrabold text-slate-800">
-                      💰 {priceLabel}
+                      💰 월 1인 ₩{' '}
+                      {perPersonPrice != null
+                        ? perPersonPrice.toLocaleString()
+                        : '-'}
                     </p>
+                    {isOwner && refundAmount != null && (
+                      <p className="text-[15px] font-bold text-emerald-600">
+                        💸 결제 후 환급 ₩ {refundAmount.toLocaleString()}
+                      </p>
+                    )}
                   </div>
 
                   <div className="mt-7 flex flex-col gap-4">

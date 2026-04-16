@@ -22,6 +22,7 @@ export interface Party {
   max_members: number | null;
   monthly_price: number | null;
   original_price: number | null;
+  service_total_price: number | null;
   logo_image_key: string | null;
   logo_image_url: string | null;
   member_count: number;
