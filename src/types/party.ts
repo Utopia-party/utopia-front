@@ -1,5 +1,14 @@
 export type PartyStatus = 'recruiting' | 'full' | 'completed' | 'canceled';
 
+export type MyMemberStatus =
+  | 'leader'
+  | 'pending'
+  | 'active'
+  | 'kicked'
+  | 'left'
+  | 'rejected'
+  | null;
+
 export interface Party {
   id: string;
   leader_id: string | null;
@@ -7,7 +16,7 @@ export interface Party {
   title: string;
   status: PartyStatus | null;
   host_nickname: string | null;
-  host_trust_score: number | null;  
+  host_trust_score: number | null;
   service_name: string | null;
   category_name: string | null;
   max_members: number | null;
@@ -17,6 +26,7 @@ export interface Party {
   logo_image_url: string | null;
   member_count: number;
   is_joined: boolean;
+  my_member_status: MyMemberStatus;
 }
 
 export interface PartyListResponse {
@@ -27,5 +37,26 @@ export interface PartyListResponse {
 }
 
 export interface Category {
-  name: string;  
+  name: string;
+}
+
+// ---- v2: 내 파티 / 멤버 관리 ----
+
+export interface MyParty extends Party {
+  is_owner: boolean;
+}
+
+export interface MyPartyListResponse {
+  parties: MyParty[];
+}
+
+export interface PartyMember {
+  user_id: string;
+  nickname: string | null;
+  role: 'leader' | 'member' | string;
+  is_current_user: boolean;
+}
+
+export interface PartyMembersResponse {
+  members: PartyMember[];
 }

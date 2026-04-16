@@ -117,17 +117,58 @@ export default function PartyDetailModal({
 
             {/* 하단 버튼 */}
             <div className="flex gap-2 mt-5">
-              <button
-                disabled={isFull}
-                onClick={() => onApply(party)}
-                className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all ${
-                  isFull
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : 'bg-primary text-white hover:opacity-90 active:scale-[0.98]'
-                }`}
-              >
-                {isFull ? '모집 마감' : '참여신청'}
-              </button>
+              {(() => {
+                const myStatus =
+                  (party as Party & { my_member_status?: string | null })
+                    .my_member_status ?? null;
+                if (myStatus === 'leader' || myStatus === 'active') {
+                  return (
+                    <button
+                      disabled
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold bg-indigo-100 text-indigo-700 cursor-not-allowed"
+                    >
+                      {myStatus === 'leader' ? '내가 리더' : '참여중'}
+                    </button>
+                  );
+                }
+                if (myStatus === 'pending') {
+                  return (
+                    <button
+                      disabled
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold bg-amber-100 text-amber-700 cursor-not-allowed"
+                    >
+                      승인 대기중
+                    </button>
+                  );
+                }
+                if (myStatus === 'kicked') {
+                  return (
+                    <button
+                      disabled
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold bg-rose-100 text-rose-700 cursor-not-allowed"
+                    >
+                      참여 불가 (강퇴)
+                    </button>
+                  );
+                }
+                return (
+                  <button
+                    disabled={isFull}
+                    onClick={() => onApply(party)}
+                    className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all ${
+                      isFull
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-primary text-white hover:opacity-90 active:scale-[0.98]'
+                    }`}
+                  >
+                    {isFull
+                      ? '모집 마감'
+                      : myStatus === 'rejected'
+                        ? '재신청'
+                        : '참여신청'}
+                  </button>
+                );
+              })()}
               <button className="w-12 h-12 flex items-center justify-center border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors">
                 <Bookmark size={18} className="text-slate-500" />
               </button>
