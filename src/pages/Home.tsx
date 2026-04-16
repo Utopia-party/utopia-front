@@ -11,6 +11,7 @@ import {
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/party/QuickMatchForm';
+import { usePageTitle } from '../hooks/usePageTitle';
 // import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -51,6 +52,8 @@ const QUICK_KEYWORDS = [
 function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
   const [value, setValue] = useState('');
   const handleSearch = () => onSearch(value.trim());
+
+  usePageTitle('');
 
   return (
     <div className="w-full max-w-2xl mx-auto">

@@ -521,8 +521,6 @@ export default function Chat() {
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  usePageTitle(partyInfo?.title ?? '');
-
   useEffect(() => {
     if (!user) {
       const t = setTimeout(() => setUserReady(true), 500);
