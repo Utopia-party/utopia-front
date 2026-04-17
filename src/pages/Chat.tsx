@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Users, Calendar, Clock, RefreshCw } from 'lucide-react';
+import {
+  Users,
+  Calendar,
+  Clock,
+  RefreshCw,
+  User,
+  AlertTriangle,
+} from 'lucide-react';
 import { api } from '../apis/api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -51,6 +58,20 @@ interface PartyInfo {
   service_name?: string | null;
   host_nickname?: string | null;
   members: Member[];
+}
+
+interface ProfileDrawerUser {
+  user_id?: string;
+  nickname?: string;
+  profile_image?: string | null;
+  role?: string;
+  status?: string;
+}
+
+interface ProfileDrawerState {
+  user: ProfileDrawerUser;
+  top: number;
+  left: number;
 }
 
 type PaymentStep = 'select' | 'card' | 'transfer' | 'ocr';
@@ -107,27 +128,46 @@ function Avatar({
   nickname,
   profileImage,
   size = 'sm',
+  onClick,
 }: {
   nickname?: string | null;
   profileImage?: string | null;
   size?: 'sm' | 'md';
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const [imgError, setImgError] = useState(false);
   const sizeClass = size === 'sm' ? 'w-7 h-7 text-[10px]' : 'w-9 h-9 text-xs';
+
+  const content =
+    profileImage && !imgError ? (
+      <img
+        src={profileImage}
+        alt={nickname ?? 'profile'}
+        onError={() => setImgError(true)}
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      getProfileInitial(nickname)
+    );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        title="프로필 열기"
+        className={`${sizeClass} rounded-full bg-primary text-white font-extrabold flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-transform hover:scale-105 active:scale-95`}
+      >
+        {content}
+      </button>
+    );
+  }
+
   return (
     <div
       className={`${sizeClass} rounded-full bg-primary text-white font-extrabold flex items-center justify-center overflow-hidden shrink-0`}
     >
-      {profileImage && !imgError ? (
-        <img
-          src={profileImage}
-          alt=""
-          onError={() => setImgError(true)}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        getProfileInitial(nickname)
-      )}
+      {content}
     </div>
   );
 }
@@ -147,6 +187,85 @@ function InfoCard({
       <div className="min-w-0">
         <p className="text-[10px] text-slate-400 font-medium">{label}</p>
         <p className="text-xs font-bold text-slate-800 truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────
+// 프로필 서랍
+// ────────────────────────────────────────────────
+function ProfileDrawer({
+  user,
+  top,
+  left,
+  onClose,
+  onProfileInfo,
+  onReport,
+}: {
+  user: ProfileDrawerUser;
+  top: number;
+  left: number;
+  onClose: () => void;
+  onProfileInfo: () => void;
+  onReport: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[70]" onClick={onClose}>
+      <div
+        className="absolute w-[280px] overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,42,0.18)]"
+        style={{ top, left }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <Avatar
+              nickname={user.nickname}
+              profileImage={user.profile_image}
+              size="md"
+            />
+            <div className="min-w-0">
+              <p className="text-base font-bold text-slate-900 truncate">
+                {user.nickname ?? '익명'}
+              </p>
+
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                {user.role && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    {ROLE_LABEL[user.role] ?? user.role}
+                  </span>
+                )}
+                {user.status && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    {STATUS_LABEL[user.status] ?? user.status}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-px bg-slate-200" />
+
+        <button
+          type="button"
+          onClick={onProfileInfo}
+          className="flex w-full items-center gap-3 px-5 py-4 text-left text-base font-semibold text-slate-800 hover:bg-slate-50"
+        >
+          <User size={18} className="text-slate-500" />
+          프로필 정보
+        </button>
+
+        <div className="mx-5 h-px bg-slate-200" />
+
+        <button
+          type="button"
+          onClick={onReport}
+          className="flex w-full items-center gap-3 px-5 py-4 text-left text-base font-semibold text-red-600 hover:bg-red-50"
+        >
+          <AlertTriangle size={18} />
+          신고
+        </button>
       </div>
     </div>
   );
@@ -183,13 +302,21 @@ function PaymentModal({
     document.head.appendChild(script);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (ocrPreview) URL.revokeObjectURL(ocrPreview);
+    };
+  }, [ocrPreview]);
+
   const handleCardPayment = async () => {
     if (!window.PortOne) {
       alert('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
     setIsLoading(true);
-    const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const orderId = `order-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
     try {
       const response = await window.PortOne.requestPayment({
         storeId: PORTONE_STORE_ID,
@@ -219,7 +346,13 @@ function PaymentModal({
   const handleOcrFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     setOcrFile(file);
-    if (file) setOcrPreview(URL.createObjectURL(file));
+
+    if (ocrPreview) URL.revokeObjectURL(ocrPreview);
+    if (file) {
+      setOcrPreview(URL.createObjectURL(file));
+    } else {
+      setOcrPreview(null);
+    }
   };
 
   const handleOcrSubmit = () => {
@@ -512,6 +645,9 @@ export default function Chat() {
   const [connected, setConnected] = useState(false);
   const [userReady, setUserReady] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
+    null,
+  );
 
   const nickname = user?.nickname ?? '익명';
   const userId = user?.user_id ?? 'guest';
@@ -546,11 +682,14 @@ export default function Chat() {
       wsRef.current &&
       (wsRef.current.readyState === WebSocket.OPEN ||
         wsRef.current.readyState === WebSocket.CONNECTING)
-    )
+    ) {
       return;
+    }
 
     const ws = new WebSocket(
-      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nickname)}&user_id=${encodeURIComponent(userId)}`,
+      `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(
+        nickname,
+      )}&user_id=${encodeURIComponent(userId)}`,
     );
     wsRef.current = ws;
     ws.onopen = () => setConnected(true);
@@ -573,19 +712,115 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (!profileDrawer) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setProfileDrawer(null);
+      }
+    };
+
+    const handleResize = () => setProfileDrawer(null);
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [profileDrawer]);
+
   const sendMessage = useCallback(() => {
     if (
       !input.trim() ||
       !wsRef.current ||
       wsRef.current.readyState !== WebSocket.OPEN
-    )
+    ) {
       return;
+    }
     wsRef.current.send(input.trim());
     setInput('');
   }, [input]);
 
+  const getMemberMeta = useCallback(
+    (targetUserId?: string) => {
+      const member = partyInfo?.members?.find(
+        (m) => m.user_id === targetUserId,
+      );
+      if (!member) {
+        return {
+          role: undefined,
+          status: undefined,
+          profile_image: null as string | null,
+        };
+      }
+      return {
+        role: member.role,
+        status: member.status,
+        profile_image: member.profile_image ?? null,
+      };
+    },
+    [partyInfo],
+  );
+
+  const openProfileDrawer = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>, targetUser: ProfileDrawerUser) => {
+      e.stopPropagation();
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const drawerWidth = 280;
+      const drawerHeight = 210;
+
+      const hasRightSpace =
+        rect.right + 12 + drawerWidth <= window.innerWidth - 12;
+
+      const left = hasRightSpace
+        ? rect.right + 12
+        : Math.max(12, rect.left - drawerWidth - 12);
+
+      const top = Math.min(
+        Math.max(12, rect.top - 8),
+        window.innerHeight - drawerHeight - 12,
+      );
+
+      setProfileDrawer({
+        user: targetUser,
+        top,
+        left,
+      });
+    },
+    [],
+  );
+
+  const closeProfileDrawer = useCallback(() => {
+    setProfileDrawer(null);
+  }, []);
+
+  const handleProfileInfo = useCallback(() => {
+    if (!profileDrawer) return;
+
+    // TODO: 실제 프로필 상세 페이지가 있으면 navigate('/profile/...')로 교체
+    alert(
+      `${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`,
+    );
+    setProfileDrawer(null);
+  }, [profileDrawer]);
+
+  const handleReportUser = useCallback(() => {
+    if (!profileDrawer) return;
+
+    // TODO: 실제 신고 모달 또는 신고 API 연결
+    alert(
+      `${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`,
+    );
+    setProfileDrawer(null);
+  }, [profileDrawer]);
+
   const renderMessage = (msg: Message, i: number) => {
     const isMe = msg.nickname === nickname || msg.user_id === userId;
+    const memberMeta = getMemberMeta(msg.user_id);
 
     if (msg.type === 'system') {
       return (
@@ -596,12 +831,17 @@ export default function Chat() {
         </div>
       );
     }
+
     if (msg.type === 'warning' || msg.type === 'error') {
       const isError = msg.type === 'error';
       return (
         <div key={i} className="flex justify-center">
           <span
-            className={`text-xs border px-3 py-1.5 rounded-xl ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'}`}
+            className={`text-xs border px-3 py-1.5 rounded-xl ${
+              isError
+                ? 'text-red-600 bg-red-50 border-red-200'
+                : 'text-orange-600 bg-orange-50 border-orange-200'
+            }`}
           >
             {msg.content}
           </span>
@@ -609,7 +849,10 @@ export default function Chat() {
       );
     }
 
-    const senderImage = isMe ? myProfileImage : (msg.profile_image ?? null);
+    const senderImage = isMe
+      ? myProfileImage
+      : (msg.profile_image ?? memberMeta.profile_image ?? null);
+
     return (
       <div
         key={i}
@@ -620,16 +863,31 @@ export default function Chat() {
             nickname={msg.nickname}
             profileImage={senderImage}
             size="sm"
+            onClick={(e) =>
+              openProfileDrawer(e, {
+                user_id: msg.user_id,
+                nickname: msg.nickname,
+                profile_image: senderImage,
+                role: memberMeta.role,
+                status: memberMeta.status,
+              })
+            }
           />
         </div>
         <div
-          className={`flex flex-col gap-0.5 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}
+          className={`flex flex-col gap-0.5 max-w-xs ${
+            isMe ? 'items-end' : 'items-start'
+          }`}
         >
           <p className="text-xs text-muted-foreground px-1">
             {msg.nickname ?? '익명'}
           </p>
           <div
-            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
+            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+              isMe
+                ? 'bg-primary text-primary-foreground rounded-br-sm'
+                : 'bg-card border border-border text-foreground rounded-bl-sm'
+            }`}
           >
             {msg.content}
           </div>
@@ -666,6 +924,17 @@ export default function Chat() {
           onClose={() => setShowPaymentModal(false)}
           partyTitle={partyInfo?.title ?? '파티'}
           nickname={nickname}
+        />
+      )}
+
+      {profileDrawer && (
+        <ProfileDrawer
+          user={profileDrawer.user}
+          top={profileDrawer.top}
+          left={profileDrawer.left}
+          onClose={closeProfileDrawer}
+          onProfileInfo={handleProfileInfo}
+          onReport={handleReportUser}
         />
       )}
 
@@ -710,8 +979,9 @@ export default function Chat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                   sendMessage();
+                }
               }}
             />
             <button
@@ -752,6 +1022,15 @@ export default function Chat() {
                       nickname={member.nickname}
                       profileImage={member.profile_image}
                       size="sm"
+                      onClick={(e) =>
+                        openProfileDrawer(e, {
+                          user_id: member.user_id,
+                          nickname: member.nickname,
+                          profile_image: member.profile_image,
+                          role: member.role,
+                          status: member.status,
+                        })
+                      }
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">
@@ -782,13 +1061,15 @@ export default function Chat() {
             )}
           </div>
 
-          {/* 파티 정보 — PartyDetailModal 스타일 */}
+          {/* 파티 정보 */}
           <div className="p-5">
-            {/* 카테고리 태그 */}
             {partyInfo?.category_name && (
               <div className="mb-3">
                 <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'}`}
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    CATEGORY_COLOR[partyInfo.category_name] ??
+                    'bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {partyInfo.category_name}
                 </span>
@@ -797,12 +1078,13 @@ export default function Chat() {
 
             <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
 
-            {/* InfoCard 그리드 */}
             <div className="grid grid-cols-2 gap-2 mb-4">
               <InfoCard
                 icon={<Users size={14} />}
                 label="모집 인원"
-                value={`${partyInfo?.member_count ?? '-'} / ${partyInfo?.max_members ?? '-'}`}
+                value={`${partyInfo?.member_count ?? '-'} / ${
+                  partyInfo?.max_members ?? '-'
+                }`}
               />
               <InfoCard
                 icon={<Calendar size={14} />}
@@ -821,7 +1103,6 @@ export default function Chat() {
               />
             </div>
 
-            {/* 정산 요약 */}
             <div className="border-t border-slate-100 pt-3 mb-3">
               <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
                 정산 요약
@@ -846,7 +1127,6 @@ export default function Chat() {
               </div>
             </div>
 
-            {/* 호스트 */}
             {partyInfo?.host_nickname && (
               <div className="border-t border-slate-100 pt-3">
                 <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
@@ -861,7 +1141,6 @@ export default function Chat() {
               </div>
             )}
 
-            {/* 상태 */}
             {partyInfo?.status && (
               <div className="mt-3">
                 <span
