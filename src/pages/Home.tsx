@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Party } from '../types/party';
@@ -12,7 +12,6 @@ import {
 import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/party/QuickMatchForm';
 import { usePageTitle } from '../hooks/usePageTitle';
-// import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -480,9 +479,32 @@ export default function Home() {
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [cooldown, setCooldown] = useState(0); // ← 추가
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
+
+  // 1분 카운트다운 타이머 ← 추가
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  // 새로고침 핸들러 ← 추가
+  const handleRefresh = () => {
+    if (cooldown > 0) return;
+    setRefreshKey((k) => k + 1);
+    setCooldown(60);
+  };
 
   const { data: categoriesRaw } = useQuery({
     queryKey: categoryKeys.all,
@@ -495,9 +517,10 @@ export default function Home() {
     queryKey: partyKeys.list(category, search, refreshKey),
     queryFn: () =>
       fetchParties({
-        category_name: category ?? undefined, // category → category_name
+        category_name: category ?? undefined,
         search,
         size: 6,
+        random: !category && !search, // ← 추가: 전체 목록일 때만 랜덤
       }),
   });
 
@@ -545,8 +568,6 @@ export default function Home() {
 
       <div className="min-h-screen bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-8">
-          {/* <SystemNoticeBanner /> */}
-
           <div className="mt-6 flex flex-col gap-8 md:flex-row">
             <CategorySidebar
               categories={categories}
@@ -563,24 +584,53 @@ export default function Home() {
               <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
                 <SectionTitle title={titleText} subtitle={subtitleText} />
                 <div className="flex items-center gap-2">
+                  {/* 새로고침 버튼 (타이머 포함) ← 교체 */}
                   <button
-                    onClick={() => setRefreshKey((k) => k + 1)}
-                    className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95"
+                    onClick={handleRefresh}
+                    disabled={cooldown > 0}
+                    className={`flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-semibold transition
+                      ${cooldown > 0
+                        ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:scale-95'
+                      }`}
                   >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    새로고침
+                    {cooldown > 0 ? (
+                      <>
+                        <svg
+                          className="h-4 w-4 text-indigo-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="tabular-nums text-indigo-500 font-bold">
+                          {cooldown}s
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                        새로고침
+                      </>
+                    )}
                   </button>
                   <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
                     <span className="text-slate-400">총</span>
