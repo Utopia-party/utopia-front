@@ -532,7 +532,7 @@ export default function Home() {
         category_name: category ?? undefined,
         search,
         size: 6,
-        random: !category && !search,
+        random: !search,
       }),
   });
 
