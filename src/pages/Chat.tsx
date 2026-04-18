@@ -542,29 +542,31 @@ export default function Chat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const userReadyRef = useRef(false);
 
-  const loadHistory = useCallback(async () => {
-    if (!partyId) return;
-    try {
-      const { data } = await api.get(`/chat/parties/${partyId}/messages`);
-      setMessages(Array.isArray(data) ? data : []);
-    } catch {
-      setMessages([]);
-    }
-  }, [partyId]);
-
   useEffect(() => {
     if (!partyId) return;
-    loadHistory();
+
+    setMessages([]);
+    setPartyInfo(null);
+
+    api
+      .get(`/chat/parties/${partyId}/messages`)
+      .then(({ data }) => {
+        setMessages(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+      });
+
     api
       .get(`/chat/parties/${partyId}/info`)
       .then(({ data }) => setPartyInfo(data))
       .catch(() => {});
-  }, [partyId, loadHistory]);
+  }, [partyId]);
 
   useEffect(() => {
     if (!partyId) return;
 
     let cancelled = false;
+
     const connect = async () => {
       if (!userReadyRef.current) {
         await new Promise((r) => setTimeout(r, 600));
@@ -604,8 +606,8 @@ export default function Chat() {
         }
       };
 
-      ws.onerror = () => {
-        loadHistory();
+      ws.onerror = (e) => {
+        console.error('WebSocket 에러:', e);
       };
     };
 
@@ -618,7 +620,7 @@ export default function Chat() {
         wsRef.current = null;
       }
     };
-  }, [partyId, loadHistory]); 
+  }, [partyId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
