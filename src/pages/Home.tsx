@@ -48,6 +48,9 @@ const QUICK_KEYWORDS = [
   'Spotify',
 ];
 
+const COOLDOWN_SECONDS = 600; // 10분
+const STORAGE_KEY = 'party_refresh_until';
+
 function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
   const [value, setValue] = useState('');
   const handleSearch = () => onSearch(value.trim());
@@ -479,18 +482,26 @@ export default function Home() {
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [cooldown, setCooldown] = useState(0); // ← 추가
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
 
-  // 1분 카운트다운 타이머 ← 추가
+  // localStorage에서 남은 쿨다운 복원
+  const [cooldown, setCooldown] = useState<number>(() => {
+    const until = localStorage.getItem(STORAGE_KEY);
+    if (!until) return 0;
+    const remaining = Math.ceil((Number(until) - Date.now()) / 1000);
+    return remaining > 0 ? remaining : 0;
+  });
+
+  // 1초마다 카운트다운
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setInterval(() => {
       setCooldown((c) => {
         if (c <= 1) {
           clearInterval(timer);
+          localStorage.removeItem(STORAGE_KEY);
           return 0;
         }
         return c - 1;
@@ -499,11 +510,12 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // 새로고침 핸들러 ← 추가
   const handleRefresh = () => {
     if (cooldown > 0) return;
     setRefreshKey((k) => k + 1);
-    setCooldown(60);
+    const until = Date.now() + COOLDOWN_SECONDS * 1000;
+    localStorage.setItem(STORAGE_KEY, String(until));
+    setCooldown(COOLDOWN_SECONDS);
   };
 
   const { data: categoriesRaw } = useQuery({
@@ -520,7 +532,7 @@ export default function Home() {
         category_name: category ?? undefined,
         search,
         size: 6,
-        random: !category && !search, // ← 추가: 전체 목록일 때만 랜덤
+        random: !category && !search,
       }),
   });
 
@@ -584,7 +596,6 @@ export default function Home() {
               <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
                 <SectionTitle title={titleText} subtitle={subtitleText} />
                 <div className="flex items-center gap-2">
-                  {/* 새로고침 버튼 (타이머 포함) ← 교체 */}
                   <button
                     onClick={handleRefresh}
                     disabled={cooldown > 0}
@@ -609,8 +620,8 @@ export default function Home() {
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        <span className="tabular-nums text-indigo-500 font-bold">
-                          {cooldown}s
+                        <span className="tabular-nums font-bold text-indigo-500">
+                          {Math.floor(cooldown / 60)}:{String(cooldown % 60).padStart(2, '0')}
                         </span>
                       </>
                     ) : (
