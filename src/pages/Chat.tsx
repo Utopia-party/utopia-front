@@ -199,6 +199,7 @@ function ProfileDrawer({
   user,
   top,
   left,
+  isMe,
   onClose,
   onProfileInfo,
   onReport,
@@ -206,6 +207,7 @@ function ProfileDrawer({
   user: ProfileDrawerUser;
   top: number;
   left: number;
+  isMe: boolean;
   onClose: () => void;
   onProfileInfo: () => void;
   onReport: () => void;
@@ -256,16 +258,19 @@ function ProfileDrawer({
           프로필 정보
         </button>
 
-        <div className="mx-5 h-px bg-slate-200" />
-
-        <button
-          type="button"
-          onClick={onReport}
-          className="flex w-full items-center gap-3 px-5 py-4 text-left text-base font-semibold text-red-600 hover:bg-red-50"
-        >
-          <AlertTriangle size={18} />
-          신고
-        </button>
+        {!isMe && (
+          <>
+            <div className="mx-5 h-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={onReport}
+              className="flex w-full items-center gap-3 px-5 py-4 text-left text-base font-semibold text-red-600 hover:bg-red-50"
+            >
+              <AlertTriangle size={18} />
+              신고
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -819,7 +824,7 @@ export default function Chat() {
   }, [profileDrawer]);
 
   const renderMessage = (msg: Message, i: number) => {
-    const isMe = msg.nickname === nickname || msg.user_id === userId;
+    const isMe = msg.user_id === userId;
     const memberMeta = getMemberMeta(msg.user_id);
 
     if (msg.type === 'system') {
@@ -868,7 +873,7 @@ export default function Chat() {
                 user_id: msg.user_id,
                 nickname: msg.nickname,
                 profile_image: senderImage,
-                role: memberMeta.role,
+                role: isMe ? user?.role : memberMeta.role,
                 status: memberMeta.status,
               })
             }
@@ -932,6 +937,7 @@ export default function Chat() {
           user={profileDrawer.user}
           top={profileDrawer.top}
           left={profileDrawer.left}
+          isMe={profileDrawer.user.user_id === userId}
           onClose={closeProfileDrawer}
           onProfileInfo={handleProfileInfo}
           onReport={handleReportUser}
