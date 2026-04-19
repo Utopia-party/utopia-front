@@ -48,7 +48,7 @@ const QUICK_KEYWORDS = [
   'Spotify',
 ];
 
-const COOLDOWN_SECONDS = 600; // 10분
+const COOLDOWN_SECONDS = 600;
 const STORAGE_KEY = 'party_refresh_until';
 
 function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
@@ -481,12 +481,11 @@ export default function Home() {
   const navigate = useNavigate();
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
 
-  // localStorage에서 남은 쿨다운 복원
   const [cooldown, setCooldown] = useState<number>(() => {
     const until = localStorage.getItem(STORAGE_KEY);
     if (!until) return 0;
@@ -494,7 +493,6 @@ export default function Home() {
     return remaining > 0 ? remaining : 0;
   });
 
-  // 1초마다 카운트다운
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setInterval(() => {
@@ -510,9 +508,12 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
+  const cacheKey = category ?? '__all__';
+  const currentRefreshKey = refreshKeys[cacheKey] ?? 0;
+
   const handleRefresh = () => {
     if (cooldown > 0) return;
-    setRefreshKey((k) => k + 1);
+    setRefreshKeys((prev) => ({ ...prev, [cacheKey]: (prev[cacheKey] ?? 0) + 1 }));
     const until = Date.now() + COOLDOWN_SECONDS * 1000;
     localStorage.setItem(STORAGE_KEY, String(until));
     setCooldown(COOLDOWN_SECONDS);
@@ -526,7 +527,7 @@ export default function Home() {
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
 
   const { data: partyData, isLoading } = useQuery({
-    queryKey: partyKeys.list(category, search, refreshKey),
+    queryKey: partyKeys.list(category, search, currentRefreshKey),
     queryFn: () =>
       fetchParties({
         category_name: category ?? undefined,
@@ -534,6 +535,7 @@ export default function Home() {
         size: 6,
         random: !search,
       }),
+    staleTime: Infinity, 
   });
 
   const parties =
@@ -584,10 +586,7 @@ export default function Home() {
             <CategorySidebar
               categories={categories}
               category={category}
-              setCategory={(val) => {
-                setCategory(val);
-                setRefreshKey(0);
-              }}
+              setCategory={setCategory}
               onCreate={() => navigate('/handcaptcha')}
               onQuickMatch={() => setShowQuickMatch(true)}
             />
