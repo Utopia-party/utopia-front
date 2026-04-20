@@ -325,7 +325,7 @@ function PaymentModal({
       }
 
       // 2. 백엔드에 결제 승인 요청 (바로 approved 처리)
-      await api.post('/payments/card/confirm', {
+      await api.post('/api/payments/card/confirm', {
         party_id: partyId,
         pg_transaction_id: response?.paymentId ?? orderId,
         amount: payAmount,
@@ -345,7 +345,7 @@ function PaymentModal({
   const handleTransferRegister = async () => {
     setIsLoading(true);
     try {
-      await api.post('/payments/transfer/register', {
+      await api.post('/api/payments/transfer/register', {
         party_id: partyId,
         amount: payAmount,
       });
