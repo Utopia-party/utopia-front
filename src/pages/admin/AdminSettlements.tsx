@@ -21,6 +21,8 @@ const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 export default function AdminSettlements() {
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
   const [expandedSettlementId, setExpandedSettlementId] = useState<
     string | null
@@ -29,44 +31,48 @@ export default function AdminSettlements() {
   const [error, setError] = useState('');
   const [busySettlementId, setBusySettlementId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-
-    const loadSettlements = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const nextSettlements = await fetchAdminSettlements();
-        if (alive) {
-          setSettlements(nextSettlements);
-        }
-      } catch (err) {
-        if (alive) {
-          setError(getAdminErrorMessage(err));
-        }
-      } finally {
-        if (alive) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadSettlements();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const reloadSettlements = async () => {
-    setLoading(true);
-    setError('');
+  const loadSettlements = async (params?: {
+    keyword?: string;
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+  }) => {
     try {
-      setSettlements(await fetchAdminSettlements());
+      setLoading(true);
+      setError('');
+      setSettlements(await fetchAdminSettlements(params));
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    void loadSettlements();
+  }, []);
+
+  const handleSearch = () => {
+    void loadSettlements({
+      keyword: search || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    });
+  };
+
+  const handleReset = () => {
+    setSearch('');
+    setDateFrom('');
+    setDateTo('');
+    void loadSettlements();
+  };
+
+  const reloadSettlements = async () => {
+    void loadSettlements({
+      keyword: search || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    });
   };
 
   const handleSettlementStatus = async (
@@ -85,22 +91,9 @@ export default function AdminSettlements() {
   };
 
   const filtered = useMemo(() => {
-    let data = settlements;
-    if (activeTab !== '전체') {
-      data = data.filter((s) => s.status === activeTab);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      data = data.filter(
-        (s) =>
-          s.id.toLowerCase().includes(q) ||
-          s.partyId.toLowerCase().includes(q) ||
-          s.leaderId.toLowerCase().includes(q) ||
-          s.status.toLowerCase().includes(q),
-      );
-    }
-    return data;
-  }, [activeTab, search, settlements]);
+    if (activeTab === '전체') return settlements;
+    return settlements.filter((s) => s.status === activeTab);
+  }, [activeTab, settlements]);
 
   return (
     <>
@@ -110,9 +103,56 @@ export default function AdminSettlements() {
       />
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-1">정산 승인 관리</h1>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-gray-500 mb-4">
           파티별 정산 확인 · 수동 승인/거절
         </p>
+
+        <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">
+              키워드 (파티명 / 파티장 / 정산월)
+            </span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="이름 또는 정산월 검색"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 w-60"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">시작일</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">종료일</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+          <div className="flex gap-2 pb-0.5">
+            <button
+              onClick={handleSearch}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              조회
+            </button>
+            <button
+              onClick={handleReset}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+            >
+              초기화
+            </button>
+          </div>
+        </div>
 
         <FilterTabs
           tabs={FILTER_TABS}
@@ -136,9 +176,6 @@ export default function AdminSettlements() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  정산 ID
-                </th>
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                   파티
                 </th>
@@ -169,9 +206,8 @@ export default function AdminSettlements() {
                 return (
                   <Fragment key={stl.id}>
                     <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                      <td className="px-4 py-3.5 text-sm">{stl.id}</td>
-                      <td className="px-4 py-3.5 text-sm">{stl.partyId}</td>
-                      <td className="px-4 py-3.5 text-sm">{stl.leaderId}</td>
+                      <td className="px-4 py-3.5 text-sm">{stl.partyName}</td>
+                      <td className="px-4 py-3.5 text-sm">{stl.leaderName}</td>
                       <td className="px-4 py-3.5 text-sm">
                         {formatWon(stl.totalAmount)}
                       </td>
@@ -234,7 +270,7 @@ export default function AdminSettlements() {
 
                     {isExpanded && (
                       <tr className="border-b border-gray-100 bg-slate-50/70">
-                        <td colSpan={8} className="px-4 py-4">
+                        <td colSpan={7} className="px-4 py-4">
                           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div>
@@ -256,8 +292,8 @@ export default function AdminSettlements() {
                             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                               {[
                                 ['정산 ID', stl.id],
-                                ['파티 ID', stl.partyId],
-                                ['파티장', stl.leaderId],
+                                ['파티명', stl.partyName],
+                                ['파티장', stl.leaderName],
                                 ['총액', formatWon(stl.totalAmount)],
                                 ['멤버 수', `${stl.memberCount}명`],
                                 ['청구월', stl.billingMonth],

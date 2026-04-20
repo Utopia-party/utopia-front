@@ -2,7 +2,7 @@ import { FiArrowRight, FiZap, FiBox, FiUsers } from 'react-icons/fi';
 import { useNavigate } from 'react-router';
 import { useRef } from 'react';
 
-import im from '../../../assets/partyup-mark.svg';
+import im from '../../../assets/logo.png';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 export default function HeroSection() {

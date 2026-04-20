@@ -14,48 +14,52 @@ const TYPE_COLOR: Record<string, string> = {
 
 export default function AdminSystemLogs() {
   const [search, setSearch] = useState('');
+  const [logType, setLogType] = useState('전체');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [logs, setLogs] = useState<SystemLogRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const loadLogs = async (params?: {
+    keyword?: string;
+    type?: string;
+    date_from?: string;
+    date_to?: string;
+  }) => {
+    try {
+      setLoading(true);
+      setError('');
+      setLogs(await fetchAdminLogs(params));
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let alive = true;
-
-    const loadLogs = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const nextLogs = await fetchAdminLogs();
-        if (alive) {
-          setLogs(nextLogs);
-        }
-      } catch (err) {
-        if (alive) {
-          setError(getAdminErrorMessage(err));
-        }
-      } finally {
-        if (alive) {
-          setLoading(false);
-        }
-      }
-    };
-
     void loadLogs();
-    return () => {
-      alive = false;
-    };
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!search) return logs;
-    const q = search.toLowerCase();
-    return logs.filter(
-      (log) =>
-        log.type.toLowerCase().includes(q) ||
-        log.message.toLowerCase().includes(q) ||
-        log.actor.toLowerCase().includes(q),
-    );
-  }, [logs, search]);
+  const handleSearch = () => {
+    void loadLogs({
+      keyword: search || undefined,
+      type: logType !== '전체' ? logType : undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    });
+  };
+
+  const handleReset = () => {
+    setSearch('');
+    setLogType('전체');
+    setDateFrom('');
+    setDateTo('');
+    void loadLogs();
+  };
+
+  const filtered = useMemo(() => logs, [logs]);
 
   const handleExport = () => {
     const header = ['timestamp', 'type', 'message', 'actor'];
@@ -95,9 +99,70 @@ export default function AdminSystemLogs() {
       />
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-1">시스템 로그</h1>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-gray-500 mb-4">
           에러 로깅 · 관리자 활동 로그 · 감사(Audit) 추적
         </p>
+
+        <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">
+              키워드 (메시지 / 주체)
+            </span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="로그 내용 검색"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 w-52"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">시작일</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">유형</span>
+            <select
+              value={logType}
+              onChange={(e) => setLogType(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            >
+              <option value="전체">전체</option>
+              <option value="ADMIN_ACTION">관리자 활동</option>
+              <option value="ERROR">에러</option>
+              <option value="INFO">정보</option>
+              <option value="WARN">경고</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">종료일</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+          <div className="flex gap-2 pb-0.5">
+            <button
+              onClick={handleSearch}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              조회
+            </button>
+            <button
+              onClick={handleReset}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+            >
+              초기화
+            </button>
+          </div>
+        </div>
 
         {loading && (
           <div className="mb-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">

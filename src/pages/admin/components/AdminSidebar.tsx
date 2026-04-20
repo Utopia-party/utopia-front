@@ -34,12 +34,6 @@ const allMenuItems = [
     permission: 'canManageReports',
   },
   {
-    path: '/admin/receipts',
-    label: '영수증 승인',
-    end: false,
-    permission: 'canApproveReceipts',
-  },
-  {
     path: '/admin/settlements',
     label: '정산 승인',
     end: false,
