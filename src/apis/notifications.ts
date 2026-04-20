@@ -117,7 +117,6 @@ export const countUnreadNotifications = (
 };
 
 // 웹소켓 메시지를 알림 목록 상태에 반영하는 함수
-// 기존 알림 배열을 어떻게 바꿀지 결정
 export const applyNotificationSocketMessage = (
   notifications: NotificationItem[],
   socketMessage: NotificationSocketMessage,
@@ -164,10 +163,10 @@ export const applyNotificationSocketMessage = (
 
 type NotificationSocketListener = (message: NotificationSocketMessage) => void;
 
-let notificationSocket: WebSocket | null = null; // 현재 웹소켓 인스턴스
-let reconnectTimer: number | null = null; // 재연결 타이머
-let manuallyClosed = false; // 사용자가 일부러 닫은 건지 확인
-const socketListeners = new Set<NotificationSocketListener>(); // 구독 중인 리스너 목록
+let notificationSocket: WebSocket | null = null;
+let reconnectTimer: number | null = null;
+let manuallyClosed = false;
+const socketListeners = new Set<NotificationSocketListener>();
 
 const getApiBaseUrl = (): string => {
   const baseURL =
@@ -182,7 +181,6 @@ const getApiBaseUrl = (): string => {
   return '';
 };
 
-// 실제 웹소켓 주소 생성
 const resolveNotificationSocketUrl = (): string => {
   const explicitWsUrl = import.meta.env.VITE_NOTIFICATION_WS_URL as
     | string
@@ -216,7 +214,6 @@ const resolveNotificationSocketUrl = (): string => {
   return base ?? '';
 };
 
-// 리스너 알림 및 재연결 관리
 const notifySocketListeners = (message: NotificationSocketMessage) => {
   socketListeners.forEach((listener) => {
     try {
@@ -261,9 +258,6 @@ const closeNotificationSocket = () => {
   const socket = notificationSocket;
   notificationSocket = null;
 
-  // React StrictMode 개발환경에서 CONNECTING 상태 cleanup 시
-  // close()를 호출하면
-  // "WebSocket is closed before the connection is established" 경고가 뜰 수 있음
   if (socket.readyState === WebSocket.CONNECTING) {
     detachSocketHandlers(socket);
     return;
@@ -277,24 +271,26 @@ const closeNotificationSocket = () => {
   }
 };
 
-// 실제 웹소켓 연결
-const ensureNotificationSocketConnection = () => {
+// 핵심 변경: WS 연결 전 단기 토큰 발급 후 쿼리 파라미터로 전달
+const ensureNotificationSocketConnection = async () => {
   if (typeof window === 'undefined') return;
   if (notificationSocket?.readyState === WebSocket.OPEN) return;
   if (notificationSocket?.readyState === WebSocket.CONNECTING) return;
   if (socketListeners.size === 0) return;
 
-  const wsUrl = resolveNotificationSocketUrl();
-  if (!wsUrl) return;
-
   try {
+    const { data } = await api.post<{ token: string }>('/api/ws-token');
+    const wsToken = data.token;
+
+    const wsBase = resolveNotificationSocketUrl();
+    if (!wsBase) return;
+
+    const wsUrl = `${wsBase}?token=${wsToken}`;
     const socket = new WebSocket(wsUrl);
     notificationSocket = socket;
 
     socket.onopen = () => {
-      // 이미 다른 소켓으로 교체된 경우 무시
       if (notificationSocket !== socket) return;
-
       notifySocketListeners({
         type: 'connected',
         timestamp: new Date().toISOString(),
@@ -303,7 +299,6 @@ const ensureNotificationSocketConnection = () => {
 
     socket.onmessage = (event) => {
       if (notificationSocket !== socket) return;
-
       try {
         const parsed = JSON.parse(event.data) as NotificationSocketMessage;
         notifySocketListeners(parsed);
@@ -313,7 +308,6 @@ const ensureNotificationSocketConnection = () => {
     };
 
     socket.onerror = (error) => {
-      // 수동 종료했거나 현재 관리 중인 소켓이 아니면 불필요한 에러 로그 생략
       if (manuallyClosed || notificationSocket !== socket) return;
       console.error('알림 웹소켓 에러:', error);
     };
@@ -322,7 +316,6 @@ const ensureNotificationSocketConnection = () => {
       if (notificationSocket === socket) {
         notificationSocket = null;
       }
-
       if (!manuallyClosed) {
         scheduleReconnect();
       }
@@ -333,7 +326,6 @@ const ensureNotificationSocketConnection = () => {
   }
 };
 
-// 외부에서 쓰는 구독 함수
 export const subscribeNotificationSocket = (
   listener: NotificationSocketListener,
 ): (() => void) => {
