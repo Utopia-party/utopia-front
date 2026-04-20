@@ -73,7 +73,8 @@ interface ProfileDrawerState {
   left: number;
 }
 
-type PaymentStep = 'select' | 'card' | 'transfer' | 'ocr';
+// OCR 제거 — card/transfer 2단계만
+type PaymentStep = 'select' | 'card' | 'transfer';
 type PaymentMethod = 'card' | 'transfer' | null;
 
 const API_BASE =
@@ -268,22 +269,25 @@ function ProfileDrawer({
 
 function PaymentModal({
   onClose,
+  partyId,
   partyTitle,
   nickname,
+  monthlyPerPerson,
 }: {
   onClose: () => void;
+  partyId: string;
   partyTitle: string;
   nickname: string;
+  monthlyPerPerson: number | null;
 }) {
   const [step, setStep] = useState<PaymentStep>('select');
-  const [method, setMethod] = useState<PaymentMethod>(null);
-  const [ocrFile, setOcrFile] = useState<File | null>(null);
-  const [ocrPreview, setOcrPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentDone, setPaymentDone] = useState(false);
-  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const ocrFileRef = useRef<HTMLInputElement>(null);
+  const [done, setDone] = useState(false);
+  const [doneMessage, setDoneMessage] = useState('');
+
+  // 결제 금액: monthly_per_person 있으면 사용, 없으면 100원 테스트
+  const payAmount = monthlyPerPerson ?? 100;
 
   useEffect(() => {
     if (document.getElementById('portone-sdk')) return;
@@ -294,67 +298,66 @@ function PaymentModal({
     document.head.appendChild(script);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (ocrPreview) URL.revokeObjectURL(ocrPreview);
-    };
-  }, [ocrPreview]);
-
+  // ── 카드 결제 ──────────────────────────────────────────────
   const handleCardPayment = async () => {
     if (!window.PortOne) {
       alert('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
     setIsLoading(true);
-    const orderId = `order-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
+    const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     try {
+      // 1. 포트원 결제 요청
       const response = await window.PortOne.requestPayment({
         storeId: PORTONE_STORE_ID,
         channelKey: PORTONE_CHANNEL_KEY,
         paymentId: orderId,
         orderName: `${partyTitle} 정산`,
-        totalAmount: 100,
+        totalAmount: payAmount,
         currency: 'CURRENCY_KRW',
         payMethod: 'CARD',
         customer: { fullName: nickname },
       });
+
       if (response?.code) {
         alert(`결제 실패: ${response.message ?? '알 수 없는 오류'}`);
-      } else {
-        setPaymentId(response?.paymentId ?? orderId);
-        setPaymentDone(true);
-        setStep('ocr');
+        return;
       }
-    } catch (err) {
-      console.error('결제 오류:', err);
-      alert('결제 중 오류가 발생했습니다.');
+
+      // 2. 백엔드에 결제 승인 요청 (바로 approved 처리)
+      await api.post('/payments/card/confirm', {
+        party_id: partyId,
+        pg_transaction_id: response?.paymentId ?? orderId,
+        amount: payAmount,
+      });
+
+      setDoneMessage('카드 결제가 완료되었습니다! 결제 승인이 확인되었어요.');
+      setDone(true);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail ?? '결제 처리 중 오류가 발생했습니다.';
+      alert(detail);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOcrFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setOcrFile(file);
-    if (ocrPreview) URL.revokeObjectURL(ocrPreview);
-    if (file) {
-      setOcrPreview(URL.createObjectURL(file));
-    } else {
-      setOcrPreview(null);
+  // ── 무통장입금 등록 ────────────────────────────────────────
+  const handleTransferRegister = async () => {
+    setIsLoading(true);
+    try {
+      await api.post('/payments/transfer/register', {
+        party_id: partyId,
+        amount: payAmount,
+      });
+      setDoneMessage('입금 정보가 등록되었습니다.\n관리자 확인 후 승인으로 변경됩니다.');
+      setDone(true);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail ?? '등록 중 오류가 발생했습니다.';
+      alert(detail);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleOcrSubmit = () => {
-    if (!ocrFile) {
-      alert('파일을 선택해주세요.');
-      return;
-    }
-    alert(
-      `"${ocrFile.name}" OCR 인증 요청이 제출되었습니다!\nOCR 분석 → 자동 승인, 실패 시 관리자 검토`,
-    );
-    onClose();
   };
 
   const handleCopyAccount = () => {
@@ -363,6 +366,33 @@ function PaymentModal({
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  // ── 완료 화면 ──────────────────────────────────────────────
+  if (done) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+          <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+            <h2 className="text-base font-extrabold text-white">결제 완료</h2>
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-xl font-light">✕</button>
+          </div>
+          <div className="p-8 flex flex-col items-center text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">✅</div>
+            <div>
+              <p className="text-lg font-extrabold text-slate-900">처리 완료!</p>
+              <p className="mt-2 text-sm text-slate-500 leading-relaxed whitespace-pre-line">{doneMessage}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-2 w-full py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-slate-800"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -375,22 +405,17 @@ function PaymentModal({
             <h2 className="text-base font-extrabold text-white">결제</h2>
             <p className="text-xs text-slate-400 mt-0.5">{partyTitle}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors text-xl font-light"
-          >
-            ✕
-          </button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-xl font-light">✕</button>
         </div>
+
         <div className="p-6">
+          {/* ── 수단 선택 ── */}
           {step === 'select' && (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-slate-600 font-medium">
-                결제 수단을 선택해주세요
-              </p>
+              <p className="text-sm text-slate-600 font-medium">결제 수단을 선택해주세요</p>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => { setMethod('card'); setStep('card'); }}
+                  onClick={() => setStep('card')}
                   className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
                 >
                   <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
@@ -398,11 +423,11 @@ function PaymentModal({
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-bold text-slate-800">카드 결제</p>
-                    <p className="text-xs text-slate-400 mt-0.5">100원 테스트</p>
+                    <p className="text-xs text-slate-400 mt-0.5">즉시 승인</p>
                   </div>
                 </button>
                 <button
-                  onClick={() => { setMethod('transfer'); setStep('transfer'); }}
+                  onClick={() => setStep('transfer')}
                   className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
                 >
                   <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
@@ -410,15 +435,18 @@ function PaymentModal({
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-bold text-slate-800">계좌 입금</p>
-                    <p className="text-xs text-slate-400 mt-0.5">OCR 인증</p>
+                    <p className="text-xs text-slate-400 mt-0.5">관리자 승인</p>
                   </div>
                 </button>
               </div>
-              <p className="text-xs text-slate-400 text-center">
-                결제 완료 후 영수증/이체확인서로 OCR 인증을 진행합니다
-              </p>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between text-sm">
+                <span className="text-slate-500">이번 달 결제 금액</span>
+                <span className="font-extrabold text-slate-900">{payAmount.toLocaleString()}원</span>
+              </div>
             </div>
           )}
+
+          {/* ── 카드 결제 ── */}
           {step === 'card' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
@@ -432,21 +460,29 @@ function PaymentModal({
                 </div>
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">결제 금액</span>
-                  <span className="font-extrabold text-primary text-base">100원 (테스트)</span>
+                  <span className="font-extrabold text-primary text-base">{payAmount.toLocaleString()}원</span>
                 </div>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="text-xs text-amber-700 font-medium">⚠️ 테스트 결제</p>
-                <p className="text-xs text-amber-600 mt-0.5">테스트 환경에서 실제 결제는 발생하지 않습니다.</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <p className="text-xs text-blue-700 font-medium">💳 카드 결제 후 즉시 승인</p>
+                <p className="text-xs text-blue-600 mt-0.5">결제 완료 시 자동으로 승인 처리됩니다.</p>
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setStep('select')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                <button onClick={handleCardPayment} disabled={isLoading} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isLoading ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />처리중...</>) : '결제하기 💳'}
+                <button
+                  onClick={handleCardPayment}
+                  disabled={isLoading}
+                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading
+                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />처리중...</>
+                    : '결제하기 💳'}
                 </button>
               </div>
             </div>
           )}
+
+          {/* ── 무통장입금 ── */}
           {step === 'transfer' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-3">
@@ -459,7 +495,10 @@ function PaymentModal({
                   <span className="text-slate-500">계좌번호</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-slate-800">{BANK_INFO.account}</span>
-                    <button onClick={handleCopyAccount} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20">
+                    <button
+                      onClick={handleCopyAccount}
+                      className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20"
+                    >
                       {copied ? '복사됨 ✓' : '복사'}
                     </button>
                   </div>
@@ -468,46 +507,26 @@ function PaymentModal({
                   <span className="text-slate-500">예금주</span>
                   <span className="font-semibold">{BANK_INFO.holder}</span>
                 </div>
+                <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
+                  <span className="text-slate-500">입금 금액</span>
+                  <span className="font-extrabold text-slate-900">{payAmount.toLocaleString()}원</span>
+                </div>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p className="text-xs text-blue-700 font-medium">📋 입금 후 이체확인서 업로드 필요</p>
-                <p className="text-xs text-blue-600 mt-0.5">입금 완료 후 아래 버튼을 눌러 이체확인서를 OCR 인증해주세요.</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="text-xs text-amber-700 font-medium">⏳ 관리자 확인 후 승인</p>
+                <p className="text-xs text-amber-600 mt-0.5">입금 후 아래 버튼을 누르면 관리자가 확인 후 승인 처리합니다.</p>
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setStep('select')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                <button onClick={() => setStep('ocr')} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90">입금했어요 →</button>
-              </div>
-            </div>
-          )}
-          {step === 'ocr' && (
-            <div className="flex flex-col gap-5">
-              {paymentDone && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
-                  <span className="text-green-500 text-lg">✅</span>
-                  <div>
-                    <p className="text-xs text-green-700 font-bold">결제 완료!</p>
-                    {paymentId && <p className="text-xs text-green-600 font-mono mt-0.5">ID: {paymentId}</p>}
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-bold text-slate-800 mb-1">{method === 'card' ? '결제 영수증' : '이체확인서'} 업로드</p>
-                <p className="text-xs text-slate-500 mb-3">OCR로 자동 분석 → 실패 시 관리자 검토</p>
-                <div onClick={() => ocrFileRef.current?.click()} className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
-                  {ocrPreview ? (
-                    <img src={ocrPreview} alt="미리보기" className="max-h-32 rounded-lg object-contain" />
-                  ) : (
-                    <><span className="text-3xl">📄</span><p className="text-sm text-slate-500 font-medium">파일 선택 또는 드래그</p><p className="text-xs text-slate-400">이미지, PDF 가능</p></>
-                  )}
-                </div>
-                {ocrFile && <p className="text-xs text-slate-500 mt-2 text-center truncate">선택됨: {ocrFile.name}</p>}
-                <input ref={ocrFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleOcrFileChange} />
-              </div>
-              <div className="flex gap-3">
-                {!paymentDone && (
-                  <button onClick={() => setStep(method === 'card' ? 'card' : 'transfer')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                )}
-                <button onClick={handleOcrSubmit} disabled={!ocrFile} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-40">OCR 인증 요청 🔍</button>
+                <button
+                  onClick={handleTransferRegister}
+                  disabled={isLoading}
+                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading
+                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />처리중...</>
+                    : '입금 완료했어요 ✓'}
+                </button>
               </div>
             </div>
           )}
@@ -553,8 +572,7 @@ export default function Chat() {
       .then(({ data }) => {
         setMessages(Array.isArray(data) ? data : []);
       })
-      .catch(() => {
-      });
+      .catch(() => {});
 
     api
       .get(`/chat/parties/${partyId}/info`)
@@ -641,13 +659,7 @@ export default function Chat() {
   }, [profileDrawer]);
 
   const sendMessage = useCallback(() => {
-    if (
-      !input.trim() ||
-      !wsRef.current ||
-      wsRef.current.readyState !== WebSocket.OPEN
-    ) {
-      return;
-    }
+    if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     wsRef.current.send(input.trim());
     setInput('');
   }, [input]);
@@ -757,8 +769,10 @@ export default function Chat() {
       {showPaymentModal && (
         <PaymentModal
           onClose={() => setShowPaymentModal(false)}
+          partyId={partyId ?? ''}
           partyTitle={partyInfo?.title ?? '파티'}
           nickname={nicknameRef.current}
+          monthlyPerPerson={partyInfo?.monthly_per_person ?? null}
         />
       )}
 
@@ -780,7 +794,7 @@ export default function Chat() {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-extrabold text-foreground truncate">{partyInfo?.title ?? '채팅방'}</h1>
-          <p className="text-xs text-muted-foreground">정산요청 · 영수증 인증 · 채팅 신고</p>
+          <p className="text-xs text-muted-foreground">정산요청 · 채팅 신고</p>
         </div>
       </div>
 
