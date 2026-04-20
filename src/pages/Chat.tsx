@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import {
-  Users,
-  Calendar,
-  Clock,
-  RefreshCw,
-  User,
-  AlertTriangle,
-} from 'lucide-react';
+import { User, AlertTriangle } from 'lucide-react';
 import { api } from '../apis/api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -37,19 +30,24 @@ interface Message {
 interface Member {
   user_id: string;
   nickname: string;
+  name?: string | null;
   role: string;
   status: string;
+  trust_score?: number | null;
+  joined_at?: string | null;
   profile_image?: string | null;
+  is_active: boolean;
 }
 
 interface PartyInfo {
   party_id: string;
   title: string;
-  description?: string | null;
   status?: string;
   max_members?: number | null;
   member_count?: number | null;
   monthly_price?: number | null;
+  leader_discount_rate?: number | null;
+  referral_discount_rate?: number | null;
   monthly_per_person?: number | null;
   start_date?: string | null;
   end_date?: string | null;
@@ -73,7 +71,6 @@ interface ProfileDrawerState {
   left: number;
 }
 
-// OCR 제거 — card/transfer 2단계만
 type PaymentStep = 'select' | 'card' | 'transfer';
 
 const API_BASE =
@@ -98,12 +95,16 @@ const ROLE_LABEL: Record<string, string> = {
   member: '멤버',
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const MEMBER_STATUS_LABEL: Record<string, string> = {
   active: '정상',
   pending: '대기',
   banned: '정지',
+};
+
+const PARTY_STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
   full: '모집완료',
+  active: '진행중',
   completed: '완료',
   canceled: '취소',
 };
@@ -119,6 +120,33 @@ const CATEGORY_COLOR: Record<string, string> = {
 function getProfileInitial(nickname?: string | null) {
   if (!nickname) return '?';
   return nickname.trim().slice(0, 2).toUpperCase();
+}
+
+function formatCurrency(value?: number | null) {
+  if (value == null) return '-';
+  return `${value.toLocaleString()}원`;
+}
+
+function formatRate(value?: number | null) {
+  if (value == null) return '-';
+  const percent = Math.abs(value) <= 1 ? value * 100 : value;
+  return `${percent}%`;
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function formatTrustScore(value?: number | null) {
+  if (value == null) return '-';
+  return `${Number(value).toFixed(1)}점`;
 }
 
 function Avatar({
@@ -169,26 +197,6 @@ function Avatar({
   );
 }
 
-function InfoCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
-      <div className="shrink-0 text-slate-500">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-[10px] text-slate-400 font-medium">{label}</p>
-        <p className="text-xs font-bold text-slate-800 truncate">{value}</p>
-      </div>
-    </div>
-  );
-}
-
 function ProfileDrawer({
   user,
   top,
@@ -232,7 +240,7 @@ function ProfileDrawer({
                 )}
                 {user.status && (
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                    {STATUS_LABEL[user.status] ?? user.status}
+                    {MEMBER_STATUS_LABEL[user.status] ?? user.status}
                   </span>
                 )}
               </div>
@@ -266,18 +274,103 @@ function ProfileDrawer({
   );
 }
 
+function DetailRow({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  value: string;
+  emphasized?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-2 text-sm">
+      <span className="shrink-0 text-slate-500">{label}</span>
+      <span
+        className={`text-right ${
+          emphasized ? 'font-bold text-primary' : 'font-semibold text-slate-900'
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function MemberItem({ member }: { member: Member }) {
+  return (
+    <div className="group relative">
+      <div className="flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-50">
+        <Avatar
+          nickname={member.nickname}
+          profileImage={member.profile_image ?? null}
+          size="md"
+        />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-slate-900">
+            {member.nickname}
+          </p>
+          <p className="truncate text-xs text-slate-500">
+            {member.name?.trim() || '이름 미등록'}
+          </p>
+        </div>
+      </div>
+
+      <div className="pointer-events-none invisible absolute left-0 top-full z-20 mt-2 w-64 translate-y-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl opacity-0 transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+        <div className="mb-2 flex items-center gap-3">
+          <Avatar
+            nickname={member.nickname}
+            profileImage={member.profile_image ?? null}
+            size="md"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-slate-900">
+              {member.nickname}
+            </p>
+            <p className="truncate text-xs text-slate-500">
+              {member.name?.trim() || '이름 미등록'}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-1 border-t border-slate-100 pt-2">
+          <DetailRow
+            label="역할"
+            value={ROLE_LABEL[member.role] ?? member.role}
+          />
+          <DetailRow
+            label="상태"
+            value={MEMBER_STATUS_LABEL[member.status] ?? member.status}
+          />
+          <DetailRow
+            label="신뢰도"
+            value={formatTrustScore(member.trust_score)}
+          />
+          <DetailRow label="참여일" value={formatDate(member.joined_at)} />
+          <DetailRow
+            label="계정상태"
+            value={member.is_active ? '활성' : '비활성'}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PaymentModal({
   onClose,
   partyId,
   partyTitle,
   nickname,
   monthlyPerPerson,
+  onPaymentComplete,
 }: {
   onClose: () => void;
   partyId: string;
   partyTitle: string;
   nickname: string;
   monthlyPerPerson: number | null;
+  onPaymentComplete: () => void; // 결제 완료 콜백
 }) {
   const [step, setStep] = useState<PaymentStep>('select');
   const [isLoading, setIsLoading] = useState(false);
@@ -285,7 +378,6 @@ function PaymentModal({
   const [done, setDone] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
 
-  // 결제 금액: monthly_per_person 있으면 사용, 없으면 100원 테스트
   const payAmount = monthlyPerPerson ?? 100;
 
   useEffect(() => {
@@ -297,7 +389,6 @@ function PaymentModal({
     document.head.appendChild(script);
   }, []);
 
-  // ── 카드 결제 ──────────────────────────────────────────────
   const handleCardPayment = async () => {
     if (!window.PortOne) {
       alert('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.');
@@ -320,27 +411,24 @@ function PaymentModal({
 
       console.log('[PORTONE 응답]', JSON.stringify(response));
 
-      // 사용자가 결제창 닫거나 취소한 경우
       if (!response) {
         alert('결제가 취소되었습니다.');
         return;
       }
-
-      // 에러 코드 있으면 실패
       if (response?.code) {
         alert(`결제 실패: ${response.message ?? '알 수 없는 오류'}`);
         return;
       }
 
-      // 백엔드로 승인 요청
       await api.post('/api/payments/card/confirm', {
         party_id: partyId,
         pg_transaction_id: response?.paymentId ?? orderId,
         amount: payAmount,
       });
 
-      setDoneMessage('카드 결제가 완료되었습니다! 결제 승인이 확인되었어요.');
+      setDoneMessage('카드 결제가 완료되었습니다!\n결제 승인이 확인되었어요.');
       setDone(true);
+      onPaymentComplete(); // 버튼 비활성화 콜백
     } catch (err: any) {
       console.error('[결제 에러]', err);
       const detail =
@@ -351,7 +439,6 @@ function PaymentModal({
     }
   };
 
-  // ── 무통장입금 등록 ────────────────────────────────────────
   const handleTransferRegister = async () => {
     setIsLoading(true);
     try {
@@ -363,6 +450,7 @@ function PaymentModal({
         '입금 정보가 등록되었습니다.\n관리자 확인 후 승인으로 변경됩니다.',
       );
       setDone(true);
+      onPaymentComplete();
     } catch (err: any) {
       const detail =
         err?.response?.data?.detail ?? '등록 중 오류가 발생했습니다.';
@@ -379,7 +467,6 @@ function PaymentModal({
     });
   };
 
-  // ── 완료 화면 ──────────────────────────────────────────────
   if (done) {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -437,7 +524,6 @@ function PaymentModal({
         </div>
 
         <div className="p-6">
-          {/* ── 수단 선택 ── */}
           {step === 'select' && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-slate-600 font-medium">
@@ -482,7 +568,6 @@ function PaymentModal({
             </div>
           )}
 
-          {/* ── 카드 결제 ── */}
           {step === 'card' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
@@ -538,7 +623,6 @@ function PaymentModal({
             </div>
           )}
 
-          {/* ── 무통장입금 ── */}
           {step === 'transfer' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-3">
@@ -625,6 +709,7 @@ export default function Chat() {
   const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
     null,
   );
+  const [alreadyPaid, setAlreadyPaid] = useState(false); // 이번 달 결제 여부
 
   const nicknameRef = useRef(user?.nickname ?? '익명');
   const userIdRef = useRef(user?.user_id ?? 'guest');
@@ -639,24 +724,46 @@ export default function Chat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const userReadyRef = useRef(false);
 
+  // 결제 상태 확인 함수
+  const checkPaymentStatus = useCallback(async () => {
+    if (!partyId) return;
+    try {
+      const { data } = await api.get(
+        `/api/payments/status?party_id=${partyId}`,
+      );
+      setAlreadyPaid(data.paid);
+    } catch {
+      // 실패해도 무시
+    }
+  }, [partyId]);
+
   useEffect(() => {
     if (!partyId) return;
 
     setMessages([]);
     setPartyInfo(null);
+    setAlreadyPaid(false);
 
     api
-      .get(`/chat/parties/${partyId}/messages`)
+      .get(`/api/chat/parties/${partyId}/messages`)
       .then(({ data }) => {
         setMessages(Array.isArray(data) ? data : []);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('메시지 로딩 실패:', err);
+        setMessages([]);
+      });
 
     api
-      .get(`/chat/parties/${partyId}/info`)
+      .get(`/api/chat/parties/${partyId}/info`)
       .then(({ data }) => setPartyInfo(data))
-      .catch(() => {});
-  }, [partyId]);
+      .catch((err) => {
+        console.error('파티 정보 로딩 실패:', err);
+        setPartyInfo(null);
+      });
+
+    checkPaymentStatus();
+  }, [partyId, checkPaymentStatus]);
 
   useEffect(() => {
     if (!partyId) return;
@@ -689,9 +796,7 @@ export default function Chat() {
         userReadyRef.current = true;
       };
 
-      ws.onclose = () => {
-        setConnected(false);
-      };
+      ws.onclose = () => setConnected(false);
 
       ws.onmessage = (e) => {
         try {
@@ -702,9 +807,7 @@ export default function Chat() {
         }
       };
 
-      ws.onerror = (e) => {
-        console.error('WebSocket 에러:', e);
-      };
+      ws.onerror = (e) => console.error('WebSocket 에러:', e);
     };
 
     connect();
@@ -881,18 +984,6 @@ export default function Chat() {
     );
   };
 
-  const formatDate = (d?: string | null) => {
-    if (!d) return '-';
-    return new Date(d)
-      .toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      })
-      .replace(/\. /g, '.')
-      .replace('.', '');
-  };
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {showPaymentModal && (
@@ -902,6 +993,10 @@ export default function Chat() {
           partyTitle={partyInfo?.title ?? '파티'}
           nickname={nicknameRef.current}
           monthlyPerPerson={partyInfo?.monthly_per_person ?? null}
+          onPaymentComplete={() => {
+            setAlreadyPaid(true);
+            setShowPaymentModal(false);
+          }}
         />
       )}
 
@@ -970,141 +1065,90 @@ export default function Chat() {
             <button className="flex-1 py-3 border border-border rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">
               채팅 신고
             </button>
+            {/* 결제 버튼 - 이번 달 결제 완료 시 비활성화 */}
             <button
-              onClick={() => setShowPaymentModal(true)}
-              className="flex-1 py-3 border-2 border-primary rounded-2xl text-sm font-bold text-primary hover:bg-primary/5"
+              onClick={() => !alreadyPaid && setShowPaymentModal(true)}
+              disabled={alreadyPaid}
+              className={`flex-1 py-3 border-2 rounded-2xl text-sm font-bold transition
+                ${
+                  alreadyPaid
+                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'border-primary text-primary hover:bg-primary/5'
+                }`}
             >
-              결제
+              {alreadyPaid ? '이번 달 결제 완료 ✓' : '정산요청'}
             </button>
           </div>
         </div>
 
-        <div className="w-72 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
+        <div className="w-80 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
           <div className="p-5 border-b border-border">
             <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
             {Array.isArray(partyInfo?.members) &&
             partyInfo.members.length > 0 ? (
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 {partyInfo.members.map((member) => (
-                  <div
-                    key={member.user_id}
-                    className="flex items-center gap-2.5 py-1.5"
-                  >
-                    <Avatar
-                      nickname={member.nickname}
-                      profileImage={member.profile_image}
-                      size="sm"
-                      onClick={(e) =>
-                        openProfileDrawer(e, {
-                          user_id: member.user_id,
-                          nickname: member.nickname,
-                          profile_image: member.profile_image,
-                          role: member.role,
-                          status: member.status,
-                        })
-                      }
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {member.nickname}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {ROLE_LABEL[member.role] ?? member.role}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${member.status === 'active' ? 'bg-green-100 text-green-700' : member.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}
-                    >
-                      {STATUS_LABEL[member.status] ?? member.status}
-                    </span>
-                  </div>
+                  <MemberItem key={member.user_id} member={member} />
                 ))}
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                멤버 정보를 불러오는 중...
+                참여 중인 멤버 정보가 없습니다.
               </p>
             )}
           </div>
 
           <div className="p-5">
-            {partyInfo?.category_name && (
-              <div className="mb-3">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {partyInfo?.category_name && (
                 <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'}`}
+                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                    CATEGORY_COLOR[partyInfo.category_name] ??
+                    'bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {partyInfo.category_name}
                 </span>
-              </div>
-            )}
+              )}
+              {partyInfo?.status && (
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+                  {PARTY_STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
+                </span>
+              )}
+            </div>
+
             <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <InfoCard
-                icon={<Users size={14} />}
-                label="모집 인원"
+            <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <DetailRow
+                label="서비스명"
+                value={partyInfo?.service_name ?? '-'}
+              />
+              <DetailRow
+                label="파티장"
+                value={partyInfo?.host_nickname ?? '-'}
+              />
+              <DetailRow
+                label="판매가"
+                value={formatCurrency(partyInfo?.monthly_price)}
+              />
+              <DetailRow
+                label="방장 할인"
+                value={formatRate(partyInfo?.leader_discount_rate)}
+              />
+              <DetailRow
+                label="추천 할인"
+                value={formatRate(partyInfo?.referral_discount_rate)}
+              />
+              <DetailRow
+                label="1인 부담"
+                value={formatCurrency(partyInfo?.monthly_per_person)}
+                emphasized
+              />
+              <DetailRow
+                label="인원"
                 value={`${partyInfo?.member_count ?? '-'} / ${partyInfo?.max_members ?? '-'}`}
               />
-              <InfoCard
-                icon={<Calendar size={14} />}
-                label="시작일"
-                value={formatDate(partyInfo?.start_date)}
-              />
-              <InfoCard
-                icon={<Clock size={14} />}
-                label="모집 마감"
-                value={formatDate(partyInfo?.end_date)}
-              />
-              <InfoCard
-                icon={<RefreshCw size={14} />}
-                label="정산 주기"
-                value="매월 1일"
-              />
             </div>
-            <div className="border-t border-slate-100 pt-3 mb-3">
-              <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
-                정산 요약
-              </p>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">총 비용</span>
-                  <span className="font-semibold text-slate-900">
-                    {partyInfo?.monthly_price != null
-                      ? `${partyInfo.monthly_price.toLocaleString()}원`
-                      : '-'}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">1인 부담</span>
-                  <span className="font-bold text-primary">
-                    {partyInfo?.monthly_per_person != null
-                      ? `${partyInfo.monthly_per_person.toLocaleString()}원`
-                      : '-'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            {partyInfo?.host_nickname && (
-              <div className="border-t border-slate-100 pt-3">
-                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
-                  호스트
-                </p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">닉네임</span>
-                  <span className="font-semibold text-slate-900">
-                    {partyInfo.host_nickname}
-                  </span>
-                </div>
-              </div>
-            )}
-            {partyInfo?.status && (
-              <div className="mt-3">
-                <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${partyInfo.status === 'recruiting' ? 'bg-orange-100 text-orange-600' : partyInfo.status === 'full' ? 'bg-slate-100 text-slate-600' : 'bg-green-100 text-green-700'}`}
-                >
-                  {STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>

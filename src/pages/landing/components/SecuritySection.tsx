@@ -8,7 +8,7 @@ import {
   FiCheck,
 } from 'react-icons/fi';
 
-import image from '../../../assets/logo.png';
+import image from '../../../assets/partyup-mark.svg';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 // 타입 정의
