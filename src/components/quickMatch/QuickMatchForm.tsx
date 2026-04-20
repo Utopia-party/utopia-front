@@ -248,6 +248,11 @@ export default function QuickMatchForm({
           </div>
         </div>
 
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700">
+          ⚠️ 빠른매칭은 자동으로 파티를 탐색하고 참여까지 진행하는 기능이며,
+          서비스에 따라 수수료가 발생할 수 있습니다.
+        </div>
+
         <div className="mt-6 flex gap-3">
           <button
             type="button"

@@ -22,6 +22,7 @@ import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/quickMatch/QuickMatchForm';
 import MatchingLoadingModal from '../components/quickMatch/MatchingLoadingModal';
 import MatchingErrorModal from '../components/quickMatch/MatchingErrorModal';
+import MatchingSuccessModal from '../components/quickMatch/MatchingSuccessModal';
 import {
   useQuickMatchRequest,
   useQuickMatchCandidates,
@@ -591,6 +592,9 @@ function CategorySidebar({
               <p className="mt-1 text-sm text-slate-500">
                 조건만 입력하면 맞는 파티를 더 빠르게 찾아드려요.
               </p>
+              <p className="mt-1 text-xs text-amber-600">
+                * 일부 빠른매칭에는 수수료가 발생할 수 있어요.
+              </p>
             </div>
             <span className="text-2xl">🥷</span>
           </div>
@@ -1031,13 +1035,23 @@ export default function Home() {
         isSubmitting={isMatching}
       />
 
-      <MatchingLoadingModal open={isMatching} title={currentStepTitle} />
+      <MatchingLoadingModal open={isMatching} message={currentStepTitle} />
 
       <MatchingErrorModal
         open={!!matchError}
         message={matchError ?? ''}
         onClose={() => setMatchError(null)}
+      />
+      <MatchingSuccessModal
+        open={!!matchResult && !isMatching && !matchError}
         matchedParty={matchedParty}
+        onClose={() => setMatchResult(null)}
+        onGoParty={() => {
+          if (matchedParty?.id) {
+            setMatchResult(null);
+            navigate(`/party/${matchedParty.id}/chat`);
+          }
+        }}
       />
     </>
   );

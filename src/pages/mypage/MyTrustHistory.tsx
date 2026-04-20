@@ -227,16 +227,11 @@ export default function MyTrustHistory() {
         if (!mounted) return;
 
         const normalizedItems = (res.items ?? [])
-          .map((item) => {
-            console.log('mapped item', item);
-            return mapTrustHistoryItem(item);
-          })
+          .map(mapTrustHistoryItem)
           .sort(
             (a, b) =>
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
           );
-
-        console.log('normalizedItems', normalizedItems);
 
         setHistoryData(normalizedItems);
       } catch (err) {

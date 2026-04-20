@@ -34,7 +34,7 @@ export default function MatchingErrorModal({
           </h3>
 
           {/* 에러 메시지 */}
-          <p className="mt-3 text-sm leading-6 text-slate-500">{message}</p>
+          {/* <p className="mt-3 text-sm leading-6 text-slate-500">{message}</p> */}
 
           {/* 보조 문구 */}
           <p className="mt-2 text-xs leading-5 text-slate-400">
