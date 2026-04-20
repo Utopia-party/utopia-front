@@ -32,6 +32,11 @@ import {
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAuthStore } from '../stores/authStore';
 
+type PartyWithDetails = Party & {
+  description?: string;
+  host_trust_score?: number;
+};
+
 type JoinResult = {
   party_id?: number;
   party_title?: string;
@@ -596,7 +601,7 @@ function CategorySidebar({
                 * 일부 빠른매칭에는 수수료가 발생할 수 있어요.
               </p>
             </div>
-            <span className="text-2xl">🥷</span>
+            <span className="text-2xl">⚡</span>
           </div>
         </button>
       </div>
@@ -701,8 +706,13 @@ export default function Home() {
     staleTime: Infinity,
   });
 
-  const parties =
-    partyData && Array.isArray(partyData.parties) ? partyData.parties : [];
+  const parties = useMemo<PartyWithDetails[]>(() => {
+    if (partyData && Array.isArray(partyData.parties)) {
+      return partyData.parties as PartyWithDetails[];
+    }
+
+    return [];
+  }, [partyData]);
 
   const titleText = useMemo(() => {
     if (search) return `'${search}' 검색 결과`;
@@ -808,7 +818,9 @@ export default function Home() {
       await quickMatchSelectMutation.mutateAsync(requestId);
 
       setMatchStep('joining');
-      const joinResponse = await quickMatchJoinMutation.mutateAsync(requestId);
+      const joinResponse = (await quickMatchJoinMutation.mutateAsync(
+        requestId,
+      )) as unknown as JoinResult;
 
       const matchedPartyId = joinResponse?.party_id ?? joinResponse?.id;
 
