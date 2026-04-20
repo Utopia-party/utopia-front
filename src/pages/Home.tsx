@@ -706,10 +706,13 @@ export default function Home() {
     staleTime: Infinity,
   });
 
-  const parties: PartyWithDetails[] =
-    partyData && Array.isArray(partyData.parties)
-      ? (partyData.parties as PartyWithDetails[])
-      : [];
+  const parties = useMemo<PartyWithDetails[]>(() => {
+    if (partyData && Array.isArray(partyData.parties)) {
+      return partyData.parties as PartyWithDetails[];
+    }
+
+    return [];
+  }, [partyData]);
 
   const titleText = useMemo(() => {
     if (search) return `'${search}' 검색 결과`;
