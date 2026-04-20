@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 
 type QuickMatchFormProps = {
   open: boolean;
@@ -61,6 +63,10 @@ export default function QuickMatchForm({
   onSubmit,
   isSubmitting = false,
 }: QuickMatchFormProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn, loading } = useAuthStore();
+
   const [category, setCategory] = useState('');
   const [serviceId, setServiceId] = useState('');
   const [priceRange, setPriceRange] = useState('');
@@ -84,13 +90,26 @@ export default function QuickMatchForm({
 
   if (!open) return null;
 
+  const moveToLogin = () => {
+    const redirectPath = `${location.pathname}${location.search}`;
+    onClose();
+
+    navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+  };
+
   const handleCategoryChange = (value: string) => {
     setCategory(value);
     setServiceId('');
   };
 
   const handleSubmit = () => {
-    if (isSubmitting) return;
+    if (isSubmitting || loading) return;
+
+    if (!isLoggedIn) {
+      alert('빠른매칭은 로그인 후 이용할 수 있습니다.');
+      moveToLogin();
+      return;
+    }
 
     if (!category) {
       alert('카테고리를 선택해주세요.');
@@ -149,7 +168,7 @@ export default function QuickMatchForm({
             <select
               value={category}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || loading}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
             >
               <option value="">카테고리를 선택해주세요</option>
@@ -168,7 +187,7 @@ export default function QuickMatchForm({
             <select
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
-              disabled={!category || isSubmitting}
+              disabled={!category || isSubmitting || loading}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
             >
               <option value="">
@@ -191,7 +210,7 @@ export default function QuickMatchForm({
             <select
               value={priceRange}
               onChange={(e) => setPriceRange(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || loading}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
             >
               {PRICE_RANGE_OPTIONS.map((option) => (
@@ -217,7 +236,7 @@ export default function QuickMatchForm({
                     | 'flexible',
                 )
               }
-              disabled={isSubmitting}
+              disabled={isSubmitting || loading}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
             >
               {DURATION_OPTIONS.map((option) => (
@@ -229,18 +248,20 @@ export default function QuickMatchForm({
           </div>
         </div>
 
-        <div className="mt-6 flex gap-2">
+        <div className="mt-6 flex gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+            className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             취소
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isSubmitting || loading}
+            className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? '매칭 중...' : '빠른 매칭 시작'}
           </button>

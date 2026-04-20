@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Party } from '../types/party';
 import {
@@ -21,6 +21,7 @@ import {
   useQuickMatchJoin,
 } from '../hooks/useQuickMatch';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useAuthStore } from '../stores/authStore';
 
 type JoinResult = {
   party_id?: number;
@@ -508,6 +509,9 @@ function CategorySidebar({
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuthStore();
+
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
@@ -518,6 +522,7 @@ export default function Home() {
   const [matchStep, setMatchStep] = useState<MatchStep>('idle');
   const [matchResult, setMatchResult] = useState<JoinResult | null>(null);
   const [matchError, setMatchError] = useState<string | null>(null);
+
   const quickMatchRequestMutation = useQuickMatchRequest();
   const quickMatchCandidatesMutation = useQuickMatchCandidates();
   const quickMatchSelectMutation = useQuickMatchSelect();
@@ -550,10 +555,23 @@ export default function Home() {
 
   const handleRefresh = () => {
     if (cooldown > 0) return;
-    setRefreshKeys((prev) => ({ ...prev, [cacheKey]: (prev[cacheKey] ?? 0) + 1 }));
+    setRefreshKeys((prev) => ({
+      ...prev,
+      [cacheKey]: (prev[cacheKey] ?? 0) + 1,
+    }));
     const until = Date.now() + COOLDOWN_SECONDS * 1000;
     localStorage.setItem(STORAGE_KEY, String(until));
     setCooldown(COOLDOWN_SECONDS);
+  };
+
+  const handleQuickMatchOpen = () => {
+    if (!isLoggedIn) {
+      const redirect = `${location.pathname}${location.search}`;
+      navigate(`/login?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
+
+    setShowQuickMatch(true);
   };
 
   const { data: categoriesRaw } = useQuery({
@@ -572,7 +590,7 @@ export default function Home() {
         size: 6,
         random: !search,
       }),
-    staleTime: Infinity, 
+    staleTime: Infinity,
   });
 
   const parties =
@@ -779,7 +797,7 @@ export default function Home() {
               category={category}
               setCategory={setCategory}
               onCreate={() => navigate('/handcaptcha')}
-              onQuickMatch={() => setShowQuickMatch(true)}
+              onQuickMatch={handleQuickMatchOpen}
             />
 
             <section className="min-w-0 flex-1">
@@ -790,9 +808,10 @@ export default function Home() {
                     onClick={handleRefresh}
                     disabled={cooldown > 0}
                     className={`flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-semibold transition
-                      ${cooldown > 0
-                        ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:scale-95'
+                      ${
+                        cooldown > 0
+                          ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:scale-95'
                       }`}
                   >
                     {cooldown > 0 ? (
@@ -811,7 +830,8 @@ export default function Home() {
                           />
                         </svg>
                         <span className="tabular-nums font-bold text-indigo-500">
-                          {Math.floor(cooldown / 60)}:{String(cooldown % 60).padStart(2, '0')}
+                          {Math.floor(cooldown / 60)}:
+                          {String(cooldown % 60).padStart(2, '0')}
                         </span>
                       </>
                     ) : (
@@ -872,7 +892,7 @@ export default function Home() {
                       파티 생성하기
                     </button>
                     <button
-                      onClick={() => setShowQuickMatch(true)}
+                      onClick={handleQuickMatchOpen}
                       className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                     >
                       빠른 매칭 열기
@@ -918,149 +938,14 @@ export default function Home() {
         isSubmitting={isMatching}
       />
 
-      <MatchingLoadingModal open={isMatching} message={currentStepTitle} />
+      <MatchingLoadingModal open={isMatching} title={currentStepTitle} />
 
       <MatchingErrorModal
         open={!!matchError}
         message={matchError ?? ''}
         onClose={() => setMatchError(null)}
-        onRetry={() => {
-          setMatchError(null);
-          setShowQuickMatch(true);
-        }}
+        matchedParty={matchedParty}
       />
-
-      {matchResult ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-          onClick={() => setMatchResult(null)}
-        >
-          <div
-            className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                    CATEGORY_COLOR[matchedParty?.category_name || '기타'] ??
-                    'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'
-                  }`}
-                >
-                  {matchedParty?.category_name || '기타'}
-                </span>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200/80">
-                  빠른 매칭 완료
-                </span>
-              </div>
-
-              <button
-                onClick={() => setMatchResult(null)}
-                className="text-2xl leading-none text-slate-400 transition hover:text-slate-600"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="mb-5">
-              <p className="text-sm font-bold text-indigo-600">
-                🎉 매칭된 파티에 바로 참여되었어요
-              </p>
-              <h3 className="mt-2 text-2xl font-extrabold leading-tight text-slate-900">
-                {matchedParty?.title ||
-                  matchResult?.party_title ||
-                  '매칭된 파티'}
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                {matchedParty?.service_name
-                  ? `${matchedParty.service_name} 파티에 연결되었어요.`
-                  : '조건에 맞는 파티에 연결되었어요.'}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                  <p className="text-[11px] font-medium text-slate-400">
-                    서비스
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-slate-800">
-                    {matchedParty?.service_name || '-'}
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                  <p className="text-[11px] font-medium text-slate-400">
-                    카테고리
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-slate-800">
-                    {matchedParty?.category_name || '기타'}
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                  <p className="text-[11px] font-medium text-slate-400">
-                    현재 인원
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-slate-800">
-                    {matchedParty?.member_count ?? 0} /{' '}
-                    {matchedParty?.max_members ?? '?'}
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                  <p className="text-[11px] font-medium text-slate-400">
-                    1인 부담
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-indigo-600">
-                    {matchedParty?.monthly_price != null
-                      ? `${Number(matchedParty.monthly_price).toLocaleString()}원`
-                      : '-'}
-                  </p>
-                </div>
-
-                <div className="col-span-2 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                  <p className="text-[11px] font-medium text-slate-400">
-                    호스트
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-slate-800">
-                    {matchedParty?.host_nickname || '익명'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-4 text-xs leading-5 text-slate-500">
-              세부 공지와 대화는 채팅방에서 바로 확인할 수 있어요.
-            </p>
-
-            <div className="mt-5 flex gap-2">
-              <button
-                onClick={() => setMatchResult(null)}
-                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                닫기
-              </button>
-
-              <button
-                onClick={() => {
-                  const targetPartyId =
-                    matchedParty?.id ?? matchResult.party_id;
-                  if (!targetPartyId) {
-                    alert('채팅방 정보를 찾을 수 없습니다.');
-                    return;
-                  }
-                  setMatchResult(null);
-                  navigate(`/party/${targetPartyId}/chat`);
-                }}
-                className="flex-1 rounded-2xl bg-indigo-600 py-3 text-sm font-bold text-white transition hover:bg-indigo-500"
-              >
-                채팅방 입장하기
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
