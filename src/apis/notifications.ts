@@ -246,12 +246,34 @@ const scheduleReconnect = () => {
   }, 3000);
 };
 
+const detachSocketHandlers = (socket: WebSocket) => {
+  socket.onopen = null;
+  socket.onmessage = null;
+  socket.onerror = null;
+  socket.onclose = null;
+};
+
 const closeNotificationSocket = () => {
   clearReconnectTimer();
 
-  if (notificationSocket) {
-    notificationSocket.close();
-    notificationSocket = null;
+  if (!notificationSocket) return;
+
+  const socket = notificationSocket;
+  notificationSocket = null;
+
+  // React StrictMode 개발환경에서 CONNECTING 상태 cleanup 시
+  // close()를 호출하면
+  // "WebSocket is closed before the connection is established" 경고가 뜰 수 있음
+  if (socket.readyState === WebSocket.CONNECTING) {
+    detachSocketHandlers(socket);
+    return;
+  }
+
+  if (
+    socket.readyState === WebSocket.OPEN ||
+    socket.readyState === WebSocket.CLOSING
+  ) {
+    socket.close();
   }
 };
 
@@ -266,16 +288,22 @@ const ensureNotificationSocketConnection = () => {
   if (!wsUrl) return;
 
   try {
-    notificationSocket = new WebSocket(wsUrl);
+    const socket = new WebSocket(wsUrl);
+    notificationSocket = socket;
 
-    notificationSocket.onopen = () => {
+    socket.onopen = () => {
+      // 이미 다른 소켓으로 교체된 경우 무시
+      if (notificationSocket !== socket) return;
+
       notifySocketListeners({
         type: 'connected',
         timestamp: new Date().toISOString(),
       });
     };
 
-    notificationSocket.onmessage = (event) => {
+    socket.onmessage = (event) => {
+      if (notificationSocket !== socket) return;
+
       try {
         const parsed = JSON.parse(event.data) as NotificationSocketMessage;
         notifySocketListeners(parsed);
@@ -284,12 +312,16 @@ const ensureNotificationSocketConnection = () => {
       }
     };
 
-    notificationSocket.onerror = (error) => {
+    socket.onerror = (error) => {
+      // 수동 종료했거나 현재 관리 중인 소켓이 아니면 불필요한 에러 로그 생략
+      if (manuallyClosed || notificationSocket !== socket) return;
       console.error('알림 웹소켓 에러:', error);
     };
 
-    notificationSocket.onclose = () => {
-      notificationSocket = null;
+    socket.onclose = () => {
+      if (notificationSocket === socket) {
+        notificationSocket = null;
+      }
 
       if (!manuallyClosed) {
         scheduleReconnect();

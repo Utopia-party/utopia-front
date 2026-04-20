@@ -1,52 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { getMyTrustHistory, type TrustHistoryApiItem } from '../../apis/user';
 
 type TrustHistoryItem = {
-  id: number;
+  id: number | string;
   title: string;
   date: string;
   detail: string;
   score: number;
+  trustScoreAfter?: number | null;
+  createdAt: string;
 };
-
-const historyData: TrustHistoryItem[] = [
-  {
-    id: 1,
-    title: '정산 승인 완료',
-    date: '2026-03-01',
-    detail: '파티: 스터디룸 공유',
-    score: 3,
-  },
-  {
-    id: 2,
-    title: '참여 후기 작성',
-    date: '2026-02-24',
-    detail: '파티: 전주 맛집 투어',
-    score: 2,
-  },
-  {
-    id: 3,
-    title: '신고 접수(검토중)',
-    date: '2026-02-26',
-    detail: '사유: 노쇼/약속 불이행',
-    score: -5,
-  },
-  {
-    id: 4,
-    title: '이상 활동 없음',
-    date: '2026-02-01',
-    detail: '시스템 점검',
-    score: 0,
-  },
-];
-
-const baseCumulativeGraphData = [
-  { label: '02/01', value: 82 },
-  { label: '02/24', value: 84 },
-  { label: '02/26', value: 79 },
-  { label: '03/01', value: 82 },
-];
 
 function getScoreBadgeClass(score: number) {
   if (score > 0) {
@@ -77,6 +42,14 @@ function TrustScoreLineChart({
   const height = 220;
   const padding = 28;
 
+  if (data.length === 0) {
+    return (
+      <div className="flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white text-sm font-semibold text-slate-400">
+        그래프로 표시할 신뢰도 변화 데이터가 없습니다.
+      </div>
+    );
+  }
+
   const minValue = Math.min(...data.map((item) => item.value)) - 2;
   const maxValue = Math.max(...data.map((item) => item.value)) + 2;
   const range = maxValue - minValue || 1;
@@ -99,7 +72,7 @@ function TrustScoreLineChart({
       height - padding - ((item.value - minValue) / range) * (height - 56);
 
     return (
-      <g key={item.label}>
+      <g key={`${item.label}-${index}`}>
         <circle cx={x} cy={y} r="5" fill="#2563eb" />
         <circle cx={x} cy={y} r="10" fill="#2563eb" fillOpacity="0.12" />
         <text
@@ -122,7 +95,7 @@ function TrustScoreLineChart({
 
     return (
       <text
-        key={item.label}
+        key={`${item.label}-${index}`}
         x={x}
         y={height - 6}
         textAnchor="middle"
@@ -149,8 +122,6 @@ function TrustScoreLineChart({
       />
     );
   });
-
-  usePageTitle('신뢰도 변화');
 
   return (
     <div className="overflow-x-auto">
@@ -180,43 +151,129 @@ function formatDateToMMDD(dateString?: string) {
   if (!dateString) return '';
 
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
 
   return `${month}/${day}`;
 }
 
+function formatDate(dateString?: string) {
+  if (!dateString) return '-';
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toLocaleDateString('ko-KR');
+}
+
+function matchesPeriod(dateString: string, period: string) {
+  const targetDate = new Date(dateString);
+  if (Number.isNaN(targetDate.getTime())) return false;
+
+  const now = new Date();
+  const startDate = new Date();
+
+  if (period === '최근 1개월') {
+    startDate.setMonth(now.getMonth() - 1);
+  } else if (period === '최근 3개월') {
+    startDate.setMonth(now.getMonth() - 3);
+  } else if (period === '최근 6개월') {
+    startDate.setMonth(now.getMonth() - 6);
+  } else {
+    return true;
+  }
+
+  return targetDate >= startDate && targetDate <= now;
+}
+
+function mapTrustHistoryItem(item: TrustHistoryApiItem): TrustHistoryItem {
+  return {
+    id: item.id,
+    title: item.title,
+    date: formatDate(item.created_at),
+    detail: item.detail,
+    score: item.score_change,
+    trustScoreAfter: item.trust_score_after,
+    createdAt: item.created_at,
+  };
+}
+
 export default function MyTrustHistory() {
+  usePageTitle('신뢰도 변화');
+
   const { user } = useAuthStore();
   const [category, setCategory] = useState('전체');
   const [period, setPeriod] = useState('최근 3개월');
   const [keyword, setKeyword] = useState('');
+  const [historyData, setHistoryData] = useState<TrustHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const currentTrustScore = user?.trust_score;
 
-  console.log(user?.updated_at);
-  const cumulativeGraphData = useMemo(() => {
-    if (currentTrustScore === null || currentTrustScore === undefined) {
-      return baseCumulativeGraphData;
-    }
+  useEffect(() => {
+    let mounted = true;
 
-    return baseCumulativeGraphData.map((item, index, array) => {
-      if (index === array.length - 1) {
-        return {
-          label: formatDateToMMDD(user?.updated_at),
-          value: currentTrustScore,
-        };
+    const fetchTrustHistory = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await getMyTrustHistory();
+        console.log('trust-history response', res);
+
+        if (!mounted) return;
+
+        const normalizedItems = (res.items ?? [])
+          .map(mapTrustHistoryItem)
+          .sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+
+        setHistoryData(normalizedItems);
+      } catch (err) {
+        console.error(err);
+        if (!mounted) return;
+        setError('신뢰도 변화 이력을 불러오지 못했습니다.');
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      return item;
-    });
-  }, [currentTrustScore, user?.updated_at]);
+    };
+
+    fetchTrustHistory();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const cumulativeGraphData = useMemo(() => {
+    return historyData
+      .filter(
+        (item) =>
+          item.trustScoreAfter !== null && item.trustScoreAfter !== undefined,
+      )
+      .map((item) => ({
+        label: formatDateToMMDD(item.createdAt),
+        value: item.trustScoreAfter as number,
+      }));
+  }, [historyData]);
 
   const filteredHistory = useMemo(() => {
-    return historyData.filter((item) => {
+    return [...historyData].reverse().filter((item) => {
       const matchesKeyword =
         keyword.trim() === '' ||
         item.title.includes(keyword) ||
         item.detail.includes(keyword);
+
+      const matchesSelectedPeriod = matchesPeriod(item.createdAt, period);
+
+      if (!matchesSelectedPeriod) return false;
 
       if (category === '전체') return matchesKeyword;
       if (category === '증가') return item.score > 0 && matchesKeyword;
@@ -225,7 +282,7 @@ export default function MyTrustHistory() {
 
       return matchesKeyword;
     });
-  }, [category, keyword]);
+  }, [category, historyData, keyword, period]);
 
   return (
     <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
@@ -293,31 +350,45 @@ export default function MyTrustHistory() {
           </div>
 
           <div className="mt-4 flex flex-col gap-3">
-            {filteredHistory.map((item) => (
-              <article
-                key={item.id}
-                className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5"
-              >
-                <div>
-                  <p className="text-[15px] font-extrabold text-slate-900">
-                    {item.title}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">
-                    {item.date} · {item.detail}
-                  </p>
-                </div>
+            {loading && (
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-10 text-center text-sm font-semibold text-slate-500">
+                신뢰도 변화 이력을 불러오는 중입니다.
+              </div>
+            )}
 
-                <div
-                  className={`inline-flex min-w-[118px] items-center justify-center rounded-full px-7 py-3 text-[18px] font-extrabold ${getScoreBadgeClass(
-                    item.score,
-                  )}`}
+            {!loading && error && (
+              <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-10 text-center text-sm font-semibold text-rose-600">
+                {error}
+              </div>
+            )}
+
+            {!loading &&
+              !error &&
+              filteredHistory.map((item) => (
+                <article
+                  key={item.id}
+                  className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5"
                 >
-                  {getScoreText(item.score)}
-                </div>
-              </article>
-            ))}
+                  <div>
+                    <p className="text-[15px] font-extrabold text-slate-900">
+                      {item.title}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                      {item.date} · {item.detail}
+                    </p>
+                  </div>
 
-            {filteredHistory.length === 0 && (
+                  <div
+                    className={`inline-flex min-w-[118px] items-center justify-center rounded-full px-7 py-3 text-[18px] font-extrabold ${getScoreBadgeClass(
+                      item.score,
+                    )}`}
+                  >
+                    {getScoreText(item.score)}
+                  </div>
+                </article>
+              ))}
+
+            {!loading && !error && filteredHistory.length === 0 && (
               <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-10 text-center text-sm font-semibold text-slate-500">
                 검색 조건에 맞는 신뢰도 변화 이력이 없습니다.
               </div>
