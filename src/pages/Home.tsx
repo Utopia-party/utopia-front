@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Party } from '../types/party';
@@ -21,7 +21,6 @@ import {
   useQuickMatchJoin,
 } from '../hooks/useQuickMatch';
 import { usePageTitle } from '../hooks/usePageTitle';
-// import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
 
 type JoinResult = {
   party_id?: number;
@@ -77,6 +76,9 @@ const QUICK_KEYWORDS = [
   '디즈니+',
   'Spotify',
 ];
+
+const COOLDOWN_SECONDS = 600;
+const STORAGE_KEY = 'party_refresh_until';
 
 function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
   const [value, setValue] = useState('');
@@ -508,7 +510,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
@@ -521,6 +523,39 @@ export default function Home() {
   const quickMatchSelectMutation = useQuickMatchSelect();
   const quickMatchJoinMutation = useQuickMatchJoin();
 
+  const [cooldown, setCooldown] = useState<number>(() => {
+    const until = localStorage.getItem(STORAGE_KEY);
+    if (!until) return 0;
+    const remaining = Math.ceil((Number(until) - Date.now()) / 1000);
+    return remaining > 0 ? remaining : 0;
+  });
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(timer);
+          localStorage.removeItem(STORAGE_KEY);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const cacheKey = category ?? '__all__';
+  const currentRefreshKey = refreshKeys[cacheKey] ?? 0;
+
+  const handleRefresh = () => {
+    if (cooldown > 0) return;
+    setRefreshKeys((prev) => ({ ...prev, [cacheKey]: (prev[cacheKey] ?? 0) + 1 }));
+    const until = Date.now() + COOLDOWN_SECONDS * 1000;
+    localStorage.setItem(STORAGE_KEY, String(until));
+    setCooldown(COOLDOWN_SECONDS);
+  };
+
   const { data: categoriesRaw } = useQuery({
     queryKey: categoryKeys.all,
     queryFn: fetchCategories,
@@ -529,13 +564,15 @@ export default function Home() {
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
 
   const { data: partyData, isLoading } = useQuery({
-    queryKey: partyKeys.list(category, search, refreshKey),
+    queryKey: partyKeys.list(category, search, currentRefreshKey),
     queryFn: () =>
       fetchParties({
         category_name: category ?? undefined,
         search,
         size: 6,
+        random: !search,
       }),
+    staleTime: Infinity, 
   });
 
   const parties =
@@ -736,16 +773,11 @@ export default function Home() {
 
       <div className="min-h-screen bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-8">
-          {/* <SystemNoticeBanner /> */}
-
           <div className="mt-6 flex flex-col gap-8 md:flex-row">
             <CategorySidebar
               categories={categories}
               category={category}
-              setCategory={(val) => {
-                setCategory(val);
-                setRefreshKey(0);
-              }}
+              setCategory={setCategory}
               onCreate={() => navigate('/handcaptcha')}
               onQuickMatch={() => setShowQuickMatch(true)}
             />
@@ -755,23 +787,51 @@ export default function Home() {
                 <SectionTitle title={titleText} subtitle={subtitleText} />
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setRefreshKey((k) => k + 1)}
-                    className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95"
+                    onClick={handleRefresh}
+                    disabled={cooldown > 0}
+                    className={`flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-semibold transition
+                      ${cooldown > 0
+                        ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:scale-95'
+                      }`}
                   >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    새로고침
+                    {cooldown > 0 ? (
+                      <>
+                        <svg
+                          className="h-4 w-4 text-indigo-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="tabular-nums font-bold text-indigo-500">
+                          {Math.floor(cooldown / 60)}:{String(cooldown % 60).padStart(2, '0')}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                        새로고침
+                      </>
+                    )}
                   </button>
                   <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
                     <span className="text-slate-400">총</span>

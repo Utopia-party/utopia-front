@@ -23,6 +23,7 @@ export const fetchParties = async (params: {
   search?: string;
   page?: number;
   size?: number;
+  random?: boolean; // ← 추가
 }): Promise<PartyListResponse> => {
   const { data } = await api.get('/api/parties', { params });
   return data;
