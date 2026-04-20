@@ -1,4 +1,4 @@
-import { X, Users, Calendar, Clock, RefreshCw, Bookmark } from 'lucide-react';
+import { X, Users, Calendar, CalendarX, Shield, RefreshCw, Bookmark } from 'lucide-react';
 import type { Party } from '../../types/party';
 
 interface PartyDetailModalProps {
@@ -9,11 +9,32 @@ interface PartyDetailModalProps {
 
 const CATEGORY_COLOR: Record<string, string> = {
   OTT: 'bg-blue-100 text-blue-700',
+  음악: 'bg-green-100 text-green-700',
   '멤버십/음악': 'bg-green-100 text-green-700',
   '교육/도서': 'bg-purple-100 text-purple-700',
   생산성: 'bg-pink-100 text-pink-700',
+  '생산성/기타': 'bg-pink-100 text-pink-700',
   기타: 'bg-slate-100 text-slate-600',
 };
+
+const STATUS_LABEL: Record<string, { label: string; className: string }> = {
+  recruiting: { label: '모집중', className: 'bg-emerald-100 text-emerald-700' },
+  full:       { label: '모집마감', className: 'bg-slate-100 text-slate-500' },
+  completed:  { label: '완료', className: 'bg-slate-100 text-slate-500' },
+  canceled:   { label: '취소', className: 'bg-red-100 text-red-500' },
+};
+
+// ISO date(2026-03-01) → 2026.03.01 포맷
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-';
+  return dateStr.slice(0, 10).replace(/-/g, '.');
+}
+
+// ISO datetime → 날짜만
+function formatDatetime(datetimeStr: string | null | undefined): string {
+  if (!datetimeStr) return '-';
+  return datetimeStr.slice(0, 10).replace(/-/g, '.');
+}
 
 export default function PartyDetailModal({
   party,
@@ -21,6 +42,8 @@ export default function PartyDetailModal({
   onApply,
 }: PartyDetailModalProps) {
   const isFull = party.status !== 'recruiting';
+  const myStatus = party.my_member_status ?? null;
+  const statusInfo = STATUS_LABEL[party.status ?? ''] ?? STATUS_LABEL['recruiting'];
 
   const descriptionLines =
     (party as Party & { description?: string }).description
@@ -42,18 +65,16 @@ export default function PartyDetailModal({
           {party.category_name && (
             <span
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                CATEGORY_COLOR[party.category_name] ??
-                'bg-slate-100 text-slate-600'
+                CATEGORY_COLOR[party.category_name] ?? 'bg-slate-100 text-slate-600'
               }`}
             >
               {party.category_name}
             </span>
           )}
-          {party.status === 'recruiting' && (
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-100 text-orange-600">
-              인기
-            </span>
-          )}
+          {/* 모집 상태 배지 */}
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${statusInfo.className}`}>
+            {statusInfo.label}
+          </span>
           <div className="flex-1" />
           <button
             onClick={onClose}
@@ -84,13 +105,27 @@ export default function PartyDetailModal({
               />
               <InfoCard
                 icon={<Calendar size={16} className="text-slate-500" />}
-                label="파티 시작일"
-                value="2026.03.01"
+                label="파티 생성일"
+                value={formatDatetime(party.created_at)}
               />
               <InfoCard
-                icon={<Clock size={16} className="text-slate-500" />}
-                label="모집 마감"
-                value="2026.03.08"
+                icon={<Calendar size={16} className="text-slate-500" />}
+                label="파티 시작일"
+                value={formatDate(party.start_date)}
+              />
+              <InfoCard
+                icon={<CalendarX size={16} className="text-slate-500" />}
+                label="파티 종료일"
+                value={formatDate(party.end_date)}
+              />
+              <InfoCard
+                icon={<Shield size={16} className="text-slate-500" />}
+                label="최소 신뢰도"
+                value={
+                  party.min_trust_score != null && party.min_trust_score > 0
+                    ? `${party.min_trust_score}점 이상`
+                    : '제한 없음'
+                }
               />
               <InfoCard
                 icon={<RefreshCw size={16} className="text-slate-500" />}
@@ -118,16 +153,23 @@ export default function PartyDetailModal({
             {/* 하단 버튼 */}
             <div className="flex gap-2 mt-5">
               {(() => {
-                const myStatus =
-                  (party as Party & { my_member_status?: string | null })
-                    .my_member_status ?? null;
-                if (myStatus === 'leader' || myStatus === 'active') {
+                if (myStatus === 'leader') {
                   return (
                     <button
                       disabled
                       className="flex-1 py-3 rounded-2xl text-sm font-bold bg-indigo-100 text-indigo-700 cursor-not-allowed"
                     >
-                      {myStatus === 'leader' ? '내가 리더' : '참여중'}
+                      방장
+                    </button>
+                  );
+                }
+                if (myStatus === 'active') {
+                  return (
+                    <button
+                      disabled
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold bg-indigo-100 text-indigo-700 cursor-not-allowed"
+                    >
+                      참여중
                     </button>
                   );
                 }
@@ -184,10 +226,10 @@ export default function PartyDetailModal({
               </p>
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">총 비용</span>
+                  <span className="text-slate-500">서비스 월 요금</span>
                   <span className="font-semibold text-slate-900">
-                    {party.original_price != null
-                      ? `${party.original_price.toLocaleString()}원`
+                    {party.service_total_price != null
+                      ? `${party.service_total_price.toLocaleString()}원`
                       : '-'}
                   </span>
                 </div>
@@ -207,7 +249,7 @@ export default function PartyDetailModal({
             {/* 호스트 */}
             <div>
               <p className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wide">
-                호스트
+                방장
               </p>
               <div className="flex flex-col gap-1.5 text-sm">
                 <div className="flex justify-between">
@@ -237,7 +279,7 @@ export default function PartyDetailModal({
               <ul className="flex flex-col gap-1.5 text-xs text-slate-500 leading-relaxed">
                 <li className="flex gap-1.5">
                   <span className="shrink-0 mt-0.5">•</span>
-                  <span>참여신청 후 호스트 승인 시 파티가 확정됩니다.</span>
+                  <span>참여신청 후 방장 승인 시 파티가 확정됩니다.</span>
                 </li>
                 <li className="flex gap-1.5">
                   <span className="shrink-0 mt-0.5">•</span>
