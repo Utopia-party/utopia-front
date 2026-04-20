@@ -18,7 +18,7 @@ declare global {
 }
 
 interface Message {
-  type: 'message' | 'system' | 'warning' | 'error';
+  type: 'message' | 'system' | 'warning' | 'error' | 'message_deleted';
   party_id?: string;
   user_id?: string;
   nickname?: string;
@@ -387,7 +387,7 @@ function PaymentModal({
   partyTitle: string;
   nickname: string;
   monthlyPerPerson: number | null;
-  onPaymentComplete: () => void; // 결제 완료 콜백
+  onPaymentComplete: () => void;
 }) {
   const [step, setStep] = useState<PaymentStep>('select');
   const [isLoading, setIsLoading] = useState(false);
@@ -426,8 +426,6 @@ function PaymentModal({
         customer: { fullName: nickname },
       });
 
-      console.log('[PORTONE 응답]', JSON.stringify(response));
-
       if (!response) {
         alert('결제가 취소되었습니다.');
         return;
@@ -445,9 +443,8 @@ function PaymentModal({
 
       setDoneMessage('카드 결제가 완료되었습니다!\n결제 승인이 확인되었어요.');
       setDone(true);
-      onPaymentComplete(); // 버튼 비활성화 콜백
+      onPaymentComplete();
     } catch (err: any) {
-      console.error('[결제 에러]', err);
       const detail =
         err?.response?.data?.detail ?? '결제 처리 중 오류가 발생했습니다.';
       alert(detail);
@@ -502,9 +499,7 @@ function PaymentModal({
               ✅
             </div>
             <div>
-              <p className="text-lg font-extrabold text-slate-900">
-                처리 완료!
-              </p>
+              <p className="text-lg font-extrabold text-slate-900">처리 완료!</p>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed whitespace-pre-line">
                 {doneMessage}
               </p>
@@ -555,9 +550,7 @@ function PaymentModal({
                     <span className="text-2xl">💳</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">
-                      카드 결제
-                    </p>
+                    <p className="text-sm font-bold text-slate-800">카드 결제</p>
                     <p className="text-xs text-slate-400 mt-0.5">즉시 승인</p>
                   </div>
                 </button>
@@ -569,9 +562,7 @@ function PaymentModal({
                     <span className="text-2xl">🏦</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">
-                      계좌 입금
-                    </p>
+                    <p className="text-sm font-bold text-slate-800">계좌 입금</p>
                     <p className="text-xs text-slate-400 mt-0.5">관리자 승인</p>
                   </div>
                 </button>
@@ -590,15 +581,11 @@ function PaymentModal({
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">파티명</span>
-                  <span className="font-semibold text-slate-800">
-                    {partyTitle}
-                  </span>
+                  <span className="font-semibold text-slate-800">{partyTitle}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">결제자</span>
-                  <span className="font-semibold text-slate-800">
-                    {nickname}
-                  </span>
+                  <span className="font-semibold text-slate-800">{nickname}</span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">결제 금액</span>
@@ -723,10 +710,8 @@ export default function Chat() {
   const [partyInfo, setPartyInfo] = useState<PartyInfo | null>(null);
   const [connected, setConnected] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
-    null,
-  );
-  const [alreadyPaid, setAlreadyPaid] = useState(false); // 이번 달 결제 여부
+  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(null);
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
 
   const nicknameRef = useRef(user?.nickname ?? '익명');
   const userIdRef = useRef(user?.user_id ?? 'guest');
@@ -741,13 +726,10 @@ export default function Chat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const userReadyRef = useRef(false);
 
-  // 결제 상태 확인 함수
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
     try {
-      const { data } = await api.get(
-        `/api/payments/status?party_id=${partyId}`,
-      );
+      const { data } = await api.get(`/api/payments/status?party_id=${partyId}`);
       setAlreadyPaid(data.paid);
     } catch {
       // 실패해도 무시
@@ -817,8 +799,15 @@ export default function Chat() {
 
       ws.onmessage = (e) => {
         try {
-          const msg: Message = JSON.parse(e.data);
-          setMessages((prev) => [...prev, msg]);
+          const msg = JSON.parse(e.data);
+
+          // ✅ 삭제된 메시지 화면에서 제거
+          if (msg.type === 'message_deleted') {
+            setMessages((prev) => prev.filter((m) => m.content !== msg.content));
+            return;
+          }
+
+          setMessages((prev) => [...prev, msg as Message]);
         } catch (err) {
           console.error('메시지 파싱 에러:', err);
         }
@@ -869,9 +858,7 @@ export default function Chat() {
 
   const getMemberMeta = useCallback(
     (targetUserId?: string) => {
-      const member = partyInfo?.members?.find(
-        (m) => m.user_id === targetUserId,
-      );
+      const member = partyInfo?.members?.find((m) => m.user_id === targetUserId);
       if (!member)
         return {
           role: undefined,
@@ -893,8 +880,7 @@ export default function Chat() {
       const rect = e.currentTarget.getBoundingClientRect();
       const drawerWidth = 280;
       const drawerHeight = 210;
-      const hasRightSpace =
-        rect.right + 12 + drawerWidth <= window.innerWidth - 12;
+      const hasRightSpace = rect.right + 12 + drawerWidth <= window.innerWidth - 12;
       const left = hasRightSpace
         ? rect.right + 12
         : Math.max(12, rect.left - drawerWidth - 12);
@@ -911,17 +897,13 @@ export default function Chat() {
 
   const handleProfileInfo = useCallback(() => {
     if (!profileDrawer) return;
-    alert(
-      `${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`,
-    );
+    alert(`${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`);
     setProfileDrawer(null);
   }, [profileDrawer]);
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
-    alert(
-      `${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`,
-    );
+    alert(`${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`);
     setProfileDrawer(null);
   }, [profileDrawer]);
 
@@ -990,7 +972,12 @@ export default function Chat() {
           </div>
           <p className="text-[10px] text-muted-foreground px-1">
             {msg.created_at
-              ? new Date(msg.created_at).toLocaleTimeString('ko-KR', {
+              ? new Date(
+                  // ✅ UTC 명시 - Z 없으면 붙여줌
+                  msg.created_at.endsWith('Z')
+                    ? msg.created_at
+                    : msg.created_at + 'Z',
+                ).toLocaleTimeString('ko-KR', {
                   hour: '2-digit',
                   minute: '2-digit',
                 })
@@ -1066,8 +1053,7 @@ export default function Chat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing)
-                  sendMessage();
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendMessage();
               }}
             />
             <button
@@ -1082,16 +1068,14 @@ export default function Chat() {
             <button className="flex-1 py-3 border border-border rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">
               채팅 신고
             </button>
-            {/* 결제 버튼 - 이번 달 결제 완료 시 비활성화 */}
             <button
               onClick={() => !alreadyPaid && setShowPaymentModal(true)}
               disabled={alreadyPaid}
-              className={`flex-1 py-3 border-2 rounded-2xl text-sm font-bold transition
-                ${
-                  alreadyPaid
-                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : 'border-primary text-primary hover:bg-primary/5'
-                }`}
+              className={`flex-1 py-3 border-2 rounded-2xl text-sm font-bold transition ${
+                alreadyPaid
+                  ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                  : 'border-primary text-primary hover:bg-primary/5'
+              }`}
             >
               {alreadyPaid ? '이번 달 결제 완료 ✓' : '정산요청'}
             </button>
@@ -1101,8 +1085,7 @@ export default function Chat() {
         <div className="w-80 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
           <div className="p-5 border-b border-border">
             <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
-            {Array.isArray(partyInfo?.members) &&
-            partyInfo.members.length > 0 ? (
+            {Array.isArray(partyInfo?.members) && partyInfo.members.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {partyInfo.members.map((member) => (
                   <MemberItem key={member.user_id} member={member} />
@@ -1120,8 +1103,7 @@ export default function Chat() {
               {partyInfo?.category_name && (
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                    CATEGORY_COLOR[partyInfo.category_name] ??
-                    'bg-slate-100 text-slate-600'
+                    CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'
                   }`}
                 >
                   {partyInfo.category_name}
@@ -1136,22 +1118,10 @@ export default function Chat() {
 
             <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
             <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <DetailRow
-                label="서비스명"
-                value={partyInfo?.service_name ?? '-'}
-              />
-              <DetailRow
-                label="파티장"
-                value={partyInfo?.host_nickname ?? '-'}
-              />
-              <DetailRow
-                label="판매가"
-                value={formatCurrency(partyInfo?.monthly_price)}
-              />
-              <DetailRow
-                label="추천 할인"
-                value={formatRate(partyInfo?.referral_discount_rate)}
-              />
+              <DetailRow label="서비스명" value={partyInfo?.service_name ?? '-'} />
+              <DetailRow label="파티장" value={partyInfo?.host_nickname ?? '-'} />
+              <DetailRow label="판매가" value={formatCurrency(partyInfo?.monthly_price)} />
+              <DetailRow label="추천 할인" value={formatRate(partyInfo?.referral_discount_rate)} />
               <DetailRow
                 label="1인 부담"
                 value={formatCurrency(partyInfo?.monthly_per_person)}
