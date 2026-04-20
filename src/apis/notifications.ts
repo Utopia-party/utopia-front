@@ -144,6 +144,7 @@ let notificationSocket: WebSocket | null = null;
 let reconnectTimer: number | null = null;
 let manuallyClosed = false;
 let reconnectAttempts = 0;
+let isConnecting = false;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const socketListeners = new Set<NotificationSocketListener>();
 
@@ -246,14 +247,12 @@ const closeNotificationSocket = () => {
   }
 };
 
-let isConnecting = false;
-
 const ensureNotificationSocketConnection = async () => {
   if (typeof window === 'undefined') return;
   if (notificationSocket?.readyState === WebSocket.OPEN) return;
   if (notificationSocket?.readyState === WebSocket.CONNECTING) return;
   if (socketListeners.size === 0) return;
-  if (isConnecting) return; 
+  if (isConnecting) return;
 
   isConnecting = true;
 
@@ -308,7 +307,7 @@ const ensureNotificationSocketConnection = async () => {
     console.error('알림 웹소켓 연결 실패:', error);
     scheduleReconnect();
   } finally {
-    isConnecting = false; 
+    isConnecting = false;
   }
 };
 
@@ -325,7 +324,7 @@ export const subscribeNotificationSocket = (
     if (socketListeners.size === 0) {
       manuallyClosed = true;
       reconnectAttempts = 0;
-      isConnecting = false; 
+      isConnecting = false;
       closeNotificationSocket();
     }
   };

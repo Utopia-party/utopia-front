@@ -1,7 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  applyNotificationSocketMessage,
   countUnreadNotifications,
   fetchMyNotifications,
   markAllNotificationsAsRead,
@@ -9,16 +8,9 @@ import {
   markNotificationAsRead,
   markNotificationReadInList,
   notificationKeys,
-  subscribeNotificationSocket,
 } from '../../apis/notifications';
-import type {
-  NotificationItem,
-  NotificationSocketMessage,
-} from '../../types/notifications';
+import type { NotificationItem } from '../../types/notifications';
 
-/**
- * 전체 알림 목록
- */
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -27,7 +19,6 @@ type Props = {
 export default function NotificationDropdown({ open, onClose }: Props) {
   const queryClient = useQueryClient();
 
-  // 알림 목록 조회
   const { data: notifications = [], isLoading } = useQuery<NotificationItem[]>({
     queryKey: notificationKeys.me,
     queryFn: fetchMyNotifications,
@@ -36,37 +27,11 @@ export default function NotificationDropdown({ open, onClose }: Props) {
     gcTime: 1000 * 60 * 30,
   });
 
-  // 웹소켓 구독
-  useEffect(() => {
-    if (!open) return;
-
-    const unsubscribe = subscribeNotificationSocket(
-      (socketMessage: NotificationSocketMessage) => {
-        queryClient.setQueryData<NotificationItem[]>(
-          notificationKeys.me,
-          (prev = []) => {
-            const next = applyNotificationSocketMessage(prev, socketMessage);
-
-            queryClient.setQueryData(
-              notificationKeys.unreadCount,
-              socketMessage.unread_count ?? countUnreadNotifications(next),
-            );
-
-            return next;
-          },
-        );
-      },
-    );
-
-    return unsubscribe;
-  }, [open, queryClient]);
-
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.is_read).length,
     [notifications],
   );
 
-  // 개별읽음
   const readOneMutation = useMutation({
     mutationFn: (notificationId: string) =>
       markNotificationAsRead(notificationId),
@@ -75,19 +40,16 @@ export default function NotificationDropdown({ open, onClose }: Props) {
         notificationKeys.me,
         (prev = []) => {
           const next = markNotificationReadInList(prev, notificationId);
-
           queryClient.setQueryData(
             notificationKeys.unreadCount,
             countUnreadNotifications(next),
           );
-
           return next;
         },
       );
     },
   });
 
-  // 전체읽음
   const readAllMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
     onSuccess: () => {
@@ -95,9 +57,7 @@ export default function NotificationDropdown({ open, onClose }: Props) {
         notificationKeys.me,
         (prev = []) => {
           const next = markAllNotificationsReadInList(prev);
-
           queryClient.setQueryData(notificationKeys.unreadCount, 0);
-
           return next;
         },
       );
@@ -109,7 +69,6 @@ export default function NotificationDropdown({ open, onClose }: Props) {
       if (!item.is_read) {
         await readOneMutation.mutateAsync(item.id);
       }
-
       onClose();
     } catch (error) {
       console.error('알림 읽음 처리 실패:', error);
