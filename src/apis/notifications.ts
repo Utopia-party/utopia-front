@@ -4,7 +4,6 @@ import type {
   NotificationSocketMessage,
 } from '../types/notifications';
 
-// Reacr Query 캐시 키
 export const notificationKeys = {
   all: ['notifications'] as const,
   me: ['notifications', 'me'] as const,
@@ -12,24 +11,20 @@ export const notificationKeys = {
   unreadCount: ['notifications', 'unread-count'] as const,
 };
 
-// 전체 알림
 export const fetchMyNotifications = async (): Promise<NotificationItem[]> => {
   const { data } = await api.get('/api/notifications/me');
   return Array.isArray(data) ? sortNotificationsByCreatedAt(data) : [];
 };
 
-// 최신 알림
 export const fetchLatestNotifications = async (
   limit = 10,
 ): Promise<NotificationItem[]> => {
   const { data } = await api.get('/api/notifications/latest', {
     params: { limit },
   });
-
   return Array.isArray(data) ? sortNotificationsByCreatedAt(data) : [];
 };
 
-// 개별 알림 읽음 처리(서버 요청)
 export const markNotificationAsRead = async (
   notificationId: string,
 ): Promise<{ message?: string }> => {
@@ -37,7 +32,6 @@ export const markNotificationAsRead = async (
   return data ?? {};
 };
 
-// 전체 읽음 처리
 export const markAllNotificationsAsRead = async (): Promise<{
   message?: string;
 }> => {
@@ -45,7 +39,6 @@ export const markAllNotificationsAsRead = async (): Promise<{
   return data ?? {};
 };
 
-// 알림 최신순 정렬
 export const sortNotificationsByCreatedAt = (
   notifications: NotificationItem[],
 ): NotificationItem[] => {
@@ -56,23 +49,19 @@ export const sortNotificationsByCreatedAt = (
   });
 };
 
-// 알림 추가 및 수정
 export const upsertNotification = (
   notifications: NotificationItem[],
   target: NotificationItem,
 ): NotificationItem[] => {
   const exists = notifications.some((item) => item.id === target.id);
-
   if (!exists) {
     return sortNotificationsByCreatedAt([target, ...notifications]);
   }
-
   return sortNotificationsByCreatedAt(
     notifications.map((item) => (item.id === target.id ? target : item)),
   );
 };
 
-// 개별 알림 삭제
 export const removeNotification = (
   notifications: NotificationItem[],
   notificationId: string,
@@ -80,7 +69,6 @@ export const removeNotification = (
   return notifications.filter((item) => item.id !== notificationId);
 };
 
-// 개별 알림 읽음 처리 (프론트 배열 상태 수정)
 export const markNotificationReadInList = (
   notifications: NotificationItem[],
   notificationId: string,
@@ -96,12 +84,10 @@ export const markNotificationReadInList = (
   );
 };
 
-// 모든 알림 읽음 처리
 export const markAllNotificationsReadInList = (
   notifications: NotificationItem[],
 ): NotificationItem[] => {
   const now = new Date().toISOString();
-
   return notifications.map((item) => ({
     ...item,
     is_read: true,
@@ -109,14 +95,12 @@ export const markAllNotificationsReadInList = (
   }));
 };
 
-// 안 읽은 알림 개수
 export const countUnreadNotifications = (
   notifications: NotificationItem[],
 ): number => {
   return notifications.filter((item) => !item.is_read).length;
 };
 
-// 웹소켓 메시지를 알림 목록 상태에 반영하는 함수
 export const applyNotificationSocketMessage = (
   notifications: NotificationItem[],
   socketMessage: NotificationSocketMessage,
@@ -127,35 +111,28 @@ export const applyNotificationSocketMessage = (
       if (!socketMessage.notification) return notifications;
       return upsertNotification(notifications, socketMessage.notification);
     }
-
     case 'notification_read': {
       if (socketMessage.notification) {
         return upsertNotification(notifications, socketMessage.notification);
       }
-
       if (socketMessage.notification_id) {
         return markNotificationReadInList(
           notifications,
           socketMessage.notification_id,
         );
       }
-
       return notifications;
     }
-
     case 'notification_deleted': {
       if (!socketMessage.notification_id) return notifications;
       return removeNotification(notifications, socketMessage.notification_id);
     }
-
     case 'notifications_read_all': {
       if (Array.isArray(socketMessage.notifications)) {
         return sortNotificationsByCreatedAt(socketMessage.notifications);
       }
-
       return markAllNotificationsReadInList(notifications);
     }
-
     default:
       return notifications;
   }
@@ -166,18 +143,15 @@ type NotificationSocketListener = (message: NotificationSocketMessage) => void;
 let notificationSocket: WebSocket | null = null;
 let reconnectTimer: number | null = null;
 let manuallyClosed = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 const socketListeners = new Set<NotificationSocketListener>();
 
 const getApiBaseUrl = (): string => {
   const baseURL =
     typeof api?.defaults?.baseURL === 'string' ? api.defaults.baseURL : '';
-
   if (baseURL) return baseURL;
-
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-
+  if (typeof window !== 'undefined') return window.location.origin;
   return '';
 };
 
@@ -236,7 +210,9 @@ const scheduleReconnect = () => {
   if (reconnectTimer !== null) return;
   if (manuallyClosed) return;
   if (socketListeners.size === 0) return;
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) return; // 무한 재연결 방지
 
+  reconnectAttempts++;
   reconnectTimer = window.setTimeout(() => {
     reconnectTimer = null;
     void ensureNotificationSocketConnection();
@@ -252,7 +228,6 @@ const detachSocketHandlers = (socket: WebSocket) => {
 
 const closeNotificationSocket = () => {
   clearReconnectTimer();
-
   if (!notificationSocket) return;
 
   const socket = notificationSocket;
@@ -280,6 +255,8 @@ const ensureNotificationSocketConnection = async () => {
   try {
     const { data } = await api.post<{ token: string }>('/api/ws-token');
     const wsToken = data.token;
+
+    reconnectAttempts = 0; // 토큰 발급 성공 시 카운터 리셋
 
     const wsBase = resolveNotificationSocketUrl();
     if (!wsBase) return;
@@ -330,13 +307,14 @@ export const subscribeNotificationSocket = (
 ): (() => void) => {
   socketListeners.add(listener);
   manuallyClosed = false;
-  void ensureNotificationSocketConnection(); // async 함수 void 처리
-  
+  reconnectAttempts = 0; 
+  void ensureNotificationSocketConnection();
+
   return () => {
     socketListeners.delete(listener);
-
     if (socketListeners.size === 0) {
       manuallyClosed = true;
+      reconnectAttempts = 0; 
       closeNotificationSocket();
     }
   };
