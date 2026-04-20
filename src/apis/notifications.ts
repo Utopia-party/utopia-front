@@ -239,7 +239,7 @@ const scheduleReconnect = () => {
 
   reconnectTimer = window.setTimeout(() => {
     reconnectTimer = null;
-    ensureNotificationSocketConnection();
+    void ensureNotificationSocketConnection();
   }, 3000);
 };
 
@@ -271,7 +271,6 @@ const closeNotificationSocket = () => {
   }
 };
 
-// 핵심 변경: WS 연결 전 단기 토큰 발급 후 쿼리 파라미터로 전달
 const ensureNotificationSocketConnection = async () => {
   if (typeof window === 'undefined') return;
   if (notificationSocket?.readyState === WebSocket.OPEN) return;
@@ -331,8 +330,8 @@ export const subscribeNotificationSocket = (
 ): (() => void) => {
   socketListeners.add(listener);
   manuallyClosed = false;
-  ensureNotificationSocketConnection();
-
+  void ensureNotificationSocketConnection(); // async 함수 void 처리
+  
   return () => {
     socketListeners.delete(listener);
 
