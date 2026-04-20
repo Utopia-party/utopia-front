@@ -210,7 +210,7 @@ const scheduleReconnect = () => {
   if (reconnectTimer !== null) return;
   if (manuallyClosed) return;
   if (socketListeners.size === 0) return;
-  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) return; // 무한 재연결 방지
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) return;
 
   reconnectAttempts++;
   reconnectTimer = window.setTimeout(() => {
@@ -246,17 +246,25 @@ const closeNotificationSocket = () => {
   }
 };
 
+let isConnecting = false;
+
 const ensureNotificationSocketConnection = async () => {
   if (typeof window === 'undefined') return;
   if (notificationSocket?.readyState === WebSocket.OPEN) return;
   if (notificationSocket?.readyState === WebSocket.CONNECTING) return;
   if (socketListeners.size === 0) return;
+  if (isConnecting) return; 
+
+  isConnecting = true;
 
   try {
     const { data } = await api.post<{ token: string }>('/api/ws-token');
     const wsToken = data.token;
 
-    reconnectAttempts = 0; // 토큰 발급 성공 시 카운터 리셋
+    reconnectAttempts = 0;
+
+    if (notificationSocket?.readyState === WebSocket.OPEN) return;
+    if (notificationSocket?.readyState === WebSocket.CONNECTING) return;
 
     const wsBase = resolveNotificationSocketUrl();
     if (!wsBase) return;
@@ -299,6 +307,8 @@ const ensureNotificationSocketConnection = async () => {
   } catch (error) {
     console.error('알림 웹소켓 연결 실패:', error);
     scheduleReconnect();
+  } finally {
+    isConnecting = false; 
   }
 };
 
@@ -307,14 +317,15 @@ export const subscribeNotificationSocket = (
 ): (() => void) => {
   socketListeners.add(listener);
   manuallyClosed = false;
-  reconnectAttempts = 0; 
+  reconnectAttempts = 0;
   void ensureNotificationSocketConnection();
 
   return () => {
     socketListeners.delete(listener);
     if (socketListeners.size === 0) {
       manuallyClosed = true;
-      reconnectAttempts = 0; 
+      reconnectAttempts = 0;
+      isConnecting = false; 
       closeNotificationSocket();
     }
   };
