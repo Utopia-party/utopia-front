@@ -1,4 +1,4 @@
-import logoImage from '../../assets/partyup-mark.svg';
+import logoImage from '../../assets/logo.png';
 import type { SizeType } from '../../types/size';
 
 interface LogoProps {

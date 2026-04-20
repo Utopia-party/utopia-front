@@ -20,50 +20,56 @@ const FILTER_TABS = ['전체', '접수', '검토중', '처리', '기각'];
 export default function AdminReports() {
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [reports, setReports] = useState<ReportRecord[]>([]);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyReportId, setBusyReportId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-
-    const loadReports = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const nextReports = await fetchAdminReports();
-        if (alive) {
-          setReports(nextReports);
-        }
-      } catch (err) {
-        if (alive) {
-          setError(getAdminErrorMessage(err));
-        }
-      } finally {
-        if (alive) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadReports();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const reloadReports = async () => {
-    setLoading(true);
-    setError('');
+  const loadReports = async (params?: {
+    keyword?: string;
+    date_from?: string;
+    date_to?: string;
+  }) => {
     try {
-      setReports(await fetchAdminReports());
+      setLoading(true);
+      setError('');
+      const nextReports = await fetchAdminReports(params);
+      setReports(nextReports);
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    void loadReports();
+  }, []);
+
+  const handleSearch = () => {
+    void loadReports({
+      keyword: search || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    });
+  };
+
+  const handleReset = () => {
+    setSearch('');
+    setDateFrom('');
+    setDateTo('');
+    void loadReports();
+  };
+
+  const reloadReports = async () => {
+    void loadReports({
+      keyword: search || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    });
   };
 
   const handleReportStatus = async (reportId: string, status: string) => {
@@ -79,21 +85,9 @@ export default function AdminReports() {
   };
 
   const filtered = useMemo(() => {
-    let data = reports;
-    if (activeTab !== '전체') {
-      data = data.filter((r) => r.status === activeTab);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      data = data.filter(
-        (r) =>
-          r.target.toLowerCase().includes(q) ||
-          r.reason.toLowerCase().includes(q) ||
-          r.status.toLowerCase().includes(q),
-      );
-    }
-    return data;
-  }, [activeTab, reports, search]);
+    if (activeTab === '전체') return reports;
+    return reports.filter((r) => r.status === activeTab);
+  }, [activeTab, reports]);
 
   return (
     <>
@@ -103,9 +97,54 @@ export default function AdminReports() {
       />
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-1">신고 관리</h1>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-gray-500 mb-4">
           신고 조회 · 처리/기각 · 사용자 패널티 연동
         </p>
+
+        <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">키워드</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="대상 이름 / 사유 / 상태"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 w-52"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">시작일</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">종료일</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+          <div className="flex gap-2 pb-0.5">
+            <button
+              onClick={handleSearch}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              조회
+            </button>
+            <button
+              onClick={handleReset}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+            >
+              초기화
+            </button>
+          </div>
+        </div>
 
         <FilterTabs
           tabs={FILTER_TABS}

@@ -6,6 +6,8 @@ export type DashboardMetric = {
   label: string;
   value: string;
   helper: string;
+  delta?: string | null;
+  trend?: string | null;
 };
 
 export type DashboardSummaryRow = {
@@ -13,11 +15,39 @@ export type DashboardSummaryRow = {
   value: string;
 };
 
+export type DashboardSeriesPoint = {
+  label: string;
+  current: number;
+  comparison: number;
+};
+
+export type DashboardChart = {
+  id: string;
+  label: string;
+  description: string;
+  unit: string;
+  points: DashboardSeriesPoint[];
+};
+
+export type DashboardRecentActivity = {
+  timestamp: string;
+  title: string;
+  description: string;
+};
+
 type AdminDashboardApiResponse = {
   metrics: DashboardMetric[];
   member_stats: DashboardSummaryRow[];
   sales_stats: DashboardSummaryRow[];
   today_summary: string;
+  period_label: string;
+  comparison_label: string;
+  compare_mode: string;
+  range_start: string;
+  range_end: string;
+  chart_points: DashboardSeriesPoint[];
+  chart_groups: DashboardChart[];
+  recent_activities: DashboardRecentActivity[];
 };
 
 export type AdminDashboard = {
@@ -25,6 +55,14 @@ export type AdminDashboard = {
   memberStats: DashboardSummaryRow[];
   salesStats: DashboardSummaryRow[];
   todaySummary: string;
+  periodLabel: string;
+  comparisonLabel: string;
+  compareMode: string;
+  rangeStart: string;
+  rangeEnd: string;
+  chartPoints: DashboardSeriesPoint[];
+  chartGroups: DashboardChart[];
+  recentActivities: DashboardRecentActivity[];
 };
 
 export type AdminRoleRecord = {
@@ -109,6 +147,7 @@ export type AdminPartyRecord = {
   id: string;
   title: string;
   service: string;
+  category: string;
   leaderId: string;
   memberCount: number;
   // 파티 종료 수정
@@ -141,7 +180,9 @@ export type ReceiptRecord = {
 export type SettlementRecord = {
   id: string;
   partyId: string;
+  partyName: string;
   leaderId: string;
+  leaderName: string;
   totalAmount: number;
   memberCount: number;
   billingMonth: string;
@@ -157,15 +198,28 @@ export type SystemLogRecord = {
   actor: string;
 };
 
-export async function fetchAdminDashboard(): Promise<AdminDashboard> {
+export async function fetchAdminDashboard(params?: {
+  date_from?: string;
+  date_to?: string;
+  compare_mode?: 'previous_period' | 'year_over_year';
+}): Promise<AdminDashboard> {
   const { data } = await api.get<AdminDashboardApiResponse>(
     '/api/admin/dashboard',
+    { params },
   );
   return {
     metrics: data.metrics,
     memberStats: data.member_stats,
     salesStats: data.sales_stats,
     todaySummary: data.today_summary,
+    periodLabel: data.period_label,
+    comparisonLabel: data.comparison_label,
+    compareMode: data.compare_mode,
+    rangeStart: data.range_start,
+    rangeEnd: data.range_end,
+    chartPoints: data.chart_points,
+    chartGroups: data.chart_groups,
+    recentActivities: data.recent_activities,
   };
 }
 
@@ -193,6 +247,8 @@ export async function updateAdminRole(
 export async function fetchAdminUsers(params?: {
   keyword?: string;
   status?: string;
+  date_from?: string;
+  date_to?: string;
 }): Promise<AdminUserRecord[]> {
   const { data } = await api.get<AdminUserRecord[]>('/api/admin/users', {
     params,
@@ -218,8 +274,16 @@ export async function updateAdminUserStatus(
   return data;
 }
 
-export async function fetchAdminParties(): Promise<AdminPartyRecord[]> {
-  const { data } = await api.get<AdminPartyRecord[]>('/api/admin/parties');
+export async function fetchAdminParties(params?: {
+  keyword?: string;
+  status?: string;
+  category?: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<AdminPartyRecord[]> {
+  const { data } = await api.get<AdminPartyRecord[]>('/api/admin/parties', {
+    params,
+  });
   return data;
 }
 
@@ -247,8 +311,15 @@ export async function forceEndAdminParty(partyId: string, reason?: string) {
   return data;
 }
 
-export async function fetchAdminReports(): Promise<ReportRecord[]> {
-  const { data } = await api.get<ReportRecord[]>('/api/admin/reports');
+export async function fetchAdminReports(params?: {
+  keyword?: string;
+  type?: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<ReportRecord[]> {
+  const { data } = await api.get<ReportRecord[]>('/api/admin/reports', {
+    params,
+  });
   return data;
 }
 
@@ -263,8 +334,15 @@ export async function updateAdminReportStatus(
   return data;
 }
 
-export async function fetchAdminReceipts(): Promise<ReceiptRecord[]> {
-  const { data } = await api.get<ReceiptRecord[]>('/api/admin/receipts');
+export async function fetchAdminReceipts(params?: {
+  keyword?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<ReceiptRecord[]> {
+  const { data } = await api.get<ReceiptRecord[]>('/api/admin/receipts', {
+    params,
+  });
   return data;
 }
 
@@ -279,8 +357,15 @@ export async function updateAdminReceiptStatus(
   return data;
 }
 
-export async function fetchAdminSettlements(): Promise<SettlementRecord[]> {
-  const { data } = await api.get<SettlementRecord[]>('/api/admin/settlements');
+export async function fetchAdminSettlements(params?: {
+  keyword?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<SettlementRecord[]> {
+  const { data } = await api.get<SettlementRecord[]>('/api/admin/settlements', {
+    params,
+  });
   return data;
 }
 
@@ -295,8 +380,15 @@ export async function updateAdminSettlementStatus(
   return data;
 }
 
-export async function fetchAdminLogs(): Promise<SystemLogRecord[]> {
-  const { data } = await api.get<SystemLogRecord[]>('/api/admin/logs');
+export async function fetchAdminLogs(params?: {
+  keyword?: string;
+  type?: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<SystemLogRecord[]> {
+  const { data } = await api.get<SystemLogRecord[]>('/api/admin/logs', {
+    params,
+  });
   return data;
 }
 

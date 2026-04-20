@@ -149,6 +149,19 @@ function formatTrustScore(value?: number | null) {
   return `${Number(value).toFixed(1)}점`;
 }
 
+function displayMemberName(member: Member) {
+  return member.name?.trim() || member.nickname || '';
+}
+
+function displayMemberSubLabel(member: Member) {
+  const name = member.name?.trim();
+  const nickname = member.nickname?.trim();
+  if (name && nickname && name !== nickname) {
+    return name;
+  }
+  return '';
+}
+
 function Avatar({
   nickname,
   profileImage,
@@ -308,11 +321,13 @@ function MemberItem({ member }: { member: Member }) {
         />
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-slate-900">
-            {member.nickname}
+            {displayMemberName(member) || member.nickname}
           </p>
-          <p className="truncate text-xs text-slate-500">
-            {member.name?.trim() || '이름 미등록'}
-          </p>
+          {displayMemberSubLabel(member) && (
+            <p className="truncate text-xs text-slate-500">
+              {displayMemberSubLabel(member)}
+            </p>
+          )}
         </div>
       </div>
 
@@ -325,11 +340,13 @@ function MemberItem({ member }: { member: Member }) {
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900">
-              {member.nickname}
+              {displayMemberName(member) || member.nickname}
             </p>
-            <p className="truncate text-xs text-slate-500">
-              {member.name?.trim() || '이름 미등록'}
-            </p>
+            {displayMemberSubLabel(member) && (
+              <p className="truncate text-xs text-slate-500">
+                {displayMemberSubLabel(member)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -1130,10 +1147,6 @@ export default function Chat() {
               <DetailRow
                 label="판매가"
                 value={formatCurrency(partyInfo?.monthly_price)}
-              />
-              <DetailRow
-                label="방장 할인"
-                value={formatRate(partyInfo?.leader_discount_rate)}
               />
               <DetailRow
                 label="추천 할인"
