@@ -75,7 +75,6 @@ interface ProfileDrawerState {
 
 // OCR 제거 — card/transfer 2단계만
 type PaymentStep = 'select' | 'card' | 'transfer';
-type PaymentMethod = 'card' | 'transfer' | null;
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
