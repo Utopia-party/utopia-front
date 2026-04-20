@@ -12,6 +12,28 @@ export const categoryKeys = {
   all: ['categories'] as const,
 };
 
+// ── sessionStorage 캐시 (random 파티 목록 전용) ──────────────────
+const SESSION_CACHE_PREFIX = 'partylist:';
+
+function getSessionCache(key: string): PartyListResponse | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_CACHE_PREFIX + key);
+    return raw ? (JSON.parse(raw) as PartyListResponse) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setSessionCache(key: string, data: PartyListResponse) {
+  try {
+    sessionStorage.setItem(SESSION_CACHE_PREFIX + key, JSON.stringify(data));
+  } catch {
+    // sessionStorage 용량 초과 등 무시
+  }
+}
+
+// ── API 함수 ─────────────────────────────────────────────────────
+
 export const fetchCategories = async (): Promise<Category[]> => {
   const { data } = await api.get('/api/parties/categories');
   return data;
@@ -23,9 +45,24 @@ export const fetchParties = async (params: {
   search?: string;
   page?: number;
   size?: number;
-  random?: boolean; // ← 추가
+  random?: boolean;
+  refreshKey?: number; // 캐시 키 구분용 (API에는 안 보냄)
 }): Promise<PartyListResponse> => {
-  const { data } = await api.get('/api/parties', { params });
+  const { refreshKey, ...apiParams } = params;
+
+  // random 요청이고 검색어 없을 때만 sessionStorage 캐시 적용
+  if (apiParams.random && !apiParams.search) {
+    const cacheKey = `${apiParams.category_name ?? '__all__'}:${refreshKey ?? 0}`;
+    const cached = getSessionCache(cacheKey);
+    if (cached) return cached;
+
+    const { data } = await api.get('/api/parties', { params: apiParams });
+    setSessionCache(cacheKey, data);
+    return data;
+  }
+
+  // 검색어 있거나 random 아닌 경우 캐시 없이 바로 호출
+  const { data } = await api.get('/api/parties', { params: apiParams });
   return data;
 };
 

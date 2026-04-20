@@ -630,6 +630,7 @@ export default function Home() {
         search,
         size: 6,
         random: !search,
+        refreshKey: currentRefreshKey,
       }),
     staleTime: Infinity,
   });
