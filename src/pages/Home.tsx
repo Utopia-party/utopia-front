@@ -574,7 +574,14 @@ export default function Home() {
   const navigate = useNavigate();
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
+  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>(() => {
+    try {
+      const raw = sessionStorage.getItem('party_refresh_keys');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
@@ -606,10 +613,13 @@ export default function Home() {
 
   const handleRefresh = () => {
     if (cooldown > 0) return;
-    setRefreshKeys((prev) => ({
-      ...prev,
-      [cacheKey]: (prev[cacheKey] ?? 0) + 1,
-    }));
+    setRefreshKeys((prev) => {
+      const next = { ...prev, [cacheKey]: (prev[cacheKey] ?? 0) + 1 };
+      try {
+        sessionStorage.setItem('party_refresh_keys', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     const until = Date.now() + COOLDOWN_SECONDS * 1000;
     localStorage.setItem(STORAGE_KEY, String(until));
     setCooldown(COOLDOWN_SECONDS);
