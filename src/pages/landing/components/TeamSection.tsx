@@ -1,6 +1,6 @@
 import { FiGithub, FiMail } from 'react-icons/fi';
 import Avatar from '../../../components/ui/Avatar';
-import image from '../../../assets/logo.png';
+import image from '../../../assets/partyup-mark.svg';
 import { useRef } from 'react';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
 import { Link } from 'react-router';

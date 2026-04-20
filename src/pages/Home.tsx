@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  BookOpen,
+  Briefcase,
+  Grid2x2,
+  Headphones,
+  Tv,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Party } from '../types/party';
 import {
   fetchParties,
@@ -30,14 +38,24 @@ const CATEGORY_COLOR: Record<string, string> = {
   기타: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80',
 };
 
-const CATEGORY_ICON: Record<string, string> = {
-  OTT: '📺',
-  음악: '🎵',
-  '멤버십/음악': '🎵',
-  '교육/도서': '📚',
-  생산성: '🧰',
-  '생산성/기타': '🧰',
-  기타: '✨',
+const CATEGORY_ICON: Record<string, LucideIcon> = {
+  OTT: Tv,
+  음악: Headphones,
+  '멤버십/음악': Headphones,
+  '교육/도서': BookOpen,
+  생산성: Briefcase,
+  '생산성/기타': Briefcase,
+  기타: Briefcase,
+};
+
+const CATEGORY_ICON_TONE: Record<string, string> = {
+  OTT: 'bg-sky-50 text-sky-600 ring-sky-100',
+  음악: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
+  '멤버십/음악': 'bg-emerald-50 text-emerald-600 ring-emerald-100',
+  '교육/도서': 'bg-violet-50 text-violet-600 ring-violet-100',
+  생산성: 'bg-amber-50 text-amber-600 ring-amber-100',
+  '생산성/기타': 'bg-amber-50 text-amber-600 ring-amber-100',
+  기타: 'bg-slate-100 text-slate-600 ring-slate-200',
 };
 
 const QUICK_KEYWORDS = [
@@ -138,6 +156,66 @@ function SectionTitle({
   );
 }
 
+function CategoryIconBadge({
+  name,
+  iconSize = 16,
+  className = '',
+  active = false,
+}: {
+  name: string | null;
+  iconSize?: number;
+  className?: string;
+  active?: boolean;
+}) {
+  const Icon = name ? CATEGORY_ICON[name] || Briefcase : Grid2x2;
+  const toneClass = active
+    ? 'bg-white/14 text-white ring-white/15'
+    : name
+      ? CATEGORY_ICON_TONE[name] || CATEGORY_ICON_TONE['기타']
+      : 'bg-slate-100 text-slate-700 ring-slate-200';
+
+  return (
+    <span
+      className={`flex items-center justify-center rounded-xl ring-1 ${toneClass} ${className}`}
+    >
+      <Icon size={iconSize} strokeWidth={2.1} />
+    </span>
+  );
+}
+
+function ServiceLogo({
+  logoUrl,
+  serviceName,
+  fallbackName,
+}: {
+  logoUrl: string | null;
+  serviceName: string | null;
+  fallbackName: string | null;
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  if (logoUrl && !imgError) {
+    return (
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+        <img
+          src={logoUrl}
+          alt={serviceName ?? '서비스 로고'}
+          className="h-full w-full object-contain p-1.5"
+          onError={() => setImgError(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <CategoryIconBadge
+      name={fallbackName}
+      iconSize={18}
+      className="h-12 w-12 shrink-0 rounded-2xl"
+    />
+  );
+}
+
 function PartyCard({
   party,
   onDetail,
@@ -152,7 +230,6 @@ function PartyCard({
   const isJoined = (party as any).is_joined;
   const myStatus: string | null = (party as any).my_member_status ?? null;
   const categoryName = party.category_name || '기타';
-  const categoryIcon = CATEGORY_ICON[categoryName] ?? '✨';
   const spotsLeft = Math.max(
     (party.max_members ?? 0) - (party.member_count ?? 0),
     0,
@@ -171,9 +248,11 @@ function PartyCard({
 
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-xl ring-1 ring-slate-200">
-            {categoryIcon}
-          </div>
+          <ServiceLogo
+            logoUrl={party.logo_image_url}
+            serviceName={party.service_name}
+            fallbackName={categoryName}
+          />
           <div className="min-w-0">
             <div className="mb-1 flex flex-wrap gap-1.5">
               <span
@@ -415,18 +494,32 @@ function CategorySidebar({
               onClick={() => setCategory(null)}
               className={`rounded-2xl px-3 py-3 text-left text-sm transition ${category === null ? 'bg-slate-900 font-bold text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
             >
-              전체 파티
+              <span className="flex items-center gap-2">
+                <CategoryIconBadge
+                  name={null}
+                  iconSize={15}
+                  active={category === null}
+                  className="h-8 w-8 shrink-0"
+                />
+                <span>전체 파티</span>
+              </span>
             </button>
             {categories.map((cat: any) => {
               const name = cat.name;
+              const isActive = category === name;
               return (
                 <button
                   key={name}
                   onClick={() => setCategory(name)}
-                  className={`flex items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${category === name ? 'bg-indigo-50 font-bold text-indigo-700 ring-1 ring-indigo-100' : 'text-slate-600 hover:bg-slate-50'}`}
+                  className={`flex items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${isActive ? 'bg-indigo-50 font-bold text-indigo-700 ring-1 ring-indigo-100' : 'text-slate-600 hover:bg-slate-50'}`}
                 >
                   <span className="flex items-center gap-2">
-                    <span>{CATEGORY_ICON[name] ?? '✨'}</span>
+                    <CategoryIconBadge
+                      name={name}
+                      iconSize={15}
+                      active={false}
+                      className="h-8 w-8 shrink-0"
+                    />
                     <span>{name}</span>
                   </span>
                 </button>
@@ -449,7 +542,7 @@ function CategorySidebar({
                 직접 모집글을 올리고 멤버를 모아보세요.
               </p>
             </div>
-            <span className="text-2xl">🚀</span>
+            <span className="text-2xl">🍿</span>
           </div>
         </button>
 
@@ -469,7 +562,7 @@ function CategorySidebar({
                 조건만 입력하면 맞는 파티를 더 빠르게 찾아드려요.
               </p>
             </div>
-            <span className="text-2xl">⚡</span>
+            <span className="text-2xl">🥷</span>
           </div>
         </button>
       </div>
@@ -513,7 +606,10 @@ export default function Home() {
 
   const handleRefresh = () => {
     if (cooldown > 0) return;
-    setRefreshKeys((prev) => ({ ...prev, [cacheKey]: (prev[cacheKey] ?? 0) + 1 }));
+    setRefreshKeys((prev) => ({
+      ...prev,
+      [cacheKey]: (prev[cacheKey] ?? 0) + 1,
+    }));
     const until = Date.now() + COOLDOWN_SECONDS * 1000;
     localStorage.setItem(STORAGE_KEY, String(until));
     setCooldown(COOLDOWN_SECONDS);
@@ -535,7 +631,7 @@ export default function Home() {
         size: 6,
         random: !search,
       }),
-    staleTime: Infinity, 
+    staleTime: Infinity,
   });
 
   const parties =
@@ -599,9 +695,10 @@ export default function Home() {
                     onClick={handleRefresh}
                     disabled={cooldown > 0}
                     className={`flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-semibold transition
-                      ${cooldown > 0
-                        ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:scale-95'
+                      ${
+                        cooldown > 0
+                          ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:scale-95'
                       }`}
                   >
                     {cooldown > 0 ? (
@@ -620,7 +717,8 @@ export default function Home() {
                           />
                         </svg>
                         <span className="tabular-nums font-bold text-indigo-500">
-                          {Math.floor(cooldown / 60)}:{String(cooldown % 60).padStart(2, '0')}
+                          {Math.floor(cooldown / 60)}:
+                          {String(cooldown % 60).padStart(2, '0')}
                         </span>
                       </>
                     ) : (
