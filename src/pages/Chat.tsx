@@ -73,8 +73,8 @@ interface ProfileDrawerState {
   left: number;
 }
 
-type PaymentStep = 'select' | 'card' | 'transfer' | 'ocr';
-type PaymentMethod = 'card' | 'transfer' | null;
+// OCR 제거 — card/transfer 2단계만
+type PaymentStep = 'select' | 'card' | 'transfer';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
@@ -268,22 +268,25 @@ function ProfileDrawer({
 
 function PaymentModal({
   onClose,
+  partyId,
   partyTitle,
   nickname,
+  monthlyPerPerson,
 }: {
   onClose: () => void;
+  partyId: string;
   partyTitle: string;
   nickname: string;
+  monthlyPerPerson: number | null;
 }) {
   const [step, setStep] = useState<PaymentStep>('select');
-  const [method, setMethod] = useState<PaymentMethod>(null);
-  const [ocrFile, setOcrFile] = useState<File | null>(null);
-  const [ocrPreview, setOcrPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentDone, setPaymentDone] = useState(false);
-  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const ocrFileRef = useRef<HTMLInputElement>(null);
+  const [done, setDone] = useState(false);
+  const [doneMessage, setDoneMessage] = useState('');
+
+  // 결제 금액: monthly_per_person 있으면 사용, 없으면 100원 테스트
+  const payAmount = monthlyPerPerson ?? 100;
 
   useEffect(() => {
     if (document.getElementById('portone-sdk')) return;
@@ -294,67 +297,79 @@ function PaymentModal({
     document.head.appendChild(script);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (ocrPreview) URL.revokeObjectURL(ocrPreview);
-    };
-  }, [ocrPreview]);
-
+  // ── 카드 결제 ──────────────────────────────────────────────
   const handleCardPayment = async () => {
     if (!window.PortOne) {
       alert('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
     setIsLoading(true);
-    const orderId = `order-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
+    const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     try {
       const response = await window.PortOne.requestPayment({
         storeId: PORTONE_STORE_ID,
         channelKey: PORTONE_CHANNEL_KEY,
         paymentId: orderId,
         orderName: `${partyTitle} 정산`,
-        totalAmount: 100,
+        totalAmount: payAmount,
         currency: 'CURRENCY_KRW',
         payMethod: 'CARD',
         customer: { fullName: nickname },
       });
+
+      console.log('[PORTONE 응답]', JSON.stringify(response));
+
+      // 사용자가 결제창 닫거나 취소한 경우
+      if (!response) {
+        alert('결제가 취소되었습니다.');
+        return;
+      }
+
+      // 에러 코드 있으면 실패
       if (response?.code) {
         alert(`결제 실패: ${response.message ?? '알 수 없는 오류'}`);
-      } else {
-        setPaymentId(response?.paymentId ?? orderId);
-        setPaymentDone(true);
-        setStep('ocr');
+        return;
       }
-    } catch (err) {
-      console.error('결제 오류:', err);
-      alert('결제 중 오류가 발생했습니다.');
+
+      // 백엔드로 승인 요청
+      await api.post('/api/payments/card/confirm', {
+        party_id: partyId,
+        pg_transaction_id: response?.paymentId ?? orderId,
+        amount: payAmount,
+      });
+
+      setDoneMessage('카드 결제가 완료되었습니다! 결제 승인이 확인되었어요.');
+      setDone(true);
+    } catch (err: any) {
+      console.error('[결제 에러]', err);
+      const detail =
+        err?.response?.data?.detail ?? '결제 처리 중 오류가 발생했습니다.';
+      alert(detail);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOcrFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setOcrFile(file);
-    if (ocrPreview) URL.revokeObjectURL(ocrPreview);
-    if (file) {
-      setOcrPreview(URL.createObjectURL(file));
-    } else {
-      setOcrPreview(null);
+  // ── 무통장입금 등록 ────────────────────────────────────────
+  const handleTransferRegister = async () => {
+    setIsLoading(true);
+    try {
+      await api.post('/api/payments/transfer/register', {
+        party_id: partyId,
+        amount: payAmount,
+      });
+      setDoneMessage(
+        '입금 정보가 등록되었습니다.\n관리자 확인 후 승인으로 변경됩니다.',
+      );
+      setDone(true);
+    } catch (err: any) {
+      const detail =
+        err?.response?.data?.detail ?? '등록 중 오류가 발생했습니다.';
+      alert(detail);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleOcrSubmit = () => {
-    if (!ocrFile) {
-      alert('파일을 선택해주세요.');
-      return;
-    }
-    alert(
-      `"${ocrFile.name}" OCR 인증 요청이 제출되었습니다!\nOCR 분석 → 자동 승인, 실패 시 관리자 검토`,
-    );
-    onClose();
   };
 
   const handleCopyAccount = () => {
@@ -363,6 +378,44 @@ function PaymentModal({
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  // ── 완료 화면 ──────────────────────────────────────────────
+  if (done) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+          <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+            <h2 className="text-base font-extrabold text-white">결제 완료</h2>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white transition-colors text-xl font-light"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-8 flex flex-col items-center text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">
+              ✅
+            </div>
+            <div>
+              <p className="text-lg font-extrabold text-slate-900">
+                처리 완료!
+              </p>
+              <p className="mt-2 text-sm text-slate-500 leading-relaxed whitespace-pre-line">
+                {doneMessage}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-2 w-full py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-slate-800"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -382,7 +435,9 @@ function PaymentModal({
             ✕
           </button>
         </div>
+
         <div className="p-6">
+          {/* ── 수단 선택 ── */}
           {step === 'select' && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-slate-600 font-medium">
@@ -390,67 +445,106 @@ function PaymentModal({
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => { setMethod('card'); setStep('card'); }}
+                  onClick={() => setStep('card')}
                   className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
                 >
                   <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl">💳</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">카드 결제</p>
-                    <p className="text-xs text-slate-400 mt-0.5">100원 테스트</p>
+                    <p className="text-sm font-bold text-slate-800">
+                      카드 결제
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">즉시 승인</p>
                   </div>
                 </button>
                 <button
-                  onClick={() => { setMethod('transfer'); setStep('transfer'); }}
+                  onClick={() => setStep('transfer')}
                   className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
                 >
                   <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl">🏦</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">계좌 입금</p>
-                    <p className="text-xs text-slate-400 mt-0.5">OCR 인증</p>
+                    <p className="text-sm font-bold text-slate-800">
+                      계좌 입금
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">관리자 승인</p>
                   </div>
                 </button>
               </div>
-              <p className="text-xs text-slate-400 text-center">
-                결제 완료 후 영수증/이체확인서로 OCR 인증을 진행합니다
-              </p>
+              <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between text-sm">
+                <span className="text-slate-500">이번 달 결제 금액</span>
+                <span className="font-extrabold text-slate-900">
+                  {payAmount.toLocaleString()}원
+                </span>
+              </div>
             </div>
           )}
+
+          {/* ── 카드 결제 ── */}
           {step === 'card' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">파티명</span>
-                  <span className="font-semibold text-slate-800">{partyTitle}</span>
+                  <span className="font-semibold text-slate-800">
+                    {partyTitle}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">결제자</span>
-                  <span className="font-semibold text-slate-800">{nickname}</span>
+                  <span className="font-semibold text-slate-800">
+                    {nickname}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">결제 금액</span>
-                  <span className="font-extrabold text-primary text-base">100원 (테스트)</span>
+                  <span className="font-extrabold text-primary text-base">
+                    {payAmount.toLocaleString()}원
+                  </span>
                 </div>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="text-xs text-amber-700 font-medium">⚠️ 테스트 결제</p>
-                <p className="text-xs text-amber-600 mt-0.5">테스트 환경에서 실제 결제는 발생하지 않습니다.</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <p className="text-xs text-blue-700 font-medium">
+                  💳 카드 결제 후 즉시 승인
+                </p>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  결제 완료 시 자동으로 승인 처리됩니다.
+                </p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep('select')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                <button onClick={handleCardPayment} disabled={isLoading} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isLoading ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />처리중...</>) : '결제하기 💳'}
+                <button
+                  onClick={() => setStep('select')}
+                  className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  이전
+                </button>
+                <button
+                  onClick={handleCardPayment}
+                  disabled={isLoading}
+                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      처리중...
+                    </>
+                  ) : (
+                    '결제하기 💳'
+                  )}
                 </button>
               </div>
             </div>
           )}
+
+          {/* ── 무통장입금 ── */}
           {step === 'transfer' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-3">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">입금 계좌 정보</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  입금 계좌 정보
+                </p>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">은행</span>
                   <span className="font-semibold">{BANK_INFO.bank}</span>
@@ -458,8 +552,13 @@ function PaymentModal({
                 <div className="flex justify-between text-sm items-center">
                   <span className="text-slate-500">계좌번호</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-slate-800">{BANK_INFO.account}</span>
-                    <button onClick={handleCopyAccount} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20">
+                    <span className="font-mono font-bold text-slate-800">
+                      {BANK_INFO.account}
+                    </span>
+                    <button
+                      onClick={handleCopyAccount}
+                      className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20"
+                    >
                       {copied ? '복사됨 ✓' : '복사'}
                     </button>
                   </div>
@@ -468,46 +567,42 @@ function PaymentModal({
                   <span className="text-slate-500">예금주</span>
                   <span className="font-semibold">{BANK_INFO.holder}</span>
                 </div>
+                <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
+                  <span className="text-slate-500">입금 금액</span>
+                  <span className="font-extrabold text-slate-900">
+                    {payAmount.toLocaleString()}원
+                  </span>
+                </div>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p className="text-xs text-blue-700 font-medium">📋 입금 후 이체확인서 업로드 필요</p>
-                <p className="text-xs text-blue-600 mt-0.5">입금 완료 후 아래 버튼을 눌러 이체확인서를 OCR 인증해주세요.</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="text-xs text-amber-700 font-medium">
+                  ⏳ 관리자 확인 후 승인
+                </p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  입금 후 아래 버튼을 누르면 관리자가 확인 후 승인 처리합니다.
+                </p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep('select')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                <button onClick={() => setStep('ocr')} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90">입금했어요 →</button>
-              </div>
-            </div>
-          )}
-          {step === 'ocr' && (
-            <div className="flex flex-col gap-5">
-              {paymentDone && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
-                  <span className="text-green-500 text-lg">✅</span>
-                  <div>
-                    <p className="text-xs text-green-700 font-bold">결제 완료!</p>
-                    {paymentId && <p className="text-xs text-green-600 font-mono mt-0.5">ID: {paymentId}</p>}
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-bold text-slate-800 mb-1">{method === 'card' ? '결제 영수증' : '이체확인서'} 업로드</p>
-                <p className="text-xs text-slate-500 mb-3">OCR로 자동 분석 → 실패 시 관리자 검토</p>
-                <div onClick={() => ocrFileRef.current?.click()} className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
-                  {ocrPreview ? (
-                    <img src={ocrPreview} alt="미리보기" className="max-h-32 rounded-lg object-contain" />
+                <button
+                  onClick={() => setStep('select')}
+                  className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  이전
+                </button>
+                <button
+                  onClick={handleTransferRegister}
+                  disabled={isLoading}
+                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      처리중...
+                    </>
                   ) : (
-                    <><span className="text-3xl">📄</span><p className="text-sm text-slate-500 font-medium">파일 선택 또는 드래그</p><p className="text-xs text-slate-400">이미지, PDF 가능</p></>
+                    '입금 완료했어요 ✓'
                   )}
-                </div>
-                {ocrFile && <p className="text-xs text-slate-500 mt-2 text-center truncate">선택됨: {ocrFile.name}</p>}
-                <input ref={ocrFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleOcrFileChange} />
-              </div>
-              <div className="flex gap-3">
-                {!paymentDone && (
-                  <button onClick={() => setStep(method === 'card' ? 'card' : 'transfer')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                )}
-                <button onClick={handleOcrSubmit} disabled={!ocrFile} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-40">OCR 인증 요청 🔍</button>
+                </button>
               </div>
             </div>
           )}
@@ -527,7 +622,9 @@ export default function Chat() {
   const [partyInfo, setPartyInfo] = useState<PartyInfo | null>(null);
   const [connected, setConnected] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(null);
+  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
+    null,
+  );
 
   const nicknameRef = useRef(user?.nickname ?? '익명');
   const userIdRef = useRef(user?.user_id ?? 'guest');
@@ -553,8 +650,7 @@ export default function Chat() {
       .then(({ data }) => {
         setMessages(Array.isArray(data) ? data : []);
       })
-      .catch(() => {
-      });
+      .catch(() => {});
 
     api
       .get(`/chat/parties/${partyId}/info`)
@@ -645,18 +741,28 @@ export default function Chat() {
       !input.trim() ||
       !wsRef.current ||
       wsRef.current.readyState !== WebSocket.OPEN
-    ) {
+    )
       return;
-    }
     wsRef.current.send(input.trim());
     setInput('');
   }, [input]);
 
   const getMemberMeta = useCallback(
     (targetUserId?: string) => {
-      const member = partyInfo?.members?.find((m) => m.user_id === targetUserId);
-      if (!member) return { role: undefined, status: undefined, profile_image: null as string | null };
-      return { role: member.role, status: member.status, profile_image: member.profile_image ?? null };
+      const member = partyInfo?.members?.find(
+        (m) => m.user_id === targetUserId,
+      );
+      if (!member)
+        return {
+          role: undefined,
+          status: undefined,
+          profile_image: null as string | null,
+        };
+      return {
+        role: member.role,
+        status: member.status,
+        profile_image: member.profile_image ?? null,
+      };
     },
     [partyInfo],
   );
@@ -667,9 +773,15 @@ export default function Chat() {
       const rect = e.currentTarget.getBoundingClientRect();
       const drawerWidth = 280;
       const drawerHeight = 210;
-      const hasRightSpace = rect.right + 12 + drawerWidth <= window.innerWidth - 12;
-      const left = hasRightSpace ? rect.right + 12 : Math.max(12, rect.left - drawerWidth - 12);
-      const top = Math.min(Math.max(12, rect.top - 8), window.innerHeight - drawerHeight - 12);
+      const hasRightSpace =
+        rect.right + 12 + drawerWidth <= window.innerWidth - 12;
+      const left = hasRightSpace
+        ? rect.right + 12
+        : Math.max(12, rect.left - drawerWidth - 12);
+      const top = Math.min(
+        Math.max(12, rect.top - 8),
+        window.innerHeight - drawerHeight - 12,
+      );
       setProfileDrawer({ user: targetUser, top, left });
     },
     [],
@@ -679,13 +791,17 @@ export default function Chat() {
 
   const handleProfileInfo = useCallback(() => {
     if (!profileDrawer) return;
-    alert(`${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`);
+    alert(
+      `${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`,
+    );
     setProfileDrawer(null);
   }, [profileDrawer]);
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
-    alert(`${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`);
+    alert(
+      `${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`,
+    );
     setProfileDrawer(null);
   }, [profileDrawer]);
 
@@ -707,17 +823,24 @@ export default function Chat() {
       const isError = msg.type === 'error';
       return (
         <div key={i} className="flex justify-center">
-          <span className={`text-xs border px-3 py-1.5 rounded-xl ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'}`}>
+          <span
+            className={`text-xs border px-3 py-1.5 rounded-xl ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'}`}
+          >
             {msg.content}
           </span>
         </div>
       );
     }
 
-    const senderImage = isMe ? myProfileImage : (msg.profile_image ?? memberMeta.profile_image ?? null);
+    const senderImage = isMe
+      ? myProfileImage
+      : (msg.profile_image ?? memberMeta.profile_image ?? null);
 
     return (
-      <div key={i} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div
+        key={i}
+        className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+      >
         <div className="shrink-0 mt-1">
           <Avatar
             nickname={msg.nickname}
@@ -734,13 +857,24 @@ export default function Chat() {
             }
           />
         </div>
-        <div className={`flex flex-col gap-0.5 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}>
-          <p className="text-xs text-muted-foreground px-1">{msg.nickname ?? '익명'}</p>
-          <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}>
+        <div
+          className={`flex flex-col gap-0.5 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}
+        >
+          <p className="text-xs text-muted-foreground px-1">
+            {msg.nickname ?? '익명'}
+          </p>
+          <div
+            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
+          >
             {msg.content}
           </div>
           <p className="text-[10px] text-muted-foreground px-1">
-            {msg.created_at ? new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : ''}
+            {msg.created_at
+              ? new Date(msg.created_at).toLocaleTimeString('ko-KR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : ''}
           </p>
         </div>
       </div>
@@ -749,7 +883,14 @@ export default function Chat() {
 
   const formatDate = (d?: string | null) => {
     if (!d) return '-';
-    return new Date(d).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace('.', '');
+    return new Date(d)
+      .toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      .replace(/\. /g, '.')
+      .replace('.', '');
   };
 
   return (
@@ -757,8 +898,10 @@ export default function Chat() {
       {showPaymentModal && (
         <PaymentModal
           onClose={() => setShowPaymentModal(false)}
+          partyId={partyId ?? ''}
           partyTitle={partyInfo?.title ?? '파티'}
           nickname={nicknameRef.current}
+          monthlyPerPerson={partyInfo?.monthly_per_person ?? null}
         />
       )}
 
@@ -775,12 +918,17 @@ export default function Chat() {
       )}
 
       <div className="bg-card border-b border-border px-6 py-3 flex items-center gap-3 shrink-0">
-        <button onClick={() => navigate('/home')} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <button
+          onClick={() => navigate('/home')}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
           ← 파티 목록
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-extrabold text-foreground truncate">{partyInfo?.title ?? '채팅방'}</h1>
-          <p className="text-xs text-muted-foreground">정산요청 · 영수증 인증 · 채팅 신고</p>
+          <h1 className="text-base font-extrabold text-foreground truncate">
+            {partyInfo?.title ?? '채팅방'}
+          </h1>
+          <p className="text-xs text-muted-foreground">정산요청 · 채팅 신고</p>
         </div>
       </div>
 
@@ -793,7 +941,9 @@ export default function Chat() {
             {messages.length > 0 ? (
               messages.map((msg, i) => renderMessage(msg, i))
             ) : (
-              <p className="text-xs text-muted-foreground">[시스템] 채팅방이 생성되었습니다.</p>
+              <p className="text-xs text-muted-foreground">
+                [시스템] 채팅방이 생성되었습니다.
+              </p>
             )}
             <div ref={bottomRef} />
           </div>
@@ -804,7 +954,8 @@ export default function Chat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendMessage();
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                  sendMessage();
               }}
             />
             <button
@@ -831,77 +982,125 @@ export default function Chat() {
         <div className="w-72 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
           <div className="p-5 border-b border-border">
             <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
-            {Array.isArray(partyInfo?.members) && partyInfo.members.length > 0 ? (
+            {Array.isArray(partyInfo?.members) &&
+            partyInfo.members.length > 0 ? (
               <div className="flex flex-col gap-1">
                 {partyInfo.members.map((member) => (
-                  <div key={member.user_id} className="flex items-center gap-2.5 py-1.5">
+                  <div
+                    key={member.user_id}
+                    className="flex items-center gap-2.5 py-1.5"
+                  >
                     <Avatar
                       nickname={member.nickname}
                       profileImage={member.profile_image}
                       size="sm"
-                      onClick={(e) => openProfileDrawer(e, {
-                        user_id: member.user_id,
-                        nickname: member.nickname,
-                        profile_image: member.profile_image,
-                        role: member.role,
-                        status: member.status,
-                      })}
+                      onClick={(e) =>
+                        openProfileDrawer(e, {
+                          user_id: member.user_id,
+                          nickname: member.nickname,
+                          profile_image: member.profile_image,
+                          role: member.role,
+                          status: member.status,
+                        })
+                      }
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{member.nickname}</p>
-                      <p className="text-xs text-muted-foreground">{ROLE_LABEL[member.role] ?? member.role}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {member.nickname}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {ROLE_LABEL[member.role] ?? member.role}
+                      </p>
                     </div>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${member.status === 'active' ? 'bg-green-100 text-green-700' : member.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                    <span
+                      className={`text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${member.status === 'active' ? 'bg-green-100 text-green-700' : member.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}
+                    >
                       {STATUS_LABEL[member.status] ?? member.status}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">멤버 정보를 불러오는 중...</p>
+              <p className="text-xs text-muted-foreground">
+                멤버 정보를 불러오는 중...
+              </p>
             )}
           </div>
 
           <div className="p-5">
             {partyInfo?.category_name && (
               <div className="mb-3">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'}`}>
+                <span
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'}`}
+                >
                   {partyInfo.category_name}
                 </span>
               </div>
             )}
             <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
             <div className="grid grid-cols-2 gap-2 mb-4">
-              <InfoCard icon={<Users size={14} />} label="모집 인원" value={`${partyInfo?.member_count ?? '-'} / ${partyInfo?.max_members ?? '-'}`} />
-              <InfoCard icon={<Calendar size={14} />} label="시작일" value={formatDate(partyInfo?.start_date)} />
-              <InfoCard icon={<Clock size={14} />} label="모집 마감" value={formatDate(partyInfo?.end_date)} />
-              <InfoCard icon={<RefreshCw size={14} />} label="정산 주기" value="매월 1일" />
+              <InfoCard
+                icon={<Users size={14} />}
+                label="모집 인원"
+                value={`${partyInfo?.member_count ?? '-'} / ${partyInfo?.max_members ?? '-'}`}
+              />
+              <InfoCard
+                icon={<Calendar size={14} />}
+                label="시작일"
+                value={formatDate(partyInfo?.start_date)}
+              />
+              <InfoCard
+                icon={<Clock size={14} />}
+                label="모집 마감"
+                value={formatDate(partyInfo?.end_date)}
+              />
+              <InfoCard
+                icon={<RefreshCw size={14} />}
+                label="정산 주기"
+                value="매월 1일"
+              />
             </div>
             <div className="border-t border-slate-100 pt-3 mb-3">
-              <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">정산 요약</p>
+              <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
+                정산 요약
+              </p>
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">총 비용</span>
-                  <span className="font-semibold text-slate-900">{partyInfo?.monthly_price != null ? `${partyInfo.monthly_price.toLocaleString()}원` : '-'}</span>
+                  <span className="font-semibold text-slate-900">
+                    {partyInfo?.monthly_price != null
+                      ? `${partyInfo.monthly_price.toLocaleString()}원`
+                      : '-'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">1인 부담</span>
-                  <span className="font-bold text-primary">{partyInfo?.monthly_per_person != null ? `${partyInfo.monthly_per_person.toLocaleString()}원` : '-'}</span>
+                  <span className="font-bold text-primary">
+                    {partyInfo?.monthly_per_person != null
+                      ? `${partyInfo.monthly_per_person.toLocaleString()}원`
+                      : '-'}
+                  </span>
                 </div>
               </div>
             </div>
             {partyInfo?.host_nickname && (
               <div className="border-t border-slate-100 pt-3">
-                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">호스트</p>
+                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
+                  호스트
+                </p>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">닉네임</span>
-                  <span className="font-semibold text-slate-900">{partyInfo.host_nickname}</span>
+                  <span className="font-semibold text-slate-900">
+                    {partyInfo.host_nickname}
+                  </span>
                 </div>
               </div>
             )}
             {partyInfo?.status && (
               <div className="mt-3">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${partyInfo.status === 'recruiting' ? 'bg-orange-100 text-orange-600' : partyInfo.status === 'full' ? 'bg-slate-100 text-slate-600' : 'bg-green-100 text-green-700'}`}>
+                <span
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${partyInfo.status === 'recruiting' ? 'bg-orange-100 text-orange-600' : partyInfo.status === 'full' ? 'bg-slate-100 text-slate-600' : 'bg-green-100 text-green-700'}`}
+                >
                   {STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
                 </span>
               </div>
