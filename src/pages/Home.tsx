@@ -4,16 +4,44 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Party } from '../types/party';
 import {
   fetchParties,
+  fetchParty,
   fetchCategories,
   applyParty,
   partyKeys,
   categoryKeys,
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
-import QuickMatchForm from '../components/party/QuickMatchForm';
-import { useQuickMatch } from '../hooks/useQuickMatch';
+import QuickMatchForm from '../components/quickMatch/QuickMatchForm';
+import MatchingLoadingModal from '../components/quickMatch/MatchingLoadingModal';
+import MatchingErrorModal from '../components/quickMatch/MatchingErrorModal';
+import {
+  useQuickMatchRequest,
+  useQuickMatchCandidates,
+  useQuickMatchSelect,
+  useQuickMatchJoin,
+} from '../hooks/useQuickMatch';
 import { usePageTitle } from '../hooks/usePageTitle';
 // import SystemNoticeBanner from '../components/notification/SystemNoticeBanner';
+
+type JoinResult = {
+  party_id?: number;
+  party_title?: string;
+  title?: string;
+  service_name?: string;
+  monthly_price?: number;
+  original_price?: number;
+  member_count?: number;
+  max_members?: number;
+  host_nickname?: string;
+  host_trust_score?: number;
+  category_name?: string;
+  description?: string;
+  status?: string;
+  id?: number | string;
+  [key: string]: any;
+};
+
+type MatchStep = 'idle' | 'requesting' | 'finding' | 'selecting' | 'joining';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -484,7 +512,14 @@ export default function Home() {
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
-  const quickMatchMutation = useQuickMatch();
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchStep, setMatchStep] = useState<MatchStep>('idle');
+  const [matchResult, setMatchResult] = useState<JoinResult | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
+  const quickMatchRequestMutation = useQuickMatchRequest();
+  const quickMatchCandidatesMutation = useQuickMatchCandidates();
+  const quickMatchSelectMutation = useQuickMatchSelect();
+  const quickMatchJoinMutation = useQuickMatchJoin();
 
   const { data: categoriesRaw } = useQuery({
     queryKey: categoryKeys.all,
@@ -497,7 +532,7 @@ export default function Home() {
     queryKey: partyKeys.list(category, search, refreshKey),
     queryFn: () =>
       fetchParties({
-        category_name: category ?? undefined, // category → category_name
+        category_name: category ?? undefined,
         search,
         size: 6,
       }),
@@ -518,32 +553,158 @@ export default function Home() {
     return '지금 바로 참여할 수 있는 파티를 한눈에 확인해보세요.';
   }, [category, search]);
 
-  const handleQuickMatchSubmit = (payload: {
-    category: string;
-    serviceId: string;
-    period: string;
-  }) => {
-    quickMatchMutation.mutate(
-      {
-        service_id: payload.serviceId,
-      },
-      {
-        onSuccess: (response) => {
-          console.log('빠른 매칭 성공:', response);
-          alert(response.message || '빠른 매칭 요청이 완료되었습니다.');
-          setShowQuickMatch(false);
-        },
-        onError: (error: any) => {
-          console.error('빠른 매칭 실패:', error?.response?.data || error);
-          alert(
-            error?.response?.data?.message ||
-              JSON.stringify(error?.response?.data) ||
-              error?.message ||
-              '빠른 매칭 요청 중 오류가 발생했습니다.',
-          );
-        },
-      },
+  const matchedParty = useMemo(() => {
+    if (!matchResult) return null;
+
+    const targetPartyId = matchResult.party_id ?? matchResult.id;
+    if (!targetPartyId) return null;
+
+    const found = parties.find(
+      (party) => String(party.id) === String(targetPartyId),
     );
+
+    if (found) {
+      return {
+        ...found,
+        ...matchResult,
+        id: found.id,
+        title:
+          (matchResult as any).title ??
+          matchResult.party_title ??
+          found.title ??
+          '매칭된 파티',
+        service_name: matchResult.service_name ?? found.service_name ?? '',
+        category_name:
+          matchResult.category_name ?? found.category_name ?? '기타',
+        member_count: matchResult.member_count ?? found.member_count ?? 0,
+        max_members: matchResult.max_members ?? found.max_members ?? null,
+        monthly_price: matchResult.monthly_price ?? found.monthly_price ?? null,
+        original_price:
+          matchResult.original_price ?? found.original_price ?? null,
+        host_nickname:
+          matchResult.host_nickname ?? found.host_nickname ?? '익명',
+        description: matchResult.description ?? found.description ?? '',
+        status: matchResult.status ?? found.status ?? 'recruiting',
+      };
+    }
+
+    return {
+      ...matchResult,
+      id: targetPartyId,
+      title:
+        (matchResult as any).title ?? matchResult.party_title ?? '매칭된 파티',
+      service_name: matchResult.service_name ?? '',
+      category_name: matchResult.category_name ?? '기타',
+      member_count: matchResult.member_count ?? 0,
+      max_members: matchResult.max_members ?? null,
+      monthly_price: matchResult.monthly_price ?? null,
+      original_price: matchResult.original_price ?? null,
+      host_nickname: matchResult.host_nickname ?? '익명',
+      description: matchResult.description ?? '',
+      status: matchResult.status ?? 'recruiting',
+    } as any;
+  }, [matchResult, parties]);
+
+  const currentStepTitle = useMemo(() => {
+    switch (matchStep) {
+      case 'requesting':
+        return '빠른 매칭 요청을 확인하고 있어요';
+      case 'finding':
+        return '조건에 맞는 파티를 찾고 있어요';
+      case 'selecting':
+        return '가장 잘 맞는 파티를 고르고 있어요';
+      case 'joining':
+        return '선택된 파티에 자동으로 참여하는 중이에요';
+      default:
+        return '조건에 맞는 파티를 찾고 있어요';
+    }
+  }, [matchStep]);
+
+  const handleQuickMatchSubmit = async (payload: {
+    service_id: string;
+    preferred_conditions?: {
+      price_range?: string;
+      duration_preference?: 'short_term' | 'long_term' | 'flexible';
+    };
+  }) => {
+    try {
+      setIsMatching(true);
+      setMatchStep('requesting');
+      setMatchResult(null);
+      setMatchError(null);
+      setShowQuickMatch(false);
+
+      const requestResponse =
+        await quickMatchRequestMutation.mutateAsync(payload);
+      const requestId = requestResponse.request_id;
+
+      setMatchStep('finding');
+      await quickMatchCandidatesMutation.mutateAsync(requestId);
+
+      setMatchStep('selecting');
+      await quickMatchSelectMutation.mutateAsync(requestId);
+
+      setMatchStep('joining');
+      const joinResponse = await quickMatchJoinMutation.mutateAsync(requestId);
+
+      const matchedPartyId = joinResponse?.party_id ?? joinResponse?.id;
+
+      if (!matchedPartyId) {
+        throw new Error('매칭된 파티 정보를 찾을 수 없습니다.');
+      }
+
+      let detailedParty: any = null;
+
+      try {
+        detailedParty = await fetchParty(String(matchedPartyId));
+      } catch (detailError) {
+        console.warn('파티 상세 조회 실패:', detailError);
+      }
+
+      setMatchResult({
+        ...joinResponse,
+        ...(detailedParty ?? {}),
+        party_id: joinResponse?.party_id ?? detailedParty?.id,
+        party_title:
+          joinResponse?.party_title ?? detailedParty?.title ?? '매칭된 파티',
+        title:
+          detailedParty?.title ?? joinResponse?.party_title ?? '매칭된 파티',
+        service_name:
+          detailedParty?.service_name ?? joinResponse?.service_name ?? '',
+        category_name:
+          detailedParty?.category_name ?? joinResponse?.category_name ?? '기타',
+        member_count:
+          detailedParty?.member_count ?? joinResponse?.member_count ?? 0,
+        max_members:
+          detailedParty?.max_members ?? joinResponse?.max_members ?? null,
+        monthly_price:
+          detailedParty?.monthly_price ?? joinResponse?.monthly_price ?? null,
+        original_price:
+          detailedParty?.original_price ?? joinResponse?.original_price ?? null,
+        host_nickname:
+          detailedParty?.host_nickname ?? joinResponse?.host_nickname ?? '익명',
+        host_trust_score:
+          detailedParty?.host_trust_score ??
+          joinResponse?.host_trust_score ??
+          null,
+        description:
+          detailedParty?.description ?? joinResponse?.description ?? '',
+        status: detailedParty?.status ?? joinResponse?.status ?? 'recruiting',
+      });
+    } catch (error: any) {
+      console.error('빠른 매칭 실패:', error?.response?.data || error);
+
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        error?.message ||
+        '빠른 매칭 요청 중 오류가 발생했습니다.';
+
+      setMatchError(errorMessage);
+    } finally {
+      setIsMatching(false);
+      setMatchStep('idle');
+    }
   };
 
   return (
@@ -694,7 +855,152 @@ export default function Home() {
         open={showQuickMatch}
         onClose={() => setShowQuickMatch(false)}
         onSubmit={handleQuickMatchSubmit}
+        isSubmitting={isMatching}
       />
+
+      <MatchingLoadingModal open={isMatching} message={currentStepTitle} />
+
+      <MatchingErrorModal
+        open={!!matchError}
+        message={matchError ?? ''}
+        onClose={() => setMatchError(null)}
+        onRetry={() => {
+          setMatchError(null);
+          setShowQuickMatch(true);
+        }}
+      />
+
+      {matchResult ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+          onClick={() => setMatchResult(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                    CATEGORY_COLOR[matchedParty?.category_name || '기타'] ??
+                    'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'
+                  }`}
+                >
+                  {matchedParty?.category_name || '기타'}
+                </span>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200/80">
+                  빠른 매칭 완료
+                </span>
+              </div>
+
+              <button
+                onClick={() => setMatchResult(null)}
+                className="text-2xl leading-none text-slate-400 transition hover:text-slate-600"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-5">
+              <p className="text-sm font-bold text-indigo-600">
+                🎉 매칭된 파티에 바로 참여되었어요
+              </p>
+              <h3 className="mt-2 text-2xl font-extrabold leading-tight text-slate-900">
+                {matchedParty?.title ||
+                  matchResult?.party_title ||
+                  '매칭된 파티'}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {matchedParty?.service_name
+                  ? `${matchedParty.service_name} 파티에 연결되었어요.`
+                  : '조건에 맞는 파티에 연결되었어요.'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
+                  <p className="text-[11px] font-medium text-slate-400">
+                    서비스
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    {matchedParty?.service_name || '-'}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
+                  <p className="text-[11px] font-medium text-slate-400">
+                    카테고리
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    {matchedParty?.category_name || '기타'}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
+                  <p className="text-[11px] font-medium text-slate-400">
+                    현재 인원
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    {matchedParty?.member_count ?? 0} /{' '}
+                    {matchedParty?.max_members ?? '?'}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
+                  <p className="text-[11px] font-medium text-slate-400">
+                    1인 부담
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-indigo-600">
+                    {matchedParty?.monthly_price != null
+                      ? `${Number(matchedParty.monthly_price).toLocaleString()}원`
+                      : '-'}
+                  </p>
+                </div>
+
+                <div className="col-span-2 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100">
+                  <p className="text-[11px] font-medium text-slate-400">
+                    호스트
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    {matchedParty?.host_nickname || '익명'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs leading-5 text-slate-500">
+              세부 공지와 대화는 채팅방에서 바로 확인할 수 있어요.
+            </p>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => setMatchResult(null)}
+                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                닫기
+              </button>
+
+              <button
+                onClick={() => {
+                  const targetPartyId =
+                    matchedParty?.id ?? matchResult.party_id;
+                  if (!targetPartyId) {
+                    alert('채팅방 정보를 찾을 수 없습니다.');
+                    return;
+                  }
+                  setMatchResult(null);
+                  navigate(`/party/${targetPartyId}/chat`);
+                }}
+                className="flex-1 rounded-2xl bg-indigo-600 py-3 text-sm font-bold text-white transition hover:bg-indigo-500"
+              >
+                채팅방 입장하기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

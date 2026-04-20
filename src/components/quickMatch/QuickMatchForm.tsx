@@ -4,10 +4,13 @@ type QuickMatchFormProps = {
   open: boolean;
   onClose: () => void;
   onSubmit: (payload: {
-    category: string;
-    serviceId: string;
-    period: string;
+    service_id: string;
+    preferred_conditions?: {
+      price_range?: string;
+      duration_preference?: 'short_term' | 'long_term' | 'flexible';
+    };
   }) => void;
+  isSubmitting?: boolean;
 };
 
 const SERVICE_MAP = {
@@ -37,27 +40,40 @@ const SERVICE_MAP = {
 
 const CATEGORY_OPTIONS = ['OTT', '교육/도서', '음악', '생산성/기타'] as const;
 
-const PERIOD_OPTIONS = [
+const PRICE_RANGE_OPTIONS = [
   { value: '', label: '상관없음' },
-  { value: '1개월', label: '1~3개월 이용' },
-  { value: '3개월', label: '3~6개월 이용' },
-  { value: '6개월', label: '6개월 이상 이용' },
+  { value: '0-5000', label: '5,000원 이하' },
+  { value: '5000-10000', label: '5,000원 ~ 10,000원' },
+  { value: '10000-20000', label: '10,000원 ~ 20,000원' },
+  { value: '20000-999999', label: '20,000원 이상' },
 ];
+
+const DURATION_OPTIONS = [
+  { value: '', label: '상관없음' },
+  { value: 'short_term', label: '단기 이용 선호' },
+  { value: 'long_term', label: '장기 이용 선호' },
+  { value: 'flexible', label: '유연하게 가능' },
+] as const;
 
 export default function QuickMatchForm({
   open,
   onClose,
   onSubmit,
+  isSubmitting = false,
 }: QuickMatchFormProps) {
   const [category, setCategory] = useState('');
   const [serviceId, setServiceId] = useState('');
-  const [period, setPeriod] = useState('');
+  const [priceRange, setPriceRange] = useState('');
+  const [durationPreference, setDurationPreference] = useState<
+    '' | 'short_term' | 'long_term' | 'flexible'
+  >('');
 
   useEffect(() => {
     if (!open) {
       setCategory('');
       setServiceId('');
-      setPeriod('');
+      setPriceRange('');
+      setDurationPreference('');
     }
   }, [open]);
 
@@ -74,6 +90,8 @@ export default function QuickMatchForm({
   };
 
   const handleSubmit = () => {
+    if (isSubmitting) return;
+
     if (!category) {
       alert('카테고리를 선택해주세요.');
       return;
@@ -84,17 +102,32 @@ export default function QuickMatchForm({
       return;
     }
 
+    const preferredConditions: {
+      price_range?: string;
+      duration_preference?: 'short_term' | 'long_term' | 'flexible';
+    } = {};
+
+    if (priceRange) {
+      preferredConditions.price_range = priceRange;
+    }
+
+    if (durationPreference) {
+      preferredConditions.duration_preference = durationPreference;
+    }
+
     onSubmit({
-      category,
-      serviceId,
-      period,
+      service_id: serviceId,
+      preferred_conditions:
+        Object.keys(preferredConditions).length > 0
+          ? preferredConditions
+          : undefined,
     });
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={isSubmitting ? undefined : onClose}
     >
       <div
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
@@ -103,7 +136,8 @@ export default function QuickMatchForm({
         <div className="mb-5">
           <h2 className="text-xl font-extrabold text-slate-900">빠른 매칭</h2>
           <p className="mt-1 text-sm text-slate-500">
-            카테고리와 플랫폼을 선택하면 빠르게 파티를 찾아드려요.
+            원하는 서비스와 선호 조건을 선택하면 빠르게 어울리는 파티를
+            찾아드려요.
           </p>
         </div>
 
@@ -115,7 +149,8 @@ export default function QuickMatchForm({
             <select
               value={category}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary"
+              disabled={isSubmitting}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
             >
               <option value="">카테고리를 선택해주세요</option>
               {CATEGORY_OPTIONS.map((item) => (
@@ -133,7 +168,7 @@ export default function QuickMatchForm({
             <select
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
-              disabled={!category}
+              disabled={!category || isSubmitting}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
             >
               <option value="">
@@ -151,14 +186,41 @@ export default function QuickMatchForm({
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-800">
-              선호 기간 <span className="text-slate-400">(선택)</span>
+              희망 가격대 <span className="text-slate-400">(선택)</span>
             </label>
             <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary"
+              value={priceRange}
+              onChange={(e) => setPriceRange(e.target.value)}
+              disabled={isSubmitting}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
             >
-              {PERIOD_OPTIONS.map((option) => (
+              {PRICE_RANGE_OPTIONS.map((option) => (
+                <option key={option.value || 'empty'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-800">
+              이용 기간 성향 <span className="text-slate-400">(선택)</span>
+            </label>
+            <select
+              value={durationPreference}
+              onChange={(e) =>
+                setDurationPreference(
+                  e.target.value as
+                    | ''
+                    | 'short_term'
+                    | 'long_term'
+                    | 'flexible',
+                )
+              }
+              disabled={isSubmitting}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              {DURATION_OPTIONS.map((option) => (
                 <option key={option.value || 'empty'} value={option.value}>
                   {option.label}
                 </option>
@@ -170,15 +232,17 @@ export default function QuickMatchForm({
         <div className="mt-6 flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            disabled={isSubmitting}
+            className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
           >
             취소
           </button>
           <button
             onClick={handleSubmit}
-            className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90"
+            disabled={isSubmitting}
+            className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            빠른 매칭 시작
+            {isSubmitting ? '매칭 중...' : '빠른 매칭 시작'}
           </button>
         </div>
       </div>
