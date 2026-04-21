@@ -40,6 +40,7 @@ export default function AdminParties() {
   const [busyPartyId, setBusyPartyId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
+  // 멤버 관리 상태
   const [memberPanelPartyId, setMemberPanelPartyId] = useState<string | null>(null);
   const [membersMap, setMembersMap] = useState<Record<string, AdminPartyMember[]>>({});
   const [memberLoading, setMemberLoading] = useState(false);
@@ -237,8 +238,10 @@ export default function AdminParties() {
         value: `${parties.filter((party) => party.status === '위험').length}`,
       },
       {
+        // 파티 종료 수정
         label: '종료됨',
         value: `${parties.filter((party) => party.status === '종료됨').length}`,
+        // 파티 종료 수정
       },
     ],
     [parties],
