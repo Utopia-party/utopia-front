@@ -22,7 +22,7 @@ export default function ReportModal({
   };
 
   const handleSubmit = async () => {
-    if (!targetUser?.user_id) {
+    if (!targetUser?.nickname?.trim()) {
       alert('신고 대상을 확인할 수 없습니다.');
       return;
     }
@@ -35,7 +35,7 @@ export default function ReportModal({
     setIsSubmitting(true);
     try {
       await createReport({
-        targetIdentifier: targetUser.user_id,
+        targetIdentifier: targetUser.nickname.trim(),
         category,
         description: description.trim(),
         files,
@@ -65,7 +65,7 @@ export default function ReportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-80 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div
         className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
