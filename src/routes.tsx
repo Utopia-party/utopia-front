@@ -28,7 +28,6 @@ import Party from './pages/Party';
 // 마이페이지 관련
 import Profile from './pages/mypage/Profile';
 import MyParty from './pages/mypage/MyParty';
-import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 import MyTrustHistory from './pages/mypage/MyTrustHistory';
@@ -147,15 +146,11 @@ const router = createBrowserRouter([
             element: <MyParty />,
           },
           {
-            path: 'history',
-            element: <MyHistory />,
-          },
-          {
             path: 'my_trust_history',
             element: <MyTrustHistory />,
           },
           {
-            path: '/mypage/report',
+            path: 'report',
             element: <MyReport />,
           },
           {

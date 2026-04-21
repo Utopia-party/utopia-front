@@ -222,7 +222,6 @@ export default function MyTrustHistory() {
         setError(null);
 
         const res = await getMyTrustHistory();
-        console.log('trust-history response', res);
 
         if (!mounted) return;
 
