@@ -50,7 +50,9 @@ export default function Sidebar() {
   return (
     <aside className="flex min-h-screen w-56 flex-col border-r border-slate-200 bg-white px-4 py-6">
       <Link to="/home" className="mb-10 flex items-center gap-3 px-2">
-        <div className="h-8 w-8 rounded-xl bg-primary" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-[20px] font-extrabold leading-none text-white">
+          P
+        </div>
         <span className="text-[20px] font-extrabold tracking-tight text-slate-900">
           Party-Up
         </span>
@@ -100,23 +102,6 @@ export default function Sidebar() {
           <span>신고</span>
         </NavLink>
       </nav>
-
-      {user?.role?.toLowerCase() === 'admin' && (
-        <div className="mt-auto pt-6">
-          <div className="mb-2 px-4 text-xs font-bold tracking-wide text-slate-400">
-            관리자
-          </div>
-
-          <nav className="flex flex-col gap-2">
-            <NavLink
-              to="/admin"
-              className={({ isActive }) => getMainLinkClass(isActive)}
-            >
-              관리자 바로가기
-            </NavLink>
-          </nav>
-        </div>
-      )}
     </aside>
   );
 }
