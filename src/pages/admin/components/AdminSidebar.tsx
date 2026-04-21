@@ -45,6 +45,12 @@ const allMenuItems = [
     end: false,
     permission: 'canViewLogs',
   },
+  {
+    path: '/admin/moderation',
+    label: '채팅 모더레이션',
+    end: false,
+    permission: 'canManageModeration',
+  },
 ] as const;
 
 export default function AdminSidebar({
