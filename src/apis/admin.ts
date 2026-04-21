@@ -121,6 +121,7 @@ export type AdminUserRecord = {
   id: string;
   name?: string | null;
   nickname: string;
+  createdAt: string;
   status: '정상' | '주의' | '정지';
   reportCount: number;
   partyCount: number;
@@ -141,11 +142,47 @@ export type AdminUserDetail = {
   partyCount: number;
   createdAt?: string | null;
   lastActive?: string | null;
+  bannedUntil?: string | null;
+  recentLoginIp?: string | null;
+  recentLoginUserAgent?: string | null;
+  recentLoginAt?: string | null;
+  trustHistories: AdminUserTrustHistory[];
+  accessLogs: AdminUserAccessLog[];
+  moderationHistories: AdminUserModerationHistory[];
+};
+
+export type AdminUserAccessLog = {
+  id: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  isActive: boolean;
+};
+
+export type AdminUserTrustHistory = {
+  id: string;
+  title: string;
+  detail?: string | null;
+  scoreChange: number;
+  trustScoreAfter: number;
+  createdAt: string;
+  changedBy: string;
+};
+
+export type AdminUserModerationHistory = {
+  id: string;
+  actionType: string;
+  reason?: string | null;
+  trustScoreChange?: number | null;
+  durationMinutes?: number | null;
+  createdAt: string;
+  createdBy: string;
 };
 
 export type AdminPartyRecord = {
   id: string;
   title: string;
+  createdAt: string;
   service: string;
   category: string;
   leaderId: string;
@@ -269,6 +306,17 @@ export async function updateAdminUserStatus(
 ) {
   const { data } = await api.patch<AdminUserRecord>(
     `/api/admin/users/${userId}/status`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateAdminUserTrustScore(
+  userId: string,
+  payload: { trustScore: number; reason?: string },
+): Promise<AdminUserDetail> {
+  const { data } = await api.patch<AdminUserDetail>(
+    `/api/admin/users/${userId}/trust-score`,
     payload,
   );
   return data;
@@ -405,8 +453,12 @@ export type AdminPartyMember = {
   trustScore: number;
 };
 
-export async function fetchAdminPartyMembers(partyId: string): Promise<AdminPartyMember[]> {
-  const { data } = await api.get<AdminPartyMember[]>(`/api/admin/parties/${partyId}/members`);
+export async function fetchAdminPartyMembers(
+  partyId: string,
+): Promise<AdminPartyMember[]> {
+  const { data } = await api.get<AdminPartyMember[]>(
+    `/api/admin/parties/${partyId}/members`,
+  );
   return data;
 }
 
@@ -444,7 +496,7 @@ export type AdminChatFlagged = {
   message: string;
   flagReason?: string | null;
   flagConfidence?: number | null;
-  moderationStatus?: string | null;  // blocked | warned | false_positive | pending
+  moderationStatus?: string | null; // blocked | warned | false_positive | pending
   isDeleted: boolean;
   createdAt: string;
 };
@@ -465,7 +517,10 @@ export async function fetchAdminFlaggedChats(params?: {
   date_to?: string;
   keyword?: string;
 }): Promise<AdminChatFlagged[]> {
-  const { data } = await api.get<AdminChatFlagged[]>('/api/admin/moderation/chat-logs', { params });
+  const { data } = await api.get<AdminChatFlagged[]>(
+    '/api/admin/moderation/chat-logs',
+    { params },
+  );
   return data;
 }
 
@@ -485,22 +540,29 @@ export async function fetchAdminModerationStats(params?: {
   date_from?: string;
   date_to?: string;
 }): Promise<AdminModerationStat> {
-  const { data } = await api.get<AdminModerationStat>('/api/admin/moderation/chat-stats', { params });
+  const { data } = await api.get<AdminModerationStat>(
+    '/api/admin/moderation/chat-stats',
+    { params },
+  );
   return data;
 }
 
 // ── 8번: 사용자 상태변경 이력 ───────────────────────────────
 export type AdminUserStatusLog = {
   id: string;
-  toStatus: string;           // 정상 / 주의 / 정지
-  changedBy: string;          // 관리자 닉네임 or "system"
+  toStatus: string; // 정상 / 주의 / 정지
+  changedBy: string; // 관리자 닉네임 or "system"
   reason?: string | null;
   trigger: 'manual' | 'report' | 'auto';
   createdAt: string;
 };
 
-export async function fetchAdminUserStatusLogs(userId: string): Promise<AdminUserStatusLog[]> {
-  const { data } = await api.get<AdminUserStatusLog[]>(`/api/admin/users/${userId}/status-logs`);
+export async function fetchAdminUserStatusLogs(
+  userId: string,
+): Promise<AdminUserStatusLog[]> {
+  const { data } = await api.get<AdminUserStatusLog[]>(
+    `/api/admin/users/${userId}/status-logs`,
+  );
   return data;
 }
 

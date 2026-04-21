@@ -169,6 +169,9 @@ export default function AdminReports() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                  접수 시각
+                </th>
+                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                   유형
                 </th>
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
@@ -195,6 +198,9 @@ export default function AdminReports() {
                 return (
                   <Fragment key={report.id}>
                     <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+                      <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
+                        {report.createdAt}
+                      </td>
                       <td className="px-4 py-3.5 text-sm">{report.type}</td>
                       <td className="px-4 py-3.5 text-sm">{report.target}</td>
                       <td className="px-4 py-3.5 text-sm">{report.reason}</td>
@@ -252,7 +258,7 @@ export default function AdminReports() {
 
                     {isExpanded && (
                       <tr className="border-b border-gray-100 bg-slate-50/70">
-                        <td colSpan={6} className="px-4 py-4">
+                        <td colSpan={7} className="px-4 py-4">
                           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div>
@@ -303,7 +309,7 @@ export default function AdminReports() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center text-gray-400 py-8">
+                  <td colSpan={7} className="text-center text-gray-400 py-8">
                     검색 결과가 없습니다.
                   </td>
                 </tr>

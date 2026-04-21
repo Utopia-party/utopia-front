@@ -177,6 +177,9 @@ export default function AdminSettlements() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                  생성 시각
+                </th>
+                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                   파티
                 </th>
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
@@ -206,6 +209,9 @@ export default function AdminSettlements() {
                 return (
                   <Fragment key={stl.id}>
                     <tr className="border-b border-gray-100 transition hover:bg-gray-50">
+                      <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
+                        {stl.createdAt}
+                      </td>
                       <td className="px-4 py-3.5 text-sm">{stl.partyName}</td>
                       <td className="px-4 py-3.5 text-sm">{stl.leaderName}</td>
                       <td className="px-4 py-3.5 text-sm">
@@ -270,7 +276,7 @@ export default function AdminSettlements() {
 
                     {isExpanded && (
                       <tr className="border-b border-gray-100 bg-slate-50/70">
-                        <td colSpan={7} className="px-4 py-4">
+                        <td colSpan={8} className="px-4 py-4">
                           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div>

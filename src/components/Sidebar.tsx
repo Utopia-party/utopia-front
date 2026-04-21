@@ -6,9 +6,7 @@ import {
   LayoutGrid,
   UserRound,
   OctagonAlert,
-  Shield,
 } from 'lucide-react';
-import { useAuthStore } from '../stores/authStore';
 
 const mypageMenus = [
   { label: '프로필', to: '/mypage/profile' },
@@ -20,7 +18,6 @@ const mypageMenus = [
 
 export default function Sidebar() {
   const location = useLocation();
-  const { user } = useAuthStore();
 
   const isMypageRoute = useMemo(
     () =>
@@ -167,30 +164,6 @@ export default function Sidebar() {
           </div>
         </NavLink>
       </nav>
-
-      {user?.role?.toLowerCase() === 'admin' && (
-        <div className="mt-auto pt-6">
-          {isSidebarOpen && (
-            <div className="mb-2 px-3 text-xs font-bold tracking-wide text-slate-400">
-              관리자
-            </div>
-          )}
-
-          <NavLink
-            to="/admin"
-            className={({ isActive }) => getMainLinkClass(isActive)}
-          >
-            <div
-              className={`flex items-center ${
-                isSidebarOpen ? 'gap-3' : 'justify-center'
-              }`}
-            >
-              <Shield className={iconClass} />
-              {isSidebarOpen && <span>관리자</span>}
-            </div>
-          </NavLink>
-        </div>
-      )}
     </aside>
   );
 }
