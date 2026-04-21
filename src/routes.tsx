@@ -15,7 +15,7 @@ import Signup from './pages/auth/Signup';
 import SocialCallback from './pages/auth/SocialCallback';
 import SocialSignup from './pages/auth/SocialSignup';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
-import Chat from './pages/Chat';
+import Chat from './pages/chat/Chat';
 import CreateParty from './components/party/CreateParty';
 
 // 보호 라우트
@@ -29,7 +29,6 @@ import Party from './pages/Party';
 // 마이페이지 관련
 import Profile from './pages/mypage/Profile';
 import MyParty from './pages/mypage/MyParty';
-import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 import MyTrustHistory from './pages/mypage/MyTrustHistory';
@@ -146,10 +145,6 @@ const router = createBrowserRouter([
           {
             path: 'party',
             element: <MyParty />,
-          },
-          {
-            path: 'history',
-            element: <MyHistory />,
           },
           {
             path: 'my_trust_history',
