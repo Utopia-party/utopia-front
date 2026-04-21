@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
+import Pagination from './components/Pagination';
 import {
   fetchAdminSettlements,
   getAdminErrorMessage,
@@ -30,6 +31,7 @@ export default function AdminSettlements() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busySettlementId, setBusySettlementId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const loadSettlements = async (params?: {
     keyword?: string;
@@ -94,6 +96,7 @@ export default function AdminSettlements() {
     if (activeTab === '전체') return settlements;
     return settlements.filter((s) => s.status === activeTab);
   }, [activeTab, settlements]);
+  const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   return (
     <>
@@ -203,7 +206,7 @@ export default function AdminSettlements() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((stl) => {
+              {paginated.map((stl) => {
                 const isExpanded = expandedSettlementId === stl.id;
 
                 return (
@@ -351,7 +354,7 @@ export default function AdminSettlements() {
                   </Fragment>
                 );
               })}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center text-gray-400 py-8">
                     검색 결과가 없습니다.
@@ -360,6 +363,7 @@ export default function AdminSettlements() {
               )}
             </tbody>
           </table>
+          <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
             승인과 거절 버튼은 실제 정산 관리자 API를 호출합니다.
           </div>

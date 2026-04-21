@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
+import Pagination from './components/Pagination';
 import {
   fetchAdminFlaggedChats,
   fetchAdminModerationStats,
@@ -72,6 +73,7 @@ export default function AdminModeration() {
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const loadChats = async (params?: {
     moderation_status?: string;
@@ -107,6 +109,7 @@ export default function AdminModeration() {
   }, []);
 
   const handleSearch = () => {
+    setPage(1);
     const statusParam = TAB_TO_STATUS[activeTab];
     void loadChats({
       moderation_status: statusParam,
@@ -118,6 +121,7 @@ export default function AdminModeration() {
   };
 
   const handleReset = () => {
+    setPage(1);
     setSearch('');
     setDateFrom('');
     setDateTo('');
@@ -127,7 +131,7 @@ export default function AdminModeration() {
   };
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab); setPage(1);
     const statusParam = TAB_TO_STATUS[tab];
     void loadChats({
       moderation_status: statusParam,
@@ -164,6 +168,7 @@ export default function AdminModeration() {
         c.partyTitle.toLowerCase().includes(q),
     );
   }, [chats, search]);
+  const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   return (
     <>
@@ -289,7 +294,7 @@ export default function AdminModeration() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((chat) => {
+                  {paginated.map((chat) => {
                     const isExpanded = expandedId === chat.id;
                     const isBusy = busyId === chat.id;
                     const statusKey = chat.moderationStatus ?? 'pending';
@@ -410,7 +415,7 @@ export default function AdminModeration() {
                       </>
                     );
                   })}
-                  {filtered.length === 0 && !loading && (
+                  {paginated.length === 0 && !loading && (
                     <tr>
                       <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">
                         탐지된 메시지가 없습니다.
@@ -420,6 +425,7 @@ export default function AdminModeration() {
                 </tbody>
               </table>
             </div>
+            <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
             <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
               오탐지로 표시하면 해당 메시지는 통계에서 false_positive로 집계됩니다.
             </div>
