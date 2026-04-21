@@ -133,22 +133,6 @@ function formatRate(value?: number | null) {
   return `${percent}%`;
 }
 
-function formatDate(value?: string | null) {
-  if (!value) return '-';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '-';
-  return parsed.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-}
-
-function formatTrustScore(value?: number | null) {
-  if (value == null) return '-';
-  return `${Number(value).toFixed(1)}점`;
-}
-
 function displayMemberName(member: Member) {
   return member.name?.trim() || member.nickname || '';
 }
@@ -228,9 +212,9 @@ function ProfileDrawer({
   onReport: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[70]" onClick={onClose}>
+    <div className="fixed inset-0 z-70" onClick={onClose}>
       <div
-        className="absolute w-[280px] overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,42,0.18)]"
+        className="absolute w-70 overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,42,0.18)]"
         style={{ top, left }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -260,7 +244,9 @@ function ProfileDrawer({
             </div>
           </div>
         </div>
+
         <div className="h-px bg-slate-200" />
+
         <button
           type="button"
           onClick={onProfileInfo}
@@ -269,6 +255,7 @@ function ProfileDrawer({
           <User size={18} className="text-slate-500" />
           프로필 정보
         </button>
+
         {!isMe && (
           <>
             <div className="mx-5 h-px bg-slate-200" />
@@ -310,16 +297,26 @@ function DetailRow({
   );
 }
 
-function MemberItem({ member }: { member: Member }) {
+function MemberItem({
+  member,
+  onClick,
+}: {
+  member: Member;
+  onClick: () => void;
+}) {
   return (
-    <div className="group relative">
-      <div className="flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-50">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-slate-200 hover:bg-slate-50"
+    >
+      <div className="flex items-center gap-3">
         <Avatar
           nickname={member.nickname}
           profileImage={member.profile_image ?? null}
           size="md"
         />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-slate-900">
             {displayMemberName(member) || member.nickname}
           </p>
@@ -328,49 +325,17 @@ function MemberItem({ member }: { member: Member }) {
               {displayMemberSubLabel(member)}
             </p>
           )}
-        </div>
-      </div>
-
-      <div className="pointer-events-none invisible absolute left-0 top-full z-20 mt-2 w-64 translate-y-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl opacity-0 transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-        <div className="mb-2 flex items-center gap-3">
-          <Avatar
-            nickname={member.nickname}
-            profileImage={member.profile_image ?? null}
-            size="md"
-          />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-900">
-              {displayMemberName(member) || member.nickname}
-            </p>
-            {displayMemberSubLabel(member) && (
-              <p className="truncate text-xs text-slate-500">
-                {displayMemberSubLabel(member)}
-              </p>
-            )}
+          <div className="mt-1 flex items-center gap-2 flex-wrap">
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+              {ROLE_LABEL[member.role] ?? member.role}
+            </span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+              {MEMBER_STATUS_LABEL[member.status] ?? member.status}
+            </span>
           </div>
         </div>
-
-        <div className="space-y-1 border-t border-slate-100 pt-2">
-          <DetailRow
-            label="역할"
-            value={ROLE_LABEL[member.role] ?? member.role}
-          />
-          <DetailRow
-            label="상태"
-            value={MEMBER_STATUS_LABEL[member.status] ?? member.status}
-          />
-          <DetailRow
-            label="신뢰도"
-            value={formatTrustScore(member.trust_score)}
-          />
-          <DetailRow label="참여일" value={formatDate(member.joined_at)} />
-          <DetailRow
-            label="계정상태"
-            value={member.is_active ? '활성' : '비활성'}
-          />
-        </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -444,10 +409,16 @@ function PaymentModal({
       setDoneMessage('카드 결제가 완료되었습니다!\n결제 승인이 확인되었어요.');
       setDone(true);
       onPaymentComplete();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const detail =
-        err?.response?.data?.detail ?? '결제 처리 중 오류가 발생했습니다.';
-      alert(detail);
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (
+              err as {
+                response?: { data?: { detail?: string } };
+              }
+            ).response?.data?.detail
+          : undefined;
+      alert(detail ?? '결제 처리 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -465,10 +436,16 @@ function PaymentModal({
       );
       setDone(true);
       onPaymentComplete();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const detail =
-        err?.response?.data?.detail ?? '등록 중 오류가 발생했습니다.';
-      alert(detail);
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (
+              err as {
+                response?: { data?: { detail?: string } };
+              }
+            ).response?.data?.detail
+          : undefined;
+      alert(detail ?? '등록 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -499,7 +476,9 @@ function PaymentModal({
               ✅
             </div>
             <div>
-              <p className="text-lg font-extrabold text-slate-900">처리 완료!</p>
+              <p className="text-lg font-extrabold text-slate-900">
+                처리 완료!
+              </p>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed whitespace-pre-line">
                 {doneMessage}
               </p>
@@ -550,7 +529,9 @@ function PaymentModal({
                     <span className="text-2xl">💳</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">카드 결제</p>
+                    <p className="text-sm font-bold text-slate-800">
+                      카드 결제
+                    </p>
                     <p className="text-xs text-slate-400 mt-0.5">즉시 승인</p>
                   </div>
                 </button>
@@ -562,7 +543,9 @@ function PaymentModal({
                     <span className="text-2xl">🏦</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">계좌 입금</p>
+                    <p className="text-sm font-bold text-slate-800">
+                      계좌 입금
+                    </p>
                     <p className="text-xs text-slate-400 mt-0.5">관리자 승인</p>
                   </div>
                 </button>
@@ -581,11 +564,15 @@ function PaymentModal({
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">파티명</span>
-                  <span className="font-semibold text-slate-800">{partyTitle}</span>
+                  <span className="font-semibold text-slate-800">
+                    {partyTitle}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">결제자</span>
-                  <span className="font-semibold text-slate-800">{nickname}</span>
+                  <span className="font-semibold text-slate-800">
+                    {nickname}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">결제 금액</span>
@@ -710,12 +697,16 @@ export default function Chat() {
   const [partyInfo, setPartyInfo] = useState<PartyInfo | null>(null);
   const [connected, setConnected] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(null);
+  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
+    null,
+  );
   const [alreadyPaid, setAlreadyPaid] = useState(false);
 
   const nicknameRef = useRef(user?.nickname ?? '익명');
   const userIdRef = useRef(user?.user_id ?? 'guest');
   const myProfileImage = user?.profile_image ?? null;
+  const currentNickname = user?.nickname ?? '익명';
+  const currentUserId = user?.user_id ?? 'guest';
 
   useEffect(() => {
     if (user?.nickname) nicknameRef.current = user.nickname;
@@ -729,7 +720,9 @@ export default function Chat() {
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
     try {
-      const { data } = await api.get(`/api/payments/status?party_id=${partyId}`);
+      const { data } = await api.get(
+        `/api/payments/status?party_id=${partyId}`,
+      );
       setAlreadyPaid(data.paid);
     } catch {
       // 실패해도 무시
@@ -739,9 +732,11 @@ export default function Chat() {
   useEffect(() => {
     if (!partyId) return;
 
-    setMessages([]);
-    setPartyInfo(null);
-    setAlreadyPaid(false);
+    const resetTimer = window.setTimeout(() => {
+      setMessages([]);
+      setPartyInfo(null);
+      setAlreadyPaid(false);
+    }, 0);
 
     api
       .get(`/api/chat/parties/${partyId}/messages`)
@@ -761,7 +756,14 @@ export default function Chat() {
         setPartyInfo(null);
       });
 
-    checkPaymentStatus();
+    const paymentStatusTimer = window.setTimeout(() => {
+      void checkPaymentStatus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(resetTimer);
+      window.clearTimeout(paymentStatusTimer);
+    };
   }, [partyId, checkPaymentStatus]);
 
   useEffect(() => {
@@ -801,9 +803,10 @@ export default function Chat() {
         try {
           const msg = JSON.parse(e.data);
 
-          // ✅ 삭제된 메시지 화면에서 제거
           if (msg.type === 'message_deleted') {
-            setMessages((prev) => prev.filter((m) => m.content !== msg.content));
+            setMessages((prev) =>
+              prev.filter((m) => m.content !== msg.content),
+            );
             return;
           }
 
@@ -858,7 +861,9 @@ export default function Chat() {
 
   const getMemberMeta = useCallback(
     (targetUserId?: string) => {
-      const member = partyInfo?.members?.find((m) => m.user_id === targetUserId);
+      const member = partyInfo?.members?.find(
+        (m) => m.user_id === targetUserId,
+      );
       if (!member)
         return {
           role: undefined,
@@ -875,12 +880,13 @@ export default function Chat() {
   );
 
   const openProfileDrawer = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>, targetUser: ProfileDrawerUser) => {
+    (e: React.MouseEvent<HTMLElement>, targetUser: ProfileDrawerUser) => {
       e.stopPropagation();
       const rect = e.currentTarget.getBoundingClientRect();
       const drawerWidth = 280;
       const drawerHeight = 210;
-      const hasRightSpace = rect.right + 12 + drawerWidth <= window.innerWidth - 12;
+      const hasRightSpace =
+        rect.right + 12 + drawerWidth <= window.innerWidth - 12;
       const left = hasRightSpace
         ? rect.right + 12
         : Math.max(12, rect.left - drawerWidth - 12);
@@ -897,96 +903,102 @@ export default function Chat() {
 
   const handleProfileInfo = useCallback(() => {
     if (!profileDrawer) return;
-    alert(`${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`);
+    alert(
+      `${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`,
+    );
     setProfileDrawer(null);
   }, [profileDrawer]);
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
-    alert(`${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`);
+    alert(
+      `${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`,
+    );
     setProfileDrawer(null);
   }, [profileDrawer]);
 
-  const renderMessage = (msg: Message, i: number) => {
-    const isMe = msg.user_id === userIdRef.current;
-    const memberMeta = getMemberMeta(msg.user_id);
+  const renderMessage = useCallback(
+    (msg: Message, i: number, currentUserId: string) => {
+      const isMe = msg.user_id === currentUserId;
+      const memberMeta = getMemberMeta(msg.user_id);
 
-    if (msg.type === 'system') {
-      return (
-        <div key={i} className="flex justify-center">
-          <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-            {msg.content}
-          </span>
-        </div>
-      );
-    }
-
-    if (msg.type === 'warning' || msg.type === 'error') {
-      const isError = msg.type === 'error';
-      return (
-        <div key={i} className="flex justify-center">
-          <span
-            className={`text-xs border px-3 py-1.5 rounded-xl ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'}`}
-          >
-            {msg.content}
-          </span>
-        </div>
-      );
-    }
-
-    const senderImage = isMe
-      ? myProfileImage
-      : (msg.profile_image ?? memberMeta.profile_image ?? null);
-
-    return (
-      <div
-        key={i}
-        className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
-      >
-        <div className="shrink-0 mt-1">
-          <Avatar
-            nickname={msg.nickname}
-            profileImage={senderImage}
-            size="sm"
-            onClick={(e) =>
-              openProfileDrawer(e, {
-                user_id: msg.user_id,
-                nickname: msg.nickname,
-                profile_image: senderImage,
-                role: isMe ? user?.role : memberMeta.role,
-                status: memberMeta.status,
-              })
-            }
-          />
-        </div>
-        <div
-          className={`flex flex-col gap-0.5 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}
-        >
-          <p className="text-xs text-muted-foreground px-1">
-            {msg.nickname ?? '익명'}
-          </p>
-          <div
-            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
-          >
-            {msg.content}
+      if (msg.type === 'system') {
+        return (
+          <div key={i} className="flex justify-center">
+            <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+              {msg.content}
+            </span>
           </div>
-          <p className="text-[10px] text-muted-foreground px-1">
-            {msg.created_at
-              ? new Date(
-                  // ✅ UTC 명시 - Z 없으면 붙여줌
-                  msg.created_at.endsWith('Z')
-                    ? msg.created_at
-                    : msg.created_at + 'Z',
-                ).toLocaleTimeString('ko-KR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
+        );
+      }
+
+      if (msg.type === 'warning' || msg.type === 'error') {
+        const isError = msg.type === 'error';
+        return (
+          <div key={i} className="flex justify-center">
+            <span
+              className={`text-xs border px-3 py-1.5 rounded-xl ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'}`}
+            >
+              {msg.content}
+            </span>
+          </div>
+        );
+      }
+
+      const senderImage = isMe
+        ? myProfileImage
+        : (msg.profile_image ?? memberMeta.profile_image ?? null);
+
+      return (
+        <div
+          key={i}
+          className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+        >
+          <div className="shrink-0 mt-1">
+            <Avatar
+              nickname={msg.nickname}
+              profileImage={senderImage}
+              size="sm"
+              onClick={(e) =>
+                openProfileDrawer(e, {
+                  user_id: msg.user_id,
+                  nickname: msg.nickname,
+                  profile_image: senderImage,
+                  role: isMe ? user?.role : memberMeta.role,
+                  status: memberMeta.status,
                 })
-              : ''}
-          </p>
+              }
+            />
+          </div>
+          <div
+            className={`flex flex-col gap-0.5 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}
+          >
+            <p className="text-xs text-muted-foreground px-1">
+              {msg.nickname ?? '익명'}
+            </p>
+            <div
+              className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
+            >
+              {msg.content}
+            </div>
+            <p className="text-[10px] text-muted-foreground px-1">
+              {msg.created_at
+                ? new Date(
+                    msg.created_at.endsWith('Z')
+                      ? msg.created_at
+                      : msg.created_at + 'Z',
+                  ).toLocaleTimeString('ko-KR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : ''}
+            </p>
+          </div>
         </div>
-      </div>
-    );
-  };
+      );
+    },
+    [getMemberMeta, openProfileDrawer, user?.role, myProfileImage],
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -995,7 +1007,7 @@ export default function Chat() {
           onClose={() => setShowPaymentModal(false)}
           partyId={partyId ?? ''}
           partyTitle={partyInfo?.title ?? '파티'}
-          nickname={nicknameRef.current}
+          nickname={currentNickname}
           monthlyPerPerson={partyInfo?.monthly_per_person ?? null}
           onPaymentComplete={() => {
             setAlreadyPaid(true);
@@ -1009,7 +1021,7 @@ export default function Chat() {
           user={profileDrawer.user}
           top={profileDrawer.top}
           left={profileDrawer.left}
-          isMe={profileDrawer.user.user_id === userIdRef.current}
+          isMe={profileDrawer.user.user_id === currentUserId}
           onClose={closeProfileDrawer}
           onProfileInfo={handleProfileInfo}
           onReport={handleReportUser}
@@ -1038,7 +1050,7 @@ export default function Chat() {
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-3 border border-border rounded-xl mx-5 mb-3 bg-white min-h-0">
             {messages.length > 0 ? (
-              messages.map((msg, i) => renderMessage(msg, i))
+              messages.map((msg, i) => renderMessage(msg, i, currentUserId))
             ) : (
               <p className="text-xs text-muted-foreground">
                 [시스템] 채팅방이 생성되었습니다.
@@ -1053,7 +1065,8 @@ export default function Chat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendMessage();
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                  sendMessage();
               }}
             />
             <button
@@ -1085,10 +1098,43 @@ export default function Chat() {
         <div className="w-80 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
           <div className="p-5 border-b border-border">
             <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
-            {Array.isArray(partyInfo?.members) && partyInfo.members.length > 0 ? (
+            {Array.isArray(partyInfo?.members) &&
+            partyInfo.members.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {partyInfo.members.map((member) => (
-                  <MemberItem key={member.user_id} member={member} />
+                  <MemberItem
+                    key={member.user_id}
+                    member={member}
+                    onClick={() =>
+                      setProfileDrawer((prev) => {
+                        const drawerWidth = 280;
+                        const drawerHeight = 210;
+                        const sidebarLeft = window.innerWidth - 320;
+                        const left = Math.max(
+                          12,
+                          sidebarLeft - drawerWidth - 12,
+                        );
+
+                        const estimatedTop = prev?.top ?? 120;
+                        const top = Math.min(
+                          Math.max(12, estimatedTop),
+                          window.innerHeight - drawerHeight - 12,
+                        );
+
+                        return {
+                          user: {
+                            user_id: member.user_id,
+                            nickname: member.nickname,
+                            profile_image: member.profile_image ?? null,
+                            role: member.role,
+                            status: member.status,
+                          },
+                          top,
+                          left,
+                        };
+                      })
+                    }
+                  />
                 ))}
               </div>
             ) : (
@@ -1103,7 +1149,8 @@ export default function Chat() {
               {partyInfo?.category_name && (
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                    CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'
+                    CATEGORY_COLOR[partyInfo.category_name] ??
+                    'bg-slate-100 text-slate-600'
                   }`}
                 >
                   {partyInfo.category_name}
@@ -1118,10 +1165,22 @@ export default function Chat() {
 
             <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
             <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <DetailRow label="서비스명" value={partyInfo?.service_name ?? '-'} />
-              <DetailRow label="파티장" value={partyInfo?.host_nickname ?? '-'} />
-              <DetailRow label="판매가" value={formatCurrency(partyInfo?.monthly_price)} />
-              <DetailRow label="추천 할인" value={formatRate(partyInfo?.referral_discount_rate)} />
+              <DetailRow
+                label="서비스명"
+                value={partyInfo?.service_name ?? '-'}
+              />
+              <DetailRow
+                label="파티장"
+                value={partyInfo?.host_nickname ?? '-'}
+              />
+              <DetailRow
+                label="판매가"
+                value={formatCurrency(partyInfo?.monthly_price)}
+              />
+              <DetailRow
+                label="추천 할인"
+                value={formatRate(partyInfo?.referral_discount_rate)}
+              />
               <DetailRow
                 label="1인 부담"
                 value={formatCurrency(partyInfo?.monthly_per_person)}
