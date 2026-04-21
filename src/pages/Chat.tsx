@@ -134,15 +134,10 @@ function formatRate(value?: number | null) {
 }
 
 function displayMemberName(member: Member) {
-  return member.name?.trim() || member.nickname || '';
+  return member.nickname?.trim() || member.name?.trim() || '';
 }
 
-function displayMemberSubLabel(member: Member) {
-  const name = member.name?.trim();
-  const nickname = member.nickname?.trim();
-  if (name && nickname && name !== nickname) {
-    return name;
-  }
+function displayMemberSubLabel() {
   return '';
 }
 
@@ -212,9 +207,9 @@ function ProfileDrawer({
   onReport: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-70" onClick={onClose}>
+    <div className="fixed inset-0 z-[70]" onClick={onClose}>
       <div
-        className="absolute w-70 overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,42,0.18)]"
+        className="absolute w-[280px] overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,42,0.18)]"
         style={{ top, left }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -302,7 +297,7 @@ function MemberItem({
   onClick,
 }: {
   member: Member;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   return (
     <button
@@ -320,9 +315,9 @@ function MemberItem({
           <p className="truncate text-sm font-bold text-slate-900">
             {displayMemberName(member) || member.nickname}
           </p>
-          {displayMemberSubLabel(member) && (
+          {displayMemberSubLabel() && (
             <p className="truncate text-xs text-slate-500">
-              {displayMemberSubLabel(member)}
+              {displayMemberSubLabel()}
             </p>
           )}
           <div className="mt-1 flex items-center gap-2 flex-wrap">
@@ -844,35 +839,48 @@ export default function Chat() {
       return (
         <div
           key={i}
-          className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+          className={`flex ${isMe ? 'justify-end' : 'justify-start gap-2'}`}
         >
-          <div className="shrink-0 mt-1">
-            <Avatar
-              nickname={msg.nickname}
-              profileImage={senderImage}
-              size="sm"
-              onClick={(e) =>
-                openProfileDrawer(e, {
-                  user_id: msg.user_id,
-                  nickname: msg.nickname,
-                  profile_image: senderImage,
-                  role: isMe ? user?.role : memberMeta.role,
-                  status: memberMeta.status,
-                })
-              }
-            />
-          </div>
+          {!isMe && (
+            <div className="shrink-0 mt-1">
+              <Avatar
+                nickname={msg.nickname}
+                profileImage={senderImage}
+                size="sm"
+                onClick={(e) =>
+                  openProfileDrawer(e, {
+                    user_id: msg.user_id,
+                    nickname: msg.nickname,
+                    profile_image: senderImage,
+                    role: memberMeta.role,
+                    status: memberMeta.status,
+                  })
+                }
+              />
+            </div>
+          )}
+
           <div
-            className={`flex flex-col gap-0.5 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}
+            className={`flex flex-col gap-0.5 max-w-xs ${
+              isMe ? 'items-end' : 'items-start'
+            }`}
           >
-            <p className="text-xs text-muted-foreground px-1">
-              {msg.nickname ?? '익명'}
-            </p>
+            {!isMe && (
+              <p className="text-xs text-muted-foreground px-1">
+                {msg.nickname ?? '익명'}
+              </p>
+            )}
+
             <div
-              className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
+              className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                isMe
+                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                  : 'bg-card border border-border text-foreground rounded-bl-sm'
+              }`}
             >
               {msg.content}
             </div>
+
             <p className="text-[10px] text-muted-foreground px-1">
               {msg.created_at
                 ? new Date(
@@ -889,7 +897,7 @@ export default function Chat() {
         </div>
       );
     },
-    [getMemberMeta, openProfileDrawer, user?.role, myProfileImage],
+    [getMemberMeta, openProfileDrawer, myProfileImage],
   );
 
   return (
@@ -995,33 +1003,13 @@ export default function Chat() {
                   <MemberItem
                     key={member.user_id}
                     member={member}
-                    onClick={() =>
-                      setProfileDrawer((prev) => {
-                        const drawerWidth = 280;
-                        const drawerHeight = 210;
-                        const sidebarLeft = window.innerWidth - 320;
-                        const left = Math.max(
-                          12,
-                          sidebarLeft - drawerWidth - 12,
-                        );
-
-                        const estimatedTop = prev?.top ?? 120;
-                        const top = Math.min(
-                          Math.max(12, estimatedTop),
-                          window.innerHeight - drawerHeight - 12,
-                        );
-
-                        return {
-                          user: {
-                            user_id: member.user_id,
-                            nickname: member.nickname,
-                            profile_image: member.profile_image ?? null,
-                            role: member.role,
-                            status: member.status,
-                          },
-                          top,
-                          left,
-                        };
+                    onClick={(e) =>
+                      openProfileDrawer(e, {
+                        user_id: member.user_id,
+                        nickname: member.nickname,
+                        profile_image: member.profile_image ?? null,
+                        role: member.role,
+                        status: member.status,
                       })
                     }
                   />
