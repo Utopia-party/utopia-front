@@ -392,6 +392,118 @@ export async function fetchAdminLogs(params?: {
   return data;
 }
 
+// ── 6번: 파티 멤버 관리 ──────────────────────────────────────
+export type AdminPartyMember = {
+  memberId: string;
+  userId: string;
+  nickname: string;
+  name?: string | null;
+  role: 'leader' | 'member';
+  status: 'active' | 'kicked' | 'left';
+  joinedAt: string;
+  leftAt?: string | null;
+  trustScore: number;
+};
+
+export async function fetchAdminPartyMembers(partyId: string): Promise<AdminPartyMember[]> {
+  const { data } = await api.get<AdminPartyMember[]>(`/api/admin/parties/${partyId}/members`);
+  return data;
+}
+
+export async function kickAdminPartyMember(
+  partyId: string,
+  userId: string,
+  reason?: string,
+): Promise<AdminPartyMember> {
+  const { data } = await api.post<AdminPartyMember>(
+    `/api/admin/parties/${partyId}/members/${userId}/kick`,
+    { reason },
+  );
+  return data;
+}
+
+export async function changeAdminPartyMemberRole(
+  partyId: string,
+  userId: string,
+  role: 'leader' | 'member',
+): Promise<AdminPartyMember> {
+  const { data } = await api.patch<AdminPartyMember>(
+    `/api/admin/parties/${partyId}/members/${userId}/role`,
+    { role },
+  );
+  return data;
+}
+
+// ── 7번: 채팅 AI 탐지 로그 & 통계 ──────────────────────────
+export type AdminChatFlagged = {
+  id: string;
+  partyId: string;
+  partyTitle: string;
+  senderId: string;
+  senderNickname: string;
+  message: string;
+  flagReason?: string | null;
+  flagConfidence?: number | null;
+  moderationStatus?: string | null;  // blocked | warned | false_positive | pending
+  isDeleted: boolean;
+  createdAt: string;
+};
+
+export type AdminModerationStat = {
+  totalFlagged: number;
+  blocked: number;
+  warned: number;
+  falsePositive: number;
+  pending: number;
+  detectionRate: number;
+};
+
+export async function fetchAdminFlaggedChats(params?: {
+  party_id?: string;
+  moderation_status?: string;
+  date_from?: string;
+  date_to?: string;
+  keyword?: string;
+}): Promise<AdminChatFlagged[]> {
+  const { data } = await api.get<AdminChatFlagged[]>('/api/admin/moderation/chat-logs', { params });
+  return data;
+}
+
+export async function updateAdminChatModerationStatus(
+  chatId: string,
+  status: 'blocked' | 'warned' | 'false_positive' | 'pending',
+): Promise<{ id: string; moderationStatus: string }> {
+  const { data } = await api.patch<{ id: string; moderationStatus: string }>(
+    `/api/admin/moderation/chat-logs/${chatId}/status`,
+    null,
+    { params: { status } },
+  );
+  return data;
+}
+
+export async function fetchAdminModerationStats(params?: {
+  date_from?: string;
+  date_to?: string;
+}): Promise<AdminModerationStat> {
+  const { data } = await api.get<AdminModerationStat>('/api/admin/moderation/chat-stats', { params });
+  return data;
+}
+
+// ── 8번: 사용자 상태변경 이력 ───────────────────────────────
+export type AdminUserStatusLog = {
+  id: string;
+  toStatus: string;           // 정상 / 주의 / 정지
+  changedBy: string;          // 관리자 닉네임 or "system"
+  reason?: string | null;
+  trigger: 'manual' | 'report' | 'auto';
+  createdAt: string;
+};
+
+export async function fetchAdminUserStatusLogs(userId: string): Promise<AdminUserStatusLog[]> {
+  const { data } = await api.get<AdminUserStatusLog[]>(`/api/admin/users/${userId}/status-logs`);
+  return data;
+}
+
 export function getAdminErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const detail = error.response?.data?.detail;
