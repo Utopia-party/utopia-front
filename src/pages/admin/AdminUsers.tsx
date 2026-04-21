@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
+import Pagination from './components/Pagination';
 import {
   fetchAdminUserDetail,
   fetchAdminUserStatusLogs,
@@ -70,6 +71,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const [detailTab, setDetailTab] = useState<Record<string, 'info' | 'logs'>>({});
   const [statusLogsMap, setStatusLogsMap] = useState<Record<string, AdminUserStatusLog[]>>({});
@@ -237,6 +239,7 @@ export default function AdminUsers() {
   };
 
   const filtered = useMemo(() => users, [users]);
+  const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   const summary = useMemo(
     () => [
@@ -300,7 +303,7 @@ export default function AdminUsers() {
             activeTab={activeTab}
             onTabChange={(tab) => {
               setActiveTab(tab);
-              void handleSearch(tab);
+              void handleSearch(tab); setPage(1);
             }}
           />
 
@@ -410,7 +413,7 @@ export default function AdminUsers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((user) => {
+                  {paginated.map((user) => {
                     const isExpanded = expandedUserId === user.id;
                     const isEditingStatus = statusEditorUserId === user.id;
                     const detail = userDetails[user.id];
@@ -507,7 +510,6 @@ export default function AdminUsers() {
 
                               {!isDetailLoading && detail && (
                                 <div className="space-y-4">
-                                  {/* 탭 전환 버튼 */}
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => setDetailTab((prev) => ({ ...prev, [user.id]: 'info' }))}
@@ -536,7 +538,6 @@ export default function AdminUsers() {
                                     </button>
                                   </div>
 
-                                  {/* 기본 정보 탭 */}
                                   {(detailTab[user.id] ?? 'info') === 'info' && (
                                     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
                                       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -643,7 +644,6 @@ export default function AdminUsers() {
                                     </div>
                                   )}
 
-                                  {/* 상태 변경 이력 탭 */}
                                   {(detailTab[user.id] ?? 'info') === 'logs' && (
                                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                       <h3 className="text-base font-semibold text-slate-900">상태 변경 이력</h3>
@@ -690,7 +690,7 @@ export default function AdminUsers() {
                       </Fragment>
                     );
                   })}
-                  {filtered.length === 0 && (
+                  {paginated.length === 0 && (
                     <tr>
                       <td
                         colSpan={7}
@@ -703,7 +703,8 @@ export default function AdminUsers() {
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
+            <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
+            <div className="px-4 py-3 text-xs text-gray-400">
               신고 누적이 높거나 신뢰도가 낮은 계정은 상태 변경 전에 상세 이력을
               먼저 확인할 수 있도록 버튼 구성을 분리했습니다.
             </div>
