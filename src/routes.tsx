@@ -15,7 +15,6 @@ import Signup from './pages/auth/Signup';
 import SocialCallback from './pages/auth/SocialCallback';
 import SocialSignup from './pages/auth/SocialSignup';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
-import Chat from './pages/Chat';
 import CreateParty from './components/party/CreateParty';
 
 // 보호 라우트
@@ -44,6 +43,7 @@ import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
 import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
+import Chat from './pages/chat/Chat';
 
 const router = createBrowserRouter([
   {
