@@ -243,8 +243,20 @@ export default function Header() {
   };
 
   return (
-    <header className="flex h-16 items-center justify-end border-b border-gray-200 bg-card px-6">
-      <div className="flex items-center gap-3">
+    <header className="flex h-16 items-center border-b border-gray-200 bg-card px-6">
+      <div className="min-w-[120px]">
+        {isLoggedIn && user?.role === 'admin' && (
+          <Link
+            to="/admin"
+            className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-4 py-1.5 text-lg font-bold text-slate-800 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+          >
+            관리자 콘솔 바로가기
+          </Link>
+        )}
+      </div>
+
+      {/* 오른쪽: 알림, 유저, 로그아웃 */}
+      <div className="ml-auto flex items-center gap-3">
         {isLoggedIn ? (
           <>
             <div className="relative">

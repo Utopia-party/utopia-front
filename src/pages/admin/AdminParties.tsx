@@ -26,6 +26,9 @@ const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 export default function AdminParties() {
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [category, setCategory] = useState('전체');
   const [parties, setParties] = useState<AdminPartyRecord[]>([]);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [expandedPartyId, setExpandedPartyId] = useState<string | null>(null);
@@ -63,7 +66,54 @@ export default function AdminParties() {
     };
   }, []);
 
+  const categories = useMemo(
+    () => [
+      '전체',
+      ...Array.from(new Set(parties.map((party) => party.category))),
+    ],
+    [parties],
+  );
+
+  const buildPartyParams = (status = activeTab, categoryValue = category) => ({
+    keyword: search || undefined,
+    status: status !== '전체' ? status : undefined,
+    category: categoryValue !== '전체' ? categoryValue : undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
+
   const reloadParties = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setParties(await fetchAdminParties(buildPartyParams()));
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async (status = activeTab, categoryValue = category) => {
+    setLoading(true);
+    setError('');
+    try {
+      setParties(
+        await fetchAdminParties(buildPartyParams(status, categoryValue)),
+      );
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setSearch('');
+    setDateFrom('');
+    setDateTo('');
+    setCategory('전체');
+    setActiveTab('전체');
     setLoading(true);
     setError('');
     try {
@@ -100,27 +150,7 @@ export default function AdminParties() {
     }
   };
 
-  const filtered = useMemo(() => {
-    let data = parties;
-
-    if (activeTab !== '전체') {
-      data = data.filter((party) => party.status === activeTab);
-    }
-
-    if (search) {
-      const q = search.toLowerCase();
-      data = data.filter(
-        (party) =>
-          party.id.toLowerCase().includes(q) ||
-          party.title.toLowerCase().includes(q) ||
-          party.service.toLowerCase().includes(q) ||
-          party.leaderId.toLowerCase().includes(q) ||
-          party.status.toLowerCase().includes(q),
-      );
-    }
-
-    return data;
-  }, [activeTab, parties, search]);
+  const filtered = useMemo(() => parties, [parties]);
 
   const summary = useMemo(
     () => [
@@ -184,8 +214,82 @@ export default function AdminParties() {
           <FilterTabs
             tabs={FILTER_TABS}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab);
+              void handleSearch(tab);
+            }}
           />
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  키워드
+                </span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="파티 ID / 제목 / 서비스 / 리더"
+                  className="w-64 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  카테고리
+                </span>
+                <select
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                >
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  시작일
+                </span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  종료일
+                </span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+              <div className="flex gap-2 pb-0.5">
+                <button
+                  type="button"
+                  onClick={() => void handleSearch()}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  조회
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleReset()}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                >
+                  초기화
+                </button>
+              </div>
+            </div>
+          </section>
 
           {isPolicyOpen && (
             <section className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm text-slate-600 shadow-sm">

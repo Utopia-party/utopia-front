@@ -1,4 +1,12 @@
-import { X, Users, Calendar, CalendarX, Shield, RefreshCw, Bookmark } from 'lucide-react';
+import {
+  X,
+  Users,
+  Calendar,
+  CalendarX,
+  Shield,
+  RefreshCw,
+  Bookmark,
+} from 'lucide-react';
 import type { Party } from '../../types/party';
 
 interface PartyDetailModalProps {
@@ -19,9 +27,9 @@ const CATEGORY_COLOR: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   recruiting: { label: '모집중', className: 'bg-emerald-100 text-emerald-700' },
-  full:       { label: '모집마감', className: 'bg-slate-100 text-slate-500' },
-  completed:  { label: '완료', className: 'bg-slate-100 text-slate-500' },
-  canceled:   { label: '취소', className: 'bg-red-100 text-red-500' },
+  full: { label: '모집마감', className: 'bg-slate-100 text-slate-500' },
+  completed: { label: '완료', className: 'bg-slate-100 text-slate-500' },
+  canceled: { label: '취소', className: 'bg-red-100 text-red-500' },
 };
 
 // ISO date(2026-03-01) → 2026.03.01 포맷
@@ -43,7 +51,8 @@ export default function PartyDetailModal({
 }: PartyDetailModalProps) {
   const isFull = party.status !== 'recruiting';
   const myStatus = party.my_member_status ?? null;
-  const statusInfo = STATUS_LABEL[party.status ?? ''] ?? STATUS_LABEL['recruiting'];
+  const statusInfo =
+    STATUS_LABEL[party.status ?? ''] ?? STATUS_LABEL['recruiting'];
 
   const descriptionLines =
     (party as Party & { description?: string }).description
@@ -65,14 +74,17 @@ export default function PartyDetailModal({
           {party.category_name && (
             <span
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                CATEGORY_COLOR[party.category_name] ?? 'bg-slate-100 text-slate-600'
+                CATEGORY_COLOR[party.category_name] ??
+                'bg-slate-100 text-slate-600'
               }`}
             >
               {party.category_name}
             </span>
           )}
           {/* 모집 상태 배지 */}
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${statusInfo.className}`}>
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-full ${statusInfo.className}`}
+          >
             {statusInfo.label}
           </span>
           <div className="flex-1" />

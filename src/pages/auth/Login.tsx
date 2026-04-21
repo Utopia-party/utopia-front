@@ -265,10 +265,14 @@ export default function Login() {
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !captchaToken}
           className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          {isSubmitting ? '로그인 중...' : '로그인'}
+          {isSubmitting
+            ? '로그인 중...'
+            : !captchaToken
+              ? '캡챠 인증 필요'
+              : '로그인'}
         </button>
 
         <div className="space-y-3 pt-2">

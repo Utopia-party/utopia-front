@@ -4,7 +4,6 @@ import type {
   NotificationSocketMessage,
 } from '../types/notifications';
 
-// Reacr Query 캐시 키
 export const notificationKeys = {
   all: ['notifications'] as const,
   me: ['notifications', 'me'] as const,
@@ -12,24 +11,20 @@ export const notificationKeys = {
   unreadCount: ['notifications', 'unread-count'] as const,
 };
 
-// 전체 알림
 export const fetchMyNotifications = async (): Promise<NotificationItem[]> => {
   const { data } = await api.get('/api/notifications/me');
   return Array.isArray(data) ? sortNotificationsByCreatedAt(data) : [];
 };
 
-// 최신 알림
 export const fetchLatestNotifications = async (
   limit = 10,
 ): Promise<NotificationItem[]> => {
   const { data } = await api.get('/api/notifications/latest', {
     params: { limit },
   });
-
   return Array.isArray(data) ? sortNotificationsByCreatedAt(data) : [];
 };
 
-// 개별 알림 읽음 처리(서버 요청)
 export const markNotificationAsRead = async (
   notificationId: string,
 ): Promise<{ message?: string }> => {
@@ -37,7 +32,6 @@ export const markNotificationAsRead = async (
   return data ?? {};
 };
 
-// 전체 읽음 처리
 export const markAllNotificationsAsRead = async (): Promise<{
   message?: string;
 }> => {
@@ -45,7 +39,6 @@ export const markAllNotificationsAsRead = async (): Promise<{
   return data ?? {};
 };
 
-// 알림 최신순 정렬
 export const sortNotificationsByCreatedAt = (
   notifications: NotificationItem[],
 ): NotificationItem[] => {
@@ -56,23 +49,19 @@ export const sortNotificationsByCreatedAt = (
   });
 };
 
-// 알림 추가 및 수정
 export const upsertNotification = (
   notifications: NotificationItem[],
   target: NotificationItem,
 ): NotificationItem[] => {
   const exists = notifications.some((item) => item.id === target.id);
-
   if (!exists) {
     return sortNotificationsByCreatedAt([target, ...notifications]);
   }
-
   return sortNotificationsByCreatedAt(
     notifications.map((item) => (item.id === target.id ? target : item)),
   );
 };
 
-// 개별 알림 삭제
 export const removeNotification = (
   notifications: NotificationItem[],
   notificationId: string,
@@ -80,7 +69,6 @@ export const removeNotification = (
   return notifications.filter((item) => item.id !== notificationId);
 };
 
-// 개별 알림 읽음 처리 (프론트 배열 상태 수정)
 export const markNotificationReadInList = (
   notifications: NotificationItem[],
   notificationId: string,
@@ -96,12 +84,10 @@ export const markNotificationReadInList = (
   );
 };
 
-// 모든 알림 읽음 처리
 export const markAllNotificationsReadInList = (
   notifications: NotificationItem[],
 ): NotificationItem[] => {
   const now = new Date().toISOString();
-
   return notifications.map((item) => ({
     ...item,
     is_read: true,
@@ -109,15 +95,12 @@ export const markAllNotificationsReadInList = (
   }));
 };
 
-// 안 읽은 알림 개수
 export const countUnreadNotifications = (
   notifications: NotificationItem[],
 ): number => {
   return notifications.filter((item) => !item.is_read).length;
 };
 
-// 웹소켓 메시지를 알림 목록 상태에 반영하는 함수
-// 기존 알림 배열을 어떻게 바꿀지 결정
 export const applyNotificationSocketMessage = (
   notifications: NotificationItem[],
   socketMessage: NotificationSocketMessage,
@@ -128,35 +111,28 @@ export const applyNotificationSocketMessage = (
       if (!socketMessage.notification) return notifications;
       return upsertNotification(notifications, socketMessage.notification);
     }
-
     case 'notification_read': {
       if (socketMessage.notification) {
         return upsertNotification(notifications, socketMessage.notification);
       }
-
       if (socketMessage.notification_id) {
         return markNotificationReadInList(
           notifications,
           socketMessage.notification_id,
         );
       }
-
       return notifications;
     }
-
     case 'notification_deleted': {
       if (!socketMessage.notification_id) return notifications;
       return removeNotification(notifications, socketMessage.notification_id);
     }
-
     case 'notifications_read_all': {
       if (Array.isArray(socketMessage.notifications)) {
         return sortNotificationsByCreatedAt(socketMessage.notifications);
       }
-
       return markAllNotificationsReadInList(notifications);
     }
-
     default:
       return notifications;
   }
@@ -164,25 +140,22 @@ export const applyNotificationSocketMessage = (
 
 type NotificationSocketListener = (message: NotificationSocketMessage) => void;
 
-let notificationSocket: WebSocket | null = null; // 현재 웹소켓 인스턴스
-let reconnectTimer: number | null = null; // 재연결 타이머
-let manuallyClosed = false; // 사용자가 일부러 닫은 건지 확인
-const socketListeners = new Set<NotificationSocketListener>(); // 구독 중인 리스너 목록
+let notificationSocket: WebSocket | null = null;
+let reconnectTimer: number | null = null;
+let manuallyClosed = false;
+let reconnectAttempts = 0;
+let isConnecting = false;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const socketListeners = new Set<NotificationSocketListener>();
 
 const getApiBaseUrl = (): string => {
   const baseURL =
     typeof api?.defaults?.baseURL === 'string' ? api.defaults.baseURL : '';
-
   if (baseURL) return baseURL;
-
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-
+  if (typeof window !== 'undefined') return window.location.origin;
   return '';
 };
 
-// 실제 웹소켓 주소 생성
 const resolveNotificationSocketUrl = (): string => {
   const explicitWsUrl = import.meta.env.VITE_NOTIFICATION_WS_URL as
     | string
@@ -216,7 +189,6 @@ const resolveNotificationSocketUrl = (): string => {
   return base ?? '';
 };
 
-// 리스너 알림 및 재연결 관리
 const notifySocketListeners = (message: NotificationSocketMessage) => {
   socketListeners.forEach((listener) => {
     try {
@@ -239,10 +211,12 @@ const scheduleReconnect = () => {
   if (reconnectTimer !== null) return;
   if (manuallyClosed) return;
   if (socketListeners.size === 0) return;
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) return;
 
+  reconnectAttempts++;
   reconnectTimer = window.setTimeout(() => {
     reconnectTimer = null;
-    ensureNotificationSocketConnection();
+    void ensureNotificationSocketConnection();
   }, 3000);
 };
 
@@ -255,15 +229,11 @@ const detachSocketHandlers = (socket: WebSocket) => {
 
 const closeNotificationSocket = () => {
   clearReconnectTimer();
-
   if (!notificationSocket) return;
 
   const socket = notificationSocket;
   notificationSocket = null;
 
-  // React StrictMode 개발환경에서 CONNECTING 상태 cleanup 시
-  // close()를 호출하면
-  // "WebSocket is closed before the connection is established" 경고가 뜰 수 있음
   if (socket.readyState === WebSocket.CONNECTING) {
     detachSocketHandlers(socket);
     return;
@@ -277,24 +247,33 @@ const closeNotificationSocket = () => {
   }
 };
 
-// 실제 웹소켓 연결
-const ensureNotificationSocketConnection = () => {
+const ensureNotificationSocketConnection = async () => {
   if (typeof window === 'undefined') return;
   if (notificationSocket?.readyState === WebSocket.OPEN) return;
   if (notificationSocket?.readyState === WebSocket.CONNECTING) return;
   if (socketListeners.size === 0) return;
+  if (isConnecting) return;
 
-  const wsUrl = resolveNotificationSocketUrl();
-  if (!wsUrl) return;
+  isConnecting = true;
 
   try {
+    const { data } = await api.post<{ token: string }>('/api/ws-token');
+    const wsToken = data.token;
+
+    reconnectAttempts = 0;
+
+    if (notificationSocket?.readyState === WebSocket.OPEN) return;
+    if (notificationSocket?.readyState === WebSocket.CONNECTING) return;
+
+    const wsBase = resolveNotificationSocketUrl();
+    if (!wsBase) return;
+
+    const wsUrl = `${wsBase}?token=${wsToken}`;
     const socket = new WebSocket(wsUrl);
     notificationSocket = socket;
 
     socket.onopen = () => {
-      // 이미 다른 소켓으로 교체된 경우 무시
       if (notificationSocket !== socket) return;
-
       notifySocketListeners({
         type: 'connected',
         timestamp: new Date().toISOString(),
@@ -303,7 +282,6 @@ const ensureNotificationSocketConnection = () => {
 
     socket.onmessage = (event) => {
       if (notificationSocket !== socket) return;
-
       try {
         const parsed = JSON.parse(event.data) as NotificationSocketMessage;
         notifySocketListeners(parsed);
@@ -313,7 +291,6 @@ const ensureNotificationSocketConnection = () => {
     };
 
     socket.onerror = (error) => {
-      // 수동 종료했거나 현재 관리 중인 소켓이 아니면 불필요한 에러 로그 생략
       if (manuallyClosed || notificationSocket !== socket) return;
       console.error('알림 웹소켓 에러:', error);
     };
@@ -322,30 +299,33 @@ const ensureNotificationSocketConnection = () => {
       if (notificationSocket === socket) {
         notificationSocket = null;
       }
-
       if (!manuallyClosed) {
+        isConnecting = false;
         scheduleReconnect();
       }
     };
   } catch (error) {
     console.error('알림 웹소켓 연결 실패:', error);
     scheduleReconnect();
+  } finally {
+    isConnecting = false;
   }
 };
 
-// 외부에서 쓰는 구독 함수
 export const subscribeNotificationSocket = (
   listener: NotificationSocketListener,
 ): (() => void) => {
   socketListeners.add(listener);
   manuallyClosed = false;
-  ensureNotificationSocketConnection();
+  reconnectAttempts = 0;
+  void ensureNotificationSocketConnection();
 
   return () => {
     socketListeners.delete(listener);
-
     if (socketListeners.size === 0) {
       manuallyClosed = true;
+      reconnectAttempts = 0;
+      isConnecting = false;
       closeNotificationSocket();
     }
   };

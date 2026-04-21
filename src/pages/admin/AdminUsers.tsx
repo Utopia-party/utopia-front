@@ -21,22 +21,24 @@ const FILTER_TABS = ['전체', '정상', '주의', '정지'];
 
 function TrustBar({ score }: { score: number }) {
   const tone =
-    score >= 85
-      ? 'bg-emerald-500'
-      : score >= 60
-        ? 'bg-amber-500'
-        : 'bg-red-500';
+    score >= 70
+      ? 'bg-blue-500'
+      : score >= 36.5
+        ? 'bg-emerald-500'
+        : score >= 35
+          ? 'bg-amber-500'
+          : 'bg-red-500';
 
   return (
     <div className="min-w-[120px]">
       <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
         <span>신뢰도</span>
-        <span className="font-semibold text-gray-700">{score}</span>
+        <span className="font-semibold text-gray-700">{score.toFixed(1)}</span>
       </div>
       <div className="h-2 rounded-full bg-gray-100">
         <div
           className={`h-2 rounded-full ${tone}`}
-          style={{ width: `${score}%` }}
+          style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }}
         />
       </div>
     </div>
@@ -47,6 +49,8 @@ export default function AdminUsers() {
   const currentUserId = useAuthStore((state) => state.user?.user_id);
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [userDetails, setUserDetails] = useState<
     Record<string, AdminUserDetail>
@@ -93,7 +97,42 @@ export default function AdminUsers() {
     };
   }, []);
 
+  const buildUserParams = (status?: string) => ({
+    keyword: search || undefined,
+    status: status && status !== '전체' ? status : undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
+
   const reloadUsers = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setUsers(await fetchAdminUsers(buildUserParams(activeTab)));
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async (status = activeTab) => {
+    setLoading(true);
+    setError('');
+    try {
+      setUsers(await fetchAdminUsers(buildUserParams(status)));
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setSearch('');
+    setDateFrom('');
+    setDateTo('');
+    setActiveTab('전체');
     setLoading(true);
     setError('');
     try {
@@ -174,26 +213,7 @@ export default function AdminUsers() {
     }
   };
 
-  const filtered = useMemo(() => {
-    let data = users;
-
-    if (activeTab !== '전체') {
-      data = data.filter((user) => user.status === activeTab);
-    }
-
-    if (search) {
-      const q = search.toLowerCase();
-      data = data.filter(
-        (user) =>
-          user.id.toLowerCase().includes(q) ||
-          (user.name || '').toLowerCase().includes(q) ||
-          user.nickname.toLowerCase().includes(q) ||
-          user.status.toLowerCase().includes(q),
-      );
-    }
-
-    return data;
-  }, [activeTab, search, users]);
+  const filtered = useMemo(() => users, [users]);
 
   const summary = useMemo(
     () => [
@@ -208,7 +228,7 @@ export default function AdminUsers() {
       },
       {
         label: '신뢰도 주의',
-        value: `${users.filter((user) => user.trustScore < 75).length}`,
+        value: `${users.filter((user) => user.trustScore < 36.5).length}`,
       },
     ],
     [users],
@@ -255,13 +275,74 @@ export default function AdminUsers() {
           <FilterTabs
             tabs={FILTER_TABS}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab);
+              void handleSearch(tab);
+            }}
           />
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  키워드
+                </span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="사용자 ID / 이름 / 닉네임"
+                  className="w-56 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  시작일
+                </span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  종료일
+                </span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+              <div className="flex gap-2 pb-0.5">
+                <button
+                  type="button"
+                  onClick={() => void handleSearch()}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  조회
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleReset()}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                >
+                  초기화
+                </button>
+              </div>
+            </div>
+          </section>
 
           {isPolicyOpen && (
             <section className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm text-slate-600 shadow-sm">
-              신뢰도 75점 미만 또는 신고 2건 이상이면 주의 상태로 우선 검토하고,
-              반복 위반 또는 누적 리스크가 크면 정지 상태로 전환합니다.
+              기본 신뢰도는 36.5점입니다. 70.0점 이상은 우수 구간(파란색),
+              36.5점 이상 69.9점 이하는 정상 구간(초록색), 35.0점 이상 36.4점
+              이하는 경계 구간(주황색), 35.0점 미만은 위험 구간(빨간색)으로
+              표시합니다. 신고가 2건 이상 누적되거나 신뢰도가 36.5점 미만이면
+              관리자 검토 대상으로 우선 확인합니다.
             </section>
           )}
 
@@ -428,7 +509,10 @@ export default function AdminUsers() {
                                         ['이름', detail.name || '-'],
                                         ['전화번호', detail.phone || '-'],
                                         ['권한', detail.role],
-                                        ['신뢰도', `${detail.trustScore}`],
+                                        [
+                                          '신뢰도',
+                                          `${detail.trustScore.toFixed(1)}`,
+                                        ],
                                         ['신고 수', `${detail.reportCount}건`],
                                         ['참여 파티', `${detail.partyCount}개`],
                                         ['가입일', detail.createdAt || '-'],

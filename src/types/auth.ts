@@ -87,6 +87,7 @@ export interface AuthErrorResponse {
 export interface AuthUser {
   user_id: string;
   email: string;
+  name?: string | null;
   nickname: string;
   phone?: string;
   provider: string;

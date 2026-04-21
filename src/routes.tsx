@@ -41,7 +41,6 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminServices from './pages/admin/AdminServices';
 import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
-import AdminReceipts from './pages/admin/AdminReceipts';
 import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 
@@ -194,10 +193,6 @@ const router = createBrowserRouter([
       {
         path: 'reports',
         Component: AdminReports,
-      },
-      {
-        path: 'receipts',
-        Component: AdminReceipts,
       },
       {
         path: 'settlements',

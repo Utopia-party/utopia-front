@@ -532,6 +532,23 @@ export default function AdminServices() {
                                         className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
                                       />
                                     </label>
+                                    <label className="flex flex-col gap-2 md:col-span-2 xl:col-span-2">
+                                      <span className="text-sm font-medium text-slate-700">
+                                        로고 이미지 키
+                                      </span>
+                                      <input
+                                        type="text"
+                                        value={draft.logoImageKey ?? ''}
+                                        onChange={(event) =>
+                                          handleDraftChange(
+                                            service.id,
+                                            'logoImageKey',
+                                            event.target.value,
+                                          )
+                                        }
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                      />
+                                    </label>
                                     <label className="flex flex-col gap-2">
                                       <span className="text-sm font-medium text-slate-700">
                                         방장 할인율
@@ -547,23 +564,6 @@ export default function AdminServices() {
                                             service.id,
                                             'leaderDiscountRate',
                                             Number(event.target.value),
-                                          )
-                                        }
-                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
-                                      />
-                                    </label>
-                                    <label className="flex flex-col gap-2 md:col-span-2 xl:col-span-2">
-                                      <span className="text-sm font-medium text-slate-700">
-                                        로고 이미지 키
-                                      </span>
-                                      <input
-                                        type="text"
-                                        value={draft.logoImageKey ?? ''}
-                                        onChange={(event) =>
-                                          handleDraftChange(
-                                            service.id,
-                                            'logoImageKey',
-                                            event.target.value,
                                           )
                                         }
                                         className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
@@ -662,6 +662,14 @@ export default function AdminServices() {
                                         <dt>현재 판매가</dt>
                                         <dd className="font-medium text-slate-900">
                                           {formatWon(service.monthlyPrice)}
+                                        </dd>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-4">
+                                        <dt>현재 방장 할인율</dt>
+                                        <dd className="font-medium text-slate-900">
+                                          {formatRate(
+                                            service.leaderDiscountRate,
+                                          )}
                                         </dd>
                                       </div>
                                       <div className="flex items-center justify-between gap-4">
