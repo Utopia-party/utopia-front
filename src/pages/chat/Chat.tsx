@@ -681,12 +681,6 @@ export default function Chat() {
   useEffect(() => {
     if (!partyId) return;
 
-    const resetTimer = window.setTimeout(() => {
-      setMessages([]);
-      setPartyInfo(null);
-      setAlreadyPaid(false);
-    }, 0);
-
     api
       .get(`/api/chat/parties/${partyId}/messages`)
       .then(({ data }) => setMessages(Array.isArray(data) ? data : []))
@@ -708,7 +702,6 @@ export default function Chat() {
     }, 0);
 
     return () => {
-      window.clearTimeout(resetTimer);
       window.clearTimeout(paymentStatusTimer);
     };
   }, [partyId, checkPaymentStatus]);
@@ -942,16 +935,19 @@ export default function Chat() {
             </div>
 
             <p className="text-[10px] text-muted-foreground px-1">
-              {msg.created_at
-                ? new Date(
-                    msg.created_at.endsWith('Z')
-                      ? msg.created_at
-                      : msg.created_at + 'Z',
-                  ).toLocaleTimeString('ko-KR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                : ''}
+              {(() => {
+                if (!msg.created_at) return '';
+                const raw =
+                  msg.created_at.endsWith('Z') || msg.created_at.includes('+')
+                    ? msg.created_at
+                    : msg.created_at.replace(' ', 'T') + 'Z';
+                const d = new Date(raw);
+                if (isNaN(d.getTime())) return '';
+                return d.toLocaleTimeString('ko-KR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+              })()}
             </p>
           </div>
         </div>
@@ -961,7 +957,7 @@ export default function Chat() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {showPaymentModal && (
         <PaymentModal
           onClose={() => setShowPaymentModal(false)}

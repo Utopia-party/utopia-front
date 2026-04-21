@@ -45,6 +45,17 @@ const allMenuItems = [
     end: false,
     permission: 'canViewLogs',
   },
+  {
+    path: '/admin/moderation',
+    label: '채팅 모더레이션',
+    end: false,
+    permission: 'canManageModeration',
+  },
+  {
+    path: '/admin/captcha',
+    label: '캡챠 관리',
+    end: false,
+  },
 ] as const;
 
 export default function AdminSidebar({

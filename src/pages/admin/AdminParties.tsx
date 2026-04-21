@@ -1,10 +1,15 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
+import Pagination from './components/Pagination';
 import {
+  changeAdminPartyMemberRole,
   fetchAdminParties,
+  fetchAdminPartyMembers,
   forceEndAdminParty,
   getAdminErrorMessage,
+  kickAdminPartyMember,
+  type AdminPartyMember,
   type AdminPartyRecord,
 } from '../../apis/admin';
 
@@ -12,14 +17,10 @@ const STATUS_STYLE: Record<string, string> = {
   운영중: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   모집중: 'bg-blue-50 text-blue-600 border-blue-100',
   위험: 'bg-amber-50 text-amber-600 border-amber-100',
-  // 파티 종료 수정
   종료됨: 'bg-red-50 text-red-600 border-red-100',
-  // 파티 종료 수정
 };
 
-// 파티 종료 수정
 const FILTER_TABS = ['전체', '운영중', '모집중', '위험', '종료됨'];
-// 파티 종료 수정
 
 const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 
@@ -37,6 +38,20 @@ export default function AdminParties() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyPartyId, setBusyPartyId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  // 멤버 관리 상태
+  const [memberPanelPartyId, setMemberPanelPartyId] = useState<string | null>(
+    null,
+  );
+  const [membersMap, setMembersMap] = useState<
+    Record<string, AdminPartyMember[]>
+  >({});
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [memberError, setMemberError] = useState('');
+  const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
+  const [kickConfirmId, setKickConfirmId] = useState<string | null>(null);
+  const [kickReason, setKickReason] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -150,7 +165,74 @@ export default function AdminParties() {
     }
   };
 
+  const openMemberPanel = async (partyId: string) => {
+    if (memberPanelPartyId === partyId) {
+      setMemberPanelPartyId(null);
+      return;
+    }
+    setMemberPanelPartyId(partyId);
+    setExpandedPartyId(partyId);
+    setMemberError('');
+    if (membersMap[partyId]) return;
+    try {
+      setMemberLoading(true);
+      const members = await fetchAdminPartyMembers(partyId);
+      setMembersMap((prev) => ({ ...prev, [partyId]: members }));
+    } catch (err) {
+      setMemberError(getAdminErrorMessage(err));
+    } finally {
+      setMemberLoading(false);
+    }
+  };
+
+  const reloadMembers = async (partyId: string) => {
+    try {
+      setMemberLoading(true);
+      const members = await fetchAdminPartyMembers(partyId);
+      setMembersMap((prev) => ({ ...prev, [partyId]: members }));
+    } catch (err) {
+      setMemberError(getAdminErrorMessage(err));
+    } finally {
+      setMemberLoading(false);
+    }
+  };
+
+  const handleKickMember = async (partyId: string, memberId: string) => {
+    try {
+      setBusyMemberId(memberId);
+      await kickAdminPartyMember(
+        partyId,
+        memberId,
+        kickReason.trim() || undefined,
+      );
+      await reloadMembers(partyId);
+      setKickConfirmId(null);
+      setKickReason('');
+    } catch (err) {
+      setMemberError(getAdminErrorMessage(err));
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
+  const handleChangeRole = async (
+    partyId: string,
+    userId: string,
+    newRole: 'leader' | 'member',
+  ) => {
+    try {
+      setBusyMemberId(userId);
+      await changeAdminPartyMemberRole(partyId, userId, newRole);
+      await reloadMembers(partyId);
+    } catch (err) {
+      setMemberError(getAdminErrorMessage(err));
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
   const filtered = useMemo(() => parties, [parties]);
+  const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   const summary = useMemo(
     () => [
@@ -216,7 +298,7 @@ export default function AdminParties() {
             activeTab={activeTab}
             onTabChange={(tab) => {
               setActiveTab(tab);
-              void handleSearch(tab);
+              void handleSearch(tab); setPage(1);
             }}
           />
 
@@ -316,6 +398,9 @@ export default function AdminParties() {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      생성 시각
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       파티
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
@@ -342,15 +427,21 @@ export default function AdminParties() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((party) => {
+                  {paginated.map((party) => {
                     const isExpanded = expandedPartyId === party.id;
                     const isForceEndOpen = forceEndPartyId === party.id;
 
                     return (
                       <Fragment key={party.id}>
                         <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                          <td className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                            {party.title}
+                          <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
+                            {party.createdAt}
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-900">
+                            <div className="font-medium">{party.title}</div>
+                            <div className="mt-1 text-xs text-gray-400">
+                              생성 {party.createdAt}
+                            </div>
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
                             <div>{party.service}</div>
@@ -395,7 +486,6 @@ export default function AdminParties() {
                               >
                                 정산
                               </button>
-                              {/* 파티 종료 수정 */}
                               {party.status !== '종료됨' && (
                                 <button
                                   className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50"
@@ -407,14 +497,23 @@ export default function AdminParties() {
                                     : '강제 종료'}
                                 </button>
                               )}
-                              {/* 파티 종료 수정 */}
+                              <button
+                                className={`rounded-md border px-3 py-1 text-xs font-medium transition ${
+                                  memberPanelPartyId === party.id
+                                    ? 'border-violet-300 bg-violet-50 text-violet-600'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                                onClick={() => void openMemberPanel(party.id)}
+                              >
+                                멤버관리
+                              </button>
                             </div>
                           </td>
                         </tr>
 
                         {isExpanded && (
                           <tr className="border-b border-gray-100 bg-slate-50/70">
-                            <td colSpan={8} className="px-4 py-4">
+                            <td colSpan={9} className="px-4 py-4">
                               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
                                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -436,6 +535,7 @@ export default function AdminParties() {
 
                                   <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                                     {[
+                                      ['생성 시각', party.createdAt],
                                       ['파티명', party.title],
                                       ['서비스', party.service],
                                       ['리더', party.leaderId],
@@ -460,6 +560,242 @@ export default function AdminParties() {
                                       </div>
                                     ))}
                                   </div>
+
+                                  {memberPanelPartyId === party.id && (
+                                    <div className="mt-6">
+                                      <div className="mb-3 flex items-center justify-between">
+                                        <h4 className="text-sm font-semibold text-slate-900">
+                                          멤버 관리
+                                        </h4>
+                                        {memberLoading && (
+                                          <span className="text-xs text-slate-400">
+                                            불러오는 중...
+                                          </span>
+                                        )}
+                                      </div>
+                                      {memberError && (
+                                        <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+                                          {memberError}
+                                        </div>
+                                      )}
+                                      <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                        <table className="min-w-full border-collapse">
+                                          <thead>
+                                            <tr className="border-b border-slate-200 bg-slate-50">
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                멤버
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                역할
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                상태
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                신뢰도
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                가입일
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                퇴장일
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                관리
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {(membersMap[party.id] ?? []).map(
+                                              (member) => {
+                                                const isKicking =
+                                                  kickConfirmId ===
+                                                  member.userId;
+                                                const isBusy =
+                                                  busyMemberId ===
+                                                  member.userId;
+                                                return (
+                                                  <Fragment
+                                                    key={member.memberId}
+                                                  >
+                                                    <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        <div className="font-medium text-slate-800">
+                                                          {member.nickname}
+                                                        </div>
+                                                        {member.name && (
+                                                          <div className="text-xs text-slate-400">
+                                                            {member.name}
+                                                          </div>
+                                                        )}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        <span
+                                                          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                                                            member.role ===
+                                                            'leader'
+                                                              ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                                              : 'border-slate-200 bg-slate-50 text-slate-600'
+                                                          }`}
+                                                        >
+                                                          {member.role ===
+                                                          'leader'
+                                                            ? '파티장'
+                                                            : '멤버'}
+                                                        </span>
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        <span
+                                                          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                                                            member.status ===
+                                                            'active'
+                                                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                              : 'border-red-200 bg-red-50 text-red-600'
+                                                          }`}
+                                                        >
+                                                          {member.status ===
+                                                          'active'
+                                                            ? '활성'
+                                                            : member.status ===
+                                                                'kicked'
+                                                              ? '강퇴'
+                                                              : '탈퇴'}
+                                                        </span>
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-xs text-slate-600">
+                                                        {member.trustScore.toFixed(
+                                                          1,
+                                                        )}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-xs text-slate-500">
+                                                        {member.joinedAt}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-xs text-slate-400">
+                                                        {member.leftAt ?? '-'}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        {member.status ===
+                                                          'active' && (
+                                                          <div className="flex flex-wrap gap-1">
+                                                            {member.role ===
+                                                              'member' && (
+                                                              <button
+                                                                className="rounded border border-amber-300 px-2 py-0.5 text-xs text-amber-600 hover:bg-amber-50 transition"
+                                                                disabled={
+                                                                  isBusy
+                                                                }
+                                                                onClick={() =>
+                                                                  void handleChangeRole(
+                                                                    party.id,
+                                                                    member.userId,
+                                                                    'leader',
+                                                                  )
+                                                                }
+                                                              >
+                                                                파티장 임명
+                                                              </button>
+                                                            )}
+                                                            <button
+                                                              className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50 transition"
+                                                              disabled={isBusy}
+                                                              onClick={() => {
+                                                                setKickConfirmId(
+                                                                  member.userId,
+                                                                );
+                                                                setKickReason(
+                                                                  '',
+                                                                );
+                                                              }}
+                                                            >
+                                                              강퇴
+                                                            </button>
+                                                          </div>
+                                                        )}
+                                                      </td>
+                                                    </tr>
+                                                    {isKicking && (
+                                                      <tr className="bg-red-50/60 border-b border-slate-100">
+                                                        <td
+                                                          colSpan={7}
+                                                          className="px-3 py-3"
+                                                        >
+                                                          <div className="flex flex-wrap items-end gap-2">
+                                                            <div className="flex flex-col gap-1">
+                                                              <span className="text-xs font-medium text-slate-600">
+                                                                강퇴 사유
+                                                              </span>
+                                                              <input
+                                                                type="text"
+                                                                value={
+                                                                  kickReason
+                                                                }
+                                                                onChange={(e) =>
+                                                                  setKickReason(
+                                                                    e.target
+                                                                      .value,
+                                                                  )
+                                                                }
+                                                                placeholder="사유 입력 (선택)"
+                                                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-red-300 w-56"
+                                                              />
+                                                            </div>
+                                                            <button
+                                                              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
+                                                              disabled={isBusy}
+                                                              onClick={() =>
+                                                                void handleKickMember(
+                                                                  party.id,
+                                                                  member.userId,
+                                                                )
+                                                              }
+                                                            >
+                                                              {isBusy
+                                                                ? '처리 중...'
+                                                                : '강퇴 확인'}
+                                                            </button>
+                                                            <button
+                                                              className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition"
+                                                              onClick={() =>
+                                                                setKickConfirmId(
+                                                                  null,
+                                                                )
+                                                              }
+                                                            >
+                                                              취소
+                                                            </button>
+                                                            {member.role ===
+                                                              'leader' && (
+                                                              <span className="text-xs text-amber-600 font-medium">
+                                                                ⚠ 파티장 강퇴 시
+                                                                다음 멤버가 자동
+                                                                승계됩니다
+                                                              </span>
+                                                            )}
+                                                          </div>
+                                                        </td>
+                                                      </tr>
+                                                    )}
+                                                  </Fragment>
+                                                );
+                                              },
+                                            )}
+                                            {(membersMap[party.id] ?? [])
+                                              .length === 0 &&
+                                              !memberLoading && (
+                                                <tr>
+                                                  <td
+                                                    colSpan={7}
+                                                    className="px-3 py-6 text-center text-sm text-slate-400"
+                                                  >
+                                                    멤버 정보가 없습니다.
+                                                  </td>
+                                                </tr>
+                                              )}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {isForceEndOpen && (
@@ -515,10 +851,10 @@ export default function AdminParties() {
                       </Fragment>
                     );
                   })}
-                  {filtered.length === 0 && (
+                  {paginated.length === 0 && (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="px-4 py-8 text-center text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.
@@ -528,7 +864,8 @@ export default function AdminParties() {
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
+            <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
+            <div className="px-4 py-3 text-xs text-gray-400">
               위험 상태 파티는 신고 누적과 현재 운영 상태를 기준으로 표시하며,
               강제 종료 버튼은 실제 관리자 API를 호출합니다.
             </div>

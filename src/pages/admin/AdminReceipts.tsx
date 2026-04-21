@@ -174,6 +174,9 @@ export default function AdminReceipts() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                  생성 시각
+                </th>
+                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                   Receipt ID
                 </th>
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
@@ -200,6 +203,9 @@ export default function AdminReceipts() {
                 return (
                   <Fragment key={receipt.id}>
                     <tr className="border-b border-gray-100 transition hover:bg-gray-50">
+                      <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
+                        {receipt.createdAt}
+                      </td>
                       <td className="px-4 py-3.5 text-sm">{receipt.id}</td>
                       <td className="px-4 py-3.5 text-sm">{receipt.userId}</td>
                       <td className="px-4 py-3.5 text-sm">{receipt.partyId}</td>
@@ -263,7 +269,7 @@ export default function AdminReceipts() {
 
                     {isExpanded && (
                       <tr className="border-b border-gray-100 bg-slate-50/70">
-                        <td colSpan={6} className="px-4 py-4">
+                        <td colSpan={7} className="px-4 py-4">
                           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div>
@@ -338,7 +344,7 @@ export default function AdminReceipts() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center text-gray-400 py-8">
+                  <td colSpan={7} className="text-center text-gray-400 py-8">
                     검색 결과가 없습니다.
                   </td>
                 </tr>

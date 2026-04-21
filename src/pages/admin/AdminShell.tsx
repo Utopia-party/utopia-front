@@ -72,6 +72,12 @@ export default function AdminShell() {
     if (path.startsWith('/admin/logs')) {
       return permissions?.canViewLogs ?? false;
     }
+    if (path.startsWith('/admin/moderation')) {
+      return permissions?.canManageModeration ?? false;
+    }
+    if (path.startsWith('/admin/captcha')) {
+      return true; // 캡챠 관리는 모든 관리자 접근 가능
+    }
     return true;
   }, [location.pathname, permissions]);
 

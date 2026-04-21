@@ -15,6 +15,7 @@ import Signup from './pages/auth/Signup';
 import SocialCallback from './pages/auth/SocialCallback';
 import SocialSignup from './pages/auth/SocialSignup';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
+import Chat from './pages/chat/Chat';
 import CreateParty from './components/party/CreateParty';
 
 // 보호 라우트
@@ -42,7 +43,8 @@ import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
 import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
-import Chat from './pages/chat/Chat';
+import AdminModeration from './pages/admin/AdminModeration';
+import AdminCaptcha from './pages/admin/AdminCaptcha';
 
 const router = createBrowserRouter([
   {
@@ -150,7 +152,7 @@ const router = createBrowserRouter([
             element: <MyTrustHistory />,
           },
           {
-            path: 'report',
+            path: '/mypage/report',
             element: <MyReport />,
           },
           {
@@ -201,6 +203,14 @@ const router = createBrowserRouter([
       {
         path: 'logs',
         Component: AdminSystemLogs,
+      },
+      {
+        path: 'moderation',
+        Component: AdminModeration,
+      },
+      {
+        path: 'captcha',
+        Component: AdminCaptcha,
       },
     ],
   },

@@ -121,6 +121,7 @@ export type AdminUserRecord = {
   id: string;
   name?: string | null;
   nickname: string;
+  createdAt: string;
   status: '정상' | '주의' | '정지';
   reportCount: number;
   partyCount: number;
@@ -141,11 +142,47 @@ export type AdminUserDetail = {
   partyCount: number;
   createdAt?: string | null;
   lastActive?: string | null;
+  bannedUntil?: string | null;
+  recentLoginIp?: string | null;
+  recentLoginUserAgent?: string | null;
+  recentLoginAt?: string | null;
+  trustHistories: AdminUserTrustHistory[];
+  accessLogs: AdminUserAccessLog[];
+  moderationHistories: AdminUserModerationHistory[];
+};
+
+export type AdminUserAccessLog = {
+  id: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  isActive: boolean;
+};
+
+export type AdminUserTrustHistory = {
+  id: string;
+  title: string;
+  detail?: string | null;
+  scoreChange: number;
+  trustScoreAfter: number;
+  createdAt: string;
+  changedBy: string;
+};
+
+export type AdminUserModerationHistory = {
+  id: string;
+  actionType: string;
+  reason?: string | null;
+  trustScoreChange?: number | null;
+  durationMinutes?: number | null;
+  createdAt: string;
+  createdBy: string;
 };
 
 export type AdminPartyRecord = {
   id: string;
   title: string;
+  createdAt: string;
   service: string;
   category: string;
   leaderId: string;
@@ -274,6 +311,17 @@ export async function updateAdminUserStatus(
   return data;
 }
 
+export async function updateAdminUserTrustScore(
+  userId: string,
+  payload: { trustScore: number; reason?: string },
+): Promise<AdminUserDetail> {
+  const { data } = await api.patch<AdminUserDetail>(
+    `/api/admin/users/${userId}/trust-score`,
+    payload,
+  );
+  return data;
+}
+
 export async function fetchAdminParties(params?: {
   keyword?: string;
   status?: string;
@@ -392,6 +440,132 @@ export async function fetchAdminLogs(params?: {
   return data;
 }
 
+// ── 6번: 파티 멤버 관리 ──────────────────────────────────────
+export type AdminPartyMember = {
+  memberId: string;
+  userId: string;
+  nickname: string;
+  name?: string | null;
+  role: 'leader' | 'member';
+  status: 'active' | 'kicked' | 'left';
+  joinedAt: string;
+  leftAt?: string | null;
+  trustScore: number;
+};
+
+export async function fetchAdminPartyMembers(
+  partyId: string,
+): Promise<AdminPartyMember[]> {
+  const { data } = await api.get<AdminPartyMember[]>(
+    `/api/admin/parties/${partyId}/members`,
+  );
+  return data;
+}
+
+export async function kickAdminPartyMember(
+  partyId: string,
+  userId: string,
+  reason?: string,
+): Promise<AdminPartyMember> {
+  const { data } = await api.post<AdminPartyMember>(
+    `/api/admin/parties/${partyId}/members/${userId}/kick`,
+    { reason },
+  );
+  return data;
+}
+
+export async function changeAdminPartyMemberRole(
+  partyId: string,
+  userId: string,
+  role: 'leader' | 'member',
+): Promise<AdminPartyMember> {
+  const { data } = await api.patch<AdminPartyMember>(
+    `/api/admin/parties/${partyId}/members/${userId}/role`,
+    { role },
+  );
+  return data;
+}
+
+// ── 7번: 채팅 AI 탐지 로그 & 통계 ──────────────────────────
+export type AdminChatFlagged = {
+  id: string;
+  partyId: string;
+  partyTitle: string;
+  senderId: string;
+  senderNickname: string;
+  message: string;
+  flagReason?: string | null;
+  flagConfidence?: number | null;
+  moderationStatus?: string | null; // blocked | warned | false_positive | pending
+  isDeleted: boolean;
+  createdAt: string;
+};
+
+export type AdminModerationStat = {
+  totalFlagged: number;
+  blocked: number;
+  warned: number;
+  falsePositive: number;
+  pending: number;
+  detectionRate: number;
+};
+
+export async function fetchAdminFlaggedChats(params?: {
+  party_id?: string;
+  moderation_status?: string;
+  date_from?: string;
+  date_to?: string;
+  keyword?: string;
+}): Promise<AdminChatFlagged[]> {
+  const { data } = await api.get<AdminChatFlagged[]>(
+    '/api/admin/moderation/chat-logs',
+    { params },
+  );
+  return data;
+}
+
+export async function updateAdminChatModerationStatus(
+  chatId: string,
+  status: 'blocked' | 'warned' | 'false_positive' | 'pending',
+): Promise<{ id: string; moderationStatus: string }> {
+  const { data } = await api.patch<{ id: string; moderationStatus: string }>(
+    `/api/admin/moderation/chat-logs/${chatId}/status`,
+    null,
+    { params: { status } },
+  );
+  return data;
+}
+
+export async function fetchAdminModerationStats(params?: {
+  date_from?: string;
+  date_to?: string;
+}): Promise<AdminModerationStat> {
+  const { data } = await api.get<AdminModerationStat>(
+    '/api/admin/moderation/chat-stats',
+    { params },
+  );
+  return data;
+}
+
+// ── 8번: 사용자 상태변경 이력 ───────────────────────────────
+export type AdminUserStatusLog = {
+  id: string;
+  toStatus: string; // 정상 / 주의 / 정지
+  changedBy: string; // 관리자 닉네임 or "system"
+  reason?: string | null;
+  trigger: 'manual' | 'report' | 'auto';
+  createdAt: string;
+};
+
+export async function fetchAdminUserStatusLogs(
+  userId: string,
+): Promise<AdminUserStatusLog[]> {
+  const { data } = await api.get<AdminUserStatusLog[]>(
+    `/api/admin/users/${userId}/status-logs`,
+  );
+  return data;
+}
+
 export function getAdminErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const detail = error.response?.data?.detail;
@@ -418,4 +592,61 @@ export function getAdminErrorMessage(error: unknown): string {
     return error.message;
   }
   return '관리자 요청 처리 중 오류가 발생했습니다.';
+}
+
+// ── LSTM Shadow Mode ──
+
+export type ShadowModeResponse = {
+  shadow_mode: boolean;
+  lstm_weight?: number;
+  score_formula?: string;
+  message?: string;
+};
+
+export async function fetchShadowMode(): Promise<ShadowModeResponse> {
+  const res = await api.get('/api/admin/captcha/shadow');
+  return res.data;
+}
+
+export async function toggleShadowMode(): Promise<ShadowModeResponse> {
+  const res = await api.put('/api/admin/captcha/shadow');
+  return res.data;
+}
+
+// ── IP 제재 관리 ──
+
+export type BlockedIpEntry = {
+  ip: string;
+  lock: boolean;
+  ban: boolean;
+  wait: boolean;
+  lock_count: number;
+  ttl: Record<string, number>;
+};
+
+export type BlockedIpsResponse = {
+  blocked_ips: BlockedIpEntry[];
+  total: number;
+};
+
+export async function fetchBlockedIps(): Promise<BlockedIpsResponse> {
+  const res = await api.get('/api/admin/captcha/blocked-ips');
+  return res.data;
+}
+
+export async function unblockIp(
+  ip: string,
+): Promise<{ ip: string; unblocked: boolean; message: string }> {
+  const res = await api.delete(
+    `/api/admin/captcha/blocked-ips/${encodeURIComponent(ip)}`,
+  );
+  return res.data;
+}
+
+export async function unblockAllIps(): Promise<{
+  total_deleted: number;
+  message: string;
+}> {
+  const res = await api.delete('/api/admin/captcha/blocked-ips');
+  return res.data;
 }

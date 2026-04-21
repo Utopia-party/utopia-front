@@ -6,6 +6,7 @@ import TeamSection from './components/TeamSection';
 import Footer from '../../components/layout/Footer';
 import Navbar from '../../components/layout/Navbar';
 import { Toaster } from 'react-hot-toast';
+import DocumentShowcaseSection from './components/DocumentShowcaseSection';
 
 export default function Landing() {
   return (
@@ -25,6 +26,10 @@ export default function Landing() {
 
       <Container>
         <SecuritySection />
+      </Container>
+
+      <Container className="py-4">
+        <DocumentShowcaseSection />
       </Container>
 
       <div className="bg-gray-50/50 w-full">

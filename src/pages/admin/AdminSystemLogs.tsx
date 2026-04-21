@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
+import Pagination from './components/Pagination';
 import {
   fetchAdminLogs,
   getAdminErrorMessage,
@@ -18,7 +19,8 @@ export default function AdminSystemLogs() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [logs, setLogs] = useState<SystemLogRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadLogs = async (params?: {
@@ -82,6 +84,8 @@ export default function AdminSystemLogs() {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  const paginatedLogs = logs.slice((page - 1) * 20, page * 20);
 
   return (
     <>
@@ -195,7 +199,7 @@ export default function AdminSystemLogs() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((log) => (
+              {paginatedLogs.map((log) => (
                 <tr
                   key={log.id}
                   className="border-b border-gray-100 hover:bg-gray-50 transition"
@@ -214,7 +218,7 @@ export default function AdminSystemLogs() {
                   <td className="px-4 py-3.5 text-sm">{log.actor}</td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {paginatedLogs.length === 0 && (
                 <tr>
                   <td colSpan={4} className="text-center text-gray-400 py-8">
                     검색 결과가 없습니다.
@@ -223,6 +227,7 @@ export default function AdminSystemLogs() {
               )}
             </tbody>
           </table>
+          <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
             현재 검색 결과를 CSV로 바로 내려받을 수 있습니다.
           </div>

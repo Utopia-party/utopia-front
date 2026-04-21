@@ -309,7 +309,7 @@ export default function Header() {
   return (
     <header className="flex h-16 items-center border-b border-gray-200 bg-card px-6">
       <div className="min-w-[120px]">
-        {isLoggedIn && user?.role === 'admin' && (
+        {isLoggedIn && user?.role?.toLowerCase() === 'admin' && (
           <Link
             to="/admin"
             className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-4 py-1.5 text-lg font-bold text-slate-800 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
