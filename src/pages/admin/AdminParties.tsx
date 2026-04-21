@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
+import Pagination from './components/Pagination';
 import {
   changeAdminPartyMemberRole,
   fetchAdminParties,
@@ -37,8 +38,8 @@ export default function AdminParties() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyPartyId, setBusyPartyId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  // 멤버 관리 상태
   const [memberPanelPartyId, setMemberPanelPartyId] = useState<string | null>(null);
   const [membersMap, setMembersMap] = useState<Record<string, AdminPartyMember[]>>({});
   const [memberLoading, setMemberLoading] = useState(false);
@@ -222,6 +223,7 @@ export default function AdminParties() {
   };
 
   const filtered = useMemo(() => parties, [parties]);
+  const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   const summary = useMemo(
     () => [
@@ -235,10 +237,8 @@ export default function AdminParties() {
         value: `${parties.filter((party) => party.status === '위험').length}`,
       },
       {
-        // 파티 종료 수정
         label: '종료됨',
         value: `${parties.filter((party) => party.status === '종료됨').length}`,
-        // 파티 종료 수정
       },
     ],
     [parties],
@@ -287,7 +287,7 @@ export default function AdminParties() {
             activeTab={activeTab}
             onTabChange={(tab) => {
               setActiveTab(tab);
-              void handleSearch(tab);
+              void handleSearch(tab); setPage(1);
             }}
           />
 
@@ -413,7 +413,7 @@ export default function AdminParties() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((party) => {
+                  {paginated.map((party) => {
                     const isExpanded = expandedPartyId === party.id;
                     const isForceEndOpen = forceEndPartyId === party.id;
 
@@ -725,7 +725,7 @@ export default function AdminParties() {
                       </Fragment>
                     );
                   })}
-                  {filtered.length === 0 && (
+                  {paginated.length === 0 && (
                     <tr>
                       <td
                         colSpan={8}
@@ -738,7 +738,8 @@ export default function AdminParties() {
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
+            <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
+            <div className="px-4 py-3 text-xs text-gray-400">
               위험 상태 파티는 신고 누적과 현재 운영 상태를 기준으로 표시하며,
               강제 종료 버튼은 실제 관리자 API를 호출합니다.
             </div>
