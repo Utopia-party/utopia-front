@@ -1,5 +1,10 @@
 import { api } from './api';
-import type { MyPaymentItem, GetMyPaymentsResponse } from '../types/user';
+import type {
+  MyPaymentItem,
+  GetMyPaymentsResponse,
+  UpdateMyProfilePayload,
+  UpdateMyProfileResponse,
+} from '../types/user';
 
 // 마이페이지 - 프로필
 // 최근활동 내역
