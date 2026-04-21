@@ -891,6 +891,68 @@ export default function AdminUsers() {
                 취소
               </button>
             </div>
+
+            {/* 신뢰도 변경 이력 */}
+            <div className="mt-6 border-t border-slate-100 pt-5">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                변경 이력
+              </span>
+              <div className="mt-3 max-h-52 overflow-y-auto space-y-2 pr-1">
+                {(trustEditorDetail?.trustHistories ?? []).length === 0 ? (
+                  <p className="py-4 text-center text-xs text-slate-400">
+                    변경 이력이 없습니다.
+                  </p>
+                ) : (
+                  [...(trustEditorDetail?.trustHistories ?? [])]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime(),
+                    )
+                    .map((h) => (
+                      <div
+                        key={h.id}
+                        className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-slate-700 truncate">
+                            {h.title}
+                          </span>
+                          <span
+                            className={`shrink-0 text-sm font-bold ${
+                              h.scoreChange > 0
+                                ? 'text-emerald-600'
+                                : h.scoreChange < 0
+                                  ? 'text-rose-500'
+                                  : 'text-slate-400'
+                            }`}
+                          >
+                            {h.scoreChange > 0 ? '+' : ''}
+                            {h.scoreChange.toFixed(1)}
+                          </span>
+                        </div>
+                        {h.detail && (
+                          <p className="mt-1 text-xs text-slate-500 line-clamp-2">
+                            {h.detail}
+                          </p>
+                        )}
+                        <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
+                          <span>→ {h.trustScoreAfter.toFixed(1)}</span>
+                          <span>
+                            {new Date(h.createdAt).toLocaleDateString('ko-KR', {
+                              year: '2-digit',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
