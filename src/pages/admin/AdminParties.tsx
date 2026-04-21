@@ -39,8 +39,12 @@ export default function AdminParties() {
   const [busyPartyId, setBusyPartyId] = useState<string | null>(null);
 
   // 멤버 관리 상태
-  const [memberPanelPartyId, setMemberPanelPartyId] = useState<string | null>(null);
-  const [membersMap, setMembersMap] = useState<Record<string, AdminPartyMember[]>>({});
+  const [memberPanelPartyId, setMemberPanelPartyId] = useState<string | null>(
+    null,
+  );
+  const [membersMap, setMembersMap] = useState<
+    Record<string, AdminPartyMember[]>
+  >({});
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState('');
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
@@ -194,7 +198,11 @@ export default function AdminParties() {
   const handleKickMember = async (partyId: string, memberId: string) => {
     try {
       setBusyMemberId(memberId);
-      await kickAdminPartyMember(partyId, memberId, kickReason.trim() || undefined);
+      await kickAdminPartyMember(
+        partyId,
+        memberId,
+        kickReason.trim() || undefined,
+      );
       await reloadMembers(partyId);
       setKickConfirmId(null);
       setKickReason('');
@@ -387,6 +395,9 @@ export default function AdminParties() {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      생성 시각
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       파티
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
@@ -420,8 +431,14 @@ export default function AdminParties() {
                     return (
                       <Fragment key={party.id}>
                         <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                          <td className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                            {party.title}
+                          <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
+                            {party.createdAt}
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-900">
+                            <div className="font-medium">{party.title}</div>
+                            <div className="mt-1 text-xs text-gray-400">
+                              생성 {party.createdAt}
+                            </div>
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
                             <div>{party.service}</div>
@@ -493,7 +510,7 @@ export default function AdminParties() {
 
                         {isExpanded && (
                           <tr className="border-b border-gray-100 bg-slate-50/70">
-                            <td colSpan={8} className="px-4 py-4">
+                            <td colSpan={9} className="px-4 py-4">
                               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
                                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -515,6 +532,7 @@ export default function AdminParties() {
 
                                   <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                                     {[
+                                      ['생성 시각', party.createdAt],
                                       ['파티명', party.title],
                                       ['서비스', party.service],
                                       ['리더', party.leaderId],
@@ -543,9 +561,13 @@ export default function AdminParties() {
                                   {memberPanelPartyId === party.id && (
                                     <div className="mt-6">
                                       <div className="mb-3 flex items-center justify-between">
-                                        <h4 className="text-sm font-semibold text-slate-900">멤버 관리</h4>
+                                        <h4 className="text-sm font-semibold text-slate-900">
+                                          멤버 관리
+                                        </h4>
                                         {memberLoading && (
-                                          <span className="text-xs text-slate-400">불러오는 중...</span>
+                                          <span className="text-xs text-slate-400">
+                                            불러오는 중...
+                                          </span>
                                         )}
                                       </div>
                                       {memberError && (
@@ -557,114 +579,215 @@ export default function AdminParties() {
                                         <table className="min-w-full border-collapse">
                                           <thead>
                                             <tr className="border-b border-slate-200 bg-slate-50">
-                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">멤버</th>
-                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">역할</th>
-                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">상태</th>
-                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">신뢰도</th>
-                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">가입일</th>
-                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">퇴장일</th>
-                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">관리</th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                멤버
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                역할
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                상태
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                신뢰도
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                가입일
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                퇴장일
+                                              </th>
+                                              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                                                관리
+                                              </th>
                                             </tr>
                                           </thead>
                                           <tbody>
-                                            {(membersMap[party.id] ?? []).map((member) => {
-                                              const isKicking = kickConfirmId === member.userId;
-                                              const isBusy = busyMemberId === member.userId;
-                                              return (
-                                                <Fragment key={member.memberId}>
-                                                  <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
-                                                    <td className="px-3 py-2.5 text-sm">
-                                                      <div className="font-medium text-slate-800">{member.nickname}</div>
-                                                      {member.name && <div className="text-xs text-slate-400">{member.name}</div>}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-sm">
-                                                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                                                        member.role === 'leader'
-                                                          ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                                          : 'border-slate-200 bg-slate-50 text-slate-600'
-                                                      }`}>
-                                                        {member.role === 'leader' ? '파티장' : '멤버'}
-                                                      </span>
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-sm">
-                                                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                                                        member.status === 'active'
-                                                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                                          : 'border-red-200 bg-red-50 text-red-600'
-                                                      }`}>
-                                                        {member.status === 'active' ? '활성' : member.status === 'kicked' ? '강퇴' : '탈퇴'}
-                                                      </span>
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-xs text-slate-600">{member.trustScore.toFixed(1)}</td>
-                                                    <td className="px-3 py-2.5 text-xs text-slate-500">{member.joinedAt}</td>
-                                                    <td className="px-3 py-2.5 text-xs text-slate-400">{member.leftAt ?? '-'}</td>
-                                                    <td className="px-3 py-2.5 text-sm">
-                                                      {member.status === 'active' && (
-                                                        <div className="flex flex-wrap gap-1">
-                                                          {member.role === 'member' && (
-                                                            <button
-                                                              className="rounded border border-amber-300 px-2 py-0.5 text-xs text-amber-600 hover:bg-amber-50 transition"
-                                                              disabled={isBusy}
-                                                              onClick={() => void handleChangeRole(party.id, member.userId, 'leader')}
-                                                            >
-                                                              파티장 임명
-                                                            </button>
-                                                          )}
-                                                          <button
-                                                            className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50 transition"
-                                                            disabled={isBusy}
-                                                            onClick={() => { setKickConfirmId(member.userId); setKickReason(''); }}
-                                                          >
-                                                            강퇴
-                                                          </button>
+                                            {(membersMap[party.id] ?? []).map(
+                                              (member) => {
+                                                const isKicking =
+                                                  kickConfirmId ===
+                                                  member.userId;
+                                                const isBusy =
+                                                  busyMemberId ===
+                                                  member.userId;
+                                                return (
+                                                  <Fragment
+                                                    key={member.memberId}
+                                                  >
+                                                    <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        <div className="font-medium text-slate-800">
+                                                          {member.nickname}
                                                         </div>
-                                                      )}
-                                                    </td>
-                                                  </tr>
-                                                  {isKicking && (
-                                                    <tr className="bg-red-50/60 border-b border-slate-100">
-                                                      <td colSpan={7} className="px-3 py-3">
-                                                        <div className="flex flex-wrap items-end gap-2">
-                                                          <div className="flex flex-col gap-1">
-                                                            <span className="text-xs font-medium text-slate-600">강퇴 사유</span>
-                                                            <input
-                                                              type="text"
-                                                              value={kickReason}
-                                                              onChange={(e) => setKickReason(e.target.value)}
-                                                              placeholder="사유 입력 (선택)"
-                                                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-red-300 w-56"
-                                                            />
+                                                        {member.name && (
+                                                          <div className="text-xs text-slate-400">
+                                                            {member.name}
                                                           </div>
-                                                          <button
-                                                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
-                                                            disabled={isBusy}
-                                                            onClick={() => void handleKickMember(party.id, member.userId)}
-                                                          >
-                                                            {isBusy ? '처리 중...' : '강퇴 확인'}
-                                                          </button>
-                                                          <button
-                                                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition"
-                                                            onClick={() => setKickConfirmId(null)}
-                                                          >
-                                                            취소
-                                                          </button>
-                                                          {member.role === 'leader' && (
-                                                            <span className="text-xs text-amber-600 font-medium">⚠ 파티장 강퇴 시 다음 멤버가 자동 승계됩니다</span>
-                                                          )}
-                                                        </div>
+                                                        )}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        <span
+                                                          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                                                            member.role ===
+                                                            'leader'
+                                                              ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                                              : 'border-slate-200 bg-slate-50 text-slate-600'
+                                                          }`}
+                                                        >
+                                                          {member.role ===
+                                                          'leader'
+                                                            ? '파티장'
+                                                            : '멤버'}
+                                                        </span>
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        <span
+                                                          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                                                            member.status ===
+                                                            'active'
+                                                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                              : 'border-red-200 bg-red-50 text-red-600'
+                                                          }`}
+                                                        >
+                                                          {member.status ===
+                                                          'active'
+                                                            ? '활성'
+                                                            : member.status ===
+                                                                'kicked'
+                                                              ? '강퇴'
+                                                              : '탈퇴'}
+                                                        </span>
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-xs text-slate-600">
+                                                        {member.trustScore.toFixed(
+                                                          1,
+                                                        )}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-xs text-slate-500">
+                                                        {member.joinedAt}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-xs text-slate-400">
+                                                        {member.leftAt ?? '-'}
+                                                      </td>
+                                                      <td className="px-3 py-2.5 text-sm">
+                                                        {member.status ===
+                                                          'active' && (
+                                                          <div className="flex flex-wrap gap-1">
+                                                            {member.role ===
+                                                              'member' && (
+                                                              <button
+                                                                className="rounded border border-amber-300 px-2 py-0.5 text-xs text-amber-600 hover:bg-amber-50 transition"
+                                                                disabled={
+                                                                  isBusy
+                                                                }
+                                                                onClick={() =>
+                                                                  void handleChangeRole(
+                                                                    party.id,
+                                                                    member.userId,
+                                                                    'leader',
+                                                                  )
+                                                                }
+                                                              >
+                                                                파티장 임명
+                                                              </button>
+                                                            )}
+                                                            <button
+                                                              className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-500 hover:bg-red-50 transition"
+                                                              disabled={isBusy}
+                                                              onClick={() => {
+                                                                setKickConfirmId(
+                                                                  member.userId,
+                                                                );
+                                                                setKickReason(
+                                                                  '',
+                                                                );
+                                                              }}
+                                                            >
+                                                              강퇴
+                                                            </button>
+                                                          </div>
+                                                        )}
                                                       </td>
                                                     </tr>
-                                                  )}
-                                                </Fragment>
-                                              );
-                                            })}
-                                            {(membersMap[party.id] ?? []).length === 0 && !memberLoading && (
-                                              <tr>
-                                                <td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-400">
-                                                  멤버 정보가 없습니다.
-                                                </td>
-                                              </tr>
+                                                    {isKicking && (
+                                                      <tr className="bg-red-50/60 border-b border-slate-100">
+                                                        <td
+                                                          colSpan={7}
+                                                          className="px-3 py-3"
+                                                        >
+                                                          <div className="flex flex-wrap items-end gap-2">
+                                                            <div className="flex flex-col gap-1">
+                                                              <span className="text-xs font-medium text-slate-600">
+                                                                강퇴 사유
+                                                              </span>
+                                                              <input
+                                                                type="text"
+                                                                value={
+                                                                  kickReason
+                                                                }
+                                                                onChange={(e) =>
+                                                                  setKickReason(
+                                                                    e.target
+                                                                      .value,
+                                                                  )
+                                                                }
+                                                                placeholder="사유 입력 (선택)"
+                                                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-red-300 w-56"
+                                                              />
+                                                            </div>
+                                                            <button
+                                                              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
+                                                              disabled={isBusy}
+                                                              onClick={() =>
+                                                                void handleKickMember(
+                                                                  party.id,
+                                                                  member.userId,
+                                                                )
+                                                              }
+                                                            >
+                                                              {isBusy
+                                                                ? '처리 중...'
+                                                                : '강퇴 확인'}
+                                                            </button>
+                                                            <button
+                                                              className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition"
+                                                              onClick={() =>
+                                                                setKickConfirmId(
+                                                                  null,
+                                                                )
+                                                              }
+                                                            >
+                                                              취소
+                                                            </button>
+                                                            {member.role ===
+                                                              'leader' && (
+                                                              <span className="text-xs text-amber-600 font-medium">
+                                                                ⚠ 파티장 강퇴 시
+                                                                다음 멤버가 자동
+                                                                승계됩니다
+                                                              </span>
+                                                            )}
+                                                          </div>
+                                                        </td>
+                                                      </tr>
+                                                    )}
+                                                  </Fragment>
+                                                );
+                                              },
                                             )}
+                                            {(membersMap[party.id] ?? [])
+                                              .length === 0 &&
+                                              !memberLoading && (
+                                                <tr>
+                                                  <td
+                                                    colSpan={7}
+                                                    className="px-3 py-6 text-center text-sm text-slate-400"
+                                                  >
+                                                    멤버 정보가 없습니다.
+                                                  </td>
+                                                </tr>
+                                              )}
                                           </tbody>
                                         </table>
                                       </div>
@@ -728,7 +851,7 @@ export default function AdminParties() {
                   {filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="px-4 py-8 text-center text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.
