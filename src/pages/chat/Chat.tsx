@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { User, AlertTriangle } from 'lucide-react';
-import { api } from '../apis/api';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../../stores/authStore';
+import { api } from '../../apis/api';
+import type {
+  Member,
+  Message,
+  PartyInfo,
+  PaymentStep,
+  ProfileDrawerState,
+  ProfileDrawerUser,
+} from '../../types/chat';
+import ReportModal from './components/ReportModal';
 
 declare global {
   interface Window {
@@ -16,62 +25,6 @@ declare global {
     };
   }
 }
-
-interface Message {
-  type: 'message' | 'system' | 'warning' | 'error' | 'message_deleted';
-  party_id?: string;
-  user_id?: string;
-  nickname?: string;
-  profile_image?: string | null;
-  content: string;
-  created_at: string;
-}
-
-interface Member {
-  user_id: string;
-  nickname: string;
-  name?: string | null;
-  role: string;
-  status: string;
-  trust_score?: number | null;
-  joined_at?: string | null;
-  profile_image?: string | null;
-  is_active: boolean;
-}
-
-interface PartyInfo {
-  party_id: string;
-  title: string;
-  status?: string;
-  max_members?: number | null;
-  member_count?: number | null;
-  monthly_price?: number | null;
-  leader_discount_rate?: number | null;
-  referral_discount_rate?: number | null;
-  monthly_per_person?: number | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  category_name?: string | null;
-  service_name?: string | null;
-  host_nickname?: string | null;
-  members: Member[];
-}
-
-interface ProfileDrawerUser {
-  user_id?: string;
-  nickname?: string;
-  profile_image?: string | null;
-  role?: string;
-  status?: string;
-}
-
-interface ProfileDrawerState {
-  user: ProfileDrawerUser;
-  top: number;
-  left: number;
-}
-
-type PaymentStep = 'select' | 'card' | 'transfer';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
@@ -693,6 +646,11 @@ export default function Chat() {
   );
   const [alreadyPaid, setAlreadyPaid] = useState(false);
 
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(
+    null,
+  );
+
   const nicknameRef = useRef(user?.nickname ?? '익명');
   const userIdRef = useRef(user?.user_id ?? 'guest');
   const myProfileImage = user?.profile_image ?? null;
@@ -715,7 +673,9 @@ export default function Chat() {
         `/api/payments/status?party_id=${partyId}`,
       );
       setAlreadyPaid(data.paid);
-    } catch {}
+    } catch (e) {
+      console.error(e);
+    }
   }, [partyId]);
 
   useEffect(() => {
@@ -898,10 +858,10 @@ export default function Chat() {
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
-    alert(
-      `${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`,
-    );
+
+    setReportTarget(profileDrawer.user);
     setProfileDrawer(null);
+    setShowReportModal(true);
   }, [profileDrawer]);
 
   const renderMessage = useCallback(
@@ -1012,6 +972,20 @@ export default function Chat() {
           onPaymentComplete={() => {
             setAlreadyPaid(true);
             setShowPaymentModal(false);
+          }}
+        />
+      )}
+
+      {showReportModal && (
+        <ReportModal
+          targetUser={reportTarget}
+          onClose={() => {
+            setShowReportModal(false);
+            setReportTarget(null);
+          }}
+          onSuccess={() => {
+            setShowReportModal(false);
+            setReportTarget(null);
           }}
         />
       )}
