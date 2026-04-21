@@ -681,12 +681,6 @@ export default function Chat() {
   useEffect(() => {
     if (!partyId) return;
 
-    const resetTimer = window.setTimeout(() => {
-      setMessages([]);
-      setPartyInfo(null);
-      setAlreadyPaid(false);
-    }, 0);
-
     api
       .get(`/api/chat/parties/${partyId}/messages`)
       .then(({ data }) => setMessages(Array.isArray(data) ? data : []))
@@ -708,7 +702,6 @@ export default function Chat() {
     }, 0);
 
     return () => {
-      window.clearTimeout(resetTimer);
       window.clearTimeout(paymentStatusTimer);
     };
   }, [partyId, checkPaymentStatus]);
