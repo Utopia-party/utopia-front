@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
@@ -106,12 +106,27 @@ function getNotificationTargetPath(item: NotificationItem) {
   return null;
 }
 
+function getProfileInitial(nickname?: string | null) {
+  if (!nickname) return 'PU';
+  return nickname.trim().slice(0, 2).toUpperCase();
+}
+
+function formatTrustScore(score?: number | null) {
+  if (score === null || score === undefined) return null;
+  return `${score}점`;
+}
+
 export default function Header() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isLoggedIn, loading, logout, user } = useAuthStore();
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [profileImageError, setProfileImageError] = useState(false);
+
+  const notificationRef = useRef<HTMLDivElement | null>(null);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: notifications = [],
@@ -125,30 +140,32 @@ export default function Header() {
     gcTime: 1000 * 60 * 30,
   });
 
-  // 웹소켓 실시간 반영
-  useEffect(() => {
-    if (!isLoggedIn) return;
+  const latestNotifications = useMemo(() => {
+    return [...notifications]
+      .sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+      })
+      .slice(0, 10);
+  }, [notifications]);
 
-    const unsubscribe = subscribeNotificationSocket(
-      (socketMessage: NotificationSocketMessage) => {
-        queryClient.setQueryData<NotificationItem[]>(
-          notificationKeys.me,
-          (prev = []) => {
-            const next = applyNotificationSocketMessage(prev, socketMessage);
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.is_read).length,
+    [notifications],
+  );
 
-            queryClient.setQueryData(
-              notificationKeys.unreadCount,
-              socketMessage.unread_count ?? countUnreadNotifications(next),
-            );
+  const profileInitial = useMemo(
+    () => getProfileInitial(user?.nickname),
+    [user?.nickname],
+  );
 
-            return next;
-          },
-        );
-      },
-    );
+  const trustScore = useMemo(
+    () => formatTrustScore(user?.trust_score ?? null),
+    [user?.trust_score],
+  );
 
-    return unsubscribe;
-  }, [isLoggedIn, queryClient]);
+  const showProfileImage = Boolean(user?.profile_image) && !profileImageError;
 
   // 개별 읽음 처리
   const markOneAsReadMutation = useMutation({
@@ -188,29 +205,76 @@ export default function Header() {
     },
   });
 
-  const latestNotifications = useMemo(() => {
-    return [...notifications]
-      .sort((a, b) => {
-        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return bTime - aTime;
-      })
-      .slice(0, 10);
-  }, [notifications]);
+  useEffect(() => {
+    if (!isLoggedIn) return;
 
-  const unreadCount = useMemo(
-    () => notifications.filter((item) => !item.is_read).length,
-    [notifications],
-  );
+    const unsubscribe = subscribeNotificationSocket(
+      (socketMessage: NotificationSocketMessage) => {
+        queryClient.setQueryData<NotificationItem[]>(
+          notificationKeys.me,
+          (prev = []) => {
+            const next = applyNotificationSocketMessage(prev, socketMessage);
+
+            queryClient.setQueryData(
+              notificationKeys.unreadCount,
+              socketMessage.unread_count ?? countUnreadNotifications(next),
+            );
+
+            return next;
+          },
+        );
+      },
+    );
+
+    return unsubscribe;
+  }, [isLoggedIn, queryClient]);
+
+  useEffect(() => {
+    setProfileImageError(false);
+  }, [user?.profile_image]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(target)
+      ) {
+        setIsNotificationOpen(false);
+      }
+
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsNotificationOpen(false);
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   if (loading) return null;
 
+  // 아래 핸들러들은 여기 있어도 괜찮음
   const handleLogout = async () => {
     try {
       await logout();
     } catch (error) {
       console.error('로그아웃 실패', error);
     } finally {
+      setIsProfileMenuOpen(false);
       alert('로그아웃 되었습니다.');
       navigate('/home', { replace: true });
     }
@@ -255,14 +319,17 @@ export default function Header() {
         )}
       </div>
 
-      {/* 오른쪽: 알림, 유저, 로그아웃 */}
+      {/* 오른쪽: 알림, 유저 */}
       <div className="ml-auto flex items-center gap-3">
         {isLoggedIn ? (
           <>
-            <div className="relative">
+            <div ref={notificationRef} className="relative">
               <button
                 type="button"
-                onClick={() => setIsNotificationOpen((prev) => !prev)}
+                onClick={() => {
+                  setIsNotificationOpen((prev) => !prev);
+                  setIsProfileMenuOpen(false);
+                }}
                 className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white transition hover:bg-gray-50"
                 aria-label="알림"
               >
@@ -382,19 +449,146 @@ export default function Header() {
               )}
             </div>
 
-            <div className="text-sm text-gray-600">
-              <span className="font-semibold text-gray-800">
-                {user?.nickname ?? '사용자'}
-              </span>
-              님
-            </div>
+            <div ref={profileMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfileMenuOpen((prev) => !prev);
+                  setIsNotificationOpen(false);
+                }}
+                className="flex items-center gap-3 rounded-full border border-slate-200 bg-white py-1.5 pl-1.5 pr-3 transition hover:border-slate-300 hover:bg-slate-50"
+                aria-label="프로필 메뉴"
+                aria-expanded={isProfileMenuOpen}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-bold text-white">
+                  {showProfileImage ? (
+                    <img
+                      src={user?.profile_image ?? ''}
+                      alt=""
+                      onError={() => setProfileImageError(true)}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    profileInitial
+                  )}
+                </div>
 
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-red-300 px-4 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
-            >
-              로그아웃
-            </button>
+                <div className="hidden min-w-0 text-left sm:block">
+                  <p className="max-w-[120px] truncate text-sm font-semibold text-slate-800">
+                    {user?.nickname ?? '사용자'}
+                  </p>
+                  <p className="text-xs font-medium text-slate-400">
+                    내 프로필
+                  </p>
+                </div>
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
+                    isProfileMenuOpen ? 'rotate-180' : ''
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 top-14 z-50 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <div className="border-b border-slate-100 bg-slate-50/80 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-base font-bold text-white shadow-sm">
+                        {showProfileImage ? (
+                          <img
+                            src={user?.profile_image ?? ''}
+                            alt=""
+                            onError={() => setProfileImageError(true)}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          profileInitial
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1 pt-1">
+                        <p className="truncate text-base font-bold text-slate-900">
+                          {user?.nickname ?? '사용자'}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-slate-500">
+                          {user?.email ?? '이메일 정보 없음'}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600">
+                            {user?.role === 'admin' ? '관리자' : '일반회원'}
+                          </span>
+
+                          {trustScore && (
+                            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-600">
+                              신뢰도 {trustScore}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2">
+                    <Link
+                      to="/mypage/profile"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <span>마이페이지</span>
+                      <span className="text-slate-300">›</span>
+                    </Link>
+
+                    <Link
+                      to="/mypage/party"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <span>내 파티</span>
+                      <span className="text-slate-300">›</span>
+                    </Link>
+
+                    <Link
+                      to="/mypage/payment"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <span>결제 / 정산</span>
+                      <span className="text-slate-300">›</span>
+                    </Link>
+
+                    <Link
+                      to="/mypage/profile"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <span>설정</span>
+                      <span className="text-slate-300">›</span>
+                    </Link>
+                  </div>
+
+                  <div className="border-t border-slate-100 p-2">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                    >
+                      <span>로그아웃</span>
+                      <span className="text-rose-300">›</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <Link

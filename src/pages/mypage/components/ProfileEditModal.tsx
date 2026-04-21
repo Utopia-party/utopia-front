@@ -38,7 +38,7 @@ export default function ProfileEditModal({
 
   const [form, setForm] = useState<ProfileEditForm>({
     nickname: initialValues.nickname ?? '',
-    phone: initialValues.phone ?? '',
+    phone: (initialValues.phone ?? '').replace(/[^0-9]/g, '').slice(0, 11),
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
@@ -53,7 +53,7 @@ export default function ProfileEditModal({
 
     setForm({
       nickname: initialValues.nickname ?? '',
-      phone: initialValues.phone ?? '',
+      phone: (initialValues.phone ?? '').replace(/[^0-9]/g, '').slice(0, 11),
     });
     setImagePreview(initialValues.profileImage ?? null);
     setSelectedImageFile(null);
@@ -74,12 +74,28 @@ export default function ProfileEditModal({
 
   const profileInitial = getProfileInitial(form.nickname);
 
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/[^0-9]/g, '');
+
+    if (numbers.length < 4) return numbers;
+    if (numbers.length < 8) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    }
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  };
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
+    let newValue = value;
+
+    if (name === 'phone') {
+      newValue = value.replace(/[^0-9]/g, '').slice(0, 11);
+    }
+
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: newValue,
     }));
   };
 
@@ -245,7 +261,7 @@ export default function ProfileEditModal({
             <input
               name="phone"
               type="tel"
-              value={form.phone}
+              value={formatPhone(form.phone)}
               onChange={handleChange}
               placeholder="010-0000-0000"
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-primary"
@@ -263,7 +279,7 @@ export default function ProfileEditModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+              className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? '저장 중...' : '저장'}
             </button>

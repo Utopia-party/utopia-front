@@ -18,6 +18,8 @@ import type { MyParty, PartyMember } from '../../types/party';
 
 type ModalMode = 'kick' | 'transfer' | 'leaderLeave';
 
+const ITEMS_PER_PAGE = 6;
+
 interface MemberPickerModalProps {
   partyId: string;
   mode: ModalMode;
@@ -65,7 +67,6 @@ function MemberPickerModal({
 
   const pickableMembers: PartyMember[] = useMemo(() => {
     const list = data?.members ?? [];
-    // 자기 자신 제외. kick 모드는 리더도 제외.
     return list.filter((m) => !m.is_current_user && m.role !== 'leader');
   }, [data]);
 
@@ -96,7 +97,6 @@ function MemberPickerModal({
       } else if (mode === 'transfer') {
         await transferMut.mutateAsync(selected);
       } else {
-        // leaderLeave: 위임 → 탈퇴
         await transferMut.mutateAsync(selected);
         await leaveMut.mutateAsync();
       }
@@ -377,6 +377,7 @@ export default function MyParty() {
   const parties: MyParty[] = data?.parties ?? [];
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const categories = useMemo(() => {
     const names = parties
@@ -392,6 +393,22 @@ export default function MyParty() {
         : parties,
     [parties, selectedCategory],
   );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredParties.length / ITEMS_PER_PAGE),
+  );
+
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const pagedParties = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredParties.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredParties, safeCurrentPage]);
+
+  const pageNumbers = useMemo(() => {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }, [totalPages]);
 
   const closeModal = () => setModal(null);
 
@@ -417,7 +434,10 @@ export default function MyParty() {
                   ? 'bg-primary text-white'
                   : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
               ].join(' ')}
-              onClick={() => setSelectedCategory(null)}
+              onClick={() => {
+                setSelectedCategory(null);
+                setCurrentPage(1);
+              }}
             >
               전체 ({parties.length})
             </button>
@@ -435,7 +455,10 @@ export default function MyParty() {
                       ? 'bg-primary text-white'
                       : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
                   ].join(' ')}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    setCurrentPage(1);
+                  }}
                 >
                   {cat} ({count})
                 </button>
@@ -461,119 +484,159 @@ export default function MyParty() {
             해당 카테고리의 파티가 없습니다.
           </div>
         ) : (
-          <section className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-            {filteredParties.map((party) => {
-              const isOwner = party.is_owner;
-              const statusLabel = isOwner ? '내가 만든 파티' : '참여중';
-              const perPersonPrice = party.monthly_price;
-              const serviceTotalPrice = party.service_total_price;
-              const refundAmount =
-                isOwner && serviceTotalPrice != null && perPersonPrice != null
-                  ? serviceTotalPrice - perPersonPrice
-                  : null;
+          <>
+            <section className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+              {pagedParties.map((party) => {
+                const isOwner = party.is_owner;
+                const statusLabel = isOwner ? '내가 만든 파티' : '참여중';
+                const perPersonPrice = party.monthly_price;
+                const serviceTotalPrice = party.service_total_price;
+                const refundAmount =
+                  isOwner && serviceTotalPrice != null && perPersonPrice != null
+                    ? serviceTotalPrice - perPersonPrice
+                    : null;
 
-              return (
-                <article
-                  key={party.id}
-                  className="flex min-h-[610px] flex-col rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm font-extrabold text-slate-600">
-                      {party.category_name ?? '카테고리'}
-                    </span>
-                    <StatusBadge label={statusLabel} isOwner={isOwner} />
-                  </div>
+                return (
+                  <article
+                    key={party.id}
+                    className="flex min-h-[610px] flex-col rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm font-extrabold text-slate-600">
+                        {party.category_name ?? '카테고리'}
+                      </span>
+                      <StatusBadge label={statusLabel} isOwner={isOwner} />
+                    </div>
 
-                  <h2 className="mt-5 text-[22px] font-extrabold leading-tight text-slate-900">
-                    {party.title}
-                  </h2>
+                    <h2 className="mt-5 text-[22px] font-extrabold leading-tight text-slate-900">
+                      {party.title}
+                    </h2>
 
-                  <div className="mt-7 flex flex-col gap-3 text-slate-700">
-                    <p className="text-[18px] font-extrabold text-slate-800">
-                      👥 {party.member_count}/{party.max_members ?? '?'}
-                    </p>
-                    <p className="text-[16px] font-bold">📍 온라인</p>
-                    <p className="text-[16px] font-extrabold text-slate-800">
-                      💰 월 1인 ₩{' '}
-                      {perPersonPrice != null
-                        ? perPersonPrice.toLocaleString()
-                        : '-'}
-                    </p>
-                    {isOwner && refundAmount != null && (
-                      <p className="text-[15px] font-bold text-emerald-600">
-                        💸 결제 후 환급 ₩ {refundAmount.toLocaleString()}
+                    <div className="mt-7 flex flex-col gap-3 text-slate-700">
+                      <p className="text-[18px] font-extrabold text-slate-800">
+                        👥 {party.member_count}/{party.max_members ?? '?'}
                       </p>
-                    )}
-                  </div>
+                      <p className="text-[16px] font-bold">📍 온라인</p>
+                      <p className="text-[16px] font-extrabold text-slate-800">
+                        💰 월 1인 ₩{' '}
+                        {perPersonPrice != null
+                          ? perPersonPrice.toLocaleString()
+                          : '-'}
+                      </p>
+                      {isOwner && refundAmount != null && (
+                        <p className="text-[15px] font-bold text-emerald-600">
+                          💸 결제 후 환급 ₩ {refundAmount.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
 
-                  <div className="mt-7 flex flex-col gap-4">
-                    <button
-                      type="button"
-                      className="h-14 rounded-full border border-slate-200 bg-white text-[16px] font-extrabold text-slate-900 transition hover:bg-slate-50"
-                      onClick={() =>
-                        setModal(
-                          isOwner
-                            ? { type: 'leaveLeader', partyId: party.id }
-                            : { type: 'leaveMember', partyId: party.id },
-                        )
-                      }
-                    >
-                      파티 탈퇴
-                    </button>
+                    <div className="mt-7 flex flex-col gap-4">
+                      <button
+                        type="button"
+                        className="h-14 rounded-full border border-slate-200 bg-white text-[16px] font-extrabold text-slate-900 transition hover:bg-slate-50"
+                        onClick={() =>
+                          setModal(
+                            isOwner
+                              ? { type: 'leaveLeader', partyId: party.id }
+                              : { type: 'leaveMember', partyId: party.id },
+                          )
+                        }
+                      >
+                        파티 탈퇴
+                      </button>
 
-                    {isOwner ? (
-                      <>
-                        <button
-                          type="button"
-                          className="h-14 rounded-full border border-amber-200 bg-amber-50 text-[16px] font-extrabold text-amber-700 transition hover:bg-amber-100"
-                          onClick={() =>
-                            setModal({
-                              type: 'applications',
-                              partyId: party.id,
-                            })
-                          }
-                        >
-                          참여 신청 관리
-                        </button>
-                        <button
-                          type="button"
-                          className="h-14 rounded-full border border-blue-200 bg-white text-[16px] font-extrabold text-primary transition hover:bg-blue-50"
-                          onClick={() =>
-                            setModal({ type: 'kick', partyId: party.id })
-                          }
-                        >
-                          참여자 강퇴
-                        </button>
-                        <button
-                          type="button"
-                          className="h-14 rounded-full border border-blue-200 bg-white text-[16px] font-extrabold text-primary transition hover:bg-blue-50"
-                          onClick={() =>
-                            setModal({ type: 'transfer', partyId: party.id })
-                          }
-                        >
-                          리더 위임
-                        </button>
-                      </>
-                    ) : null}
+                      {isOwner ? (
+                        <>
+                          <button
+                            type="button"
+                            className="h-14 rounded-full border border-amber-200 bg-amber-50 text-[16px] font-extrabold text-amber-700 transition hover:bg-amber-100"
+                            onClick={() =>
+                              setModal({
+                                type: 'applications',
+                                partyId: party.id,
+                              })
+                            }
+                          >
+                            참여 신청 관리
+                          </button>
+                          <button
+                            type="button"
+                            className="h-14 rounded-full border border-blue-200 bg-white text-[16px] font-extrabold text-primary transition hover:bg-blue-50"
+                            onClick={() =>
+                              setModal({ type: 'kick', partyId: party.id })
+                            }
+                          >
+                            참여자 강퇴
+                          </button>
+                          <button
+                            type="button"
+                            className="h-14 rounded-full border border-blue-200 bg-white text-[16px] font-extrabold text-primary transition hover:bg-blue-50"
+                            onClick={() =>
+                              setModal({ type: 'transfer', partyId: party.id })
+                            }
+                          >
+                            리더 위임
+                          </button>
+                        </>
+                      ) : null}
 
-                    <button
-                      type="button"
-                      className="h-14 rounded-full border border-blue-200 bg-primary text-[16px] font-extrabold text-white text-primary transition hover:opacity-90"
-                      onClick={() => navigate(`/party/${party.id}/chat`)}
-                    >
-                      채팅방
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        className="h-14 rounded-full border border-blue-200 bg-primary text-[16px] font-extrabold text-white text-primary transition hover:opacity-90"
+                        onClick={() => navigate(`/party/${party.id}/chat`)}
+                      >
+                        채팅방
+                      </button>
+                    </div>
 
-                  <p className="mt-auto pt-5 text-sm font-semibold leading-6 text-slate-500">
-                    {isOwner
-                      ? '리더 권한: 모집 상태 관리/강퇴/리더 위임/파티 종료(스케줄링)'
-                      : '채팅방에서: 정산요청/영수증 인증/채팅 신고 가능'}
-                  </p>
-                </article>
-              );
-            })}
-          </section>
+                    <p className="mt-auto pt-5 text-sm font-semibold leading-6 text-slate-500">
+                      {isOwner
+                        ? '리더 권한: 모집 상태 관리/강퇴/리더 위임/파티 종료(스케줄링)'
+                        : '채팅방에서: 정산요청/영수증 인증/채팅 신고 가능'}
+                    </p>
+                  </article>
+                );
+              })}
+            </section>
+
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={safeCurrentPage === 1}
+                onClick={() => setCurrentPage(Math.max(safeCurrentPage - 1, 1))}
+              >
+                이전
+              </button>
+
+              {pageNumbers.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  className={[
+                    'h-11 min-w-[44px] rounded-full px-4 text-sm font-extrabold transition',
+                    currentPage === page
+                      ? 'bg-primary text-white'
+                      : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+                  ].join(' ')}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={safeCurrentPage === totalPages}
+                onClick={() =>
+                  setCurrentPage(Math.min(safeCurrentPage + 1, totalPages))
+                }
+              >
+                다음
+              </button>
+            </div>
+          </>
         )}
       </div>
 

@@ -13,6 +13,11 @@ type TrustHistoryItem = {
   createdAt: string;
 };
 
+type CategoryFilter = '전체' | '점수 상승' | '점수 하락';
+type PeriodFilter = '최근 1개월' | '최근 3개월' | '최근 6개월';
+
+const ITEMS_PER_PAGE = 10;
+
 function getScoreBadgeClass(score: number) {
   if (score > 0) {
     return 'border border-emerald-200 bg-emerald-50 text-emerald-700';
@@ -168,24 +173,45 @@ function formatDate(dateString?: string) {
   return date.toLocaleDateString('ko-KR');
 }
 
-function matchesPeriod(dateString: string, period: string) {
-  const targetDate = new Date(dateString);
-  if (Number.isNaN(targetDate.getTime())) return false;
+function matchesPeriod(dateString: string, period: PeriodFilter) {
+  const baseDate = new Date(dateString);
+  if (Number.isNaN(baseDate.getTime())) return false;
 
   const now = new Date();
-  const startDate = new Date();
+
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+
+  const targetDay = new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth(),
+    baseDate.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+
+  const startDate = new Date(today);
 
   if (period === '최근 1개월') {
-    startDate.setMonth(now.getMonth() - 1);
+    startDate.setMonth(startDate.getMonth() - 1);
   } else if (period === '최근 3개월') {
-    startDate.setMonth(now.getMonth() - 3);
-  } else if (period === '최근 6개월') {
-    startDate.setMonth(now.getMonth() - 6);
+    startDate.setMonth(startDate.getMonth() - 3);
   } else {
-    return true;
+    startDate.setMonth(startDate.getMonth() - 6);
   }
 
-  return targetDate >= startDate && targetDate <= now;
+  startDate.setHours(0, 0, 0, 0);
+
+  return targetDay >= startDate && targetDay <= today;
 }
 
 function mapTrustHistoryItem(item: TrustHistoryApiItem): TrustHistoryItem {
@@ -204,12 +230,13 @@ export default function MyTrustHistory() {
   usePageTitle('신뢰도 변화');
 
   const { user } = useAuthStore();
-  const [category, setCategory] = useState('전체');
-  const [period, setPeriod] = useState('최근 3개월');
+  const [category, setCategory] = useState<CategoryFilter>('전체');
+  const [period, setPeriod] = useState<PeriodFilter>('최근 1개월');
   const [keyword, setKeyword] = useState('');
   const [historyData, setHistoryData] = useState<TrustHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const currentTrustScore = user?.trust_score;
 
@@ -229,7 +256,7 @@ export default function MyTrustHistory() {
           .map(mapTrustHistoryItem)
           .sort(
             (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
 
         setHistoryData(normalizedItems);
@@ -244,7 +271,7 @@ export default function MyTrustHistory() {
       }
     };
 
-    fetchTrustHistory();
+    void fetchTrustHistory();
 
     return () => {
       mounted = false;
@@ -253,35 +280,58 @@ export default function MyTrustHistory() {
 
   const cumulativeGraphData = useMemo(() => {
     return historyData
+      .filter((item) => matchesPeriod(item.createdAt, period))
       .filter(
         (item) =>
           item.trustScoreAfter !== null && item.trustScoreAfter !== undefined,
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       )
       .map((item) => ({
         label: formatDateToMMDD(item.createdAt),
         value: item.trustScoreAfter as number,
       }));
-  }, [historyData]);
+  }, [historyData, period]);
 
   const filteredHistory = useMemo(() => {
-    return [...historyData].reverse().filter((item) => {
+    const trimmedKeyword = keyword.trim();
+
+    return historyData.filter((item) => {
       const matchesKeyword =
-        keyword.trim() === '' ||
-        item.title.includes(keyword) ||
-        item.detail.includes(keyword);
+        trimmedKeyword === '' ||
+        item.title.includes(trimmedKeyword) ||
+        item.detail.includes(trimmedKeyword);
+
+      if (!matchesKeyword) return false;
 
       const matchesSelectedPeriod = matchesPeriod(item.createdAt, period);
-
       if (!matchesSelectedPeriod) return false;
 
-      if (category === '전체') return matchesKeyword;
-      if (category === '증가') return item.score > 0 && matchesKeyword;
-      if (category === '감소') return item.score < 0 && matchesKeyword;
-      if (category === '유지') return item.score === 0 && matchesKeyword;
+      if (category === '전체') return true;
+      if (category === '점수 상승') return item.score > 0;
+      if (category === '점수 하락') return item.score < 0;
 
-      return matchesKeyword;
+      return true;
     });
   }, [category, historyData, keyword, period]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredHistory.length / ITEMS_PER_PAGE),
+  );
+
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const pagedHistory = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredHistory.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredHistory, safeCurrentPage]);
+
+  const pageNumbers = useMemo(() => {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }, [totalPages]);
 
   return (
     <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
@@ -303,7 +353,7 @@ export default function MyTrustHistory() {
                   신뢰도 변화 그래프
                 </h2>
                 <p className="mt-1 text-sm font-medium text-slate-500">
-                  최근 기간 동안의 누적 신뢰도 흐름입니다.
+                  {period} 기준 신뢰도 변화 흐름입니다.
                 </p>
               </div>
 
@@ -317,32 +367,72 @@ export default function MyTrustHistory() {
 
           <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 outline-none"
-              >
-                <option>전체</option>
-                <option>증가</option>
-                <option>감소</option>
-                <option>유지</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    setCategory(e.target.value as CategoryFilter);
+                    setCurrentPage(1);
+                  }}
+                  className="h-11 min-w-[132px] appearance-none rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
+                >
+                  <option>전체</option>
+                  <option>점수 상승</option>
+                  <option>점수 하락</option>
+                </select>
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
 
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 outline-none"
-              >
-                <option>최근 1개월</option>
-                <option>최근 3개월</option>
-                <option>최근 6개월</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={period}
+                  onChange={(e) => {
+                    setPeriod(e.target.value as PeriodFilter);
+                    setCurrentPage(1);
+                  }}
+                  className="h-11 min-w-[132px] appearance-none rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
+                >
+                  <option>최근 1개월</option>
+                  <option>최근 3개월</option>
+                  <option>최근 6개월</option>
+                </select>
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
             </div>
 
             <input
               type="text"
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              onChange={(e) => {
+                setKeyword(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="사유/파티명 검색"
               className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400 md:w-[250px]"
             />
@@ -363,7 +453,7 @@ export default function MyTrustHistory() {
 
             {!loading &&
               !error &&
-              filteredHistory.map((item) => (
+              pagedHistory.map((item) => (
                 <article
                   key={item.id}
                   className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5"
@@ -393,6 +483,46 @@ export default function MyTrustHistory() {
               </div>
             )}
           </div>
+
+          {!loading && !error && filteredHistory.length > 0 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() => setCurrentPage(Math.max(safeCurrentPage - 1, 1))}
+                disabled={safeCurrentPage === 1}
+              >
+                이전
+              </button>
+
+              {pageNumbers.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  className={[
+                    'h-11 min-w-[44px] rounded-full px-4 text-sm font-extrabold transition',
+                    safeCurrentPage === page
+                      ? 'bg-primary text-white'
+                      : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+                  ].join(' ')}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() =>
+                  setCurrentPage(Math.min(safeCurrentPage + 1, totalPages))
+                }
+                disabled={safeCurrentPage === totalPages}
+              >
+                다음
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </div>

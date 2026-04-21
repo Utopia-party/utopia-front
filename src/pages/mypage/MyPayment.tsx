@@ -7,7 +7,9 @@ type PaymentStatus = 'pending' | 'approved' | 'rejected';
 type PaymentMethod = 'card' | 'transfer' | null;
 
 type StatusFilter = 'all' | PaymentStatus;
-type PeriodFilter = '3months' | '6months' | 'all';
+type PeriodFilter = '1month' | '3months' | '6months' | 'all';
+
+const ITEMS_PER_PAGE = 15;
 
 function formatPrice(amount: number) {
   return `${amount.toLocaleString('ko-KR')}원`;
@@ -74,18 +76,46 @@ function getMethodLabel(method: PaymentMethod | string) {
 function isWithinPeriod(item: MyPaymentItem, period: PeriodFilter) {
   if (period === 'all') return true;
 
-  const baseDate = new Date(item.paid_at ?? item.created_at);
-  if (Number.isNaN(baseDate.getTime())) return true;
+  const rawDate = item.paid_at ?? item.created_at;
+  const baseDate = new Date(rawDate);
 
-  const cutoff = new Date();
+  if (Number.isNaN(baseDate.getTime())) return false;
 
-  if (period === '3months') {
-    cutoff.setMonth(cutoff.getMonth() - 3);
+  const now = new Date();
+
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+
+  const paymentDay = new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth(),
+    baseDate.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+
+  const start = new Date(today);
+
+  if (period === '1month') {
+    start.setMonth(start.getMonth() - 1);
+  } else if (period === '3months') {
+    start.setMonth(start.getMonth() - 3);
   } else {
-    cutoff.setMonth(cutoff.getMonth() - 6);
+    start.setMonth(start.getMonth() - 6);
   }
 
-  return baseDate >= cutoff;
+  start.setHours(0, 0, 0, 0);
+
+  return paymentDay >= start && paymentDay <= today;
 }
 
 export default function MyPayment() {
@@ -96,8 +126,9 @@ export default function MyPayment() {
   const [error, setError] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('3months');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('1month');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -106,7 +137,13 @@ export default function MyPayment() {
         setError(null);
 
         const data = await fetchMyPayments();
-        setPayments(Array.isArray(data) ? data : []);
+        setPayments(
+          (Array.isArray(data) ? data : []).sort(
+            (a, b) =>
+              new Date(b.paid_at ?? b.created_at).getTime() -
+              new Date(a.paid_at ?? a.created_at).getTime(),
+          ),
+        );
       } catch (err: any) {
         const message =
           err?.response?.data?.detail ||
@@ -146,6 +183,22 @@ export default function MyPayment() {
     });
   }, [payments, periodFilter, searchKeyword, statusFilter]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredPayments.length / ITEMS_PER_PAGE),
+  );
+
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const pagedPayments = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredPayments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredPayments, safeCurrentPage]);
+
+  const pageNumbers = useMemo(() => {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }, [totalPages]);
+
   return (
     <div className="min-h-full bg-[#f5f7fb] px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
       <div className="mx-auto max-w-6xl">
@@ -162,35 +215,60 @@ export default function MyPayment() {
               <div className="relative">
                 <select
                   value={statusFilter}
-                  onChange={(e) =>
-                    setStatusFilter(e.target.value as StatusFilter)
-                  }
-                  className="inline-flex h-14 min-w-[132px] appearance-none items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 pr-12 text-base font-extrabold text-slate-800 shadow-sm outline-none transition focus:border-slate-300"
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value as StatusFilter);
+                    setCurrentPage(1);
+                  }}
+                  className="h-11 min-w-[132px] appearance-none rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
                 >
                   <option value="all">전체 상태</option>
                   <option value="approved">결제완료</option>
                   <option value="pending">입금대기</option>
                   <option value="rejected">결제실패</option>
                 </select>
-                <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-slate-400">
-                  ⌄
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </span>
               </div>
 
               <div className="relative">
                 <select
                   value={periodFilter}
-                  onChange={(e) =>
-                    setPeriodFilter(e.target.value as PeriodFilter)
-                  }
-                  className="inline-flex h-14 min-w-[132px] appearance-none items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 pr-12 text-base font-extrabold text-slate-800 shadow-sm outline-none transition focus:border-slate-300"
+                  onChange={(e) => {
+                    setPeriodFilter(e.target.value as PeriodFilter);
+                    setCurrentPage(1);
+                  }}
+                  className="h-11 min-w-[132px] appearance-none rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
                 >
+                  <option value="1month">최근 1개월</option>
                   <option value="3months">최근 3개월</option>
                   <option value="6months">최근 6개월</option>
                   <option value="all">전체 기간</option>
                 </select>
-                <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-slate-400">
-                  ⌄
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </span>
               </div>
             </div>
@@ -199,7 +277,10 @@ export default function MyPayment() {
               <input
                 type="text"
                 value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
+                onChange={(e) => {
+                  setSearchKeyword(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="파티명/결제ID 검색"
                 className="h-14 w-full rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
               />
@@ -236,80 +317,126 @@ export default function MyPayment() {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 bg-white">
-                {filteredPayments.map((item) => {
-                  const statusMeta = getStatusMeta(item.status);
-                  const displayDate = formatDate(
-                    item.paid_at ?? item.created_at,
-                  );
+              <>
+                <div className="divide-y divide-slate-200 bg-white">
+                  {pagedPayments.map((item) => {
+                    const statusMeta = getStatusMeta(item.status);
+                    const displayDate = formatDate(
+                      item.paid_at ?? item.created_at,
+                    );
 
-                  return (
-                    <article
-                      key={item.id}
-                      className="grid gap-4 px-5 py-5 md:grid-cols-[1.2fr_2.4fr_1.2fr_1.1fr_1.4fr_1.2fr] md:items-center md:px-10"
+                    return (
+                      <article
+                        key={item.id}
+                        className="grid gap-4 px-5 py-5 md:grid-cols-[1.2fr_2.4fr_1.2fr_1.1fr_1.4fr_1.2fr] md:items-center md:px-10"
+                      >
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 md:hidden">
+                            날짜
+                          </p>
+                          <p className="text-[15px] font-bold text-slate-500">
+                            {displayDate}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 md:hidden">
+                            파티
+                          </p>
+                          <p className="text-[17px] font-extrabold text-slate-900">
+                            {getDisplayPartyName(item)}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-slate-400">
+                            정산월 {item.billing_month}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 md:hidden">
+                            금액
+                          </p>
+                          <p className="text-[17px] font-extrabold text-slate-900">
+                            {formatPrice(item.amount)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 md:hidden">
+                            상태
+                          </p>
+                          <span
+                            className={`inline-flex rounded-full border px-4 py-2 text-sm font-extrabold ${statusMeta.className}`}
+                          >
+                            {statusMeta.label}
+                          </span>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 md:hidden">
+                            결제 ID
+                          </p>
+                          <p className="break-all text-[15px] font-bold text-slate-500">
+                            {getDisplayPaymentId(item)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 md:hidden">
+                            수단
+                          </p>
+                          <p className="text-[15px] font-bold text-slate-500">
+                            {getMethodLabel(item.payment_method)}
+                          </p>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                <div className="border-t border-slate-200 bg-white px-5 py-5 md:px-10">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() =>
+                        setCurrentPage(Math.max(safeCurrentPage - 1, 1))
+                      }
+                      disabled={safeCurrentPage === 1}
                     >
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 md:hidden">
-                          날짜
-                        </p>
-                        <p className="text-[15px] font-bold text-slate-500">
-                          {displayDate}
-                        </p>
-                      </div>
+                      이전
+                    </button>
 
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 md:hidden">
-                          파티
-                        </p>
-                        <p className="text-[17px] font-extrabold text-slate-900">
-                          {getDisplayPartyName(item)}
-                        </p>
-                        <p className="mt-1 text-xs font-semibold text-slate-400">
-                          정산월 {item.billing_month}
-                        </p>
-                      </div>
+                    {pageNumbers.map((page) => (
+                      <button
+                        key={page}
+                        type="button"
+                        className={[
+                          'h-11 min-w-[44px] rounded-full px-4 text-sm font-extrabold transition',
+                          safeCurrentPage === page
+                            ? 'bg-primary text-white'
+                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+                        ].join(' ')}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    ))}
 
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 md:hidden">
-                          금액
-                        </p>
-                        <p className="text-[17px] font-extrabold text-slate-900">
-                          {formatPrice(item.amount)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 md:hidden">
-                          상태
-                        </p>
-                        <span
-                          className={`inline-flex rounded-full border px-4 py-2 text-sm font-extrabold ${statusMeta.className}`}
-                        >
-                          {statusMeta.label}
-                        </span>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 md:hidden">
-                          결제 ID
-                        </p>
-                        <p className="break-all text-[15px] font-bold text-slate-500">
-                          {getDisplayPaymentId(item)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 md:hidden">
-                          수단
-                        </p>
-                        <p className="text-[15px] font-bold text-slate-500">
-                          {getMethodLabel(item.payment_method)}
-                        </p>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
+                    <button
+                      type="button"
+                      className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() =>
+                        setCurrentPage(
+                          Math.min(safeCurrentPage + 1, totalPages),
+                        )
+                      }
+                      disabled={safeCurrentPage === totalPages}
+                    >
+                      다음
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </section>

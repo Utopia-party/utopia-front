@@ -9,6 +9,8 @@ import {
   type RecentActivityItem,
 } from '../../apis/user';
 
+const RECENT_ACTIVITY_PREVIEW_COUNT = 5;
+
 function getProfileInitial(nickname?: string | null) {
   if (!nickname) return 'PU';
   return nickname.trim().slice(0, 2).toUpperCase();
@@ -141,6 +143,10 @@ function ProfileDashboard() {
   const recentActivities = profile?.recent_activities ?? [];
 
   const profileInitial = useMemo(() => getProfileInitial(nickname), [nickname]);
+  const visibleActivities = recentActivities.slice(
+    0,
+    RECENT_ACTIVITY_PREVIEW_COUNT,
+  );
 
   useEffect(() => {
     setImageError(false);
@@ -310,15 +316,13 @@ function ProfileDashboard() {
           </section>
 
           <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-900">
-                  최근 활동 내역
-                </h3>
-                <p className="mt-1 text-sm font-medium text-slate-500">
-                  최근 계정 활동과 신뢰도 반영 내역입니다.
-                </p>
-              </div>
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900">
+                최근 활동 내역
+              </h3>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                최근 계정 활동과 신뢰도 반영 내역입니다.
+              </p>
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
@@ -327,7 +331,7 @@ function ProfileDashboard() {
                   최근 활동 내역이 없습니다.
                 </div>
               ) : (
-                recentActivities.map((activity) => {
+                visibleActivities.map((activity) => {
                   const score = getActivityScore(activity);
 
                   return (
@@ -359,6 +363,18 @@ function ProfileDashboard() {
                 })
               )}
             </div>
+
+            {recentActivities.length > RECENT_ACTIVITY_PREVIEW_COUNT ? (
+              <div className="mt-4 flex justify-center">
+                {/* <button
+                  type="button"
+                  onClick={() => navigate('/mypage/activity')}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 transition hover:bg-white"
+                >
+                  전체 활동 보기
+                </button> */}
+              </div>
+            ) : null}
           </section>
         </div>
       </div>
