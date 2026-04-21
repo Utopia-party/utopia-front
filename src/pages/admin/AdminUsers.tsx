@@ -11,6 +11,7 @@ import {
   type AdminUserStatusLog,
   getAdminErrorMessage,
   updateAdminUserStatus,
+  updateAdminUserTrustScore,
   type AdminUserRecord,
 } from '../../apis/admin';
 
@@ -46,6 +47,13 @@ function TrustBar({ score }: { score: number }) {
       </div>
     </div>
   );
+}
+
+function getTrustTone(score: number) {
+  if (score >= 70) return 'bg-blue-500';
+  if (score >= 36.5) return 'bg-emerald-500';
+  if (score >= 35) return 'bg-amber-500';
+  return 'bg-red-500';
 }
 
 export default function AdminUsers() {
@@ -221,6 +229,57 @@ export default function AdminUsers() {
     }
   };
 
+  const openTrustEditor = async (user: AdminUserRecord) => {
+    setExpandedUserId(user.id);
+    setDetailError('');
+    setTrustEditorUserId(user.id);
+    setTrustScoreDraft(user.trustScore.toFixed(1));
+    setTrustReason('');
+
+    if (!userDetails[user.id]) {
+      try {
+        setDetailLoadingId(user.id);
+        const detail = await fetchAdminUserDetail(user.id);
+        setUserDetails((prev) => ({ ...prev, [user.id]: detail }));
+        setTrustScoreDraft(detail.trustScore.toFixed(1));
+      } catch (err) {
+        setDetailError(getAdminErrorMessage(err));
+      } finally {
+        setDetailLoadingId(null);
+      }
+    }
+  };
+
+  const submitTrustScoreUpdate = async () => {
+    if (!trustEditorUserId) return;
+
+    const parsed = Number(trustScoreDraft);
+    if (Number.isNaN(parsed)) {
+      setDetailError('신뢰도는 숫자로 입력해야 합니다.');
+      return;
+    }
+    if (parsed < 0 || parsed > 100) {
+      setDetailError('신뢰도는 0점 이상 100점 이하로만 설정할 수 있습니다.');
+      return;
+    }
+
+    try {
+      setBusyUserId(trustEditorUserId);
+      const nextDetail = await updateAdminUserTrustScore(trustEditorUserId, {
+        trustScore: parsed,
+        reason: trustReason.trim() || undefined,
+      });
+      setUserDetails((prev) => ({ ...prev, [trustEditorUserId]: nextDetail }));
+      await reloadUsers();
+      setTrustEditorUserId(null);
+      setTrustReason('');
+    } catch (err) {
+      setDetailError(getAdminErrorMessage(err));
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
   const handleLoadStatusLogs = async (userId: string) => {
     const current = detailTab[userId] ?? 'info';
     const nextTab = current === 'info' ? 'logs' : 'info';
@@ -259,6 +318,19 @@ export default function AdminUsers() {
     ],
     [users],
   );
+
+  const trustEditorDetail = trustEditorUserId ? userDetails[trustEditorUserId] : null;
+  const trustScoreNumber = Number(trustScoreDraft);
+  const trustScorePreview = Number.isNaN(trustScoreNumber) ? 0 : Math.min(Math.max(trustScoreNumber, 0), 100);
+  const trustTone = getTrustTone(trustScorePreview);
+  const trustScoreError =
+    trustScoreDraft.trim() === ''
+      ? '신뢰도를 입력해주세요.'
+      : Number.isNaN(trustScoreNumber)
+        ? '신뢰도는 숫자로 입력해주세요.'
+        : trustScoreNumber < 0 || trustScoreNumber > 100
+          ? '0점 이상 100점 이하 범위 안에서 입력해주세요.'
+          : '';
 
   return (
     <>
@@ -478,6 +550,13 @@ export default function AdminUsers() {
                                   ? '처리 중...'
                                   : '상태 변경'}
                               </button>
+                              <button
+                                className="rounded-md border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-600 transition hover:bg-emerald-50"
+                                disabled={busyUserId === user.id}
+                                onClick={() => void openTrustEditor(user)}
+                              >
+                                신뢰도 변경
+                              </button>
                               {!isCurrentAdmin && user.status !== '정지' && (
                                 <button
                                   className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50"
@@ -510,6 +589,7 @@ export default function AdminUsers() {
 
                               {!isDetailLoading && detail && (
                                 <div className="space-y-4">
+                                  {/* 탭 전환 버튼 */}
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => setDetailTab((prev) => ({ ...prev, [user.id]: 'info' }))}
@@ -538,6 +618,7 @@ export default function AdminUsers() {
                                     </button>
                                   </div>
 
+                                  {/* 기본 정보 탭 */}
                                   {(detailTab[user.id] ?? 'info') === 'info' && (
                                     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
                                       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -644,6 +725,7 @@ export default function AdminUsers() {
                                     </div>
                                   )}
 
+                                  {/* 상태 변경 이력 탭 */}
                                   {(detailTab[user.id] ?? 'info') === 'logs' && (
                                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                       <h3 className="text-base font-semibold text-slate-900">상태 변경 이력</h3>
@@ -711,6 +793,74 @@ export default function AdminUsers() {
           </section>
         </div>
       </div>
+      {trustEditorUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <button
+            type="button"
+            aria-label="신뢰도 변경 닫기"
+            className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm"
+            onClick={() => { setTrustEditorUserId(null); setTrustReason(''); }}
+          />
+          <div className="relative z-10 w-[440px] max-w-[calc(100vw-32px)] rounded-[28px] border border-white/60 bg-white p-6 shadow-[0_30px_100px_rgba(15,23,42,0.24)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">신뢰도 변경</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {trustEditorDetail?.name?.trim() || trustEditorDetail?.nickname || '선택한 사용자'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 px-2.5 py-1 text-xs text-slate-500 transition hover:bg-slate-50"
+                onClick={() => { setTrustEditorUserId(null); setTrustReason(''); }}
+              >
+                닫기
+              </button>
+            </div>
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>실시간 미리보기</span>
+                <span className="font-semibold text-slate-700">{trustScorePreview.toFixed(1)}</span>
+              </div>
+              <div className="mt-3 h-3 rounded-full bg-white">
+                <div className={`h-3 rounded-full ${trustTone} transition-all duration-200`} style={{ width: `${trustScorePreview}%` }} />
+              </div>
+            </div>
+            <label className="mt-5 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Slider</span>
+              <input type="range" min="0" max="100" step="0.1" value={trustScorePreview}
+                onChange={(e) => setTrustScoreDraft(e.target.value)}
+                className="mt-3 w-full accent-emerald-500" />
+            </label>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Score</span>
+              <input type="number" min="0" max="100" step="0.1" value={trustScoreDraft}
+                onChange={(e) => setTrustScoreDraft(e.target.value)}
+                className={`mt-2 w-full rounded-xl bg-white px-4 py-3 text-sm text-slate-700 outline-none transition ${trustScoreError ? 'border border-rose-300' : 'border border-slate-200 focus:border-emerald-400'}`} />
+              {trustScoreError && <p className="mt-2 text-xs font-medium text-rose-500">{trustScoreError}</p>}
+            </label>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Reason</span>
+              <textarea value={trustReason} onChange={(e) => setTrustReason(e.target.value)} rows={3}
+                placeholder="신뢰도 변경 사유를 입력하세요."
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400" />
+            </label>
+            <div className="mt-5 flex gap-2">
+              <button type="button"
+                className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={busyUserId === trustEditorUserId || Boolean(trustScoreError)}
+                onClick={() => void submitTrustScoreUpdate()}>
+                {busyUserId === trustEditorUserId ? '저장 중...' : '적용'}
+              </button>
+              <button type="button"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                onClick={() => { setTrustEditorUserId(null); setTrustReason(''); }}>
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
