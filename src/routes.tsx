@@ -15,6 +15,7 @@ import Signup from './pages/auth/Signup';
 import SocialCallback from './pages/auth/SocialCallback';
 import SocialSignup from './pages/auth/SocialSignup';
 import HandOcrCaptcha from './pages/hand-ocr-captcha/HandOcrCaptcha';
+import Chat from './pages/Chat';
 import CreateParty from './components/party/CreateParty';
 
 // 보호 라우트
@@ -28,6 +29,7 @@ import Party from './pages/Party';
 // 마이페이지 관련
 import Profile from './pages/mypage/Profile';
 import MyParty from './pages/mypage/MyParty';
+import MyHistory from './pages/mypage/MyHistory';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 import MyTrustHistory from './pages/mypage/MyTrustHistory';
@@ -42,7 +44,7 @@ import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
 import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
-import Chat from './pages/chat/Chat';
+import AdminModeration from './pages/admin/AdminModeration';
 
 const router = createBrowserRouter([
   {
@@ -146,11 +148,15 @@ const router = createBrowserRouter([
             element: <MyParty />,
           },
           {
+            path: 'history',
+            element: <MyHistory />,
+          },
+          {
             path: 'my_trust_history',
             element: <MyTrustHistory />,
           },
           {
-            path: 'report',
+            path: '/mypage/report',
             element: <MyReport />,
           },
           {
@@ -201,6 +207,10 @@ const router = createBrowserRouter([
       {
         path: 'logs',
         Component: AdminSystemLogs,
+      },
+      {
+        path: 'moderation',
+        Component: AdminModeration,
       },
     ],
   },
