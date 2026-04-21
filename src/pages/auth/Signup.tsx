@@ -481,14 +481,14 @@ export default function Signup() {
         <div className="space-y-3 pt-4">
           <button
             type="submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || !captchaToken}
             className={`w-full rounded-xl py-4 font-bold text-white transition ${
-              isFormValid
+              isFormValid && captchaToken
                 ? 'bg-blue-600 hover:bg-blue-700'
                 : 'cursor-not-allowed bg-gray-300'
             }`}
           >
-            회원가입 완료
+            {!captchaToken ? '캡챠 인증 필요' : '회원가입 완료'}
           </button>
           {/* <button
             type="button"
