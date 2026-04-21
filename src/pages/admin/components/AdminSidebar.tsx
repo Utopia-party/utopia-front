@@ -51,6 +51,11 @@ const allMenuItems = [
     end: false,
     permission: 'canManageModeration',
   },
+  {
+    path: '/admin/captcha',
+    label: '캡챠 관리',
+    end: false,
+  },
 ] as const;
 
 export default function AdminSidebar({

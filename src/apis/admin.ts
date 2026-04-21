@@ -593,3 +593,60 @@ export function getAdminErrorMessage(error: unknown): string {
   }
   return '관리자 요청 처리 중 오류가 발생했습니다.';
 }
+
+// ── LSTM Shadow Mode ──
+
+export type ShadowModeResponse = {
+  shadow_mode: boolean;
+  lstm_weight?: number;
+  score_formula?: string;
+  message?: string;
+};
+
+export async function fetchShadowMode(): Promise<ShadowModeResponse> {
+  const res = await api.get('/api/admin/captcha/shadow');
+  return res.data;
+}
+
+export async function toggleShadowMode(): Promise<ShadowModeResponse> {
+  const res = await api.put('/api/admin/captcha/shadow');
+  return res.data;
+}
+
+// ── IP 제재 관리 ──
+
+export type BlockedIpEntry = {
+  ip: string;
+  lock: boolean;
+  ban: boolean;
+  wait: boolean;
+  lock_count: number;
+  ttl: Record<string, number>;
+};
+
+export type BlockedIpsResponse = {
+  blocked_ips: BlockedIpEntry[];
+  total: number;
+};
+
+export async function fetchBlockedIps(): Promise<BlockedIpsResponse> {
+  const res = await api.get('/api/admin/captcha/blocked-ips');
+  return res.data;
+}
+
+export async function unblockIp(
+  ip: string,
+): Promise<{ ip: string; unblocked: boolean; message: string }> {
+  const res = await api.delete(
+    `/api/admin/captcha/blocked-ips/${encodeURIComponent(ip)}`,
+  );
+  return res.data;
+}
+
+export async function unblockAllIps(): Promise<{
+  total_deleted: number;
+  message: string;
+}> {
+  const res = await api.delete('/api/admin/captcha/blocked-ips');
+  return res.data;
+}
