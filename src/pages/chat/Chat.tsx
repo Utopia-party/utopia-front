@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { User, AlertTriangle } from 'lucide-react';
-import { api } from '../apis/api';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../../stores/authStore';
+import { api } from '../../apis/api';
+import type {
+  Member,
+  Message,
+  PartyInfo,
+  PaymentStep,
+  ProfileDrawerState,
+  ProfileDrawerUser,
+} from '../../types/chat';
+import ReportModal from './components/ReportModal';
 
 declare global {
   interface Window {
@@ -16,62 +25,6 @@ declare global {
     };
   }
 }
-
-interface Message {
-  type: 'message' | 'system' | 'warning' | 'error' | 'message_deleted';
-  party_id?: string;
-  user_id?: string;
-  nickname?: string;
-  profile_image?: string | null;
-  content: string;
-  created_at: string;
-}
-
-interface Member {
-  user_id: string;
-  nickname: string;
-  name?: string | null;
-  role: string;
-  status: string;
-  trust_score?: number | null;
-  joined_at?: string | null;
-  profile_image?: string | null;
-  is_active: boolean;
-}
-
-interface PartyInfo {
-  party_id: string;
-  title: string;
-  status?: string;
-  max_members?: number | null;
-  member_count?: number | null;
-  monthly_price?: number | null;
-  leader_discount_rate?: number | null;
-  referral_discount_rate?: number | null;
-  monthly_per_person?: number | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  category_name?: string | null;
-  service_name?: string | null;
-  host_nickname?: string | null;
-  members: Member[];
-}
-
-interface ProfileDrawerUser {
-  user_id?: string;
-  nickname?: string;
-  profile_image?: string | null;
-  role?: string;
-  status?: string;
-}
-
-interface ProfileDrawerState {
-  user: ProfileDrawerUser;
-  top: number;
-  left: number;
-}
-
-type PaymentStep = 'select' | 'card' | 'transfer';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
@@ -425,7 +378,9 @@ function PaymentModal({
         party_id: partyId,
         amount: payAmount,
       });
-      setDoneMessage('입금 정보가 등록되었습니다.\n관리자 확인 후 승인으로 변경됩니다.');
+      setDoneMessage(
+        '입금 정보가 등록되었습니다.\n관리자 확인 후 승인으로 변경됩니다.',
+      );
       setDone(true);
       onPaymentComplete();
     } catch (err: unknown) {
@@ -456,10 +411,17 @@ function PaymentModal({
         <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
           <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
             <h2 className="text-base font-extrabold text-white">결제 완료</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-xl font-light">✕</button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white transition-colors text-xl font-light"
+            >
+              ✕
+            </button>
           </div>
           <div className="p-8 flex flex-col items-center text-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">✅</div>
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">
+              ✅
+            </div>
             <div>
               <p className="text-lg font-extrabold text-slate-900">
                 처리 완료!
@@ -468,7 +430,12 @@ function PaymentModal({
                 {doneMessage}
               </p>
             </div>
-            <button onClick={onClose} className="mt-2 w-full py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-slate-800">확인</button>
+            <button
+              onClick={onClose}
+              className="mt-2 w-full py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-slate-800"
+            >
+              확인
+            </button>
           </div>
         </div>
       </div>
@@ -477,21 +444,36 @@ function PaymentModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
           <div>
             <h2 className="text-base font-extrabold text-white">결제</h2>
             <p className="text-xs text-slate-400 mt-0.5">{partyTitle}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-xl font-light">✕</button>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors text-xl font-light"
+          >
+            ✕
+          </button>
         </div>
         <div className="p-6">
           {step === 'select' && (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-slate-600 font-medium">결제 수단을 선택해주세요</p>
+              <p className="text-sm text-slate-600 font-medium">
+                결제 수단을 선택해주세요
+              </p>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => setStep('card')} className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center"><span className="text-2xl">💳</span></div>
+                <button
+                  onClick={() => setStep('card')}
+                  className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
+                    <span className="text-2xl">💳</span>
+                  </div>
                   <div className="text-center">
                     <p className="text-sm font-bold text-slate-800">
                       카드 결제
@@ -499,8 +481,13 @@ function PaymentModal({
                     <p className="text-xs text-slate-400 mt-0.5">즉시 승인</p>
                   </div>
                 </button>
-                <button onClick={() => setStep('transfer')} className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center"><span className="text-2xl">🏦</span></div>
+                <button
+                  onClick={() => setStep('transfer')}
+                  className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
+                    <span className="text-2xl">🏦</span>
+                  </div>
                   <div className="text-center">
                     <p className="text-sm font-bold text-slate-800">
                       계좌 입금
@@ -511,7 +498,9 @@ function PaymentModal({
               </div>
               <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between text-sm">
                 <span className="text-slate-500">이번 달 결제 금액</span>
-                <span className="font-extrabold text-slate-900">{payAmount.toLocaleString()}원</span>
+                <span className="font-extrabold text-slate-900">
+                  {payAmount.toLocaleString()}원
+                </span>
               </div>
             </div>
           )}
@@ -538,13 +527,33 @@ function PaymentModal({
                 </div>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p className="text-xs text-blue-700 font-medium">💳 카드 결제 후 즉시 승인</p>
-                <p className="text-xs text-blue-600 mt-0.5">결제 완료 시 자동으로 승인 처리됩니다.</p>
+                <p className="text-xs text-blue-700 font-medium">
+                  💳 카드 결제 후 즉시 승인
+                </p>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  결제 완료 시 자동으로 승인 처리됩니다.
+                </p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep('select')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                <button onClick={handleCardPayment} disabled={isLoading} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isLoading ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />처리중...</>) : '결제하기 💳'}
+                <button
+                  onClick={() => setStep('select')}
+                  className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  이전
+                </button>
+                <button
+                  onClick={handleCardPayment}
+                  disabled={isLoading}
+                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      처리중...
+                    </>
+                  ) : (
+                    '결제하기 💳'
+                  )}
                 </button>
               </div>
             </div>
@@ -552,26 +561,66 @@ function PaymentModal({
           {step === 'transfer' && (
             <div className="flex flex-col gap-5">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-3">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">입금 계좌 정보</p>
-                <div className="flex justify-between text-sm"><span className="text-slate-500">은행</span><span className="font-semibold">{BANK_INFO.bank}</span></div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  입금 계좌 정보
+                </p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">은행</span>
+                  <span className="font-semibold">{BANK_INFO.bank}</span>
+                </div>
                 <div className="flex justify-between text-sm items-center">
                   <span className="text-slate-500">계좌번호</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-slate-800">{BANK_INFO.account}</span>
-                    <button onClick={handleCopyAccount} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20">{copied ? '복사됨 ✓' : '복사'}</button>
+                    <span className="font-mono font-bold text-slate-800">
+                      {BANK_INFO.account}
+                    </span>
+                    <button
+                      onClick={handleCopyAccount}
+                      className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20"
+                    >
+                      {copied ? '복사됨 ✓' : '복사'}
+                    </button>
                   </div>
                 </div>
-                <div className="flex justify-between text-sm"><span className="text-slate-500">예금주</span><span className="font-semibold">{BANK_INFO.holder}</span></div>
-                <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1"><span className="text-slate-500">입금 금액</span><span className="font-extrabold text-slate-900">{payAmount.toLocaleString()}원</span></div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">예금주</span>
+                  <span className="font-semibold">{BANK_INFO.holder}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
+                  <span className="text-slate-500">입금 금액</span>
+                  <span className="font-extrabold text-slate-900">
+                    {payAmount.toLocaleString()}원
+                  </span>
+                </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="text-xs text-amber-700 font-medium">⏳ 관리자 확인 후 승인</p>
-                <p className="text-xs text-amber-600 mt-0.5">입금 후 아래 버튼을 누르면 관리자가 확인 후 승인 처리합니다.</p>
+                <p className="text-xs text-amber-700 font-medium">
+                  ⏳ 관리자 확인 후 승인
+                </p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  입금 후 아래 버튼을 누르면 관리자가 확인 후 승인 처리합니다.
+                </p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep('select')} className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50">이전</button>
-                <button onClick={handleTransferRegister} disabled={isLoading} className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isLoading ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />처리중...</>) : '입금 완료했어요 ✓'}
+                <button
+                  onClick={() => setStep('select')}
+                  className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  이전
+                </button>
+                <button
+                  onClick={handleTransferRegister}
+                  disabled={isLoading}
+                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      처리중...
+                    </>
+                  ) : (
+                    '입금 완료했어요 ✓'
+                  )}
                 </button>
               </div>
             </div>
@@ -597,6 +646,11 @@ export default function Chat() {
   );
   const [alreadyPaid, setAlreadyPaid] = useState(false);
 
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(
+    null,
+  );
+
   const nicknameRef = useRef(user?.nickname ?? '익명');
   const userIdRef = useRef(user?.user_id ?? 'guest');
   const myProfileImage = user?.profile_image ?? null;
@@ -619,7 +673,8 @@ export default function Chat() {
         `/api/payments/status?party_id=${partyId}`,
       );
       setAlreadyPaid(data.paid);
-    } catch {
+    } catch (e) {
+      console.error(e);
     }
   }, [partyId]);
 
@@ -741,7 +796,12 @@ export default function Chat() {
   }, [profileDrawer]);
 
   const sendMessage = useCallback(() => {
-    if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (
+      !input.trim() ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    )
+      return;
     wsRef.current.send(input.trim());
     setInput('');
   }, [input]);
@@ -798,10 +858,10 @@ export default function Chat() {
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
-    alert(
-      `${profileDrawer.user.nickname ?? '사용자'} 신고 기능을 연결하면 됩니다.`,
-    );
+
+    setReportTarget(profileDrawer.user);
     setProfileDrawer(null);
+    setShowReportModal(true);
   }, [profileDrawer]);
 
   const renderMessage = useCallback(
@@ -916,6 +976,20 @@ export default function Chat() {
         />
       )}
 
+      {showReportModal && (
+        <ReportModal
+          targetUser={reportTarget}
+          onClose={() => {
+            setShowReportModal(false);
+            setReportTarget(null);
+          }}
+          onSuccess={() => {
+            setShowReportModal(false);
+            setReportTarget(null);
+          }}
+        />
+      )}
+
       {profileDrawer && (
         <ProfileDrawer
           user={profileDrawer.user}
@@ -952,7 +1026,9 @@ export default function Chat() {
             {messages.length > 0 ? (
               messages.map((msg, i) => renderMessage(msg, i, currentUserId))
             ) : (
-              <p className="text-xs text-muted-foreground">[시스템] 채팅방이 생성되었습니다.</p>
+              <p className="text-xs text-muted-foreground">
+                [시스템] 채팅방이 생성되었습니다.
+              </p>
             )}
             <div ref={bottomRef} />
           </div>
@@ -1016,7 +1092,9 @@ export default function Chat() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">참여 중인 멤버 정보가 없습니다.</p>
+              <p className="text-xs text-muted-foreground">
+                참여 중인 멤버 정보가 없습니다.
+              </p>
             )}
           </div>
 
