@@ -28,6 +28,11 @@ export interface Party {
   member_count: number;
   is_joined: boolean;
   my_member_status: MyMemberStatus;
+  // 추가 필드
+  start_date: string | null; // 파티 생성일 (ISO date)
+  end_date: string | null; // 파티 종료일 (ISO date)
+  min_trust_score: number | null; // 최소 신뢰도
+  created_at: string | null; // 파티 생성일시
 }
 
 export interface PartyListResponse {

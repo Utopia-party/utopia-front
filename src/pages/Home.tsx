@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -12,14 +12,50 @@ import {
 import type { Party } from '../types/party';
 import {
   fetchParties,
+  fetchParty,
   fetchCategories,
   applyParty,
   partyKeys,
   categoryKeys,
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
-import QuickMatchForm from '../components/party/QuickMatchForm';
+import QuickMatchForm from '../components/quickMatch/QuickMatchForm';
+import MatchingLoadingModal from '../components/quickMatch/MatchingLoadingModal';
+import MatchingErrorModal from '../components/quickMatch/MatchingErrorModal';
+import MatchingSuccessModal from '../components/quickMatch/MatchingSuccessModal';
+import {
+  useQuickMatchRequest,
+  useQuickMatchCandidates,
+  useQuickMatchSelect,
+  useQuickMatchJoin,
+} from '../hooks/useQuickMatch';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useAuthStore } from '../stores/authStore';
+
+type PartyWithDetails = Party & {
+  description?: string;
+  host_trust_score?: number;
+};
+
+type JoinResult = {
+  party_id?: number;
+  party_title?: string;
+  title?: string;
+  service_name?: string;
+  monthly_price?: number;
+  original_price?: number;
+  member_count?: number;
+  max_members?: number;
+  host_nickname?: string;
+  host_trust_score?: number;
+  category_name?: string;
+  description?: string;
+  status?: string;
+  id?: number | string;
+  [key: string]: any;
+};
+
+type MatchStep = 'idle' | 'requesting' | 'finding' | 'selecting' | 'joining';
 
 const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
@@ -561,8 +597,11 @@ function CategorySidebar({
               <p className="mt-1 text-sm text-slate-500">
                 조건만 입력하면 맞는 파티를 더 빠르게 찾아드려요.
               </p>
+              <p className="mt-1 text-xs text-amber-600">
+                * 일부 빠른매칭에는 수수료가 발생할 수 있어요.
+              </p>
             </div>
-            <span className="text-2xl">🥷</span>
+            <span className="text-2xl">⚡</span>
           </div>
         </button>
       </div>
@@ -572,6 +611,9 @@ function CategorySidebar({
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn } = useAuthStore();
+
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>(() => {
@@ -585,6 +627,15 @@ export default function Home() {
   const [applyTarget, setApplyTarget] = useState<Party | null>(null);
   const [detailTarget, setDetailTarget] = useState<Party | null>(null);
   const [showQuickMatch, setShowQuickMatch] = useState(false);
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchStep, setMatchStep] = useState<MatchStep>('idle');
+  const [matchResult, setMatchResult] = useState<JoinResult | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
+
+  const quickMatchRequestMutation = useQuickMatchRequest();
+  const quickMatchCandidatesMutation = useQuickMatchCandidates();
+  const quickMatchSelectMutation = useQuickMatchSelect();
+  const quickMatchJoinMutation = useQuickMatchJoin();
 
   const [cooldown, setCooldown] = useState<number>(() => {
     const until = localStorage.getItem(STORAGE_KEY);
@@ -625,6 +676,16 @@ export default function Home() {
     setCooldown(COOLDOWN_SECONDS);
   };
 
+  const handleQuickMatchOpen = () => {
+    if (!isLoggedIn) {
+      const redirect = `${location.pathname}${location.search}`;
+      navigate(`/login?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
+
+    setShowQuickMatch(true);
+  };
+
   const { data: categoriesRaw } = useQuery({
     queryKey: categoryKeys.all,
     queryFn: fetchCategories,
@@ -645,8 +706,13 @@ export default function Home() {
     staleTime: Infinity,
   });
 
-  const parties =
-    partyData && Array.isArray(partyData.parties) ? partyData.parties : [];
+  const parties = useMemo<PartyWithDetails[]>(() => {
+    if (partyData && Array.isArray(partyData.parties)) {
+      return partyData.parties as PartyWithDetails[];
+    }
+
+    return [];
+  }, [partyData]);
 
   const titleText = useMemo(() => {
     if (search) return `'${search}' 검색 결과`;
@@ -659,6 +725,162 @@ export default function Home() {
     if (category) return '선택한 카테고리의 모집 중인 파티를 확인해보세요.';
     return '지금 바로 참여할 수 있는 파티를 한눈에 확인해보세요.';
   }, [category, search]);
+
+  const matchedParty = useMemo(() => {
+    if (!matchResult) return null;
+
+    const targetPartyId = matchResult.party_id ?? matchResult.id;
+    if (!targetPartyId) return null;
+
+    const found = parties.find(
+      (party) => String(party.id) === String(targetPartyId),
+    );
+
+    if (found) {
+      return {
+        ...found,
+        ...matchResult,
+        id: found.id,
+        title:
+          (matchResult as any).title ??
+          matchResult.party_title ??
+          found.title ??
+          '매칭된 파티',
+        service_name: matchResult.service_name ?? found.service_name ?? '',
+        category_name:
+          matchResult.category_name ?? found.category_name ?? '기타',
+        member_count: matchResult.member_count ?? found.member_count ?? 0,
+        max_members: matchResult.max_members ?? found.max_members ?? null,
+        monthly_price: matchResult.monthly_price ?? found.monthly_price ?? null,
+        original_price:
+          matchResult.original_price ?? found.original_price ?? null,
+        host_nickname:
+          matchResult.host_nickname ?? found.host_nickname ?? '익명',
+        description: matchResult.description ?? found.description ?? '',
+        status: matchResult.status ?? found.status ?? 'recruiting',
+      };
+    }
+
+    return {
+      ...matchResult,
+      id: targetPartyId,
+      title:
+        (matchResult as any).title ?? matchResult.party_title ?? '매칭된 파티',
+      service_name: matchResult.service_name ?? '',
+      category_name: matchResult.category_name ?? '기타',
+      member_count: matchResult.member_count ?? 0,
+      max_members: matchResult.max_members ?? null,
+      monthly_price: matchResult.monthly_price ?? null,
+      original_price: matchResult.original_price ?? null,
+      host_nickname: matchResult.host_nickname ?? '익명',
+      description: matchResult.description ?? '',
+      status: matchResult.status ?? 'recruiting',
+    } as any;
+  }, [matchResult, parties]);
+
+  const currentStepTitle = useMemo(() => {
+    switch (matchStep) {
+      case 'requesting':
+        return '빠른 매칭 요청을 확인하고 있어요';
+      case 'finding':
+        return '조건에 맞는 파티를 찾고 있어요';
+      case 'selecting':
+        return '가장 잘 맞는 파티를 고르고 있어요';
+      case 'joining':
+        return '선택된 파티에 자동으로 참여하는 중이에요';
+      default:
+        return '조건에 맞는 파티를 찾고 있어요';
+    }
+  }, [matchStep]);
+
+  const handleQuickMatchSubmit = async (payload: {
+    service_id: string;
+    preferred_conditions?: {
+      price_range?: string;
+      duration_preference?: 'short_term' | 'long_term' | 'flexible';
+    };
+  }) => {
+    try {
+      setIsMatching(true);
+      setMatchStep('requesting');
+      setMatchResult(null);
+      setMatchError(null);
+      setShowQuickMatch(false);
+
+      const requestResponse =
+        await quickMatchRequestMutation.mutateAsync(payload);
+      const requestId = requestResponse.request_id;
+
+      setMatchStep('finding');
+      await quickMatchCandidatesMutation.mutateAsync(requestId);
+
+      setMatchStep('selecting');
+      await quickMatchSelectMutation.mutateAsync(requestId);
+
+      setMatchStep('joining');
+      const joinResponse = (await quickMatchJoinMutation.mutateAsync(
+        requestId,
+      )) as unknown as JoinResult;
+
+      const matchedPartyId = joinResponse?.party_id ?? joinResponse?.id;
+
+      if (!matchedPartyId) {
+        throw new Error('매칭된 파티 정보를 찾을 수 없습니다.');
+      }
+
+      let detailedParty: any = null;
+
+      try {
+        detailedParty = await fetchParty(String(matchedPartyId));
+      } catch (detailError) {
+        console.warn('파티 상세 조회 실패:', detailError);
+      }
+
+      setMatchResult({
+        ...joinResponse,
+        ...(detailedParty ?? {}),
+        party_id: joinResponse?.party_id ?? detailedParty?.id,
+        party_title:
+          joinResponse?.party_title ?? detailedParty?.title ?? '매칭된 파티',
+        title:
+          detailedParty?.title ?? joinResponse?.party_title ?? '매칭된 파티',
+        service_name:
+          detailedParty?.service_name ?? joinResponse?.service_name ?? '',
+        category_name:
+          detailedParty?.category_name ?? joinResponse?.category_name ?? '기타',
+        member_count:
+          detailedParty?.member_count ?? joinResponse?.member_count ?? 0,
+        max_members:
+          detailedParty?.max_members ?? joinResponse?.max_members ?? null,
+        monthly_price:
+          detailedParty?.monthly_price ?? joinResponse?.monthly_price ?? null,
+        original_price:
+          detailedParty?.original_price ?? joinResponse?.original_price ?? null,
+        host_nickname:
+          detailedParty?.host_nickname ?? joinResponse?.host_nickname ?? '익명',
+        host_trust_score:
+          detailedParty?.host_trust_score ??
+          joinResponse?.host_trust_score ??
+          null,
+        description:
+          detailedParty?.description ?? joinResponse?.description ?? '',
+        status: detailedParty?.status ?? joinResponse?.status ?? 'recruiting',
+      });
+    } catch (error: any) {
+      console.error('빠른 매칭 실패:', error?.response?.data || error);
+
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        error?.message ||
+        '빠른 매칭 요청 중 오류가 발생했습니다.';
+
+      setMatchError(errorMessage);
+    } finally {
+      setIsMatching(false);
+      setMatchStep('idle');
+    }
+  };
 
   return (
     <>
@@ -695,7 +917,7 @@ export default function Home() {
               category={category}
               setCategory={setCategory}
               onCreate={() => navigate('/handcaptcha')}
-              onQuickMatch={() => setShowQuickMatch(true)}
+              onQuickMatch={handleQuickMatchOpen}
             />
 
             <section className="min-w-0 flex-1">
@@ -790,7 +1012,7 @@ export default function Home() {
                       파티 생성하기
                     </button>
                     <button
-                      onClick={() => setShowQuickMatch(true)}
+                      onClick={handleQuickMatchOpen}
                       className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                     >
                       빠른 매칭 열기
@@ -832,7 +1054,27 @@ export default function Home() {
       <QuickMatchForm
         open={showQuickMatch}
         onClose={() => setShowQuickMatch(false)}
-        onSubmit={() => {}}
+        onSubmit={handleQuickMatchSubmit}
+        isSubmitting={isMatching}
+      />
+
+      <MatchingLoadingModal open={isMatching} message={currentStepTitle} />
+
+      <MatchingErrorModal
+        open={!!matchError}
+        message={matchError ?? ''}
+        onClose={() => setMatchError(null)}
+      />
+      <MatchingSuccessModal
+        open={!!matchResult && !isMatching && !matchError}
+        matchedParty={matchedParty}
+        onClose={() => setMatchResult(null)}
+        onGoParty={() => {
+          if (matchedParty?.id) {
+            setMatchResult(null);
+            navigate(`/party/${matchedParty.id}/chat`);
+          }
+        }}
       />
     </>
   );
