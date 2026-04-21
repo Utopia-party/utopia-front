@@ -63,7 +63,6 @@ export default function Sidebar() {
         isSidebarOpen ? 'w-56' : 'w-18'
       }`}
     >
-      {/* 상단 */}
       <div
         className={`mb-10 flex items-center ${
           isSidebarOpen ? 'justify-between' : 'flex-col gap-4'
@@ -75,7 +74,9 @@ export default function Sidebar() {
             isSidebarOpen ? 'gap-3 px-1' : 'justify-center'
           }`}
         >
-          <div className="h-8 w-8 shrink-0 rounded-xl bg-primary" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-[20px] font-extrabold leading-none text-white">
+            P
+          </div>
           {isSidebarOpen && (
             <span className="text-[20px] font-extrabold tracking-tight text-slate-900">
               Party-Up
@@ -93,7 +94,6 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* 메뉴 */}
       <nav className="flex flex-col gap-2">
         <NavLink
           to="/home"

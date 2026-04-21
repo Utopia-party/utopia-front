@@ -243,7 +243,24 @@ export default function Header() {
   };
 
   return (
-    <header className="flex h-16 items-center justify-end border-b border-gray-200 bg-card px-6">
+    <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-card px-6">
+      {/* 왼쪽: 관리자 버튼 */}
+      {isLoggedIn && user?.role === 'admin' && (
+        <Link
+          to="/admin"
+          /* 1. rounded-full: 이미지 속 버튼들처럼 완전히 둥근 모양으로 변경
+             2. border-slate-200: 표준 컬러 사용 (white-300은 표준 아님)
+             3. bg-slate-50: 표준 배경색 사용 (white-50은 표준 아님)
+             4. text-slate-800: 검정색보다 조금 더 부드러운 진회색 사용
+             5. hover 시: 테두리와 글자색이 함께 파란색 톤으로 부드럽게 변하도록 설정
+          */
+          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-1.5 text-lg font-bold text-slate-800 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+        >
+          관리자
+        </Link>
+      )}
+
+      {/* 오른쪽: 알림, 유저, 로그아웃 */}
       <div className="flex items-center gap-3">
         {isLoggedIn ? (
           <>

@@ -300,7 +300,7 @@ const ensureNotificationSocketConnection = async () => {
         notificationSocket = null;
       }
       if (!manuallyClosed) {
-        isConnecting = false; 
+        isConnecting = false;
         scheduleReconnect();
       }
     };
