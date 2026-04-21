@@ -4,8 +4,10 @@ import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import {
   fetchAdminUserDetail,
+  fetchAdminUserStatusLogs,
   fetchAdminUsers,
   type AdminUserDetail,
+  type AdminUserStatusLog,
   getAdminErrorMessage,
   updateAdminUserStatus,
   type AdminUserRecord,
@@ -68,6 +70,10 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
+
+  const [detailTab, setDetailTab] = useState<Record<string, 'info' | 'logs'>>({});
+  const [statusLogsMap, setStatusLogsMap] = useState<Record<string, AdminUserStatusLog[]>>({});
+  const [statusLogsLoading, setStatusLogsLoading] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -210,6 +216,23 @@ export default function AdminUsers() {
       setDetailError(getAdminErrorMessage(err));
     } finally {
       setBusyUserId(null);
+    }
+  };
+
+  const handleLoadStatusLogs = async (userId: string) => {
+    const current = detailTab[userId] ?? 'info';
+    const nextTab = current === 'info' ? 'logs' : 'info';
+    setDetailTab((prev) => ({ ...prev, [userId]: nextTab }));
+
+    if (nextTab === 'logs' && !statusLogsMap[userId]) {
+      try {
+        setStatusLogsLoading(userId);
+        const logs = await fetchAdminUserStatusLogs(userId);
+        setStatusLogsMap((prev) => ({ ...prev, [userId]: logs }));
+      } catch {
+      } finally {
+        setStatusLogsLoading(null);
+      }
     }
   };
 
@@ -483,143 +506,180 @@ export default function AdminUsers() {
                               )}
 
                               {!isDetailLoading && detail && (
-                                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
-                                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                      <div>
-                                        <h3 className="text-base font-semibold text-slate-900">
-                                          {detail.nickname}
-                                        </h3>
-                                        <p className="mt-1 text-sm text-slate-500">
-                                          사용자 상세 정보와 운영 판단 지표를 한
-                                          번에 확인합니다.
-                                        </p>
-                                      </div>
-                                      <span
-                                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[detail.status as keyof typeof STATUS_STYLE] ?? STATUS_STYLE[user.status]}`}
-                                      >
-                                        {detail.status}
-                                      </span>
-                                    </div>
-
-                                    <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                      {[
-                                        ['사용자 ID', detail.id],
-                                        ['이메일', detail.email],
-                                        ['이름', detail.name || '-'],
-                                        ['전화번호', detail.phone || '-'],
-                                        ['권한', detail.role],
-                                        [
-                                          '신뢰도',
-                                          `${detail.trustScore.toFixed(1)}`,
-                                        ],
-                                        ['신고 수', `${detail.reportCount}건`],
-                                        ['참여 파티', `${detail.partyCount}개`],
-                                        ['가입일', detail.createdAt || '-'],
-                                        ['최근 활동', detail.lastActive || '-'],
-                                      ].map(([label, value]) => (
-                                        <div
-                                          key={label}
-                                          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                        >
-                                          <div className="text-xs font-medium text-slate-400">
-                                            {label}
-                                          </div>
-                                          <div className="mt-1 break-all text-sm font-semibold text-slate-800">
-                                            {value}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
+                                <div className="space-y-4">
+                                  {/* 탭 전환 버튼 */}
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => setDetailTab((prev) => ({ ...prev, [user.id]: 'info' }))}
+                                      className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                                        (detailTab[user.id] ?? 'info') === 'info'
+                                          ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                                          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      기본 정보
+                                    </button>
+                                    <button
+                                      onClick={() => void handleLoadStatusLogs(user.id)}
+                                      className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                                        (detailTab[user.id] ?? 'info') === 'logs'
+                                          ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                                          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      상태 변경 이력
+                                      {(statusLogsMap[user.id] ?? []).length > 0 && (
+                                        <span className="ml-1.5 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] text-indigo-600">
+                                          {statusLogsMap[user.id]?.length}
+                                        </span>
+                                      )}
+                                    </button>
                                   </div>
 
-                                  {isEditingStatus && (
-                                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
-                                      <h3 className="text-base font-semibold text-slate-900">
-                                        상태 변경
-                                      </h3>
-                                      <p className="mt-1 text-sm text-slate-500">
-                                        팝업 대신 이 패널에서 상태와 사유를 바로
-                                        수정합니다.
-                                      </p>
-
-                                      <div className="mt-4 flex flex-wrap gap-2">
-                                        {(
-                                          ['정상', '주의', '정지'] as const
-                                        ).map((status) => (
-                                          <button
-                                            key={status}
-                                            type="button"
-                                            onClick={() =>
-                                              setStatusDraft(status)
-                                            }
-                                            disabled={
-                                              isCurrentAdmin &&
-                                              status === '정지'
-                                            }
-                                            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                                              statusDraft === status
-                                                ? STATUS_STYLE[status]
-                                                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
-                                            } ${
-                                              isCurrentAdmin &&
-                                              status === '정지'
-                                                ? 'cursor-not-allowed opacity-40'
-                                                : ''
-                                            }`}
+                                  {/* 기본 정보 탭 */}
+                                  {(detailTab[user.id] ?? 'info') === 'info' && (
+                                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
+                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                          <div>
+                                            <h3 className="text-base font-semibold text-slate-900">
+                                              {detail.nickname}
+                                            </h3>
+                                            <p className="mt-1 text-sm text-slate-500">
+                                              사용자 상세 정보와 운영 판단 지표를 한 번에 확인합니다.
+                                            </p>
+                                          </div>
+                                          <span
+                                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[detail.status as keyof typeof STATUS_STYLE] ?? STATUS_STYLE[user.status]}`}
                                           >
-                                            {status}
-                                          </button>
-                                        ))}
+                                            {detail.status}
+                                          </span>
+                                        </div>
+                                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                          {[
+                                            ['사용자 ID', detail.id],
+                                            ['이메일', detail.email],
+                                            ['이름', detail.name || '-'],
+                                            ['전화번호', detail.phone || '-'],
+                                            ['권한', detail.role],
+                                            ['신뢰도', `${detail.trustScore.toFixed(1)}`],
+                                            ['신고 수', `${detail.reportCount}건`],
+                                            ['참여 파티', `${detail.partyCount}개`],
+                                            ['가입일', detail.createdAt || '-'],
+                                            ['최근 활동', detail.lastActive || '-'],
+                                          ].map(([label, value]) => (
+                                            <div
+                                              key={label}
+                                              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                            >
+                                              <div className="text-xs font-medium text-slate-400">{label}</div>
+                                              <div className="mt-1 break-all text-sm font-semibold text-slate-800">{value}</div>
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
 
-                                      {isCurrentAdmin && (
-                                        <p className="mt-3 text-xs text-slate-500">
-                                          현재 로그인한 관리자 본인 계정은
-                                          정지할 수 없습니다.
-                                        </p>
+                                      {isEditingStatus && (
+                                        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+                                          <h3 className="text-base font-semibold text-slate-900">상태 변경</h3>
+                                          <p className="mt-1 text-sm text-slate-500">
+                                            팝업 대신 이 패널에서 상태와 사유를 바로 수정합니다.
+                                          </p>
+                                          <div className="mt-4 flex flex-wrap gap-2">
+                                            {(['정상', '주의', '정지'] as const).map((status) => (
+                                              <button
+                                                key={status}
+                                                type="button"
+                                                onClick={() => setStatusDraft(status)}
+                                                disabled={isCurrentAdmin && status === '정지'}
+                                                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                                                  statusDraft === status
+                                                    ? STATUS_STYLE[status]
+                                                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                                                } ${isCurrentAdmin && status === '정지' ? 'cursor-not-allowed opacity-40' : ''}`}
+                                              >
+                                                {status}
+                                              </button>
+                                            ))}
+                                          </div>
+                                          {isCurrentAdmin && (
+                                            <p className="mt-3 text-xs text-slate-500">
+                                              현재 로그인한 관리자 본인 계정은 정지할 수 없습니다.
+                                            </p>
+                                          )}
+                                          <label className="mt-4 block">
+                                            <span className="text-sm font-medium text-slate-700">변경 사유</span>
+                                            <textarea
+                                              value={statusReason}
+                                              onChange={(event) => setStatusReason(event.target.value)}
+                                              rows={4}
+                                              placeholder="상태 변경 사유를 입력하세요."
+                                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                            />
+                                          </label>
+                                          <div className="mt-4 flex flex-wrap gap-2">
+                                            <button
+                                              type="button"
+                                              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                              disabled={busyUserId === user.id}
+                                              onClick={() => void submitStatusUpdate()}
+                                            >
+                                              {busyUserId === user.id ? '저장 중...' : '저장'}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                                              onClick={() => {
+                                                setStatusEditorUserId(null);
+                                                setStatusReason('');
+                                                setStatusDraft(user.status);
+                                              }}
+                                            >
+                                              취소
+                                            </button>
+                                          </div>
+                                        </div>
                                       )}
+                                    </div>
+                                  )}
 
-                                      <label className="mt-4 block">
-                                        <span className="text-sm font-medium text-slate-700">
-                                          변경 사유
-                                        </span>
-                                        <textarea
-                                          value={statusReason}
-                                          onChange={(event) =>
-                                            setStatusReason(event.target.value)
-                                          }
-                                          rows={4}
-                                          placeholder="상태 변경 사유를 입력하세요."
-                                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
-                                        />
-                                      </label>
-
-                                      <div className="mt-4 flex flex-wrap gap-2">
-                                        <button
-                                          type="button"
-                                          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                          disabled={busyUserId === user.id}
-                                          onClick={() =>
-                                            void submitStatusUpdate()
-                                          }
-                                        >
-                                          {busyUserId === user.id
-                                            ? '저장 중...'
-                                            : '저장'}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                                          onClick={() => {
-                                            setStatusEditorUserId(null);
-                                            setStatusReason('');
-                                            setStatusDraft(user.status);
-                                          }}
-                                        >
-                                          취소
-                                        </button>
-                                      </div>
+                                  {/* 상태 변경 이력 탭 */}
+                                  {(detailTab[user.id] ?? 'info') === 'logs' && (
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                      <h3 className="text-base font-semibold text-slate-900">상태 변경 이력</h3>
+                                      <p className="mt-1 text-sm text-slate-500">
+                                        정상·주의·정지 상태가 변경된 전체 기록입니다.
+                                      </p>
+                                      {statusLogsLoading === user.id && (
+                                        <div className="mt-4 text-sm text-slate-400">이력을 불러오는 중입니다...</div>
+                                      )}
+                                      {statusLogsLoading !== user.id && (statusLogsMap[user.id] ?? []).length === 0 && (
+                                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+                                          상태 변경 이력이 없습니다.
+                                        </div>
+                                      )}
+                                      {statusLogsLoading !== user.id && (statusLogsMap[user.id] ?? []).length > 0 && (
+                                        <div className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                          {(statusLogsMap[user.id] ?? []).map((log) => (
+                                            <div key={log.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
+                                              <span className={`mt-0.5 inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[log.toStatus] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                {log.toStatus}
+                                              </span>
+                                              <span className={`mt-0.5 inline-flex shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                                                log.trigger === 'manual' ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                : log.trigger === 'report' ? 'bg-amber-50 text-amber-600 border-amber-100'
+                                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                                              }`}>
+                                                {log.trigger === 'manual' ? '수동' : log.trigger === 'report' ? '신고' : '자동'}
+                                              </span>
+                                              <div className="flex-1 min-w-0">
+                                                <p className="text-sm text-slate-700">{log.reason ?? '사유 없음'}</p>
+                                                <p className="mt-0.5 text-xs text-slate-400">{log.changedBy} · {log.createdAt}</p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>

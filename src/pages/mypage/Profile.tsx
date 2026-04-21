@@ -1,39 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../stores/authStore';
 import ProfileEditModal from './components/ProfileEditModal';
 import { usePageTitle } from '../../hooks/usePageTitle';
-
-const recentActivities = [
-  {
-    title: '정산 승인 완료',
-    date: '2026-03-01',
-    detail: '파티: 스터디룸 공유',
-    score: '+3',
-    scoreClass: 'text-emerald-500',
-  },
-  {
-    title: '참여 후기 작성',
-    date: '2026-02-24',
-    detail: '파티: 전주 맛집 투어',
-    score: '+2',
-    scoreClass: 'text-emerald-500',
-  },
-  {
-    title: '신고 접수(검토중)',
-    date: '2026-02-26',
-    detail: '사유: 노쇼/약속 불이행',
-    score: '-5',
-    scoreClass: 'text-rose-500',
-  },
-  {
-    title: '이상 활동 없음',
-    date: '2026-02-01',
-    detail: '시스템 점검',
-    score: '0',
-    scoreClass: 'text-slate-500',
-  },
-];
+import {
+  getMyProfile,
+  type GetMyProfileResponse,
+  type RecentActivityItem,
+} from '../../apis/user';
 
 function getProfileInitial(nickname?: string | null) {
   if (!nickname) return 'PU';
@@ -69,17 +43,102 @@ function formatTrustScore(score?: number | null) {
   return `${score}점`;
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function formatActionLabel(action?: string | null) {
+  if (!action) return '활동';
+  return action
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word[0]?.toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function getActivityScore(activity: RecentActivityItem) {
+  const rawScore = activity.metadata?.score_change;
+
+  if (typeof rawScore !== 'number') {
+    return null;
+  }
+
+  if (rawScore > 0) {
+    return {
+      text: `+${rawScore}`,
+      className: 'text-emerald-500',
+    };
+  }
+
+  if (rawScore < 0) {
+    return {
+      text: `${rawScore}`,
+      className: 'text-rose-500',
+    };
+  }
+
+  return {
+    text: '0',
+    className: 'text-slate-500',
+  };
+}
+
 function ProfileDashboard() {
   const navigate = useNavigate();
   const { user, isLoggedIn, loading } = useAuthStore();
+
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [profile, setProfile] = useState<GetMyProfileResponse | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
-  const nickname = user?.nickname ?? '';
-  const rawPhone = user?.phone ?? '';
+  const fetchProfile = useCallback(async () => {
+    if (!isLoggedIn) return;
+
+    try {
+      setProfileLoading(true);
+      setProfileError(null);
+      const data = await getMyProfile();
+      setProfile(data);
+    } catch (error) {
+      console.error(error);
+      setProfileError('프로필 정보를 불러오지 못했습니다.');
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    if (!isEditOpen && isLoggedIn) {
+      void fetchProfile();
+    }
+  }, [isEditOpen, isLoggedIn, fetchProfile]);
+
+  const nickname = profile?.nickname ?? user?.nickname ?? '';
+  const rawPhone = profile?.phone ?? user?.phone ?? '';
   const phone = formatPhoneNumber(rawPhone);
-  const trustScore = formatTrustScore(user?.trust_score);
-  const profileImageUrl = user?.profile_image ?? null;
+  const trustScore = formatTrustScore(
+    profile?.trust_score ?? user?.trust_score ?? null,
+  );
+  const profileImageUrl = profile?.profile_image ?? user?.profile_image ?? null;
+  const totalPartyParticipations = profile?.total_party_participations ?? 0;
+  const activePartyCount = profile?.active_party_count ?? 0;
+  const recommendedCount = profile?.recommendation_count ?? 0;
+  const recentActivities = profile?.recent_activities ?? [];
 
   const profileInitial = useMemo(() => getProfileInitial(nickname), [nickname]);
 
@@ -89,7 +148,7 @@ function ProfileDashboard() {
 
   const showProfileImage = Boolean(profileImageUrl) && !imageError;
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
         <div className="mx-auto max-w-6xl">
@@ -140,11 +199,17 @@ function ProfileDashboard() {
             </p>
           </div>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-extrabold text-white">
+          {profileError ? (
+            <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
+              {profileError}
+            </div>
+          ) : null}
+
+          <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-5">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-2xl font-extrabold text-white shadow-sm sm:h-24 sm:w-24 sm:text-3xl">
                     {showProfileImage ? (
                       <img
                         src={profileImageUrl!}
@@ -157,9 +222,9 @@ function ProfileDashboard() {
                     )}
                   </div>
 
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-[17px] font-extrabold text-slate-900">
+                  <div className="min-w-0 flex-1 pt-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900 sm:text-[24px]">
                         {nickname}
                       </h2>
 
@@ -167,65 +232,79 @@ function ProfileDashboard() {
                         정상
                       </span>
                     </div>
+
+                    <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
+                      파티 활동과 신뢰 정보를 한눈에 볼 수 있는 내 프로필입니다.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">
+                        <span className="mr-2 text-slate-400">전화번호</span>
+                        <span className="text-slate-800">{phone || '-'}</span>
+                      </div>
+
+                      <div className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                        <span className="mr-2 text-emerald-500">신뢰도</span>
+                        <span>{trustScore}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setIsEditOpen(true)}
-                  className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-primary transition hover:bg-blue-100"
+                  className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-primary transition hover:bg-blue-100"
                 >
                   프로필 수정
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-4">
                   <p className="text-xs font-semibold text-slate-400">
-                    전화번호
+                    추천받은 수
                   </p>
-                  <p className="mt-1 text-sm font-extrabold text-slate-900">
-                    {phone || '-'}
+                  <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
+                    {recommendedCount}
+                    <span className="ml-1 text-base font-bold text-slate-500">
+                      회
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    다른 사용자에게 받은 추천 횟수
                   </p>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <article className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-slate-500">
-                      신뢰도 점수
-                    </p>
-                    <span className="text-lg">🚨</span>
-                  </div>
-                  <p className="mt-3 text-2xl font-extrabold text-slate-900">
-                    {trustScore}
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-4">
+                  <p className="text-xs font-semibold text-slate-400">
+                    누적 파티 참여
                   </p>
-                </article>
+                  <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
+                    {totalPartyParticipations}
+                    <span className="ml-1 text-base font-bold text-slate-500">
+                      회
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    지금까지 참여한 전체 파티 기록
+                  </p>
+                </div>
 
-                <article className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-slate-500">
-                      누적파티참여
-                    </p>
-                    <span className="text-lg">✅</span>
-                  </div>
-                  <p className="mt-3 text-2xl font-extrabold text-slate-900">
-                    2회
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-4">
+                  <p className="text-xs font-semibold text-slate-400">
+                    참여 중인 파티
                   </p>
-                </article>
-
-                <article className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-slate-500">
-                      참여파티 수
-                    </p>
-                    <span className="text-lg">🗂️</span>
-                  </div>
-                  <p className="mt-3 text-2xl font-extrabold text-slate-900">
-                    1개
+                  <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
+                    {activePartyCount}
+                    <span className="ml-1 text-base font-bold text-slate-500">
+                      개
+                    </span>
                   </p>
-                </article>
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    현재 진행 중인 파티 수
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -240,44 +319,45 @@ function ProfileDashboard() {
                   최근 계정 활동과 신뢰도 반영 내역입니다.
                 </p>
               </div>
-
-              <div className="flex items-center gap-2 self-end md:self-auto">
-                <button
-                  type="button"
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700"
-                >
-                  전체 활동 ▾
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700"
-                >
-                  최근 7일 ▾
-                </button>
-              </div>
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
-              {recentActivities.map((activity) => (
-                <article
-                  key={`${activity.title}-${activity.date}`}
-                  className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4"
-                >
-                  <div>
-                    <p className="text-sm font-extrabold text-slate-900">
-                      {activity.title}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-500">
-                      {activity.date} · {activity.detail}
-                    </p>
-                  </div>
-                  <p
-                    className={`text-2xl font-extrabold ${activity.scoreClass}`}
-                  >
-                    {activity.score}
-                  </p>
-                </article>
-              ))}
+              {recentActivities.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 text-sm font-semibold text-slate-500">
+                  최근 활동 내역이 없습니다.
+                </div>
+              ) : (
+                recentActivities.map((activity) => {
+                  const score = getActivityScore(activity);
+
+                  return (
+                    <article
+                      key={activity.id}
+                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4"
+                    >
+                      <div>
+                        <p className="text-sm font-extrabold text-slate-900">
+                          {formatActionLabel(activity.action)}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-500">
+                          {formatDate(activity.created_at)}
+                          {activity.description
+                            ? ` · ${activity.description}`
+                            : ''}
+                        </p>
+                      </div>
+
+                      {score ? (
+                        <p
+                          className={`text-2xl font-extrabold ${score.className}`}
+                        >
+                          {score.text}
+                        </p>
+                      ) : null}
+                    </article>
+                  );
+                })
+              )}
             </div>
           </section>
         </div>
@@ -288,7 +368,7 @@ function ProfileDashboard() {
         onClose={() => setIsEditOpen(false)}
         initialValues={{
           nickname,
-          phone,
+          phone: rawPhone,
           profileImage: profileImageUrl,
         }}
       />

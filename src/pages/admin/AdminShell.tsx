@@ -72,6 +72,9 @@ export default function AdminShell() {
     if (path.startsWith('/admin/logs')) {
       return permissions?.canViewLogs ?? false;
     }
+    if (path.startsWith('/admin/moderation')) {
+      return permissions?.canManageModeration ?? false;
+    }
     return true;
   }, [location.pathname, permissions]);
 
