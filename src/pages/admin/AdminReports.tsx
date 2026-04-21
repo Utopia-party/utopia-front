@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
+import Pagination from './components/Pagination';
 import {
   fetchAdminReports,
   getAdminErrorMessage,
@@ -27,6 +28,7 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyReportId, setBusyReportId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const loadReports = async (params?: {
     keyword?: string;
@@ -88,6 +90,7 @@ export default function AdminReports() {
     if (activeTab === '전체') return reports;
     return reports.filter((r) => r.status === activeTab);
   }, [activeTab, reports]);
+  const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   return (
     <>
@@ -189,7 +192,7 @@ export default function AdminReports() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((report) => {
+              {paginated.map((report) => {
                 const isExpanded = expandedReportId === report.id;
 
                 return (
@@ -301,7 +304,7 @@ export default function AdminReports() {
                   </Fragment>
                 );
               })}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center text-gray-400 py-8">
                     검색 결과가 없습니다.
@@ -310,6 +313,7 @@ export default function AdminReports() {
               )}
             </tbody>
           </table>
+          <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
             처리와 기각 버튼은 실제 관리자 신고 상태 API를 호출합니다.
           </div>
