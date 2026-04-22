@@ -31,7 +31,6 @@ export default function AdminParties() {
   const [dateTo, setDateTo] = useState('');
   const [category, setCategory] = useState('전체');
   const [parties, setParties] = useState<AdminPartyRecord[]>([]);
-  const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [expandedPartyId, setExpandedPartyId] = useState<string | null>(null);
   const [forceEndPartyId, setForceEndPartyId] = useState<string | null>(null);
   const [forceEndReason, setForceEndReason] = useState('운영 정책 위반');
@@ -260,14 +259,6 @@ export default function AdminParties() {
       <AdminHeader
         placeholder="파티 검색 (파티명/서비스/리더)..."
         onSearch={setSearch}
-        rightContent={
-          <button
-            className="rounded-md border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-            onClick={() => setIsPolicyOpen((prev) => !prev)}
-          >
-            {isPolicyOpen ? '정책 닫기' : '정산 정책'}
-          </button>
-        }
       />
       <div className="p-6 md:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
@@ -276,6 +267,10 @@ export default function AdminParties() {
             <p className="mt-1 text-sm text-gray-500">
               파티 운영 상태, 신고 누적, 최근 정산 이슈를 한 화면에서 관리할 수
               있게 구성했습니다.
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              정산 대기 파티는 정산 승인 관리 화면에서 승인 또는 거절할 수 있고,
+              운영 리스크가 큰 파티는 여기서 강제 종료로 바로 전환합니다.
             </p>
           </section>
 
@@ -298,7 +293,8 @@ export default function AdminParties() {
             activeTab={activeTab}
             onTabChange={(tab) => {
               setActiveTab(tab);
-              void handleSearch(tab); setPage(1);
+              void handleSearch(tab);
+              setPage(1);
             }}
           />
 
@@ -372,13 +368,6 @@ export default function AdminParties() {
               </div>
             </div>
           </section>
-
-          {isPolicyOpen && (
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm text-slate-600 shadow-sm">
-              정산 대기 파티는 정산 승인 관리 화면에서 승인 또는 거절할 수 있고,
-              운영 리스크가 큰 파티는 여기서 강제 종료로 전환합니다.
-            </section>
-          )}
 
           {loading && (
             <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
@@ -864,7 +853,14 @@ export default function AdminParties() {
                 </tbody>
               </table>
             </div>
-            <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
+            <Pagination
+              total={filtered.length}
+              page={page}
+              pageSize={20}
+              onChange={(p) => {
+                setPage(p);
+              }}
+            />
             <div className="px-4 py-3 text-xs text-gray-400">
               위험 상태 파티는 신고 누적과 현재 운영 상태를 기준으로 표시하며,
               강제 종료 버튼은 실제 관리자 API를 호출합니다.
