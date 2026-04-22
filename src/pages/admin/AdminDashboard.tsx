@@ -284,6 +284,15 @@ export default function AdminDashboard() {
   const [breakdownCompareMode, setBreakdownCompareMode] =
     useState<CompareMode>('previous_period');
 
+  const handleBreakdownCompareModeChange = (nextMode: CompareMode) => {
+    setBreakdownCompareMode(nextMode);
+    void loadBreakdownDashboard({
+      date_from: breakdownDateFrom || undefined,
+      date_to: breakdownDateTo || undefined,
+      compare_mode: nextMode,
+    });
+  };
+
   const loadDashboard = async (
     nextParams?: Partial<{
       date_from: string;
@@ -634,7 +643,9 @@ export default function AdminDashboard() {
                   <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
                     <button
                       type="button"
-                      onClick={() => setBreakdownCompareMode('previous_period')}
+                      onClick={() =>
+                        handleBreakdownCompareModeChange('previous_period')
+                      }
                       className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                         breakdownCompareMode === 'previous_period'
                           ? 'bg-slate-900 text-white'
@@ -645,7 +656,9 @@ export default function AdminDashboard() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setBreakdownCompareMode('year_over_year')}
+                      onClick={() =>
+                        handleBreakdownCompareModeChange('year_over_year')
+                      }
                       className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                         breakdownCompareMode === 'year_over_year'
                           ? 'bg-slate-900 text-white'

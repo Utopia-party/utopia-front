@@ -297,6 +297,11 @@ export default function AdminRoles() {
               관리자별로 실제 권한 토글을 확인하고 필요한 범위만 열어
               운영합니다.
             </p>
+            <p className="mt-2 text-sm text-gray-500">
+              사용자관리, 파티관리, 신고관리, 정산 승인, 로그 조회 권한을
+              계정별로 나눠서 제어할 수 있고 관리자 추가 후에도 필요한 권한만
+              열어 최소 권한 원칙으로 운영할 수 있습니다.
+            </p>
           </section>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
