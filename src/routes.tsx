@@ -42,6 +42,7 @@ import AdminServices from './pages/admin/AdminServices';
 import AdminParties from './pages/admin/AdminParties';
 import AdminReports from './pages/admin/AdminReports';
 import AdminSettlements from './pages/admin/AdminSettlements';
+import AdminPayments from './pages/admin/AdminPayments';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 import AdminModeration from './pages/admin/AdminModeration';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
@@ -199,6 +200,10 @@ const router = createBrowserRouter([
       {
         path: 'settlements',
         Component: AdminSettlements,
+      },
+      {
+        path: 'payments',
+        Component: AdminPayments,
       },
       {
         path: 'logs',

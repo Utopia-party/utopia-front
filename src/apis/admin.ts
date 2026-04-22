@@ -685,3 +685,52 @@ export async function forceChallenge(
   );
   return res.data;
 }
+
+// ─── 결제 내역 ────────────────────────────────────────────────────────────────
+
+export type AdminPaymentRecord = {
+  id: string;
+  userId: string;
+  userNickname: string;
+  userName: string | null;
+  partyId: string;
+  partyTitle: string;
+  serviceName: string | null;
+  role: '방장' | '멤버';
+  basePrice: number;
+  amount: number;
+  discountReason: string | null;
+  commissionRate: number;
+  commissionAmount: number;
+  paymentMethod: string | null;
+  status: string;
+  billingMonth: string;
+  pricingType: string | null;
+  paidAt: string | null;
+  createdAt: string;
+};
+
+export type AdminPaymentListResponse = {
+  items: AdminPaymentRecord[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export async function fetchAdminPayments(params?: {
+  keyword?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  limit?: number;
+}): Promise<AdminPaymentListResponse> {
+  const { data } = await api.get<AdminPaymentListResponse>(
+    '/api/admin/payments',
+    {
+      params,
+    },
+  );
+  return data;
+}
