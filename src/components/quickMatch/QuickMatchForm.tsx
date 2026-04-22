@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+
 import { useAuthStore } from '../../stores/authStore';
 
 type QuickMatchFormProps = {
@@ -17,30 +18,38 @@ type QuickMatchFormProps = {
 
 const SERVICE_MAP = {
   OTT: [
-    { id: 'd291df64-74a0-4b26-bc32-1811a6912cf9', name: '티빙' },
     { id: 'bc087bf5-1286-4572-9268-0e100036ce5a', name: '넷플릭스' },
-    { id: '84969135-2545-4dc7-a800-ff0bfeb5a643', name: '디즈니플러스' },
-    { id: 'f07acd67-39a4-42ad-8b83-e29181cf9f55', name: '웨이브' },
+    { id: '84969135-2545-4dc7-a800-ff0bfeb5a643', name: '디즈니+' },
+    { id: 'd291df64-74a0-4b26-bc32-1811a6912cf9', name: '티빙' },
     { id: '7c2025d2-72c2-448f-99d4-03a324c629a4', name: '왓챠' },
     { id: 'f543b795-a9a7-45be-80f2-e378db05bcfe', name: '라프텔' },
+    { id: 'f07acd67-39a4-42ad-8b83-e29181cf9f55', name: '웨이브' },
   ],
+
   '교육/도서': [
     { id: 'bf03cdb6-0776-4499-86fb-a8559c9cf219', name: '밀리의 서재' },
     { id: 'b6efbdeb-0d84-4940-b2bd-83a18dc71b47', name: '리디 셀렉트' },
   ],
-  음악: [
+
+  '음악/멤버십': [
     { id: '2e9288af-f3a1-4b90-8c09-4ea0dfd27164', name: '스포티파이' },
     { id: '37a890be-7596-4317-b9a4-de2f85da095a', name: '애플 뮤직' },
-    { id: 'd48bde3d-88f2-482d-83f8-14564ddf9b74', name: '유튜브' },
-    { id: '32bfbda8-33db-4924-a7b0-a88871716b9e', name: '쿠팡' },
+    { id: 'd48bde3d-88f2-482d-83f8-14564ddf9b74', name: '유튜브 프리미엄' },
+    { id: '32bfbda8-33db-4924-a7b0-a88871716b9e', name: '쿠팡 와우' },
   ],
+
   '생산성/기타': [
     { id: 'ca41c7d0-73a2-4cd5-a0d2-702c79d06fae', name: 'ChatGPT Plus' },
     { id: '2b0ef251-c062-4cca-979c-c2041868957c', name: 'Microsoft 365' },
   ],
 } as const;
 
-const CATEGORY_OPTIONS = ['OTT', '교육/도서', '음악', '생산성/기타'] as const;
+const CATEGORY_OPTIONS = [
+  'OTT',
+  '교육/도서',
+  '음악/멤버십',
+  '생산성/기타',
+] as const;
 
 const PRICE_RANGE_OPTIONS = [
   { value: '', label: '상관없음' },
@@ -74,14 +83,17 @@ export default function QuickMatchForm({
     '' | 'short_term' | 'long_term' | 'flexible'
   >('');
 
-  useEffect(() => {
-    if (!open) {
-      setCategory('');
-      setServiceId('');
-      setPriceRange('');
-      setDurationPreference('');
-    }
-  }, [open]);
+  const resetForm = () => {
+    setCategory('');
+    setServiceId('');
+    setPriceRange('');
+    setDurationPreference('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const serviceOptions = useMemo(() => {
     if (!category) return [];
@@ -92,8 +104,7 @@ export default function QuickMatchForm({
 
   const moveToLogin = () => {
     const redirectPath = `${location.pathname}${location.search}`;
-    onClose();
-
+    handleClose();
     navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`);
   };
 
@@ -146,7 +157,7 @@ export default function QuickMatchForm({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-      onClick={isSubmitting ? undefined : onClose}
+      onClick={isSubmitting ? undefined : handleClose}
     >
       <div
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
@@ -256,7 +267,7 @@ export default function QuickMatchForm({
         <div className="mt-6 flex gap-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isSubmitting}
             className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >

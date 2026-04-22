@@ -525,7 +525,7 @@ export default function Header() {
 
                         <div className="mt-3 flex flex-wrap gap-2">
                           <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600">
-                            {user?.role === 'admin' ? '관리자' : '일반회원'}
+                            {user?.role === 'admin' ? '관리자' : '회원'}
                           </span>
 
                           {trustScore && (
@@ -539,15 +539,6 @@ export default function Header() {
                   </div>
 
                   <div className="p-2">
-                    <Link
-                      to="/mypage/profile"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                      className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                      <span>마이페이지</span>
-                      <span className="text-slate-300">›</span>
-                    </Link>
-
                     <Link
                       to="/mypage/party"
                       onClick={() => setIsProfileMenuOpen(false)}
