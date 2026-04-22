@@ -650,3 +650,38 @@ export async function unblockAllIps(): Promise<{
   const res = await api.delete('/api/admin/captcha/blocked-ips');
   return res.data;
 }
+
+// ── 캡챠 수치 설정 ──
+
+export type CaptchaConfigResponse = {
+  lstm_weight: number;
+  knn_weight: number;
+  rule_weight: number;
+  pass_threshold: number;
+  challenge_threshold: number;
+  message?: string;
+};
+
+export async function fetchCaptchaConfig(): Promise<CaptchaConfigResponse> {
+  const res = await api.get('/api/admin/captcha/config');
+  return res.data;
+}
+
+export async function updateCaptchaConfig(
+  config: Partial<Omit<CaptchaConfigResponse, 'rule_weight' | 'message'>>,
+): Promise<CaptchaConfigResponse> {
+  const res = await api.put('/api/admin/captcha/config', config);
+  return res.data;
+}
+
+// ── 챌린지 강제 발동 ──
+
+export async function forceChallenge(
+  ip?: string,
+): Promise<{ message: string }> {
+  const res = await api.post(
+    '/api/admin/captcha/force-challenge',
+    ip ? { ip } : {},
+  );
+  return res.data;
+}
