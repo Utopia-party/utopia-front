@@ -66,30 +66,24 @@ const STATUS_LABEL: Record<string, string> = {
 
 const CATEGORY_COLOR: Record<string, string> = {
   OTT: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/80',
-  음악: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
-  '멤버십/음악': 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
   '교육/도서': 'bg-violet-50 text-violet-700 ring-1 ring-violet-200/80',
-  생산성: 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/80',
+  '음악/멤버십': 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
   '생산성/기타': 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/80',
   기타: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80',
 };
 
 const CATEGORY_ICON: Record<string, LucideIcon> = {
   OTT: Tv,
-  음악: Headphones,
-  '멤버십/음악': Headphones,
   '교육/도서': BookOpen,
-  생산성: Briefcase,
+  '음악/멤버십': Headphones,
   '생산성/기타': Briefcase,
   기타: Briefcase,
 };
 
 const CATEGORY_ICON_TONE: Record<string, string> = {
   OTT: 'bg-sky-50 text-sky-600 ring-sky-100',
-  음악: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
-  '멤버십/음악': 'bg-emerald-50 text-emerald-600 ring-emerald-100',
   '교육/도서': 'bg-violet-50 text-violet-600 ring-violet-100',
-  생산성: 'bg-amber-50 text-amber-600 ring-amber-100',
+  '음악/멤버십': 'bg-emerald-50 text-emerald-600 ring-emerald-100',
   '생산성/기타': 'bg-amber-50 text-amber-600 ring-amber-100',
   기타: 'bg-slate-100 text-slate-600 ring-slate-200',
 };
@@ -297,7 +291,7 @@ function PartyCard({
                 {STATUS_LABEL[party.status ?? ''] || '모집중'}
               </span>
               <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${CATEGORY_COLOR[categoryName] ?? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'}`}
+                className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ${CATEGORY_COLOR[categoryName] ?? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'}`}
               >
                 {categoryName}
               </span>
