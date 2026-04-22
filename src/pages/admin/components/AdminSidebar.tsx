@@ -49,12 +49,13 @@ const allMenuItems = [
     path: '/admin/moderation',
     label: '채팅 모더레이션',
     end: false,
-    permission: 'canManageModeration',
+    permission: 'canManageChatModeration',
   },
   {
     path: '/admin/captcha',
     label: '캡챠 관리',
     end: false,
+    permission: 'canManageCaptcha',
   },
 ] as const;
 
