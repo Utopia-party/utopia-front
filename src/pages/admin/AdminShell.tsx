@@ -69,6 +69,9 @@ export default function AdminShell() {
     if (path.startsWith('/admin/settlements')) {
       return permissions?.canApproveSettlements ?? false;
     }
+    if (path.startsWith('/admin/payments')) {
+      return permissions?.canApproveSettlements ?? false;
+    }
     if (path.startsWith('/admin/logs')) {
       return permissions?.canViewLogs ?? false;
     }

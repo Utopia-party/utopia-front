@@ -15,6 +15,7 @@ type ChartTabId = 'sales' | 'members' | 'reports' | 'settlements';
 const CARD_ACCENTS: Record<string, string> = {
   members: 'from-[#61e4c5] via-[#52d4d4] to-[#54a8ff]',
   sales: 'from-[#7bc7ff] via-[#5f9dff] to-[#4f6fff]',
+  commission: 'from-[#f9a84d] via-[#f97316] to-[#ea580c]',
   reports: 'from-[#8898ff] via-[#8f8ae7] to-[#a48ce9]',
   settlements: 'from-[#8fe3ff] via-[#61c2ff] to-[#4f8bff]',
 };

@@ -40,6 +40,12 @@ const allMenuItems = [
     permission: 'canApproveSettlements',
   },
   {
+    path: '/admin/payments',
+    label: '결제 내역',
+    end: false,
+    permission: 'canApproveSettlements',
+  },
+  {
     path: '/admin/logs',
     label: '시스템 로그',
     end: false,
