@@ -36,15 +36,15 @@ const PERMISSION_OPTIONS: Array<{
     tone: 'bg-amber-50 text-amber-600 border-amber-100',
   },
   {
-    key: 'canManageModeration',
-    label: '모더레이션',
-    description: '제재/운영 조치와 실시간 운영 개입',
+    key: 'canManageChatModeration',
+    label: '채팅 모더레이션 관리',
+    description: '채팅 제재 상태 변경과 실시간 운영 개입',
     tone: 'bg-rose-50 text-rose-600 border-rose-100',
   },
   {
-    key: 'canApproveReceipts',
-    label: '영수증 승인',
-    description: '영수증 검토와 승인/거절 처리',
+    key: 'canManageCaptcha',
+    label: '캡챠 관리',
+    description: '캡챠 운영 상태와 제재 정책 관리',
     tone: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   },
   {
@@ -73,8 +73,8 @@ const FILTER_TABS = [
   '사용자 관리',
   '파티 관리',
   '신고 관리',
-  '모더레이션',
-  '영수증 승인',
+  '채팅 모더레이션 관리',
+  '캡챠 관리',
   '정산 승인',
   '로그 조회',
 ];
@@ -84,8 +84,8 @@ const FILTER_KEY_MAP: Record<string, PermissionKey> = {
   '사용자 관리': 'canManageUsers',
   '파티 관리': 'canManageParties',
   '신고 관리': 'canManageReports',
-  모더레이션: 'canManageModeration',
-  '영수증 승인': 'canApproveReceipts',
+  '채팅 모더레이션 관리': 'canManageChatModeration',
+  '캡챠 관리': 'canManageCaptcha',
   '정산 승인': 'canApproveSettlements',
   '로그 조회': 'canViewLogs',
 };
@@ -94,8 +94,8 @@ const DEFAULT_ADMIN_PERMISSIONS: AdminRoleUpdatePayload = {
   canManageUsers: true,
   canManageParties: true,
   canManageReports: true,
-  canManageModeration: true,
-  canApproveReceipts: true,
+  canManageChatModeration: true,
+  canManageCaptcha: true,
   canApproveSettlements: true,
   canViewLogs: true,
   canManageAdmins: false,
@@ -111,8 +111,8 @@ const permissionsFromRole = (
   canManageUsers: role.canManageUsers,
   canManageParties: role.canManageParties,
   canManageReports: role.canManageReports,
-  canManageModeration: role.canManageModeration,
-  canApproveReceipts: role.canApproveReceipts,
+  canManageChatModeration: role.canManageChatModeration,
+  canManageCaptcha: role.canManageCaptcha,
   canApproveSettlements: role.canApproveSettlements,
   canViewLogs: role.canViewLogs,
   canManageAdmins: role.canManageAdmins,
@@ -296,6 +296,11 @@ export default function AdminRoles() {
             <p className="mt-1 text-sm text-gray-500">
               관리자별로 실제 권한 토글을 확인하고 필요한 범위만 열어
               운영합니다.
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              사용자관리, 파티관리, 신고관리, 정산 승인, 로그 조회 권한을
+              계정별로 나눠서 제어할 수 있고 관리자 추가 후에도 필요한 권한만
+              열어 최소 권한 원칙으로 운영할 수 있습니다.
             </p>
           </section>
 
@@ -535,25 +540,6 @@ export default function AdminRoles() {
                     </div>
                   ))}
                 </div>
-              </section>
-
-              <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-gray-900">
-                  최소 권한 원칙
-                </h2>
-                <ul className="mt-4 space-y-2 text-sm text-gray-500">
-                  <li>
-                    관리자 추가 시 기본값은 운영 권한 전체 + 관리자 권한 제외로
-                    시작합니다.
-                  </li>
-                  <li>
-                    관리자 권한은 다른 관리자 계정의 권한 편집이 가능할 때만
-                    켭니다.
-                  </li>
-                  <li>
-                    실제 업무 범위에 맞는 토글만 켜서 운영하도록 설계했습니다.
-                  </li>
-                </ul>
               </section>
             </div>
           </div>

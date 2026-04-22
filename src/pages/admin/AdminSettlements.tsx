@@ -107,7 +107,9 @@ export default function AdminSettlements() {
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-1">정산 승인 관리</h1>
         <p className="text-sm text-gray-500 mb-4">
-          파티별 정산 확인 · 수동 승인/거절
+          파티별 정산 요청, 정산월, 파티장, 총 정산 금액을 한 화면에서 확인하고
+          승인 또는 거절까지 바로 처리할 수 있게 구성했습니다. 운영 이슈가 있는
+          파티는 파티관리 화면과 함께 보고 대응하면 됩니다.
         </p>
 
         <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -363,7 +365,14 @@ export default function AdminSettlements() {
               )}
             </tbody>
           </table>
-          <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
+          <Pagination
+            total={filtered.length}
+            page={page}
+            pageSize={20}
+            onChange={(p) => {
+              setPage(p);
+            }}
+          />
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
             승인과 거절 버튼은 실제 정산 관리자 API를 호출합니다.
           </div>

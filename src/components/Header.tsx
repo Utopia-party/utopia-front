@@ -312,7 +312,7 @@ export default function Header() {
         {isLoggedIn && user?.role?.toLowerCase() === 'admin' && (
           <Link
             to="/admin"
-            className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-4 py-1.5 text-lg font-bold text-slate-800 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+            className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-800 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
           >
             관리자 콘솔 바로가기
           </Link>

@@ -101,7 +101,9 @@ export default function AdminReports() {
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-1">신고 관리</h1>
         <p className="text-sm text-gray-500 mb-4">
-          신고 조회 · 처리/기각 · 사용자 패널티 연동
+          신고 접수 시각, 대상, 사유, 처리 상태를 한 화면에서 확인하고 운영
+          조치까지 바로 연결할 수 있게 구성했습니다. 반복 신고나 운영 리스크가
+          큰 항목은 사용자 패널티와 함께 검토합니다.
         </p>
 
         <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -319,7 +321,14 @@ export default function AdminReports() {
               )}
             </tbody>
           </table>
-          <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
+          <Pagination
+            total={filtered.length}
+            page={page}
+            pageSize={20}
+            onChange={(p) => {
+              setPage(p);
+            }}
+          />
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
             처리와 기각 버튼은 실제 관리자 신고 상태 API를 호출합니다.
           </div>

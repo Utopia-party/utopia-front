@@ -6,8 +6,12 @@ import {
   fetchBlockedIps,
   unblockIp,
   unblockAllIps,
+  fetchCaptchaConfig,
+  updateCaptchaConfig,
+  forceChallenge,
   type ShadowModeResponse,
   type BlockedIpEntry,
+  type CaptchaConfigResponse,
 } from '../../apis/admin';
 
 function formatTtl(seconds: number): string {
@@ -33,17 +37,75 @@ export default function AdminCaptcha() {
     }
   }, []);
 
+  // ── 캡챠 수치 설정 (handleShadowToggle보다 먼저 선언) ──
+  const [config, setConfig] = useState<CaptchaConfigResponse | null>(null);
+  const [configDraft, setConfigDraft] = useState<{
+    lstm_weight: string;
+    knn_weight: string;
+    pass_threshold: string;
+    challenge_threshold: string;
+  }>({
+    lstm_weight: '',
+    knn_weight: '',
+    pass_threshold: '',
+    challenge_threshold: '',
+  });
+  const [configSaving, setConfigSaving] = useState(false);
+  const [configMsg, setConfigMsg] = useState('');
+
+  const loadConfig = useCallback(async () => {
+    try {
+      const data = await fetchCaptchaConfig();
+      setConfig(data);
+      setConfigDraft({
+        lstm_weight: String(data.lstm_weight),
+        knn_weight: String(data.knn_weight),
+        pass_threshold: String(data.pass_threshold),
+        challenge_threshold: String(data.challenge_threshold),
+      });
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const handleShadowToggle = useCallback(async () => {
     setShadowToggling(true);
     try {
       const data = await toggleShadowMode();
       setShadowData(data);
+      await loadConfig();
     } catch {
       await loadShadowMode();
     } finally {
       setShadowToggling(false);
     }
-  }, [loadShadowMode]);
+  }, [loadShadowMode, loadConfig]);
+
+  const handleConfigSave = useCallback(async () => {
+    setConfigSaving(true);
+    setConfigMsg('');
+    try {
+      const data = await updateCaptchaConfig({
+        lstm_weight: parseFloat(configDraft.lstm_weight),
+        knn_weight: parseFloat(configDraft.knn_weight),
+        pass_threshold: parseFloat(configDraft.pass_threshold),
+        challenge_threshold: parseFloat(configDraft.challenge_threshold),
+      });
+      setConfig(data);
+      setConfigDraft({
+        lstm_weight: String(data.lstm_weight),
+        knn_weight: String(data.knn_weight),
+        pass_threshold: String(data.pass_threshold),
+        challenge_threshold: String(data.challenge_threshold),
+      });
+      setConfigMsg(data.message || '저장 완료');
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { detail?: string } } };
+      setConfigMsg(apiErr.response?.data?.detail || '저장 실패');
+    } finally {
+      setConfigSaving(false);
+    }
+  }, [configDraft]);
 
   // ── IP 제재 관리 ──
   const [blockedIps, setBlockedIps] = useState<BlockedIpEntry[]>([]);
@@ -96,7 +158,8 @@ export default function AdminCaptcha() {
   useEffect(() => {
     loadShadowMode();
     loadBlockedIps();
-  }, [loadShadowMode, loadBlockedIps]);
+    loadConfig();
+  }, [loadShadowMode, loadBlockedIps, loadConfig]);
 
   return (
     <>
@@ -169,74 +232,216 @@ export default function AdminCaptcha() {
             </div>
           </section>
 
-          {/* ── 점수 공식 카드 ── */}
+          {/* ── 수치 설정 카드 ── */}
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600 text-sm font-bold">
                 fx
               </span>
               <h2 className="text-sm font-semibold text-slate-900">
-                점수 산출 공식
+                점수 가중치 / 임계값 설정
               </h2>
+              <span className="ml-auto text-xs text-slate-400">
+                런타임 변경 (재시작 불필요)
+              </span>
             </div>
 
+            {/* 가중치 */}
             <div className="space-y-3">
-              <div
-                className={`rounded-xl px-4 py-3 ${
-                  !shadowData?.shadow_mode
-                    ? 'border-2 border-emerald-300 bg-emerald-50'
-                    : 'border border-slate-100 bg-slate-50'
-                }`}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  LSTM 활성 모드
-                  {!shadowData?.shadow_mode && (
-                    <span className="ml-2 text-emerald-600">(현재)</span>
-                  )}
-                </p>
-                <p className="mt-1 font-mono text-sm text-slate-900">
-                  final = rule x 10% + KNN x 20% + LSTM x 70%
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  + 다중 신호 합의: 2/3 이상 사람 판정 시 block 방지
-                </p>
+              <p className="text-xs font-semibold text-slate-600">
+                가중치 (합계 = 1.0)
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    LSTM
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    max="1"
+                    value={configDraft.lstm_weight}
+                    onChange={(e) =>
+                      setConfigDraft((d) => ({
+                        ...d,
+                        lstm_weight: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    KNN
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    max="1"
+                    value={configDraft.knn_weight}
+                    onChange={(e) =>
+                      setConfigDraft((d) => ({
+                        ...d,
+                        knn_weight: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    Rule (자동)
+                  </label>
+                  <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-500">
+                    {config
+                      ? (
+                          1 -
+                          parseFloat(configDraft.lstm_weight || '0') -
+                          parseFloat(configDraft.knn_weight || '0')
+                        ).toFixed(2)
+                      : '-'}
+                  </div>
+                </div>
               </div>
 
+              {/* 현재 공식 표시 */}
               <div
-                className={`rounded-xl px-4 py-3 ${
-                  shadowData?.shadow_mode
-                    ? 'border-2 border-amber-300 bg-amber-50'
-                    : 'border border-slate-100 bg-slate-50'
+                className={`rounded-xl px-4 py-2 text-xs font-mono ${
+                  !shadowData?.shadow_mode
+                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border border-amber-200 bg-amber-50 text-amber-800'
                 }`}
               >
-                <p className="text-xs font-semibold text-slate-700">
-                  Shadow 모드 (LSTM 미반영)
-                  {shadowData?.shadow_mode && (
-                    <span className="ml-2 text-amber-600">(현재)</span>
-                  )}
-                </p>
-                <p className="mt-1 font-mono text-sm text-slate-900">
-                  final = rule x 50% + KNN x 50%
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  LSTM 점수는 로그에만 기록
-                </p>
+                {!shadowData?.shadow_mode
+                  ? `final = rule x ${((1 - (config?.lstm_weight ?? 0.7) - (config?.knn_weight ?? 0.2)) * 100).toFixed(0)}% + KNN x ${((config?.knn_weight ?? 0.2) * 100).toFixed(0)}% + LSTM x ${((config?.lstm_weight ?? 0.7) * 100).toFixed(0)}%`
+                  : 'Shadow 모드: final = rule x (1-knn_w) + KNN x knn_w'}
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-              <p className="text-xs font-semibold text-slate-700">판정 기준</p>
-              <div className="mt-2 flex gap-3">
+            {/* 임계값 */}
+            <div className="mt-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-600">
+                판정 임계값
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    Pass (이상이면 통과)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    max="1"
+                    value={configDraft.pass_threshold}
+                    onChange={(e) =>
+                      setConfigDraft((d) => ({
+                        ...d,
+                        pass_threshold: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    Block (이하이면 차단)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    max="1"
+                    value={configDraft.challenge_threshold}
+                    onChange={(e) =>
+                      setConfigDraft((d) => ({
+                        ...d,
+                        challenge_threshold: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3">
                 <span className="rounded-lg bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                  pass: final &ge; 0.7
+                  pass: final &ge; {configDraft.pass_threshold || '0.7'}
                 </span>
                 <span className="rounded-lg bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                  challenge: 0.3 &lt; final &lt; 0.7
+                  challenge: {configDraft.challenge_threshold || '0.3'} &lt;
+                  final &lt; {configDraft.pass_threshold || '0.7'}
                 </span>
                 <span className="rounded-lg bg-rose-100 px-3 py-1 text-xs font-medium text-rose-700">
-                  block: final &le; 0.3
+                  block: final &le; {configDraft.challenge_threshold || '0.3'}
                 </span>
               </div>
+            </div>
+
+            {/* 저장 버튼 */}
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={() => void handleConfigSave()}
+                disabled={configSaving}
+                className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                {configSaving ? '저장 중...' : '적용'}
+              </button>
+              <button
+                onClick={() => void loadConfig()}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              >
+                초기화
+              </button>
+              {configMsg && (
+                <span
+                  className={`text-xs font-medium ${
+                    configMsg.includes('실패')
+                      ? 'text-rose-600'
+                      : 'text-emerald-600'
+                  }`}
+                >
+                  {configMsg}
+                </span>
+              )}
+            </div>
+          </section>
+
+          {/* ── 챌린지 강제 발동 카드 ── */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600 text-sm font-bold">
+                !
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  챌린지 강제 발동
+                </h2>
+                <p className="text-xs text-slate-500">
+                  다음 캡챠 요청을 강제로 이미지 챌린지로 전환 (발표 시연용)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await forceChallenge();
+                    alert(res.message);
+                  } catch {
+                    alert('강제 발동 실패');
+                  }
+                }}
+                className="rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
+              >
+                모든 IP에 챌린지 강제 발동
+              </button>
+              <span className="text-xs text-slate-400">
+                버튼 클릭 후 로그인 페이지에서 캡챠 체크박스를 누르면 이미지
+                챌린지가 표시됩니다
+              </span>
             </div>
           </section>
 
