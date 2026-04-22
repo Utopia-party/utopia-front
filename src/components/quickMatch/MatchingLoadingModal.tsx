@@ -14,7 +14,7 @@ export default function MatchingLoadingModal({
       <div className="w-full max-w-sm rounded-[28px] bg-white px-6 py-8 text-center shadow-2xl">
         {/* 아이콘 */}
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-3xl ring-1 ring-indigo-100">
-          ⚡
+          🥷
         </div>
 
         {/* 제목 */}

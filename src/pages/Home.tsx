@@ -601,7 +601,7 @@ function CategorySidebar({
                 * 일부 빠른매칭에는 수수료가 발생할 수 있어요.
               </p>
             </div>
-            <span className="text-2xl">⚡</span>
+            <span className="text-2xl">🥷</span>
           </div>
         </button>
       </div>
