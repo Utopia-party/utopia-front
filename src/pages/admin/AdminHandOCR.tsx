@@ -109,8 +109,9 @@ const getElapsedMs = (inspection?: InspectionRecord | null) =>
 
 const getHealthTone = (health?: AdminHandOcrHealth | null): HealthTone => {
   if (!health) return 'error';
-  if (!health.ok || !health.poseModelLoaded || !health.ocrLoaded)
+  if (!health.ok || !health.poseModelLoaded || !health.ocrLoaded) {
     return 'error';
+  }
   if (!health.paddleCudaAvailable || !health.ocrUseGpu) return 'warn';
   return 'ok';
 };
@@ -435,9 +436,12 @@ export default function AdminHandOCR() {
     }
   };
 
-  const loadImageUrlIfNeeded = async (key?: string | null) => {
+  const loadImageUrlByKey = async (key?: string | null) => {
     if (!key) return null;
-    if (key in imageUrlMap) return imageUrlMap[key];
+
+    if (imageUrlMap[key] !== undefined) {
+      return imageUrlMap[key];
+    }
 
     setImageLoadingMap((prev) => ({ ...prev, [key]: true }));
 
@@ -454,7 +458,22 @@ export default function AdminHandOCR() {
     }
   };
 
-  const handleToggleDetail = async (record: AdminHandOcrRecord) => {
+  const handleOpenImage = async (
+    key?: string | null,
+    existingUrl?: string | null,
+  ) => {
+    if (existingUrl) {
+      openImageWindow(existingUrl);
+      return;
+    }
+
+    const nextUrl = await loadImageUrlByKey(key);
+    if (nextUrl) {
+      openImageWindow(nextUrl);
+    }
+  };
+
+  const handleToggleDetail = (record: AdminHandOcrRecord) => {
     const key = getRecordKey(record);
 
     if (expandedRecordId === key) {
@@ -464,9 +483,9 @@ export default function AdminHandOCR() {
 
     setExpandedRecordId(key);
 
-    await Promise.allSettled([
-      loadImageUrlIfNeeded(record.imageKey),
-      loadImageUrlIfNeeded(record.textCropKey),
+    void Promise.allSettled([
+      loadImageUrlByKey(record.imageKey),
+      loadImageUrlByKey(record.textCropKey),
     ]);
   };
 
@@ -570,6 +589,7 @@ export default function AdminHandOCR() {
               {healthLabel}
             </span>
             <button
+              type="button"
               className="rounded-md border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               onClick={() => setIsGuideOpen((prev) => !prev)}
             >
@@ -933,28 +953,47 @@ export default function AdminHandOCR() {
                           <td className="px-4 py-3.5 text-sm">
                             <div className="flex flex-wrap gap-1.5">
                               <button
+                                type="button"
                                 className={`rounded-md border px-3 py-1 text-xs font-medium transition ${
                                   isExpanded
                                     ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
                                     : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                                 }`}
-                                onClick={() => void handleToggleDetail(record)}
+                                onClick={() => handleToggleDetail(record)}
                               >
                                 {isExpanded ? '닫기' : '상세'}
                               </button>
                               <button
+                                type="button"
                                 className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled={!imageUrl}
-                                onClick={() => openImageWindow(imageUrl)}
+                                disabled={
+                                  isOriginalImageLoading || !record.imageKey
+                                }
+                                onClick={() =>
+                                  void handleOpenImage(
+                                    record.imageKey,
+                                    imageUrl,
+                                  )
+                                }
                               >
-                                원본
+                                {isOriginalImageLoading
+                                  ? '불러오는 중...'
+                                  : '원본'}
                               </button>
                               <button
+                                type="button"
                                 className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled={!textCropUrl}
-                                onClick={() => openImageWindow(textCropUrl)}
+                                disabled={
+                                  isTextCropLoading || !record.textCropKey
+                                }
+                                onClick={() =>
+                                  void handleOpenImage(
+                                    record.textCropKey,
+                                    textCropUrl,
+                                  )
+                                }
                               >
-                                Crop
+                                {isTextCropLoading ? '불러오는 중...' : 'Crop'}
                               </button>
                             </div>
                           </td>
@@ -1052,11 +1091,15 @@ export default function AdminHandOCR() {
                                         <span className="text-xs font-semibold text-slate-500">
                                           원본 이미지
                                         </span>
-                                        {imageUrl && (
+                                        {(imageUrl || record.imageKey) && (
                                           <button
+                                            type="button"
                                             className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white"
                                             onClick={() =>
-                                              openImageWindow(imageUrl)
+                                              void handleOpenImage(
+                                                record.imageKey,
+                                                imageUrl,
+                                              )
                                             }
                                           >
                                             새 창 열기
@@ -1088,11 +1131,16 @@ export default function AdminHandOCR() {
                                         <span className="text-xs font-semibold text-slate-500">
                                           Text Crop
                                         </span>
-                                        {textCropUrl && (
+                                        {(textCropUrl ||
+                                          record.textCropKey) && (
                                           <button
+                                            type="button"
                                             className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white"
                                             onClick={() =>
-                                              openImageWindow(textCropUrl)
+                                              void handleOpenImage(
+                                                record.textCropKey,
+                                                textCropUrl,
+                                              )
                                             }
                                           >
                                             새 창 열기
@@ -1317,6 +1365,7 @@ export default function AdminHandOCR() {
                         <td className="px-4 py-3 text-sm">
                           <div className="flex flex-wrap gap-1.5">
                             <button
+                              type="button"
                               className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                               disabled={busyBlockIp === block.ip}
                               onClick={() => void handleReleaseBlock(block.ip)}
@@ -1326,6 +1375,7 @@ export default function AdminHandOCR() {
                                 : '차단 해제'}
                             </button>
                             <button
+                              type="button"
                               className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
                               disabled={busyResetIp === block.ip}
                               onClick={() =>
@@ -1452,6 +1502,7 @@ export default function AdminHandOCR() {
                         <td className="px-4 py-3 text-sm">
                           <div className="flex flex-wrap gap-1.5">
                             <button
+                              type="button"
                               className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                               disabled={
                                 !session.sessionId ||
@@ -1467,6 +1518,7 @@ export default function AdminHandOCR() {
                                 : '세션 만료'}
                             </button>
                             <button
+                              type="button"
                               className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
                               disabled={busyResetIp === session.ip}
                               onClick={() =>
