@@ -55,6 +55,10 @@ type FinetuneStats = {
   ready: boolean;
   min_required: number;
 };
+type ChatBan = {
+  ip: string;
+  ttl: number;
+};
 
 // ── 큰 바 차트 ──
 function BarChart({ data }: { data: ModerationTrendPoint[] }) {
@@ -172,7 +176,7 @@ function DonutChart({ blocked, warned, falsePositive, pending }: {
 }
 
 export default function AdminModeration() {
-  const [mainTab, setMainTab] = useState<'설정' | '통계' | '로그'>('설정');
+  const [mainTab, setMainTab] = useState<'설정' | '통계' | '로그' | 'IP 벤'>('설정');
 
   // ── 설정 상태 ──
   const [config, setConfig] = useState<Config | null>(null);
@@ -204,7 +208,13 @@ export default function AdminModeration() {
   const [logError, setLogError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [unblockBusyId, setUnblockBusyId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+
+  // ── IP 벤 상태 ──
+  const [chatBans, setChatBans] = useState<ChatBan[]>([]);
+  const [chatBansLoading, setChatBansLoading] = useState(false);
+  const [unbanBusy, setUnbanBusy] = useState<string | null>(null);
 
   // ── 설정 로드 ──
   useEffect(() => {
@@ -328,6 +338,53 @@ export default function AdminModeration() {
     setBusyId(null);
   };
 
+  // ── 로그 탭 — 유저 채팅 차단 해제 ──
+  const handleUnblockUser = async (senderId: string, chatId: string) => {
+    setUnblockBusyId(chatId);
+    try {
+      await fetch(`${API}/unblock/user/${senderId}`, { method: 'POST' });
+      // 상태를 false_positive로 변경해 로그에 반영
+      await updateAdminChatModerationStatus(chatId, 'false_positive');
+      setChats((prev) =>
+        prev.map((c) => c.id === chatId ? { ...c, moderationStatus: 'false_positive' } : c),
+      );
+    } catch (err) {
+      setLogError(getAdminErrorMessage(err));
+    }
+    setUnblockBusyId(null);
+  };
+
+  // ── IP 벤 로드 ──
+  const loadChatBans = async () => {
+    setChatBansLoading(true);
+    try {
+      const res = await fetch(`${API}/chat-bans`);
+      const data: ChatBan[] = await res.json();
+      setChatBans(data);
+    } catch {}
+    setChatBansLoading(false);
+  };
+
+  useEffect(() => {
+    if (mainTab === 'IP 벤') void loadChatBans();
+  }, [mainTab]);
+
+  const handleUnbanIp = async (ip: string) => {
+    setUnbanBusy(ip);
+    try {
+      await fetch(`${API}/unblock/ip/${encodeURIComponent(ip)}`, { method: 'DELETE' });
+      setChatBans((prev) => prev.filter((b) => b.ip !== ip));
+    } catch {}
+    setUnbanBusy(null);
+  };
+
+  const formatTtl = (ttl: number) => {
+    if (ttl < 0) return '영구';
+    const h = Math.floor(ttl / 3600);
+    const m = Math.floor((ttl % 3600) / 60);
+    return `${h}시간 ${m}분`;
+  };
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return chats;
@@ -364,7 +421,7 @@ export default function AdminModeration() {
 
           {/* 메인 탭 */}
           <div className="flex gap-1 border-b border-gray-200">
-            {(['설정', '통계', '로그'] as const).map((t) => (
+            {(['설정', '통계', '로그', 'IP 벤'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setMainTab(t)}
@@ -408,11 +465,11 @@ export default function AdminModeration() {
                     <div className="grid md:grid-cols-2 gap-5">
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-1">
                         <p className="text-sm font-bold text-gray-800 mb-4">탐지 단계 활성화</p>
-                        {([
+                        {(([
                           ['stage1_enabled', '1단계 — 규칙 기반', '화이트/블랙리스트 (0ms)', 'bg-emerald-100 text-emerald-700'],
                           ['stage2_enabled', '2단계 — ML 모델', 'GPU 서버 HTTP 호출 (10~30ms)', 'bg-blue-100 text-blue-700'],
                           ['stage3_enabled', '3단계 — Ollama Exaone', '문맥 판단 (500ms~3s)', 'bg-violet-100 text-violet-700'],
-                        ] as [keyof Config, string, string, string][]).map(([key, label, sub, badge]) => (
+                        ]) as [keyof Config, string, string, string][]).map(([key, label, sub, badge]) => (
                           <div key={key} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                             <div className="flex items-center gap-3">
                               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${badge}`}>
@@ -439,10 +496,10 @@ export default function AdminModeration() {
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                         <p className="text-sm font-bold text-gray-800 mb-1">2단계 임계값</p>
                         <p className="text-xs text-gray-400 mb-5">통과~차단 사이 점수는 3단계(Ollama)로 전달</p>
-                        {([
+                        {(([
                           ['stage2_pass_threshold', '통과 임계값', '이하이면 정상 처리', 0.5, 0.9],
                           ['stage2_block_threshold', '차단 임계값', '이상이면 즉시 차단', 0.7, 0.99],
-                        ] as [keyof Config, string, string, number, number][]).map(([key, label, sub, min, max]) => (
+                        ]) as [keyof Config, string, string, number, number][]).map(([key, label, sub, min, max]) => (
                           <div key={key} className="mb-4">
                             <div className="flex justify-between text-sm mb-2">
                               <div>
@@ -485,10 +542,10 @@ export default function AdminModeration() {
                   {/* 규칙 단어 */}
                   {configTab === '규칙 단어' && (
                     <div className="grid md:grid-cols-2 gap-5">
-                      {([
+                      {(([
                         ['whitelist', '화이트리스트', '항상 정상 처리 — 오탐지된 단어 추가', wlInput, setWlInput, 'bg-emerald-50 text-emerald-700 border-emerald-200', 'bg-emerald-600 hover:bg-emerald-700'] as const,
                         ['blacklist', '블랙리스트', '항상 즉시 차단 — 명백한 욕설 축약어', blInput, setBlInput, 'bg-red-50 text-red-700 border-red-200', 'bg-red-600 hover:bg-red-700'] as const,
-                      ]).map(([type, title, sub, val, setVal, tagStyle, btnStyle]) => (
+                      ])).map(([type, title, sub, val, setVal, tagStyle, btnStyle]) => (
                         <div key={type} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                           <p className="text-sm font-bold text-gray-800 mb-1">{title}</p>
                           <p className="text-xs text-gray-400 mb-4">{sub}</p>
@@ -761,6 +818,7 @@ export default function AdminModeration() {
                       {paginated.map((chat) => {
                         const isExpanded = expandedId === chat.id;
                         const isBusy = busyId === chat.id;
+                        const isUnblockBusy = unblockBusyId === chat.id;
                         const statusKey = chat.moderationStatus ?? 'pending';
                         return (
                           <>
@@ -828,6 +886,8 @@ export default function AdminModeration() {
                                       <div className="text-xs text-slate-400 mb-1">원본 메시지</div>
                                       <p className={`text-sm break-all ${chat.isDeleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>{chat.message}</p>
                                     </div>
+
+                                    {/* 상태 변경 버튼 */}
                                     <div className="flex flex-wrap gap-2 items-center">
                                       <span className="text-xs font-semibold text-slate-600">상태 변경:</span>
                                       {(['blocked', 'warned', 'false_positive', 'pending'] as const).map((s) => (
@@ -839,6 +899,20 @@ export default function AdminModeration() {
                                         >{STATUS_LABEL[s]}</button>
                                       ))}
                                     </div>
+
+                                    {/* 채팅 차단 해제 버튼 — blocked 상태일 때만 표시 */}
+                                    {statusKey === 'blocked' && (
+                                      <div className="mt-3 pt-3 border-t border-slate-100">
+                                        <p className="text-xs text-slate-400 mb-2">차단 해제 — Redis 차단 삭제, is_active 복구, banned_until 초기화</p>
+                                        <button
+                                          disabled={isUnblockBusy}
+                                          onClick={() => void handleUnblockUser(chat.senderId, chat.id)}
+                                          className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"
+                                        >
+                                          {isUnblockBusy ? '처리 중...' : '채팅 차단 해제'}
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -858,6 +932,65 @@ export default function AdminModeration() {
                 <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
                   오탐지로 표시하면 해당 메시지는 통계에서 false_positive로 집계됩니다.
                 </div>
+              </section>
+            </div>
+          )}
+
+          {/* ── IP 벤 탭 ── */}
+          {mainTab === 'IP 벤' && (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">채팅 IP 벤 목록</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">욕설 감지로 IP 차단된 목록입니다. 해제 시 해당 IP로 다시 로그인 가능합니다.</p>
+                </div>
+                <button
+                  onClick={loadChatBans}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  새로고침
+                </button>
+              </div>
+
+              <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                {chatBansLoading ? (
+                  <div className="px-5 py-10 text-center text-sm text-gray-400">불러오는 중...</div>
+                ) : chatBans.length === 0 ? (
+                  <div className="px-5 py-10 text-center text-sm text-gray-400">채팅 IP 벤 목록이 없습니다.</div>
+                ) : (
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        {['IP 주소', '남은 시간', '해제'].map((h) => (
+                          <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chatBans.map((ban) => (
+                        <tr key={ban.ip} className="border-b border-gray-100 hover:bg-gray-50/70">
+                          <td className="px-5 py-3.5 font-mono text-sm text-gray-800">{ban.ip}</td>
+                          <td className="px-5 py-3.5 text-sm text-gray-500">
+                            <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                              ban.ttl < 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                            }`}>
+                              {formatTtl(ban.ttl)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <button
+                              disabled={unbanBusy === ban.ip}
+                              onClick={() => void handleUnbanIp(ban.ip)}
+                              className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"
+                            >
+                              {unbanBusy === ban.ip ? '처리 중...' : '벤 해제'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </section>
             </div>
           )}
