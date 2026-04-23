@@ -47,6 +47,7 @@ import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 import AdminModeration from './pages/admin/AdminModeration';
 import AdminHandOCR from './pages/admin/AdminHandOCR';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
+import AdminQuickMatch from './pages/admin/AdminQuickMatch';
 
 const router = createBrowserRouter([
   {
@@ -221,6 +222,10 @@ const router = createBrowserRouter([
       {
         path: 'captcha',
         Component: AdminCaptcha,
+      },
+      {
+        path: 'quick-match',
+        Component: AdminQuickMatch,
       },
     ],
   },
