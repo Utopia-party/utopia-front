@@ -60,11 +60,6 @@ const allMenuItems: MenuItem[] = [
     visibleIf: (permissions) => Boolean(permissions?.canManageChatModeration),
   },
   {
-    path: '/admin/moderation/config',
-    label: '모더레이션 설정',
-    visibleIf: (permissions) => Boolean(permissions?.canManageChatModeration),
-  },
-  {
     path: '/admin/captcha',
     label: '캡챠 관리',
     visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
