@@ -64,6 +64,12 @@ const allMenuItems = [
     permission: 'canManageChatModeration',
   },
   {
+    path: '/admin/moderation/config',
+    label: '모더레이션 설정',
+    end: false,
+    permission: 'canManageChatModeration',
+  },
+  {
     path: '/admin/captcha',
     label: '캡챠 관리',
     end: false,
