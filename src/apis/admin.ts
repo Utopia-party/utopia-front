@@ -831,3 +831,23 @@ export async function fetchCaptchaSessions(
   });
   return res.data;
 }
+
+export type ModerationTrendPoint = {
+  date: string;
+  blocked: number;
+  warned: number;
+  false_positive: number;
+  total: number;
+};
+
+export async function fetchModerationTrend(params?: {
+  period?: 'daily' | 'weekly' | 'monthly';
+  start_date?: string;
+  end_date?: string;
+}): Promise<ModerationTrendPoint[]> {
+  const { data } = await api.get<ModerationTrendPoint[]>(
+    '/api/admin/moderation/chat-trend',
+    { params },
+  );
+  return data;
+}
