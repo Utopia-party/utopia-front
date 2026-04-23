@@ -15,6 +15,7 @@ import {
 
 const API = '/api/admin/moderation';
 
+// ── 상수 ──
 const STATUS_STYLE: Record<string, string> = {
   blocked: 'bg-red-50 text-red-600 border-red-100',
   warned: 'bg-amber-50 text-amber-600 border-amber-100',
@@ -32,6 +33,8 @@ const STAGE_STYLE: Record<number, string> = {
   2: 'bg-blue-50 text-blue-700 border-blue-100',
   3: 'bg-violet-50 text-violet-700 border-violet-100',
 };
+const EXAMPLE_LABEL_KO: Record<string, string> = { none: '정상', offensive: '경고', hate: '즉시차단' };
+
 const FILTER_TABS = ['전체', '차단', '경고', '오탐지', '검토 중'];
 const TAB_TO_STATUS: Record<string, string> = {
   차단: 'blocked',
@@ -40,6 +43,7 @@ const TAB_TO_STATUS: Record<string, string> = {
   '검토 중': 'pending',
 };
 
+// ── 설정 타입 ──
 type Config = {
   stage1_enabled: boolean;
   stage2_enabled: boolean;
@@ -63,6 +67,7 @@ type ChatBan = {
   ttl: number;
 };
 
+// ── 큰 바 차트 ──
 function BarChart({ data }: { data: ModerationTrendPoint[] }) {
   const max = Math.max(...data.map((d) => d.total), 1);
   const chartHeight = 180;
@@ -109,6 +114,7 @@ function BarChart({ data }: { data: ModerationTrendPoint[] }) {
   );
 }
 
+// ── 도넛 차트 ──
 function DonutChart({ blocked, warned, falsePositive, pending }: {
   blocked: number; warned: number; falsePositive: number; pending: number;
 }) {
@@ -169,6 +175,7 @@ function DonutChart({ blocked, warned, falsePositive, pending }: {
 export default function AdminModeration() {
   const [mainTab, setMainTab] = useState<'설정' | '통계' | '로그' | 'IP 벤'>('설정');
 
+  // ── 설정 상태 ──
   const [config, setConfig] = useState<Config | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [configSaving, setConfigSaving] = useState(false);
@@ -179,6 +186,7 @@ export default function AdminModeration() {
   const [exText, setExText] = useState('');
   const [exLabel, setExLabel] = useState('none');
 
+  // ── 통계 상태 ──
   const [stats, setStats] = useState<AdminModerationStat | null>(null);
   const [trend, setTrend] = useState<ModerationTrendPoint[]>([]);
   const [trendPeriod, setTrendPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -187,6 +195,7 @@ export default function AdminModeration() {
   const [statsDateFrom, setStatsDateFrom] = useState('');
   const [statsDateTo, setStatsDateTo] = useState('');
 
+  // ── 로그 상태 ──
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -199,10 +208,12 @@ export default function AdminModeration() {
   const [unblockBusyId, setUnblockBusyId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
+  // ── IP 벤 상태 ──
   const [chatBans, setChatBans] = useState<ChatBan[]>([]);
   const [chatBansLoading, setChatBansLoading] = useState(false);
   const [unbanBusy, setUnbanBusy] = useState<string | null>(null);
 
+  // ── 설정 로드 ──
   useEffect(() => {
     fetch(`${API}/config`)
       .then((r) => r.json())
@@ -547,7 +558,7 @@ export default function AdminModeration() {
                               <span className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold ${
                                 ex.label === 'none' ? 'bg-emerald-50 text-emerald-700' :
                                 ex.label === 'offensive' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
-                              }`}>{ex.label}</span>
+                              }`}>{EXAMPLE_LABEL_KO[ex.label] ?? ex.label}</span>
                               <button
                                 onClick={() => setConfig((c) => c ? { ...c, ollama_prompt_examples: c.ollama_prompt_examples.filter((_, j) => j !== i) } : c)}
                                 className="text-gray-300 hover:text-gray-600 text-lg leading-none"
@@ -560,9 +571,9 @@ export default function AdminModeration() {
                             className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400" />
                           <select value={exLabel} onChange={(e) => setExLabel(e.target.value)}
                             className="border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400 bg-white">
-                            <option value="none">none</option>
-                            <option value="offensive">offensive</option>
-                            <option value="hate">hate</option>
+                            <option value="none">정상</option>
+                            <option value="offensive">경고</option>
+                            <option value="hate">즉시차단</option>
                           </select>
                           <button
                             onClick={() => { if (!exText.trim()) return; setConfig((c) => c ? { ...c, ollama_prompt_examples: [...c.ollama_prompt_examples, { text: exText.trim(), label: exLabel }] } : c); setExText(''); }}
@@ -740,11 +751,24 @@ export default function AdminModeration() {
 
               <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full border-collapse">
+                  <table className="w-full border-collapse table-fixed">
+                    <colgroup>
+                      <col style={{ width: '72px' }} />
+                      <col style={{ width: '110px' }} />
+                      <col style={{ width: '88px' }} />
+                      <col style={{ width: '110px' }} />
+                      <col style={{ width: '140px' }} />
+                      <col style={{ width: '76px' }} />
+                      <col style={{ width: '76px' }} />
+                      <col style={{ width: '68px' }} />
+                      <col style={{ width: '52px' }} />
+                      <col style={{ width: '128px' }} />
+                      <col style={{ width: '88px' }} />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
                         {['상태', '파티', '발신자', '메시지', '탐지 사유', '탐지 단계', 'ML 신뢰도', '경고 횟수', '삭제', '발생일', '관리'].map((h) => (
-                          <th key={h} className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          <th key={h} className="px-3 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -757,53 +781,59 @@ export default function AdminModeration() {
                         return (
                           <>
                             <tr key={chat.id} className="border-b border-gray-100 transition hover:bg-gray-50/70">
-                              <td className="px-4 py-3.5">
-                                <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[statusKey] ?? STATUS_STYLE.pending}`}>
+                              <td className="px-3 py-3.5">
+                                <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[statusKey] ?? STATUS_STYLE.pending}`}>
                                   {STATUS_LABEL[statusKey] ?? statusKey}
                                 </span>
                               </td>
-                              <td className="px-4 py-3.5 text-sm text-gray-700 max-w-[120px] truncate">{chat.partyTitle}</td>
-                              <td className="px-4 py-3.5 text-sm text-gray-700">{chat.senderNickname}</td>
-                              <td className="px-4 py-3.5 max-w-xs">
+                              <td className="px-3 py-3.5">
+                                <span className="block truncate text-sm text-gray-700" title={chat.partyTitle}>{chat.partyTitle}</span>
+                              </td>
+                              <td className="px-3 py-3.5">
+                                <span className="block truncate text-sm text-gray-700" title={chat.senderNickname}>{chat.senderNickname}</span>
+                              </td>
+                              <td className="px-3 py-3.5">
                                 <span className={`block truncate text-sm ${chat.isDeleted ? 'line-through text-gray-400' : 'text-gray-800'}`} title={chat.message}>
                                   {chat.message}
                                 </span>
                               </td>
-                              <td className="px-4 py-3.5 text-sm text-gray-500">{chat.flagReason ?? '-'}</td>
-                              <td className="px-4 py-3.5">
+                              <td className="px-3 py-3.5">
+                                <span className="block truncate text-sm text-gray-500" title={chat.flagReason ?? '-'}>{chat.flagReason ?? '-'}</span>
+                              </td>
+                              <td className="px-3 py-3.5">
                                 {chat.flagStage != null ? (
-                                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${STAGE_STYLE[chat.flagStage] ?? 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                                  <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold ${STAGE_STYLE[chat.flagStage] ?? 'bg-gray-50 text-gray-500 border-gray-100'}`}>
                                     {chat.flagStage}단계
                                   </span>
                                 ) : <span className="text-sm text-gray-400">-</span>}
                               </td>
-                              <td className="px-4 py-3.5 text-sm text-gray-500">
+                              <td className="px-3 py-3.5 text-sm text-gray-500 whitespace-nowrap">
                                 {chat.flagConfidence != null ? `${(chat.flagConfidence * 100).toFixed(0)}%` : '-'}
                               </td>
-                              <td className="px-4 py-3.5 text-sm">
+                              <td className="px-3 py-3.5 whitespace-nowrap">
                                 {chat.warnCount != null ? (
-                                  <span className={`font-semibold ${chat.warnCount >= 3 ? 'text-red-500' : chat.warnCount >= 1 ? 'text-amber-500' : 'text-gray-400'}`}>
+                                  <span className={`text-sm font-semibold ${chat.warnCount >= 3 ? 'text-red-500' : chat.warnCount >= 1 ? 'text-amber-500' : 'text-gray-400'}`}>
                                     {chat.warnCount}회
                                   </span>
-                                ) : <span className="text-gray-400">-</span>}
+                                ) : <span className="text-sm text-gray-400">-</span>}
                               </td>
-                              <td className="px-4 py-3.5 text-sm">
+                              <td className="px-3 py-3.5 whitespace-nowrap">
                                 {chat.isDeleted
                                   ? <span className="text-xs text-gray-400">삭제됨</span>
                                   : <span className="text-xs text-emerald-500">유지</span>}
                               </td>
-                              <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">{chat.createdAt}</td>
-                              <td className="px-4 py-3.5">
-                                <div className="flex gap-1.5">
+                              <td className="px-3 py-3.5 text-xs text-gray-400 whitespace-nowrap">{chat.createdAt}</td>
+                              <td className="px-3 py-3.5">
+                                <div className="flex gap-1 whitespace-nowrap">
                                   <button
                                     onClick={() => setExpandedId((prev) => (prev === chat.id ? null : chat.id))}
-                                    className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${isExpanded ? 'border-violet-300 bg-violet-50 text-violet-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                    className={`rounded-md border px-2 py-1 text-xs font-medium transition ${isExpanded ? 'border-violet-300 bg-violet-50 text-violet-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                                   >{isExpanded ? '닫기' : '상세'}</button>
                                   {statusKey !== 'false_positive' && (
                                     <button
                                       disabled={isBusy}
                                       onClick={() => void handleStatusUpdate(chat.id, 'false_positive')}
-                                      className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                                      className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
                                     >{isBusy ? '...' : '오탐지'}</button>
                                   )}
                                 </div>
