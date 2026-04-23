@@ -734,3 +734,99 @@ export async function fetchAdminPayments(params?: {
   );
   return data;
 }
+
+// ── 캡챠 통계 (대시보드) ──
+
+export type CaptchaPeriod = 'daily' | 'weekly' | 'monthly';
+
+export type CaptchaSummaryStats = {
+  total: number;
+  pass_count: number;
+  challenge_count: number;
+  block_count: number;
+  pass_rate: number;
+  challenge_rate: number;
+  block_rate: number;
+};
+
+export type ScoreDistributionBucket = {
+  range: string;
+  count: number;
+};
+
+export type TrendPoint = {
+  date: string;
+  display: string;
+  pass: number;
+  challenge: number;
+  block: number;
+};
+
+export type ChallengeDetail = {
+  total: number;
+  pass_count: number;
+  pending_count: number;
+  pass_rate: number;
+  avg_solve_time_ms: number;
+};
+
+export type CaptchaStatsResponse = {
+  period: CaptchaPeriod;
+  start_date: string;
+  end_date: string;
+  summary: CaptchaSummaryStats;
+  challenge_detail: ChallengeDetail;
+  score_distribution: ScoreDistributionBucket[];
+  trend: TrendPoint[];
+};
+
+export async function fetchCaptchaStats(
+  period: CaptchaPeriod = 'daily',
+  startDate?: string,
+  endDate?: string,
+): Promise<CaptchaStatsResponse> {
+  const res = await api.get('/api/admin/captcha/stats', {
+    params: {
+      period,
+      ...(startDate ? { start_date: startDate } : {}),
+      ...(endDate ? { end_date: endDate } : {}),
+    },
+  });
+  return res.data;
+}
+
+// ── 캡챠 세션 로그 ──
+
+export type CaptchaSessionEntry = {
+  id: string;
+  trigger_type: string;
+  client_ip: string;
+  behavior_score: number | null;
+  vector_score: number | null;
+  lstm_score: number | null;
+  final_score: number | null;
+  status: string;
+  attempt_count: number;
+  solve_time_ms: number | null;
+  is_correct: boolean | null;
+  created_at: string;
+};
+
+export type CaptchaSessionsResponse = {
+  sessions: CaptchaSessionEntry[];
+  total: number;
+  page: number;
+  size: number;
+  total_pages: number;
+};
+
+export async function fetchCaptchaSessions(
+  page: number = 1,
+  size: number = 20,
+  status?: string,
+): Promise<CaptchaSessionsResponse> {
+  const res = await api.get('/api/admin/captcha/sessions', {
+    params: { page, size, ...(status ? { status } : {}) },
+  });
+  return res.data;
+}

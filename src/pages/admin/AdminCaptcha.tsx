@@ -9,9 +9,15 @@ import {
   fetchCaptchaConfig,
   updateCaptchaConfig,
   forceChallenge,
+  fetchCaptchaStats,
+  fetchCaptchaSessions,
   type ShadowModeResponse,
   type BlockedIpEntry,
   type CaptchaConfigResponse,
+  type CaptchaStatsResponse,
+  type CaptchaSessionsResponse,
+  type CaptchaSessionEntry,
+  type CaptchaPeriod,
 } from '../../apis/admin';
 
 function formatTtl(seconds: number): string {
@@ -155,11 +161,65 @@ export default function AdminCaptcha() {
     }
   }, [loadBlockedIps]);
 
+  // ── 캡챠 통계 (대시보드) ──
+  const [stats, setStats] = useState<CaptchaStatsResponse | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsPeriod, setStatsPeriod] = useState<CaptchaPeriod>('daily');
+  const [statsStartDate, setStatsStartDate] = useState('');
+  const [statsEndDate, setStatsEndDate] = useState('');
+
+  const loadStats = useCallback(
+    async (
+      period: CaptchaPeriod = statsPeriod,
+      startDate?: string,
+      endDate?: string,
+    ) => {
+      setStatsLoading(true);
+      try {
+        const data = await fetchCaptchaStats(
+          period,
+          startDate || undefined,
+          endDate || undefined,
+        );
+        setStats(data);
+      } catch {
+        // 조회 실패 시 무시
+      } finally {
+        setStatsLoading(false);
+      }
+    },
+    [statsPeriod],
+  );
+
+  // ── 캡챠 세션 로그 ──
+  const [sessionsData, setSessionsData] =
+    useState<CaptchaSessionsResponse | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionPage, setSessionPage] = useState(1);
+  const [sessionFilter, setSessionFilter] = useState<string>('');
+
+  const loadSessions = useCallback(
+    async (page: number = 1, status?: string) => {
+      setSessionsLoading(true);
+      try {
+        const data = await fetchCaptchaSessions(page, 20, status || undefined);
+        setSessionsData(data);
+      } catch {
+        // 조회 실패 시 무시
+      } finally {
+        setSessionsLoading(false);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     loadShadowMode();
     loadBlockedIps();
     loadConfig();
-  }, [loadShadowMode, loadBlockedIps, loadConfig]);
+    loadStats();
+    loadSessions();
+  }, [loadShadowMode, loadBlockedIps, loadConfig, loadStats, loadSessions]);
 
   return (
     <>
@@ -569,34 +629,522 @@ export default function AdminCaptcha() {
             )}
           </section>
 
-          {/* ── 향후 확장 영역: 통계 ── */}
-          <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 shadow-sm opacity-60">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400 text-sm">
-                📊
-              </span>
-              <h2 className="text-sm font-semibold text-slate-400">
-                캡챠 통계 (예정)
-              </h2>
+          {/* ── 캡챠 통계 대시보드 ── */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+            {/* 헤더 + 기간 선택 */}
+            <div className="flex flex-col gap-4 mb-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 text-sm font-bold">
+                    📊
+                  </span>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    캡챠 통계
+                  </h2>
+                  {stats && (
+                    <span className="text-xs text-slate-400 ml-1">
+                      {stats.start_date} ~ {stats.end_date}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() =>
+                    void loadStats(statsPeriod, statsStartDate, statsEndDate)
+                  }
+                  disabled={statsLoading}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-50"
+                >
+                  {statsLoading ? '조회 중...' : '새로고침'}
+                </button>
+              </div>
+
+              {/* 기간 탭 + 날짜 범위 */}
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* 일별 / 주별 / 월별 탭 */}
+                <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                  {[
+                    { key: 'daily' as CaptchaPeriod, label: '일별' },
+                    { key: 'weekly' as CaptchaPeriod, label: '주별' },
+                    { key: 'monthly' as CaptchaPeriod, label: '월별' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => {
+                        setStatsPeriod(tab.key);
+                        setStatsStartDate('');
+                        setStatsEndDate('');
+                        void loadStats(tab.key, '', '');
+                      }}
+                      className={`px-3.5 py-1.5 text-xs font-medium transition ${
+                        statsPeriod === tab.key
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 날짜 범위 */}
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    value={statsStartDate}
+                    onChange={(e) => setStatsStartDate(e.target.value)}
+                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600"
+                  />
+                  <span className="text-xs text-slate-400">~</span>
+                  <input
+                    type="date"
+                    value={statsEndDate}
+                    onChange={(e) => setStatsEndDate(e.target.value)}
+                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600"
+                  />
+                  <button
+                    onClick={() => {
+                      if (statsStartDate && statsEndDate) {
+                        void loadStats(
+                          statsPeriod,
+                          statsStartDate,
+                          statsEndDate,
+                        );
+                      }
+                    }}
+                    disabled={!statsStartDate || !statsEndDate || statsLoading}
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition disabled:opacity-40"
+                  >
+                    조회
+                  </button>
+                </div>
+
+                {/* 빠른 선택 */}
+                <div className="flex gap-1">
+                  {[
+                    { label: '오늘', days: 0 },
+                    { label: '7일', days: 6 },
+                    { label: '30일', days: 29 },
+                    { label: '90일', days: 89 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      onClick={() => {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setDate(end.getDate() - preset.days);
+                        const fmt = (d: Date) => d.toISOString().slice(0, 10);
+                        const s = fmt(start);
+                        const e = fmt(end);
+                        setStatsStartDate(s);
+                        setStatsEndDate(e);
+                        void loadStats(statsPeriod, s, e);
+                      }}
+                      className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-500 hover:bg-slate-50 transition"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-slate-400">
-              pass / challenge / block 비율, 시간대별 요청 수, 봇 탐지율
-            </p>
+
+            {/* 기간 요약 카드 */}
+            <div className="grid grid-cols-4 gap-3 mb-6">
+              <div className="rounded-xl bg-slate-50 px-4 py-3">
+                <p className="text-xs text-slate-500">전체</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">
+                  {stats?.summary.total.toLocaleString() ?? '-'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-emerald-50 px-4 py-3">
+                <p className="text-xs text-emerald-600">Pass</p>
+                <p className="text-2xl font-bold text-emerald-700 mt-1">
+                  {stats?.summary.pass_count.toLocaleString() ?? '-'}
+                </p>
+                <p className="text-xs text-emerald-500 mt-0.5">
+                  {stats ? `${stats.summary.pass_rate}%` : '-'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-amber-50 px-4 py-3">
+                <p className="text-xs text-amber-600">Challenge</p>
+                <p className="text-2xl font-bold text-amber-700 mt-1">
+                  {stats?.summary.challenge_count.toLocaleString() ?? '-'}
+                </p>
+                <p className="text-xs text-amber-500 mt-0.5">
+                  {stats ? `${stats.summary.challenge_rate}%` : '-'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-rose-50 px-4 py-3">
+                <p className="text-xs text-rose-600">Block</p>
+                <p className="text-2xl font-bold text-rose-700 mt-1">
+                  {stats?.summary.block_count.toLocaleString() ?? '-'}
+                </p>
+                <p className="text-xs text-rose-500 mt-0.5">
+                  {stats ? `${stats.summary.block_rate}%` : '-'}
+                </p>
+              </div>
+            </div>
+
+            {/* 챌린지 상세 카드 */}
+            {stats?.challenge_detail && stats.challenge_detail.total > 0 && (
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+                  <p className="text-xs text-violet-600">챌린지 통과율</p>
+                  <p className="text-2xl font-bold text-violet-700 mt-1">
+                    {stats.challenge_detail.pass_rate}%
+                  </p>
+                  <p className="text-xs text-violet-500 mt-0.5">
+                    {stats.challenge_detail.pass_count}/
+                    {stats.challenge_detail.total}건 통과
+                  </p>
+                </div>
+                <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+                  <p className="text-xs text-violet-600">평균 풀이 시간</p>
+                  <p className="text-2xl font-bold text-violet-700 mt-1">
+                    {stats.challenge_detail.avg_solve_time_ms > 0
+                      ? `${(stats.challenge_detail.avg_solve_time_ms / 1000).toFixed(1)}초`
+                      : '-'}
+                  </p>
+                  <p className="text-xs text-violet-500 mt-0.5">
+                    챌린지 통과 기준
+                  </p>
+                </div>
+                <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+                  <p className="text-xs text-violet-600">미완료</p>
+                  <p className="text-2xl font-bold text-violet-700 mt-1">
+                    {stats.challenge_detail.pending_count}건
+                  </p>
+                  <p className="text-xs text-violet-500 mt-0.5">
+                    이미지 풀이 중 이탈
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 차트 2열: 점수 분포 + 추이 */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              {/* 점수 분포 히스토그램 */}
+              <div>
+                <h3 className="text-xs font-semibold text-slate-600 mb-3">
+                  점수 분포
+                </h3>
+                {(() => {
+                  const BAR_MAX_H = 120; // 최대 바 높이 (px)
+                  const buckets = stats?.score_distribution ?? [];
+                  const maxCount = Math.max(...buckets.map((b) => b.count), 1);
+                  return (
+                    <div
+                      className="flex items-end gap-1.5"
+                      style={{ height: `${BAR_MAX_H + 40}px` }}
+                    >
+                      {buckets.map((bucket, i) => {
+                        const barH = Math.max(
+                          (bucket.count / maxCount) * BAR_MAX_H,
+                          2,
+                        );
+                        const barColor =
+                          i < 3
+                            ? 'bg-rose-400'
+                            : i < 7
+                              ? 'bg-amber-400'
+                              : 'bg-emerald-400';
+                        return (
+                          <div
+                            key={bucket.range}
+                            className="flex-1 flex flex-col items-center justify-end"
+                            style={{ height: '100%' }}
+                          >
+                            <span className="text-[10px] text-slate-500 font-medium mb-1">
+                              {bucket.count || ''}
+                            </span>
+                            <div
+                              className={`w-full rounded-t-sm ${barColor} transition-all duration-300`}
+                              style={{ height: `${barH}px` }}
+                            />
+                            <span className="text-[10px] text-slate-400 mt-1">
+                              {bucket.range.split('-')[0]}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+                <div className="flex justify-between mt-1">
+                  <span className="text-[10px] text-rose-400 font-medium">
+                    Block
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-medium">
+                    Challenge
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-medium">
+                    Pass
+                  </span>
+                </div>
+              </div>
+
+              {/* 추이 (CSS 바 차트) */}
+              <div>
+                <h3 className="text-xs font-semibold text-slate-600 mb-3">
+                  {statsPeriod === 'daily'
+                    ? '일별'
+                    : statsPeriod === 'weekly'
+                      ? '주별'
+                      : '월별'}{' '}
+                  추이
+                </h3>
+                <div className="space-y-2">
+                  {(stats?.trend ?? []).map((day) => {
+                    const dayTotal = day.pass + day.challenge + day.block;
+                    const maxTotal = Math.max(
+                      ...(stats?.trend ?? []).map(
+                        (d) => d.pass + d.challenge + d.block,
+                      ),
+                      1,
+                    );
+                    return (
+                      <div key={day.date} className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 w-20 shrink-0 text-right font-mono">
+                          {day.display}
+                        </span>
+                        <div className="flex-1 flex h-5 rounded overflow-hidden bg-slate-100">
+                          {dayTotal > 0 && (
+                            <>
+                              <div
+                                className="bg-emerald-400 transition-all"
+                                style={{
+                                  width: `${(day.pass / maxTotal) * 100}%`,
+                                }}
+                                title={`Pass: ${day.pass}`}
+                              />
+                              <div
+                                className="bg-amber-400 transition-all"
+                                style={{
+                                  width: `${(day.challenge / maxTotal) * 100}%`,
+                                }}
+                                title={`Challenge: ${day.challenge}`}
+                              />
+                              <div
+                                className="bg-rose-400 transition-all"
+                                style={{
+                                  width: `${(day.block / maxTotal) * 100}%`,
+                                }}
+                                title={`Block: ${day.block}`}
+                              />
+                            </>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-400 w-8 shrink-0">
+                          {dayTotal}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {(!stats?.trend || stats.trend.length === 0) && (
+                    <p className="text-xs text-slate-400 text-center py-4">
+                      데이터가 없습니다
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-4 mt-3">
+                  <span className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400" />
+                    Pass
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-amber-400" />
+                    Challenge
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-rose-400" />
+                    Block
+                  </span>
+                </div>
+              </div>
+            </div>
           </section>
 
-          {/* ── 향후 확장 영역: 세션 로그 ── */}
-          <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 shadow-sm opacity-60">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400 text-sm">
-                📋
-              </span>
-              <h2 className="text-sm font-semibold text-slate-400">
-                세션 로그 / 이미지 (예정)
-              </h2>
+          {/* ── 캡챠 세션 로그 ── */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100 text-cyan-600 text-sm font-bold">
+                  📋
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    세션 로그
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    전체 {sessionsData?.total.toLocaleString() ?? 0}건
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* 상태 필터 */}
+                <select
+                  value={sessionFilter}
+                  onChange={(e) => {
+                    setSessionFilter(e.target.value);
+                    setSessionPage(1);
+                    void loadSessions(1, e.target.value);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
+                >
+                  <option value="">전체</option>
+                  <option value="pass">Pass</option>
+                  <option value="challenge">Challenge</option>
+                  <option value="block">Block</option>
+                </select>
+                <button
+                  onClick={() => void loadSessions(sessionPage, sessionFilter)}
+                  disabled={sessionsLoading}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-50"
+                >
+                  {sessionsLoading ? '조회 중...' : '새로고침'}
+                </button>
+              </div>
             </div>
-            <p className="text-xs text-slate-400">
-              캡챠 세션 목록, MinIO 이미지 미리보기, 수동 라벨링
-            </p>
+
+            {/* 세션 테이블 */}
+            {!sessionsData || sessionsData.sessions.length === 0 ? (
+              <div className="rounded-xl border border-slate-100 bg-slate-50 px-5 py-8 text-center">
+                <p className="text-sm text-slate-400">
+                  세션 데이터가 없습니다.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                          Session ID
+                        </th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                          시간
+                        </th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">
+                          IP
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500">
+                          Final
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500">
+                          Rule
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500">
+                          KNN
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500">
+                          LSTM
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500">
+                          결과
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessionsData.sessions.map(
+                        (session: CaptchaSessionEntry) => (
+                          <tr
+                            key={session.id}
+                            className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"
+                          >
+                            <td className="px-3 py-2.5 font-mono text-xs text-slate-700">
+                              {session.id.slice(0, 8)}...
+                            </td>
+                            <td className="px-3 py-2.5 text-xs text-slate-500">
+                              {session.created_at
+                                ? new Date(
+                                    session.created_at,
+                                  ).toLocaleTimeString('ko-KR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                  })
+                                : '-'}
+                            </td>
+                            <td className="px-3 py-2.5 font-mono text-xs text-slate-600">
+                              {session.client_ip}
+                            </td>
+                            <td className="px-3 py-2.5 text-center text-xs font-semibold text-slate-900">
+                              {session.final_score?.toFixed(4) ?? '-'}
+                            </td>
+                            <td className="px-3 py-2.5 text-center text-xs text-slate-500">
+                              {session.behavior_score?.toFixed(4) ?? '-'}
+                            </td>
+                            <td className="px-3 py-2.5 text-center text-xs text-slate-500">
+                              {session.vector_score?.toFixed(4) ?? '-'}
+                            </td>
+                            <td className="px-3 py-2.5 text-center text-xs text-slate-500">
+                              {session.lstm_score?.toFixed(4) ?? '-'}
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              <span
+                                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                  session.status === 'pass'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : session.status === 'challenge'
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-rose-100 text-rose-700'
+                                }`}
+                              >
+                                {session.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 페이지네이션 */}
+                {sessionsData.total_pages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-xs text-slate-400">
+                      {sessionsData.total}건 중{' '}
+                      {(sessionsData.page - 1) * sessionsData.size + 1}~
+                      {Math.min(
+                        sessionsData.page * sessionsData.size,
+                        sessionsData.total,
+                      )}
+                      건
+                    </p>
+                    <div className="flex gap-1">
+                      <button
+                        disabled={sessionPage <= 1}
+                        onClick={() => {
+                          const p = sessionPage - 1;
+                          setSessionPage(p);
+                          void loadSessions(p, sessionFilter);
+                        }}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                      >
+                        이전
+                      </button>
+                      <span className="px-3 py-1 text-xs text-slate-500">
+                        {sessionsData.page} / {sessionsData.total_pages}
+                      </span>
+                      <button
+                        disabled={sessionPage >= sessionsData.total_pages}
+                        onClick={() => {
+                          const p = sessionPage + 1;
+                          setSessionPage(p);
+                          void loadSessions(p, sessionFilter);
+                        }}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </section>
         </div>
       </div>
