@@ -47,7 +47,7 @@ const allMenuItems: MenuItem[] = [
   {
     path: '/admin/payments',
     label: '결제 내역',
-    visibleIf: (permissions) => Boolean(permissions?.canApproveSettlements),
+    visibleIf: (permissions) => Boolean(permissions?.canManagePayments),
   },
   {
     path: '/admin/logs',

@@ -273,7 +273,7 @@ export default function AdminPayments() {
                     <th className="px-4 py-3">역할</th>
                     <th className="px-4 py-3">결제 방법</th>
                     <th className="px-4 py-3">청구월</th>
-                    <th className="px-4 py-3 text-right">원가</th>
+                    <th className="px-4 py-3 text-right">1인 기준</th>
                     <th className="px-4 py-3 text-right">실결제</th>
                     <th className="px-4 py-3">할인</th>
                     <th className="px-4 py-3 text-right">수수료</th>

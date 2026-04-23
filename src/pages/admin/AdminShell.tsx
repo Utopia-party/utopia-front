@@ -70,7 +70,7 @@ export default function AdminShell() {
       return permissions?.canApproveSettlements ?? false;
     }
     if (path.startsWith('/admin/payments')) {
-      return permissions?.canApproveSettlements ?? false;
+      return permissions?.canManagePayments ?? false;
     }
     if (path.startsWith('/admin/logs')) {
       return permissions?.canViewLogs ?? false;
@@ -80,6 +80,9 @@ export default function AdminShell() {
     }
     if (path.startsWith('/admin/captcha')) {
       return permissions?.canManageCaptcha ?? false;
+    }
+    if (path.startsWith('/admin/handocr')) {
+      return permissions?.canManageHandOcr ?? false;
     }
     return true;
   }, [location.pathname, permissions]);
