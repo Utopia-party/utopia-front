@@ -45,6 +45,7 @@ import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminPayments from './pages/admin/AdminPayments';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 import AdminModeration from './pages/admin/AdminModeration';
+import AdminModerationConfig from './pages/admin/AdminModerationConfig';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
 
 const router = createBrowserRouter([
@@ -212,6 +213,10 @@ const router = createBrowserRouter([
       {
         path: 'moderation',
         Component: AdminModeration,
+      },
+      {
+        path: 'moderation/config',  
+        Component: AdminModerationConfig,
       },
       {
         path: 'captcha',
