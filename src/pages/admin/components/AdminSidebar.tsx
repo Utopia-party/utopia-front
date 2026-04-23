@@ -35,6 +35,11 @@ const allMenuItems: MenuItem[] = [
     visibleIf: (permissions) => Boolean(permissions?.canManageParties),
   },
   {
+    path: '/admin/quick-match',
+    label: '빠른매칭 관리',
+    visibleIf: (permissions) => Boolean(permissions?.canManageParties),
+  },
+  {
     path: '/admin/reports',
     label: '신고관리',
     visibleIf: (permissions) => Boolean(permissions?.canManageReports),
