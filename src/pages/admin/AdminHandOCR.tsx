@@ -151,11 +151,6 @@ const matchesActiveTab = (record: AdminHandOcrRecord, tab: string) => {
   return true;
 };
 
-const openImageWindow = (url?: string | null) => {
-  if (!url) return;
-  window.open(url, '_blank', 'noopener,noreferrer');
-};
-
 const renderBBoxSummary = (bbox: unknown) => {
   if (!isObject(bbox)) return '-';
 
@@ -458,21 +453,6 @@ export default function AdminHandOCR() {
     }
   };
 
-  const handleOpenImage = async (
-    key?: string | null,
-    existingUrl?: string | null,
-  ) => {
-    if (existingUrl) {
-      openImageWindow(existingUrl);
-      return;
-    }
-
-    const nextUrl = await loadImageUrlByKey(key);
-    if (nextUrl) {
-      openImageWindow(nextUrl);
-    }
-  };
-
   const handleToggleDetail = (record: AdminHandOcrRecord) => {
     const key = getRecordKey(record);
 
@@ -704,10 +684,6 @@ export default function AdminHandOCR() {
                   </span>{' '}
                   : textMatch = false
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <span className="font-semibold text-slate-800">차단 IP</span>{' '}
-                  : captcha:block:{'{ip}'}
-                </div>
               </div>
             </div>
           </section>
@@ -816,8 +792,7 @@ export default function AdminHandOCR() {
           {isGuideOpen && (
             <section className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm text-slate-600 shadow-sm">
               성공/실패, 포즈 불일치, 문자열 불일치, OCR 저신뢰 상태를 한
-              화면에서 비교합니다. 이미지 미리보기는 presigned URL 또는 공개
-              URL을 내려주는 관리자 API가 연결되어야 정상 표시됩니다.
+              화면에서 비교합니다.
             </section>
           )}
 
@@ -872,31 +847,6 @@ export default function AdminHandOCR() {
                     const key = getRecordKey(record);
                     const statusLabel = getRecordStatus(record);
                     const isExpanded = expandedRecordId === key;
-                    const inspection = (record.inspection ??
-                      null) as InspectionRecord | null;
-                    const elapsedMs = getElapsedMs(inspection);
-
-                    const imageUrl =
-                      imageUrlMap[record.imageKey ?? ''] ??
-                      record.imageUrl ??
-                      null;
-
-                    const textCropUrl =
-                      imageUrlMap[record.textCropKey ?? ''] ??
-                      record.textCropUrl ??
-                      null;
-
-                    const isOriginalImageLoading = record.imageKey
-                      ? Boolean(imageLoadingMap[record.imageKey])
-                      : false;
-
-                    const isTextCropLoading = record.textCropKey
-                      ? Boolean(imageLoadingMap[record.textCropKey])
-                      : false;
-
-                    const bbox =
-                      record.textRegionBbox ??
-                      getNestedValue(inspection, ['ocr', 'best_bbox']);
 
                     return (
                       <Fragment key={key}>
@@ -951,315 +901,292 @@ export default function AdminHandOCR() {
                             {record.aiErrorCode ?? '-'}
                           </td>
                           <td className="px-4 py-3.5 text-sm">
-                            <div className="flex flex-wrap gap-1.5">
-                              <button
-                                type="button"
-                                className={`rounded-md border px-3 py-1 text-xs font-medium transition ${
-                                  isExpanded
-                                    ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                                }`}
-                                onClick={() => handleToggleDetail(record)}
-                              >
-                                {isExpanded ? '닫기' : '상세'}
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled={
-                                  isOriginalImageLoading || !record.imageKey
-                                }
-                                onClick={() =>
-                                  void handleOpenImage(
-                                    record.imageKey,
-                                    imageUrl,
-                                  )
-                                }
-                              >
-                                {isOriginalImageLoading
-                                  ? '불러오는 중...'
-                                  : '원본'}
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled={
-                                  isTextCropLoading || !record.textCropKey
-                                }
-                                onClick={() =>
-                                  void handleOpenImage(
-                                    record.textCropKey,
-                                    textCropUrl,
-                                  )
-                                }
-                              >
-                                {isTextCropLoading ? '불러오는 중...' : 'Crop'}
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              className={`rounded-md border px-3 py-1 text-xs font-medium transition ${
+                                isExpanded
+                                  ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                              }`}
+                              onClick={() => handleToggleDetail(record)}
+                            >
+                              {isExpanded ? '닫기' : '상세'}
+                            </button>
                           </td>
                         </tr>
 
-                        {isExpanded && (
-                          <tr className="border-b border-gray-100 bg-slate-50/70">
-                            <td colSpan={9} className="px-4 py-4">
-                              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(320px,1fr)]">
-                                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div>
+                        {isExpanded &&
+                          (() => {
+                            const inspection = (record.inspection ??
+                              null) as InspectionRecord | null;
+                            const elapsedMs = getElapsedMs(inspection);
+
+                            const imageUrl =
+                              imageUrlMap[record.imageKey ?? ''] ??
+                              record.imageUrl ??
+                              null;
+
+                            const textCropUrl =
+                              imageUrlMap[record.textCropKey ?? ''] ??
+                              record.textCropUrl ??
+                              null;
+
+                            const isOriginalImageLoading = record.imageKey
+                              ? Boolean(imageLoadingMap[record.imageKey])
+                              : false;
+
+                            const isTextCropLoading = record.textCropKey
+                              ? Boolean(imageLoadingMap[record.textCropKey])
+                              : false;
+
+                            const bbox =
+                              record.textRegionBbox ??
+                              getNestedValue(inspection, ['ocr', 'best_bbox']);
+
+                            const ocrCandidates = Array.isArray(
+                              record.ocrTextCandidates,
+                            )
+                              ? record.ocrTextCandidates
+                              : [];
+
+                            return (
+                              <tr className="border-b border-gray-100 bg-slate-50/70">
+                                <td colSpan={9} className="px-4 py-4">
+                                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(320px,1fr)]">
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                          <h3 className="text-base font-semibold text-slate-900">
+                                            검증 상세
+                                          </h3>
+                                          <p className="mt-1 text-sm text-slate-500">
+                                            기대값, 인식값, 매칭 결과, 에러
+                                            메시지를 확인합니다.
+                                          </p>
+                                        </div>
+                                        <span
+                                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[statusLabel]}`}
+                                        >
+                                          {statusLabel}
+                                        </span>
+                                      </div>
+
+                                      <div className="mt-5 grid gap-3 md:grid-cols-2">
+                                        {[
+                                          ['Session ID', record.sessionId],
+                                          [
+                                            'Request ID',
+                                            record.requestId ?? '-',
+                                          ],
+                                          ['기대 포즈', record.expectedPose],
+                                          [
+                                            '인식 포즈',
+                                            record.detectedPose ?? '-',
+                                          ],
+                                          ['기대 문자열', record.expectedText],
+                                          [
+                                            '인식 문자열',
+                                            record.detectedText ?? '-',
+                                          ],
+                                          [
+                                            '포즈 매칭',
+                                            record.poseMatch === null
+                                              ? '-'
+                                              : record.poseMatch
+                                                ? '일치'
+                                                : '불일치',
+                                          ],
+                                          [
+                                            '문자 매칭',
+                                            record.textMatch === null
+                                              ? '-'
+                                              : record.textMatch
+                                                ? '일치'
+                                                : '불일치',
+                                          ],
+                                          [
+                                            'AI 에러코드',
+                                            record.aiErrorCode ?? '-',
+                                          ],
+                                          [
+                                            'AI 메시지',
+                                            record.aiMessage ?? '-',
+                                          ],
+                                          ['가이드', record.aiGuide ?? '-'],
+                                          [
+                                            '총 처리시간',
+                                            elapsedMs !== null
+                                              ? `${elapsedMs} ms`
+                                              : '-',
+                                          ],
+                                        ].map(([label, value]) => (
+                                          <div
+                                            key={label}
+                                            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                          >
+                                            <div className="text-xs font-medium text-slate-400">
+                                              {label}
+                                            </div>
+                                            <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                              {value}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                       <h3 className="text-base font-semibold text-slate-900">
-                                        검증 상세
+                                        이미지 샘플
                                       </h3>
                                       <p className="mt-1 text-sm text-slate-500">
-                                        기대값, 인식값, 매칭 결과, 에러 메시지를
+                                        상세를 열면 원본 이미지와 OCR crop을
+                                        바로 확인합니다.
+                                      </p>
+
+                                      <div className="mt-5 grid gap-4">
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                          <div className="mb-2 text-xs font-semibold text-slate-500">
+                                            원본 이미지
+                                          </div>
+                                          {isOriginalImageLoading ? (
+                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
+                                              이미지 URL을 불러오는 중입니다.
+                                            </div>
+                                          ) : imageUrl ? (
+                                            <img
+                                              src={imageUrl}
+                                              alt="HandOCR original"
+                                              className="h-52 w-full rounded-xl border border-slate-200 object-contain bg-white"
+                                            />
+                                          ) : (
+                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
+                                              이미지 URL이 없습니다.
+                                            </div>
+                                          )}
+                                          <div className="mt-2 break-all text-xs text-slate-400">
+                                            {record.imageKey ?? '-'}
+                                          </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                          <div className="mb-2 text-xs font-semibold text-slate-500">
+                                            Text Crop
+                                          </div>
+                                          {isTextCropLoading ? (
+                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
+                                              Crop 이미지 URL을 불러오는
+                                              중입니다.
+                                            </div>
+                                          ) : textCropUrl ? (
+                                            <img
+                                              src={textCropUrl}
+                                              alt="HandOCR crop"
+                                              className="h-52 w-full rounded-xl border border-slate-200 object-contain bg-white"
+                                            />
+                                          ) : (
+                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
+                                              Crop 이미지 URL이 없습니다.
+                                            </div>
+                                          )}
+                                          <div className="mt-2 break-all text-xs text-slate-400">
+                                            {record.textCropKey ?? '-'}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                      <h3 className="text-base font-semibold text-slate-900">
+                                        OCR / Inspection
+                                      </h3>
+                                      <p className="mt-1 text-sm text-slate-500">
+                                        OCR 후보, bbox, inspection 원문을
                                         확인합니다.
                                       </p>
-                                    </div>
-                                    <span
-                                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[statusLabel]}`}
-                                    >
-                                      {statusLabel}
-                                    </span>
-                                  </div>
 
-                                  <div className="mt-5 grid gap-3 md:grid-cols-2">
-                                    {[
-                                      ['Session ID', record.sessionId],
-                                      ['Request ID', record.requestId ?? '-'],
-                                      ['기대 포즈', record.expectedPose],
-                                      ['인식 포즈', record.detectedPose ?? '-'],
-                                      ['기대 문자열', record.expectedText],
-                                      [
-                                        '인식 문자열',
-                                        record.detectedText ?? '-',
-                                      ],
-                                      [
-                                        '포즈 매칭',
-                                        record.poseMatch === null
-                                          ? '-'
-                                          : record.poseMatch
-                                            ? '일치'
-                                            : '불일치',
-                                      ],
-                                      [
-                                        '문자 매칭',
-                                        record.textMatch === null
-                                          ? '-'
-                                          : record.textMatch
-                                            ? '일치'
-                                            : '불일치',
-                                      ],
-                                      [
-                                        'AI 에러코드',
-                                        record.aiErrorCode ?? '-',
-                                      ],
-                                      ['AI 메시지', record.aiMessage ?? '-'],
-                                      ['가이드', record.aiGuide ?? '-'],
-                                      [
-                                        '총 처리시간',
-                                        elapsedMs !== null
-                                          ? `${elapsedMs} ms`
-                                          : '-',
-                                      ],
-                                    ].map(([label, value]) => (
-                                      <div
-                                        key={label}
-                                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                      >
-                                        <div className="text-xs font-medium text-slate-400">
-                                          {label}
+                                      <div className="mt-5 space-y-4">
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                          <div className="text-xs font-medium text-slate-400">
+                                            OCR confidence
+                                          </div>
+                                          <div className="mt-1 text-sm font-semibold text-slate-800">
+                                            {formatConfidence(
+                                              record.ocrConfidence,
+                                            )}
+                                          </div>
                                         </div>
-                                        <div className="mt-1 break-all text-sm font-semibold text-slate-800">
-                                          {value}
+
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                          <div className="text-xs font-medium text-slate-400">
+                                            Pose confidence
+                                          </div>
+                                          <div className="mt-1 text-sm font-semibold text-slate-800">
+                                            {formatConfidence(
+                                              record.poseConfidence,
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
 
-                                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                  <h3 className="text-base font-semibold text-slate-900">
-                                    이미지 샘플
-                                  </h3>
-                                  <p className="mt-1 text-sm text-slate-500">
-                                    원본 이미지와 OCR text crop 이미지를
-                                    확인합니다.
-                                  </p>
-
-                                  <div className="mt-5 grid gap-4">
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                                      <div className="mb-2 flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-slate-500">
-                                          원본 이미지
-                                        </span>
-                                        {(imageUrl || record.imageKey) && (
-                                          <button
-                                            type="button"
-                                            className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white"
-                                            onClick={() =>
-                                              void handleOpenImage(
-                                                record.imageKey,
-                                                imageUrl,
-                                              )
-                                            }
-                                          >
-                                            새 창 열기
-                                          </button>
-                                        )}
-                                      </div>
-                                      {isOriginalImageLoading ? (
-                                        <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                          이미지 URL을 불러오는 중입니다.
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                          <div className="text-xs font-medium text-slate-400">
+                                            OCR best attempt
+                                          </div>
+                                          <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                            {record.ocrBestAttempt ?? '-'}
+                                          </div>
                                         </div>
-                                      ) : imageUrl ? (
-                                        <img
-                                          src={imageUrl}
-                                          alt="HandOCR original"
-                                          className="h-52 w-full rounded-xl border border-slate-200 object-contain bg-white"
-                                        />
-                                      ) : (
-                                        <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                          이미지 URL이 없습니다.
+
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                          <div className="text-xs font-medium text-slate-400">
+                                            Text region bbox
+                                          </div>
+                                          <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                            {renderBBoxSummary(bbox)}
+                                          </div>
                                         </div>
-                                      )}
-                                      <div className="mt-2 break-all text-xs text-slate-400">
-                                        {record.imageKey ?? '-'}
-                                      </div>
-                                    </div>
 
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                                      <div className="mb-2 flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-slate-500">
-                                          Text Crop
-                                        </span>
-                                        {(textCropUrl ||
-                                          record.textCropKey) && (
-                                          <button
-                                            type="button"
-                                            className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white"
-                                            onClick={() =>
-                                              void handleOpenImage(
-                                                record.textCropKey,
-                                                textCropUrl,
-                                              )
-                                            }
-                                          >
-                                            새 창 열기
-                                          </button>
-                                        )}
-                                      </div>
-                                      {isTextCropLoading ? (
-                                        <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                          Crop 이미지 URL을 불러오는 중입니다.
-                                        </div>
-                                      ) : textCropUrl ? (
-                                        <img
-                                          src={textCropUrl}
-                                          alt="HandOCR crop"
-                                          className="h-52 w-full rounded-xl border border-slate-200 object-contain bg-white"
-                                        />
-                                      ) : (
-                                        <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                          Crop 이미지 URL이 없습니다.
-                                        </div>
-                                      )}
-                                      <div className="mt-2 break-all text-xs text-slate-400">
-                                        {record.textCropKey ?? '-'}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                  <h3 className="text-base font-semibold text-slate-900">
-                                    OCR / Inspection
-                                  </h3>
-                                  <p className="mt-1 text-sm text-slate-500">
-                                    OCR 후보, bbox, inspection 원문을
-                                    확인합니다.
-                                  </p>
-
-                                  <div className="mt-5 space-y-4">
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                      <div className="text-xs font-medium text-slate-400">
-                                        OCR confidence
-                                      </div>
-                                      <div className="mt-1 text-sm font-semibold text-slate-800">
-                                        {formatConfidence(record.ocrConfidence)}
-                                      </div>
-                                    </div>
-
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                      <div className="text-xs font-medium text-slate-400">
-                                        Pose confidence
-                                      </div>
-                                      <div className="mt-1 text-sm font-semibold text-slate-800">
-                                        {formatConfidence(
-                                          record.poseConfidence,
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                      <div className="text-xs font-medium text-slate-400">
-                                        OCR best attempt
-                                      </div>
-                                      <div className="mt-1 break-all text-sm font-semibold text-slate-800">
-                                        {record.ocrBestAttempt ?? '-'}
-                                      </div>
-                                    </div>
-
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                      <div className="text-xs font-medium text-slate-400">
-                                        Text region bbox
-                                      </div>
-                                      <div className="mt-1 break-all text-sm font-semibold text-slate-800">
-                                        {renderBBoxSummary(bbox)}
-                                      </div>
-                                    </div>
-
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                      <div className="text-xs font-medium text-slate-400">
-                                        OCR 후보
-                                      </div>
-                                      <div className="mt-2 flex flex-wrap gap-2">
-                                        {(record.ocrTextCandidates ?? [])
-                                          .length > 0 ? (
-                                          record.ocrTextCandidates.map(
-                                            (candidate) => (
-                                              <span
-                                                key={candidate}
-                                                className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
-                                              >
-                                                {candidate}
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                          <div className="text-xs font-medium text-slate-400">
+                                            OCR 후보
+                                          </div>
+                                          <div className="mt-2 flex flex-wrap gap-2">
+                                            {ocrCandidates.length > 0 ? (
+                                              ocrCandidates.map((candidate) => (
+                                                <span
+                                                  key={candidate}
+                                                  className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
+                                                >
+                                                  {candidate}
+                                                </span>
+                                              ))
+                                            ) : (
+                                              <span className="text-sm text-slate-400">
+                                                OCR 후보가 없습니다.
                                               </span>
-                                            ),
-                                          )
-                                        ) : (
-                                          <span className="text-sm text-slate-400">
-                                            OCR 후보가 없습니다.
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
+                                            )}
+                                          </div>
+                                        </div>
 
-                                    <div className="rounded-xl border border-slate-200 bg-slate-950 p-0 shadow-inner">
-                                      <div className="border-b border-slate-800 px-4 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                                        inspection
+                                        <div className="rounded-xl border border-slate-200 bg-slate-950 p-0 shadow-inner">
+                                          <div className="border-b border-slate-800 px-4 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                                            inspection
+                                          </div>
+                                          <pre className="max-h-[360px] overflow-auto px-4 py-4 text-xs leading-6 text-slate-200">
+                                            {JSON.stringify(
+                                              record.inspection ?? {},
+                                              null,
+                                              2,
+                                            )}
+                                          </pre>
+                                        </div>
                                       </div>
-                                      <pre className="max-h-[360px] overflow-auto px-4 py-4 text-xs leading-6 text-slate-200">
-                                        {JSON.stringify(
-                                          record.inspection ?? {},
-                                          null,
-                                          2,
-                                        )}
-                                      </pre>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+                                </td>
+                              </tr>
+                            );
+                          })()}
                       </Fragment>
                     );
                   })}
@@ -1279,9 +1206,8 @@ export default function AdminHandOCR() {
             </div>
 
             <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
-              상세 패널은 저장된 OCR 후보, bbox, inspection 원문 기준으로
-              표시합니다. 이미지 미리보기는 관리자 API에서 presigned URL 또는
-              공개 URL을 내려줄 때 활성화됩니다.
+              상세 패널을 열면 OCR 후보, bbox, inspection, 원본/crop 이미지를
+              함께 표시합니다.
             </div>
           </section>
 
