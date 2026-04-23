@@ -68,22 +68,33 @@ type ChatBan = {
 };
 
 // ── 큰 바 차트 ──
-function BarChart({ data }: { data: ModerationTrendPoint[] }) {
-  const max = Math.max(...data.map((d) => d.total), 1);
+function BarChart({ data, period }: { data: ModerationTrendPoint[]; period: 'daily' | 'weekly' | 'monthly' }) {
+  // 기간별 최소 슬롯 수 — 바 너비 일정하게 유지
+  const minSlots = period === 'daily' ? 7 : period === 'weekly' ? 8 : 6;
+
+  // 빈 슬롯 채우기
+  const filled = [...data];
+  while (filled.length < minSlots) {
+    filled.unshift({ date: '', blocked: 0, warned: 0, false_positive: 0, total: 0 });
+  }
+
+  const max = Math.max(...filled.map((d) => d.total), 1);
   const chartHeight = 180;
 
   return (
     <div className="w-full">
       <div className="flex items-end gap-2" style={{ height: chartHeight }}>
-        {data.map((d, i) => (
+        {filled.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded-lg px-2 py-1.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none shadow-lg">
-              <div className="font-semibold mb-0.5">{d.date}</div>
-              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" />차단 {d.blocked}</div>
-              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-400 inline-block" />경고 {d.warned}</div>
-              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-slate-300 inline-block" />오탐 {d.false_positive}</div>
-              <div className="border-t border-slate-700 mt-1 pt-1 font-semibold">합계 {d.total}</div>
-            </div>
+            {d.date && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded-lg px-2 py-1.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none shadow-lg">
+                <div className="font-semibold mb-0.5">{d.date}</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" />차단 {d.blocked}</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-400 inline-block" />경고 {d.warned}</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-slate-300 inline-block" />오탐 {d.false_positive}</div>
+                <div className="border-t border-slate-700 mt-1 pt-1 font-semibold">합계 {d.total}</div>
+              </div>
+            )}
             <div
               className="w-full flex flex-col justify-end rounded overflow-hidden cursor-pointer transition-all hover:brightness-95"
               style={{ height: chartHeight - 20 }}
@@ -98,7 +109,7 @@ function BarChart({ data }: { data: ModerationTrendPoint[] }) {
                 <div className="w-full bg-slate-100 rounded" style={{ height: 4 }} />
               )}
             </div>
-            <span className="text-[10px] text-slate-400 truncate w-full text-center mt-1">{d.date.slice(5)}</span>
+            <span className="text-[10px] text-slate-400 truncate w-full text-center mt-1">{d.date ? d.date.slice(5) : ''}</span>
           </div>
         ))}
       </div>
@@ -683,7 +694,7 @@ export default function AdminModeration() {
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <p className="text-sm font-bold text-gray-800">탐지 추이</p>
+                    <p className="text-sm font-bold text-gray-800">탐지 현황</p>
                     <p className="text-xs text-gray-400 mt-0.5">기간별 차단/경고/오탐지 현황</p>
                   </div>
                   <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
@@ -698,7 +709,7 @@ export default function AdminModeration() {
                 {trendLoading ? (
                   <div className="h-48 flex items-center justify-center text-sm text-gray-400">불러오는 중...</div>
                 ) : trend.length > 0 ? (
-                  <BarChart data={trend} />
+                  <BarChart data={trend} period={trendPeriod} />
                 ) : (
                   <div className="h-48 flex items-center justify-center text-sm text-gray-400">데이터가 없습니다.</div>
                 )}
