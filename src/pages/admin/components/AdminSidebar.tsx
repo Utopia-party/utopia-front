@@ -28,6 +28,12 @@ const allMenuItems = [
     permission: 'canManageParties',
   },
   {
+    path: '/admin/handocr',
+    label: 'HandOCR CAPTCHA',
+    end: false,
+    permission: 'canManageHandOcr',
+  },
+  {
     path: '/admin/reports',
     label: '신고관리',
     end: false,
