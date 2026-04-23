@@ -80,7 +80,7 @@ const menuSections: MenuSection[] = [
       {
         path: '/admin/payments',
         label: '결제 내역',
-        permission: 'canApproveSettlements',
+        permission: 'canManagePayments',
       },
     ],
   },
