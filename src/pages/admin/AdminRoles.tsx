@@ -98,6 +98,7 @@ const DEFAULT_ADMIN_PERMISSIONS: AdminRoleUpdatePayload = {
   canManageCaptcha: true,
   canApproveSettlements: true,
   canViewLogs: true,
+  canManageHandOcr: true,
   canManageAdmins: false,
 };
 
@@ -115,6 +116,7 @@ const permissionsFromRole = (
   canManageCaptcha: role.canManageCaptcha,
   canApproveSettlements: role.canApproveSettlements,
   canViewLogs: role.canViewLogs,
+  canManageHandOcr: role.canManageHandOcr,
   canManageAdmins: role.canManageAdmins,
 });
 
