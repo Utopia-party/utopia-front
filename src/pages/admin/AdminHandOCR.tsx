@@ -200,7 +200,6 @@ export default function AdminHandOCR() {
   const [healthError, setHealthError] = useState('');
 
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const [imageUrlMap, setImageUrlMap] = useState<Record<string, string | null>>(
     {},
@@ -568,13 +567,6 @@ export default function AdminHandOCR() {
             >
               {healthLabel}
             </span>
-            <button
-              type="button"
-              className="rounded-md border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-              onClick={() => setIsGuideOpen((prev) => !prev)}
-            >
-              {isGuideOpen ? '가이드 닫기' : '운영 가이드'}
-            </button>
           </div>
         }
       />
@@ -788,13 +780,6 @@ export default function AdminHandOCR() {
               </div>
             </div>
           </section>
-
-          {isGuideOpen && (
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm text-slate-600 shadow-sm">
-              성공/실패, 포즈 불일치, 문자열 불일치, OCR 저신뢰 상태를 한
-              화면에서 비교합니다.
-            </section>
-          )}
 
           {loading && (
             <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
