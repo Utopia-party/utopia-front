@@ -634,7 +634,7 @@ function PaymentModal({
 export default function Chat() {
   const { partyId } = useParams<{ partyId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -747,6 +747,13 @@ export default function Chat() {
             setMessages((prev) =>
               prev.filter((m) => m.content !== msg.content),
             );
+            return;
+          }
+
+          if (msg.type === 'force_logout') {
+            wsRef.current?.close();
+            wsRef.current = null;
+            logout().then(() => navigate('/login?reason=banned'));
             return;
           }
 

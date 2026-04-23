@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
 import { useAuthStore } from '../../stores/authStore';
 import { login } from '../../apis/auth';
@@ -15,6 +15,8 @@ type LoginForm = LoginPayload & {
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isBanned = searchParams.get('reason') === 'banned';
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,6 +166,12 @@ export default function Login() {
 
   return (
     <div className="mx-auto mt-10 mb-12 max-w-xl rounded-xl border-2 border-gray-200 bg-white p-10 shadow-lg">
+      {isBanned && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="font-bold">계정이 정지되었습니다.</p>
+          <p className="mt-1 text-red-600">욕설 등 위반 행위로 인해 자동 로그아웃 처리되었습니다. 문의가 필요하면 고객센터로 연락해주세요.</p>
+        </div>
+      )}
       <div className="flex justify-between mb-4">
         <h1 className=" text-2xl font-bold text-gray-800">로그인</h1>
         <div className="grid grid-cols-2 gap-3">
