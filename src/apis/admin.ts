@@ -77,6 +77,7 @@ export type AdminRoleRecord = {
   canApproveSettlements: boolean;
   canViewLogs: boolean;
   canManageAdmins: boolean;
+  canManageHandOcr: boolean;
   lastUpdated: string;
   updatedBy: string;
 };
