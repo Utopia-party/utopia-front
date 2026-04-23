@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import Pagination from './components/Pagination';
@@ -55,48 +55,6 @@ type FinetuneStats = {
   ready: boolean;
   min_required: number;
 };
-
-// ── 미니 바 차트 ──
-function MiniBarChart({ data, height = 80 }: { data: ModerationTrendPoint[]; height?: number }) {
-  const max = Math.max(...data.map((d) => d.total), 1);
-  return (
-    <div className="flex items-end gap-1" style={{ height }}>
-      {data.map((d, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
-          <div
-            className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
-          >
-            <div>차단 {d.blocked}</div>
-            <div>경고 {d.warned}</div>
-            <div>오탐 {d.false_positive}</div>
-          </div>
-          <div className="w-full flex flex-col justify-end rounded-sm overflow-hidden" style={{ height: height - 16 }}>
-            {d.total > 0 && (
-              <>
-                <div
-                  className="w-full bg-red-400 transition-all"
-                  style={{ height: `${(d.blocked / max) * (height - 16)}px` }}
-                />
-                <div
-                  className="w-full bg-amber-400 transition-all"
-                  style={{ height: `${(d.warned / max) * (height - 16)}px` }}
-                />
-                <div
-                  className="w-full bg-slate-300 transition-all"
-                  style={{ height: `${(d.false_positive / max) * (height - 16)}px` }}
-                />
-              </>
-            )}
-            {d.total === 0 && <div className="w-full bg-slate-100" style={{ height: height - 16 }} />}
-          </div>
-          <span className="text-[9px] text-slate-400 truncate w-full text-center">
-            {d.date.slice(5)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ── 큰 바 차트 ──
 function BarChart({ data }: { data: ModerationTrendPoint[] }) {
