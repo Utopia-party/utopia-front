@@ -20,12 +20,6 @@ const CARD_ACCENTS: Record<string, string> = {
   settlements: 'from-[#8fe3ff] via-[#61c2ff] to-[#4f8bff]',
 };
 
-const METRIC_TREND_STYLES: Record<string, string> = {
-  up: 'text-emerald-700 bg-emerald-50',
-  down: 'text-rose-700 bg-rose-50',
-  flat: 'text-slate-700 bg-slate-100',
-};
-
 function formatWon(value: number) {
   return `₩ ${value.toLocaleString()}`;
 }
@@ -52,27 +46,45 @@ function buildLinePath(values: number[], width: number, height: number) {
     .join(' ');
 }
 
+function shouldShowAxisLabel(index: number, total: number) {
+  if (total <= 10) {
+    return true;
+  }
+  const interval = Math.ceil(total / 8);
+  if (index === 0 || index === total - 1) {
+    return true;
+  }
+  if (total - 1 - index < interval) {
+    return false;
+  }
+  return index % interval === 0;
+}
+
 function DashboardLineChart({
   title,
   eyebrow,
   description,
+  periodLabel,
   unit,
   points,
 }: {
   title: string;
   eyebrow: string;
   description: string;
+  periodLabel: string;
   unit: string;
   points: DashboardSeriesPoint[];
 }) {
-  const width = 760;
-  const height = 240;
+  const width = 720;
+  const height = 220;
+  const paddingLeft = 104;
+  const paddingRight = 48;
+  const topPadding = 16;
+  const labelY = topPadding + height + 28;
+  const viewWidth = width + paddingLeft + paddingRight;
   const currentValues = points.map((point) => point.current);
-  const comparisonValues = points.map((point) => point.comparison);
-  const combined = [...currentValues, ...comparisonValues];
-  const max = Math.max(...combined, 1);
+  const max = Math.max(...currentValues, 1);
   const pathCurrent = buildLinePath(currentValues, width, height);
-  const pathComparison = buildLinePath(comparisonValues, width, height);
 
   return (
     <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(36,54,94,0.08)]">
@@ -89,86 +101,83 @@ function DashboardLineChart({
         <div className="grid gap-2 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
-            현재 기간
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-            비교 기간
+            {periodLabel}
           </div>
         </div>
       </div>
 
       <div className="mt-8 overflow-x-auto">
         <svg
-          viewBox={`0 0 ${width} ${height + 24}`}
+          viewBox={`0 0 ${viewWidth} ${labelY + 16}`}
           className="h-[280px] min-w-[760px] w-full"
           role="img"
           aria-label="기간별 승인 매출 비교 그래프"
         >
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-            const y = height - height * ratio;
-            const labelValue = Math.round(max * ratio);
-            return (
-              <g key={ratio}>
-                <line
-                  x1="0"
-                  y1={y}
-                  x2={width}
-                  y2={y}
-                  stroke="#e2e8f0"
-                  strokeDasharray="4 6"
-                />
-                <text
-                  x="0"
-                  y={Math.max(y - 8, 12)}
-                  fill="#94a3b8"
-                  fontSize="11"
-                >
-                  {formatPointValue(labelValue, unit)}
-                </text>
-              </g>
-            );
-          })}
+          <g transform={`translate(${paddingLeft}, ${topPadding})`}>
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+              const y = height - height * ratio;
+              const labelValue = Math.round(max * ratio);
+              return (
+                <g key={ratio}>
+                  <line
+                    x1="0"
+                    y1={y}
+                    x2={width}
+                    y2={y}
+                    stroke="#e2e8f0"
+                    strokeDasharray="4 6"
+                  />
+                  <text
+                    x="-96"
+                    y={Math.max(y - 8, 12)}
+                    fill="#94a3b8"
+                    fontSize="11"
+                    textAnchor="start"
+                  >
+                    {formatPointValue(labelValue, unit)}
+                  </text>
+                </g>
+              );
+            })}
 
-          <path
-            d={pathComparison}
-            fill="none"
-            stroke="#6ee7b7"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-          <path
-            d={pathCurrent}
-            fill="none"
-            stroke="#38bdf8"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
+            <path
+              d={pathCurrent}
+              fill="none"
+              stroke="#38bdf8"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
 
-          {points.map((point, index) => {
-            const step =
-              points.length > 1 ? width / (points.length - 1) : width;
-            const x = index * step;
-            const currentY =
-              height - (point.current / Math.max(max, 1)) * height;
-            const comparisonY =
-              height - (point.comparison / Math.max(max, 1)) * height;
-            return (
-              <g key={point.label}>
-                <circle cx={x} cy={comparisonY} r="5" fill="#6ee7b7" />
-                <circle cx={x} cy={currentY} r="5" fill="#38bdf8" />
-                <text
-                  x={x}
-                  y={height + 18}
-                  textAnchor="middle"
-                  fill="#94a3b8"
-                  fontSize="11"
-                >
-                  {point.label}
-                </text>
-              </g>
-            );
-          })}
+            {points.map((point, index) => {
+              const step =
+                points.length > 1 ? width / (points.length - 1) : width;
+              const x = index * step;
+              const currentY =
+                height - (point.current / Math.max(max, 1)) * height;
+              const textAnchor =
+                index === 0
+                  ? 'start'
+                  : index === points.length - 1
+                    ? 'end'
+                    : 'middle';
+              return (
+                <g key={point.label}>
+                  <circle cx={x} cy={currentY} r="5" fill="#38bdf8" />
+                  {shouldShowAxisLabel(index, points.length) && (
+                    <text
+                      x={x}
+                      y={labelY - topPadding}
+                      textAnchor={textAnchor}
+                      fill="#94a3b8"
+                      fontSize="11"
+                    >
+                      {point.label}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
         </svg>
       </div>
     </div>
@@ -177,7 +186,6 @@ function DashboardLineChart({
 
 function MetricCard({ metric }: { metric: DashboardMetric }) {
   const accent = CARD_ACCENTS[metric.id] ?? CARD_ACCENTS.members;
-  const trendStyle = METRIC_TREND_STYLES[metric.trend ?? 'flat'];
 
   return (
     <article className="relative overflow-hidden rounded-[28px] border border-white/50 bg-white p-6 shadow-[0_20px_50px_rgba(39,64,120,0.10)]">
@@ -193,13 +201,6 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
             {metric.value}
           </p>
         </div>
-        {metric.delta && (
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${trendStyle}`}
-          >
-            {metric.delta}
-          </span>
-        )}
       </div>
       <p className="mt-4 text-sm leading-6 text-slate-500">{metric.helper}</p>
     </article>
@@ -273,26 +274,13 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [compareMode, setCompareMode] =
-    useState<CompareMode>('previous_period');
+  const compareMode: CompareMode = 'previous_period';
   const [activeChartId, setActiveChartId] = useState<ChartTabId>('sales');
   const [breakdownDashboard, setBreakdownDashboard] =
     useState<AdminDashboardData | null>(null);
   const [breakdownLoading, setBreakdownLoading] = useState(true);
   const [breakdownError, setBreakdownError] = useState('');
-  const [breakdownDateFrom, setBreakdownDateFrom] = useState('');
-  const [breakdownDateTo, setBreakdownDateTo] = useState('');
-  const [breakdownCompareMode, setBreakdownCompareMode] =
-    useState<CompareMode>('previous_period');
-
-  const handleBreakdownCompareModeChange = (nextMode: CompareMode) => {
-    setBreakdownCompareMode(nextMode);
-    void loadBreakdownDashboard({
-      date_from: breakdownDateFrom || undefined,
-      date_to: breakdownDateTo || undefined,
-      compare_mode: nextMode,
-    });
-  };
+  const breakdownCompareMode: CompareMode = 'previous_period';
 
   const loadDashboard = async (
     nextParams?: Partial<{
@@ -312,7 +300,7 @@ export default function AdminDashboard() {
       setDashboard(nextDashboard);
       setDateFrom(nextDashboard.rangeStart);
       setDateTo(nextDashboard.rangeEnd);
-      setCompareMode(nextDashboard.compareMode as CompareMode);
+      setBreakdownDashboard(nextDashboard);
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
@@ -335,14 +323,11 @@ export default function AdminDashboard() {
       setBreakdownLoading(true);
       setBreakdownError('');
       const nextDashboard = await fetchAdminDashboard({
-        date_from: nextParams?.date_from ?? (breakdownDateFrom || undefined),
-        date_to: nextParams?.date_to ?? (breakdownDateTo || undefined),
+        date_from: nextParams?.date_from ?? (dateFrom || undefined),
+        date_to: nextParams?.date_to ?? (dateTo || undefined),
         compare_mode: nextParams?.compare_mode ?? breakdownCompareMode,
       });
       setBreakdownDashboard(nextDashboard);
-      setBreakdownDateFrom(nextDashboard.rangeStart);
-      setBreakdownDateTo(nextDashboard.rangeEnd);
-      setBreakdownCompareMode(nextDashboard.compareMode as CompareMode);
     } catch (err) {
       setBreakdownError(getAdminErrorMessage(err));
     } finally {
@@ -354,6 +339,14 @@ export default function AdminDashboard() {
     void loadBreakdownDashboard();
   }, []);
 
+  const handleAnalyzeDashboard = async () => {
+    await loadDashboard({
+      date_from: dateFrom,
+      date_to: dateTo,
+      compare_mode: compareMode,
+    });
+  };
+
   const activeChart = useMemo<DashboardChart | null>(() => {
     const chart =
       dashboard?.chartGroups.find((item) => item.id === activeChartId) ??
@@ -363,24 +356,13 @@ export default function AdminDashboard() {
   const chartSnapshot = useMemo(() => {
     const points = activeChart?.points ?? [];
     const totalCurrent = points.reduce((sum, point) => sum + point.current, 0);
-    const totalComparison = points.reduce(
-      (sum, point) => sum + point.comparison,
-      0,
-    );
     const peak = Math.max(...points.map((point) => point.current), 0);
-    return { totalCurrent, totalComparison, peak };
+    return { totalCurrent, peak };
   }, [activeChart]);
   const breakdownRows = useMemo(() => {
     const rows = breakdownDashboard?.salesStats ?? [];
     return rows.filter((row) => row.label !== '비교 기준');
   }, [breakdownDashboard]);
-  const comparisonRangeValue = useMemo(() => {
-    return (
-      breakdownDashboard?.salesStats.find((row) => row.label === '비교 기준')
-        ?.value ?? '-'
-    );
-  }, [breakdownDashboard]);
-
   return (
     <>
       <AdminHeader
@@ -403,8 +385,8 @@ export default function AdminDashboard() {
                   통계 대시보드
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-slate-500">
-                  날짜 범위를 선택하면 해당 기간 실적과 직전 기간 또는 전년 동기
-                  대비 변화량을 바로 확인할 수 있습니다.
+                  날짜 범위를 선택하면 해당 기간 실적과 변화 흐름을 바로 확인할
+                  수 있습니다.
                 </p>
                 <div className="mt-8 rounded-3xl bg-slate-50 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -412,9 +394,6 @@ export default function AdminDashboard() {
                   </p>
                   <p className="mt-2 text-lg font-semibold text-slate-900">
                     {dashboard?.periodLabel ?? '-'}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-500">
-                    {dashboard?.comparisonLabel ?? '비교 기준을 계산 중입니다.'}
                   </p>
                 </div>
               </div>
@@ -445,27 +424,10 @@ export default function AdminDashboard() {
                           className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
                         />
                       </label>
-                      <label className="flex min-w-[180px] flex-col gap-1">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Compare
-                        </span>
-                        <select
-                          value={compareMode}
-                          onChange={(event) =>
-                            setCompareMode(event.target.value as CompareMode)
-                          }
-                          className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
-                        >
-                          <option value="previous_period">
-                            직전 동일 기간
-                          </option>
-                          <option value="year_over_year">전년 동기</option>
-                        </select>
-                      </label>
                       <div className="ml-auto flex gap-2">
                         <button
                           type="button"
-                          onClick={() => void loadDashboard()}
+                          onClick={() => void handleAnalyzeDashboard()}
                           className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                         >
                           분석 보기
@@ -527,29 +489,23 @@ export default function AdminDashboard() {
                 eyebrow="Trend View"
                 description={
                   activeChart?.description ??
-                  '현재 기간과 비교 기간을 같은 축으로 정렬해 보여줍니다.'
+                  '선택한 기간의 지표 흐름을 날짜별로 보여줍니다.'
                 }
+                periodLabel={dashboard?.periodLabel ?? '-'}
                 unit={activeChart?.unit ?? 'count'}
                 points={activeChart?.points ?? []}
               />
 
               <div className="grid gap-4 md:grid-cols-3">
                 <CompactStatCard
-                  label="현재 기간 총합"
+                  label="조회 기간 총합"
                   value={formatPointValue(
                     chartSnapshot.totalCurrent,
                     activeChart?.unit ?? 'count',
                   )}
                 />
                 <CompactStatCard
-                  label="비교 기간 총합"
-                  value={formatPointValue(
-                    chartSnapshot.totalComparison,
-                    activeChart?.unit ?? 'count',
-                  )}
-                />
-                <CompactStatCard
-                  label="현재 기간 최고 피크"
+                  label="조회 기간 최고 피크"
                   value={formatPointValue(
                     chartSnapshot.peak,
                     activeChart?.unit ?? 'count',
@@ -566,7 +522,7 @@ export default function AdminDashboard() {
                 </p>
                 <div className="mt-5 space-y-4">
                   <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                    <div className="text-sm text-slate-500">현재 기간 합계</div>
+                    <div className="text-sm text-slate-500">조회 기간 합계</div>
                     <div className="mt-2 text-3xl font-semibold text-slate-900">
                       {formatPointValue(
                         chartSnapshot.totalCurrent,
@@ -574,18 +530,9 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   </div>
-                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                    <div className="text-sm text-slate-500">비교 기간 합계</div>
-                    <div className="mt-2 text-2xl font-semibold text-slate-900">
-                      {formatPointValue(
-                        chartSnapshot.totalComparison,
-                        activeChart?.unit ?? 'count',
-                      )}
-                    </div>
-                  </div>
                   <div className="rounded-2xl bg-gradient-to-r from-[#61e4c5] to-[#54a8ff] px-4 py-4 text-white">
                     <div className="text-sm text-white/80">
-                      현재 기간 최고 피크
+                      조회 기간 최고 피크
                     </div>
                     <div className="mt-2 text-2xl font-semibold">
                       {formatPointValue(
@@ -612,76 +559,9 @@ export default function AdminDashboard() {
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                     매출/정산 세부 내역
                   </p>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Start Date
-                  </span>
-                  <input
-                    type="date"
-                    value={breakdownDateFrom}
-                    onChange={(event) =>
-                      setBreakdownDateFrom(event.target.value)
-                    }
-                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    End Date
-                  </span>
-                  <input
-                    type="date"
-                    value={breakdownDateTo}
-                    onChange={(event) => setBreakdownDateTo(event.target.value)}
-                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
-                  />
-                </label>
-                <div className="flex items-end gap-2">
-                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleBreakdownCompareModeChange('previous_period')
-                      }
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        breakdownCompareMode === 'previous_period'
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      직전 기간
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleBreakdownCompareModeChange('year_over_year')
-                      }
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        breakdownCompareMode === 'year_over_year'
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      전년 동기
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void loadBreakdownDashboard({
-                        date_from: breakdownDateFrom,
-                        date_to: breakdownDateTo,
-                        compare_mode: breakdownCompareMode,
-                      })
-                    }
-                    className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    조회
-                  </button>
+                  <p className="mt-2 text-sm text-slate-500">
+                    상단에서 선택한 날짜 기준으로 함께 갱신됩니다.
+                  </p>
                 </div>
               </div>
 
@@ -697,19 +577,6 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                 ))}
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  비교 기준
-                </div>
-                <div className="mt-2 text-sm font-medium text-slate-900">
-                  {comparisonRangeValue}
-                </div>
-                <div className="mt-1 text-sm text-slate-500">
-                  현재는 {breakdownDashboard?.comparisonLabel ?? '-'} 기준으로
-                  비교 중입니다.
-                </div>
               </div>
 
               {breakdownLoading && (

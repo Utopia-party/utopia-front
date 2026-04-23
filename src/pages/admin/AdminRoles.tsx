@@ -48,10 +48,22 @@ const PERMISSION_OPTIONS: Array<{
     tone: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   },
   {
+    key: 'canManageHandOcr',
+    label: 'HandOCR CAPTCHA',
+    description: 'HandOCR 검증 이력과 차단 세션 관리',
+    tone: 'bg-cyan-50 text-cyan-600 border-cyan-100',
+  },
+  {
     key: 'canApproveSettlements',
     label: '정산 승인',
     description: '정산 검토와 승인/거절 처리',
     tone: 'bg-green-50 text-green-600 border-green-100',
+  },
+  {
+    key: 'canManagePayments',
+    label: '수익내역 관리',
+    description: '결제 내역과 플랫폼 수수료 수익 조회',
+    tone: 'bg-orange-50 text-orange-600 border-orange-100',
   },
   {
     key: 'canViewLogs',
@@ -75,7 +87,9 @@ const FILTER_TABS = [
   '신고 관리',
   '채팅 모더레이션 관리',
   '캡챠 관리',
+  'HandOCR CAPTCHA',
   '정산 승인',
+  '수익내역 관리',
   '로그 조회',
 ];
 
@@ -86,7 +100,9 @@ const FILTER_KEY_MAP: Record<string, PermissionKey> = {
   '신고 관리': 'canManageReports',
   '채팅 모더레이션 관리': 'canManageChatModeration',
   '캡챠 관리': 'canManageCaptcha',
+  'HandOCR CAPTCHA': 'canManageHandOcr',
   '정산 승인': 'canApproveSettlements',
+  '수익내역 관리': 'canManagePayments',
   '로그 조회': 'canViewLogs',
 };
 
@@ -97,6 +113,7 @@ const DEFAULT_ADMIN_PERMISSIONS: AdminRoleUpdatePayload = {
   canManageChatModeration: true,
   canManageCaptcha: true,
   canApproveSettlements: true,
+  canManagePayments: true,
   canViewLogs: true,
   canManageHandOcr: true,
   canManageAdmins: false,
@@ -115,6 +132,7 @@ const permissionsFromRole = (
   canManageChatModeration: role.canManageChatModeration,
   canManageCaptcha: role.canManageCaptcha,
   canApproveSettlements: role.canApproveSettlements,
+  canManagePayments: role.canManagePayments,
   canViewLogs: role.canViewLogs,
   canManageHandOcr: role.canManageHandOcr,
   canManageAdmins: role.canManageAdmins,

@@ -75,6 +75,7 @@ export type AdminRoleRecord = {
   canManageChatModeration: boolean;
   canManageCaptcha: boolean;
   canApproveSettlements: boolean;
+  canManagePayments: boolean;
   canViewLogs: boolean;
   canManageAdmins: boolean;
   canManageHandOcr: boolean;
