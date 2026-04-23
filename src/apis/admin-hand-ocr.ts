@@ -83,8 +83,8 @@ export interface AdminHandOcrRecordApiResponse {
 
   ocr_best_attempt?: string | null;
   ocrBestAttempt?: string | null;
-  ocr_text_candidates?: string[] | null;
-  ocrTextCandidates?: string[] | null;
+  ocr_text_candidates?: unknown;
+  ocrTextCandidates?: unknown;
 
   text_region_bbox?: Record<string, unknown> | null;
   textRegionBbox?: Record<string, unknown> | null;
@@ -190,7 +190,7 @@ export interface AdminHandOcrActionResponse {
 const HAND_OCR_ADMIN_ENDPOINTS = {
   records: '/api/admin/handocr/records',
   health: '/api/admin/handocr/health',
-  imageUrl: '/api/admin/handocr/image-url',
+  image: '/api/admin/handocr/image',
   blocks: '/api/admin/handocr/blocks',
   sessions: '/api/admin/handocr/sessions',
 } as const;
@@ -220,6 +220,41 @@ const toRecordObject = (value: unknown): Record<string, unknown> | null => {
     return value as Record<string, unknown>;
   }
   return null;
+};
+
+const toStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter((item) => item.length > 0);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => String(item).trim())
+          .filter((item) => item.length > 0);
+      }
+    } catch {
+      // ignore
+    }
+
+    if (trimmed.includes(',')) {
+      return trimmed
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    }
+
+    return [trimmed];
+  }
+
+  return [];
 };
 
 const buildQueryString = (
@@ -324,7 +359,9 @@ const normalizeAdminHandOcrRecord = (
   ocrBestAttempt: toNullableString(
     item.ocrBestAttempt ?? item.ocr_best_attempt,
   ),
-  ocrTextCandidates: item.ocrTextCandidates ?? item.ocr_text_candidates ?? [],
+  ocrTextCandidates: toStringArray(
+    item.ocrTextCandidates ?? item.ocr_text_candidates,
+  ),
 
   textRegionBbox: toRecordObject(item.textRegionBbox ?? item.text_region_bbox),
   inspection: toRecordObject(item.inspection),
@@ -391,11 +428,8 @@ export async function fetchAdminHandOcrHealth(): Promise<AdminHandOcrHealth> {
 export async function fetchAdminHandOcrImageUrl(
   key: string,
 ): Promise<string | null> {
-  const queryString = buildQueryString({ key });
-  const data = await fetchJson<{ url?: string }>(
-    `${HAND_OCR_ADMIN_ENDPOINTS.imageUrl}${queryString}`,
-  );
-  return typeof data?.url === 'string' ? data.url : null;
+  if (!key) return null;
+  return `${HAND_OCR_ADMIN_ENDPOINTS.image}?key=${encodeURIComponent(key)}`;
 }
 
 export async function fetchAdminHandOcrBlocks(
@@ -430,7 +464,7 @@ export async function resetAdminHandOcrIpFailures(
   ip: string,
 ): Promise<AdminHandOcrActionResponse> {
   return fetchJson<AdminHandOcrActionResponse>(
-    `${HAND_OCR_ADMIN_ENDPOINTS.blocks.replace('/blocks', '')}/ips/${encodeURIComponent(ip)}/reset-failures`,
+    `/api/admin/handocr/ips/${encodeURIComponent(ip)}/reset-failures`,
     {
       method: 'POST',
     },
