@@ -67,11 +67,6 @@ const menuSections: MenuSection[] = [
         label: '채팅 모더레이션',
         permission: 'canManageChatModeration',
       },
-      {
-        path: '/admin/moderation/config',
-        label: '모더레이션 설정',
-        permission: 'canManageChatModeration',
-      },
     ],
   },
   {
