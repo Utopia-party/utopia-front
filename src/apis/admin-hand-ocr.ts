@@ -9,6 +9,8 @@ export interface AdminHandOcrQuery {
   error_code?: string;
   pose?: string;
   status_tab?: string;
+  page?: number;
+  page_size?: number;
 }
 
 export interface AdminHandOcrHealthApiResponse {
@@ -127,6 +129,48 @@ export interface AdminHandOcrRecord {
   textRegionBbox: Record<string, unknown> | null;
 
   inspection: Record<string, unknown> | null;
+}
+
+export interface AdminHandOcrSummaryApiResponse {
+  total?: number;
+  success?: number;
+  failed?: number;
+  low_confidence?: number;
+  lowConfidence?: number;
+  pose_mismatch?: number;
+  poseMismatch?: number;
+  gpu_error?: number;
+  gpuError?: number;
+}
+
+export interface AdminHandOcrSummary {
+  total: number;
+  success: number;
+  failed: number;
+  lowConfidence: number;
+  poseMismatch: number;
+  gpuError: number;
+}
+
+export interface AdminHandOcrRecordsPageApiResponse {
+  items?: AdminHandOcrRecordApiResponse[];
+  total_count?: number;
+  totalCount?: number;
+  page?: number;
+  page_size?: number;
+  pageSize?: number;
+  total_pages?: number;
+  totalPages?: number;
+  summary?: AdminHandOcrSummaryApiResponse;
+}
+
+export interface AdminHandOcrRecordsPage {
+  items: AdminHandOcrRecord[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  summary: AdminHandOcrSummary;
 }
 
 export interface AdminHandOcrBlockQuery {
@@ -367,6 +411,32 @@ const normalizeAdminHandOcrRecord = (
   inspection: toRecordObject(item.inspection),
 });
 
+const normalizeAdminHandOcrSummary = (
+  item?: AdminHandOcrSummaryApiResponse,
+): AdminHandOcrSummary => ({
+  total: toNullableNumber(item?.total) ?? 0,
+  success: toNullableNumber(item?.success) ?? 0,
+  failed: toNullableNumber(item?.failed) ?? 0,
+  lowConfidence:
+    toNullableNumber(item?.lowConfidence ?? item?.low_confidence) ?? 0,
+  poseMismatch:
+    toNullableNumber(item?.poseMismatch ?? item?.pose_mismatch) ?? 0,
+  gpuError: toNullableNumber(item?.gpuError ?? item?.gpu_error) ?? 0,
+});
+
+const normalizeAdminHandOcrRecordsPage = (
+  item: AdminHandOcrRecordsPageApiResponse,
+): AdminHandOcrRecordsPage => ({
+  items: Array.isArray(item.items)
+    ? item.items.map(normalizeAdminHandOcrRecord)
+    : [],
+  totalCount: toNullableNumber(item.totalCount ?? item.total_count) ?? 0,
+  page: toNullableNumber(item.page) ?? 1,
+  pageSize: toNullableNumber(item.pageSize ?? item.page_size) ?? 20,
+  totalPages: toNullableNumber(item.totalPages ?? item.total_pages) ?? 1,
+  summary: normalizeAdminHandOcrSummary(item.summary),
+});
+
 const normalizeAdminHandOcrBlock = (
   item: AdminHandOcrBlockApiResponse,
 ): AdminHandOcrBlockItem => ({
@@ -394,7 +464,7 @@ const normalizeAdminHandOcrSession = (
 
 export async function fetchAdminHandOcrRecords(
   params?: AdminHandOcrQuery,
-): Promise<AdminHandOcrRecord[]> {
+): Promise<AdminHandOcrRecordsPage> {
   const queryString = buildQueryString({
     keyword: params?.keyword,
     date_from: params?.date_from,
@@ -402,20 +472,15 @@ export async function fetchAdminHandOcrRecords(
     error_code: params?.error_code,
     pose: params?.pose,
     status_tab: params?.status_tab,
+    page: params?.page,
+    page_size: params?.page_size,
   });
 
-  const data = await fetchJson<
-    | { items?: AdminHandOcrRecordApiResponse[] }
-    | AdminHandOcrRecordApiResponse[]
-  >(`${HAND_OCR_ADMIN_ENDPOINTS.records}${queryString}`);
+  const data = await fetchJson<AdminHandOcrRecordsPageApiResponse>(
+    `${HAND_OCR_ADMIN_ENDPOINTS.records}${queryString}`,
+  );
 
-  const rawItems: AdminHandOcrRecordApiResponse[] = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.items)
-      ? data.items
-      : [];
-
-  return rawItems.map(normalizeAdminHandOcrRecord);
+  return normalizeAdminHandOcrRecordsPage(data);
 }
 
 export async function fetchAdminHandOcrHealth(): Promise<AdminHandOcrHealth> {

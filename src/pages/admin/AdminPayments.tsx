@@ -132,10 +132,10 @@ export default function AdminPayments() {
     });
   };
 
-  // 현재 페이지 승인 건 합계 (요약은 전체 기준이면 좋지만 현재 페이지 데이터로 표시)
+  // 승인된 결제만 매출/수수료 합계에 반영한다.
   const approvedItems = payments.filter((p) => p.status === 'approved');
-  const pageAmount = approvedItems.reduce((s, p) => s + (p.amount ?? 0), 0);
-  const pageCommission = approvedItems.reduce(
+  const revenueTotal = approvedItems.reduce((s, p) => s + (p.amount ?? 0), 0);
+  const commissionTotal = approvedItems.reduce(
     (s, p) => s + (p.commissionAmount ?? 0),
     0,
   );
@@ -232,19 +232,15 @@ export default function AdminPayments() {
             </p>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500">
-              현재 페이지 승인 합계
-            </p>
+            <p className="text-xs font-semibold text-gray-500">매출 합계</p>
             <p className="mt-1 text-2xl font-bold text-blue-600">
-              {fmt(pageAmount)}
+              {fmt(revenueTotal)}
             </p>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500">
-              현재 페이지 수수료
-            </p>
+            <p className="text-xs font-semibold text-gray-500">수수료 합계</p>
             <p className="mt-1 text-2xl font-bold text-orange-500">
-              {fmt(pageCommission)}
+              {fmt(commissionTotal)}
             </p>
           </div>
         </div>

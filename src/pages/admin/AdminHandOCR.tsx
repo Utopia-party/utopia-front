@@ -14,6 +14,7 @@ import {
   type AdminHandOcrHealth,
   type AdminHandOcrRecord,
   type AdminHandOcrSessionItem,
+  type AdminHandOcrSummary,
 } from '../../apis/admin-hand-ocr';
 
 const FILTER_TABS = [
@@ -24,6 +25,8 @@ const FILTER_TABS = [
   '포즈불일치',
   '문자불일치',
 ];
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 const STATUS_STYLE: Record<string, string> = {
   성공: 'bg-emerald-50 text-emerald-600 border-emerald-100',
@@ -42,6 +45,15 @@ type SummaryCard = {
 
 type HealthTone = 'ok' | 'warn' | 'error';
 type InspectionRecord = Record<string, unknown>;
+
+const EMPTY_SUMMARY: AdminHandOcrSummary = {
+  total: 0,
+  success: 0,
+  failed: 0,
+  lowConfidence: 0,
+  poseMismatch: 0,
+  gpuError: 0,
+};
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -141,16 +153,6 @@ const getRecordStatus = (record: AdminHandOcrRecord) => {
   return '실패';
 };
 
-const matchesActiveTab = (record: AdminHandOcrRecord, tab: string) => {
-  if (tab === '전체') return true;
-  if (tab === '성공') return record.verifySuccess;
-  if (tab === '실패') return !record.verifySuccess;
-  if (tab === '저신뢰') return record.ocrLowConfidence === true;
-  if (tab === '포즈불일치') return record.poseMatch === false;
-  if (tab === '문자불일치') return record.textMatch === false;
-  return true;
-};
-
 const renderBBoxSummary = (bbox: unknown) => {
   if (!isObject(bbox)) return '-';
 
@@ -184,6 +186,18 @@ const getAdminErrorMessage = (error: unknown) => {
   return '관리자 요청 처리 중 오류가 발생했습니다.';
 };
 
+const getVisiblePages = (current: number, total: number) => {
+  const pages: number[] = [];
+  const start = Math.max(1, current - 2);
+  const end = Math.min(total, current + 2);
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page);
+  }
+
+  return pages;
+};
+
 export default function AdminHandOCR() {
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
@@ -200,7 +214,6 @@ export default function AdminHandOCR() {
   const [healthError, setHealthError] = useState('');
 
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const [imageUrlMap, setImageUrlMap] = useState<Record<string, string | null>>(
     {},
@@ -208,6 +221,12 @@ export default function AdminHandOCR() {
   const [imageLoadingMap, setImageLoadingMap] = useState<
     Record<string, boolean>
   >({});
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [summary, setSummary] = useState<AdminHandOcrSummary>(EMPTY_SUMMARY);
 
   const [blockKeyword, setBlockKeyword] = useState('');
   const [blocks, setBlocks] = useState<AdminHandOcrBlockItem[]>([]);
@@ -222,6 +241,38 @@ export default function AdminHandOCR() {
   const [sessionsError, setSessionsError] = useState('');
   const [busySessionId, setBusySessionId] = useState<string | null>(null);
 
+  const buildParams = (
+    tab = activeTab,
+    nextPage = page,
+    nextPageSize = pageSize,
+  ) => ({
+    keyword: search || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+    error_code: errorCode !== '전체' ? errorCode : undefined,
+    pose: poseFilter !== '전체' ? poseFilter : undefined,
+    status_tab: tab !== '전체' ? tab : undefined,
+    page: nextPage,
+    page_size: nextPageSize,
+  });
+
+  const loadRecords = async (
+    tab = activeTab,
+    nextPage = page,
+    nextPageSize = pageSize,
+  ) => {
+    const result = await fetchAdminHandOcrRecords(
+      buildParams(tab, nextPage, nextPageSize),
+    );
+
+    setRecords(result.items);
+    setPage(result.page);
+    setPageSize(result.pageSize);
+    setTotalCount(result.totalCount);
+    setTotalPages(result.totalPages);
+    setSummary(result.summary);
+  };
+
   useEffect(() => {
     let alive = true;
 
@@ -231,17 +282,23 @@ export default function AdminHandOCR() {
       setHealthError('');
 
       const [recordsResult, healthResult] = await Promise.allSettled([
-        fetchAdminHandOcrRecords(),
+        fetchAdminHandOcrRecords({ page: 1, page_size: pageSize }),
         fetchAdminHandOcrHealth(),
       ]);
 
       if (!alive) return;
 
       if (recordsResult.status === 'fulfilled') {
-        setRecords(recordsResult.value);
+        setRecords(recordsResult.value.items);
+        setPage(recordsResult.value.page);
+        setPageSize(recordsResult.value.pageSize);
+        setTotalCount(recordsResult.value.totalCount);
+        setTotalPages(recordsResult.value.totalPages);
+        setSummary(recordsResult.value.summary);
       } else {
         setError(getAdminErrorMessage(recordsResult.reason));
         setRecords([]);
+        setSummary(EMPTY_SUMMARY);
       }
 
       if (healthResult.status === 'fulfilled') {
@@ -354,20 +411,15 @@ export default function AdminHandOCR() {
     [records],
   );
 
-  const buildParams = (tab = activeTab) => ({
-    keyword: search || undefined,
-    date_from: dateFrom || undefined,
-    date_to: dateTo || undefined,
-    error_code: errorCode !== '전체' ? errorCode : undefined,
-    pose: poseFilter !== '전체' ? poseFilter : undefined,
-    status_tab: tab !== '전체' ? tab : undefined,
-  });
-
-  const reloadRecords = async (tab = activeTab) => {
+  const reloadRecords = async (
+    tab = activeTab,
+    nextPage = page,
+    nextPageSize = pageSize,
+  ) => {
     setLoading(true);
     setError('');
     try {
-      setRecords(await fetchAdminHandOcrRecords(buildParams(tab)));
+      await loadRecords(tab, nextPage, nextPageSize);
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
@@ -406,7 +458,19 @@ export default function AdminHandOCR() {
   };
 
   const handleSearch = async (tab = activeTab) => {
-    await reloadRecords(tab);
+    setExpandedRecordId(null);
+    await reloadRecords(tab, 1, pageSize);
+  };
+
+  const handlePageChange = async (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) return;
+    setExpandedRecordId(null);
+    await reloadRecords(activeTab, nextPage, pageSize);
+  };
+
+  const handlePageSizeChange = async (nextPageSize: number) => {
+    setExpandedRecordId(null);
+    await reloadRecords(activeTab, 1, nextPageSize);
   };
 
   const handleReset = async () => {
@@ -423,7 +487,16 @@ export default function AdminHandOCR() {
     setError('');
 
     try {
-      setRecords(await fetchAdminHandOcrRecords());
+      const result = await fetchAdminHandOcrRecords({
+        page: 1,
+        page_size: pageSize,
+      });
+      setRecords(result.items);
+      setPage(result.page);
+      setPageSize(result.pageSize);
+      setTotalCount(result.totalCount);
+      setTotalPages(result.totalPages);
+      setSummary(result.summary);
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
@@ -505,48 +578,37 @@ export default function AdminHandOCR() {
     }
   };
 
-  const filtered = useMemo(
-    () => records.filter((record) => matchesActiveTab(record, activeTab)),
-    [records, activeTab],
-  );
-
-  const summary = useMemo<SummaryCard[]>(() => {
-    const gpuErrorCount = records.filter(
-      (record) =>
-        record.aiErrorCode?.startsWith('GPU_') ||
-        record.aiErrorCode === 'HAND_LANDMARKER_FAILED' ||
-        record.aiErrorCode === 'MODEL_PREDICTION_FAILED',
-    ).length;
-
-    return [
-      { label: '전체 검증', value: `${records.length}` },
+  const summaryCards = useMemo<SummaryCard[]>(
+    () => [
+      { label: '전체 검증', value: `${summary.total}` },
       {
         label: '성공',
-        value: `${records.filter((record) => record.verifySuccess).length}`,
+        value: `${summary.success}`,
         tone: 'text-emerald-600',
       },
       {
         label: '실패',
-        value: `${records.filter((record) => !record.verifySuccess).length}`,
+        value: `${summary.failed}`,
         tone: 'text-rose-600',
       },
       {
         label: 'OCR 저신뢰',
-        value: `${records.filter((record) => record.ocrLowConfidence).length}`,
+        value: `${summary.lowConfidence}`,
         tone: 'text-amber-600',
       },
       {
         label: '포즈 불일치',
-        value: `${records.filter((record) => record.poseMatch === false).length}`,
+        value: `${summary.poseMismatch}`,
         tone: 'text-orange-600',
       },
       {
         label: 'GPU / 모델 오류',
-        value: `${gpuErrorCount}`,
+        value: `${summary.gpuError}`,
         tone: 'text-violet-600',
       },
-    ];
-  }, [records]);
+    ],
+    [summary],
+  );
 
   const healthTone = getHealthTone(health);
   const healthLabel =
@@ -555,6 +617,11 @@ export default function AdminHandOCR() {
       : healthTone === 'warn'
         ? 'GPU 경고'
         : 'GPU 오류';
+
+  const visiblePages = useMemo(
+    () => getVisiblePages(page, totalPages),
+    [page, totalPages],
+  );
 
   return (
     <>
@@ -568,13 +635,6 @@ export default function AdminHandOCR() {
             >
               {healthLabel}
             </span>
-            <button
-              type="button"
-              className="rounded-md border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-              onClick={() => setIsGuideOpen((prev) => !prev)}
-            >
-              {isGuideOpen ? '가이드 닫기' : '운영 가이드'}
-            </button>
           </div>
         }
       />
@@ -592,7 +652,7 @@ export default function AdminHandOCR() {
           </section>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {summary.map((item) => (
+            {summaryCards.map((item) => (
               <div
                 key={item.label}
                 className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
@@ -789,13 +849,6 @@ export default function AdminHandOCR() {
             </div>
           </section>
 
-          {isGuideOpen && (
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm text-slate-600 shadow-sm">
-              성공/실패, 포즈 불일치, 문자열 불일치, OCR 저신뢰 상태를 한
-              화면에서 비교합니다.
-            </section>
-          )}
-
           {loading && (
             <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
               HandOCR 검증 이력을 불러오는 중입니다.
@@ -843,7 +896,7 @@ export default function AdminHandOCR() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((record) => {
+                  {records.map((record) => {
                     const key = getRecordKey(record);
                     const statusLabel = getRecordStatus(record);
                     const isExpanded = expandedRecordId === key;
@@ -1191,7 +1244,7 @@ export default function AdminHandOCR() {
                     );
                   })}
 
-                  {filtered.length === 0 && (
+                  {records.length === 0 && (
                     <tr>
                       <td
                         colSpan={9}
@@ -1205,9 +1258,62 @@ export default function AdminHandOCR() {
               </table>
             </div>
 
-            <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
-              상세 패널을 열면 OCR 후보, bbox, inspection, 원본/crop 이미지를
-              함께 표시합니다.
+            <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between">
+              <div className="text-xs text-gray-500">
+                총 {totalCount.toLocaleString()}건 중 {page} / {totalPages}{' '}
+                페이지
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={pageSize}
+                  onChange={(event) =>
+                    void handlePageSizeChange(Number(event.target.value))
+                  }
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}개씩
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => void handlePageChange(page - 1)}
+                  disabled={page <= 1}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  이전
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {visiblePages.map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => void handlePageChange(pageNumber)}
+                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                        pageNumber === page
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void handlePageChange(page + 1)}
+                  disabled={page >= totalPages}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다음
+                </button>
+              </div>
             </div>
           </section>
 

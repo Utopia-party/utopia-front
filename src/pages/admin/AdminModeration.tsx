@@ -28,6 +28,13 @@ const STATUS_LABEL: Record<string, string> = {
   false_positive: '오탐지',
   pending: '검토 중',
 };
+const STAGE_STYLE: Record<number, string> = {
+  1: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  2: 'bg-blue-50 text-blue-700 border-blue-100',
+  3: 'bg-violet-50 text-violet-700 border-violet-100',
+};
+const EXAMPLE_LABEL_KO: Record<string, string> = { none: '정상', offensive: '경고', hate: '즉시차단' };
+
 const FILTER_TABS = ['전체', '차단', '경고', '오탐지', '검토 중'];
 const TAB_TO_STATUS: Record<string, string> = {
   차단: 'blocked',
@@ -61,24 +68,33 @@ type ChatBan = {
 };
 
 // ── 큰 바 차트 ──
-function BarChart({ data }: { data: ModerationTrendPoint[] }) {
-  const max = Math.max(...data.map((d) => d.total), 1);
+function BarChart({ data, period }: { data: ModerationTrendPoint[]; period: 'daily' | 'weekly' | 'monthly' }) {
+  // 기간별 최소 슬롯 수 — 바 너비 일정하게 유지
+  const minSlots = period === 'daily' ? 7 : period === 'weekly' ? 8 : 6;
+
+  // 빈 슬롯 채우기
+  const filled = [...data];
+  while (filled.length < minSlots) {
+    filled.unshift({ date: '', blocked: 0, warned: 0, false_positive: 0, total: 0 });
+  }
+
+  const max = Math.max(...filled.map((d) => d.total), 1);
   const chartHeight = 180;
 
   return (
     <div className="w-full">
       <div className="flex items-end gap-2" style={{ height: chartHeight }}>
-        {data.map((d, i) => (
+        {filled.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
-            <div
-              className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded-lg px-2 py-1.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none shadow-lg"
-            >
-              <div className="font-semibold mb-0.5">{d.date}</div>
-              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" />차단 {d.blocked}</div>
-              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-400 inline-block" />경고 {d.warned}</div>
-              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-slate-300 inline-block" />오탐 {d.false_positive}</div>
-              <div className="border-t border-slate-700 mt-1 pt-1 font-semibold">합계 {d.total}</div>
-            </div>
+            {d.date && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs rounded-lg px-2 py-1.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none shadow-lg">
+                <div className="font-semibold mb-0.5">{d.date}</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" />차단 {d.blocked}</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-400 inline-block" />경고 {d.warned}</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-slate-300 inline-block" />오탐 {d.false_positive}</div>
+                <div className="border-t border-slate-700 mt-1 pt-1 font-semibold">합계 {d.total}</div>
+              </div>
+            )}
             <div
               className="w-full flex flex-col justify-end rounded overflow-hidden cursor-pointer transition-all hover:brightness-95"
               style={{ height: chartHeight - 20 }}
@@ -93,9 +109,7 @@ function BarChart({ data }: { data: ModerationTrendPoint[] }) {
                 <div className="w-full bg-slate-100 rounded" style={{ height: 4 }} />
               )}
             </div>
-            <span className="text-[10px] text-slate-400 truncate w-full text-center mt-1">
-              {d.date.slice(5)}
-            </span>
+            <span className="text-[10px] text-slate-400 truncate w-full text-center mt-1">{d.date ? d.date.slice(5) : ''}</span>
           </div>
         ))}
       </div>
@@ -143,23 +157,17 @@ function DonutChart({ blocked, warned, falsePositive, pending }: {
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f1f5f9" strokeWidth={18} />
         {arcs.map((arc, i) => (
           <circle
-            key={i}
-            cx={cx} cy={cy} r={r}
-            fill="none"
-            stroke={arc.color}
-            strokeWidth={18}
+            key={i} cx={cx} cy={cy} r={r} fill="none"
+            stroke={arc.color} strokeWidth={18}
             strokeDasharray={`${arc.dash} ${arc.gap}`}
-            strokeDashoffset={arc.offset}
-            strokeLinecap="butt"
+            strokeDashoffset={arc.offset} strokeLinecap="butt"
             style={{ transition: 'stroke-dasharray 0.5s ease' }}
           />
         ))}
-        <text x={cx} y={cy - 6} textAnchor="middle" className="text-base font-bold" fill="#1e293b" fontSize={18} fontWeight={700}>
+        <text x={cx} y={cy - 6} textAnchor="middle" fill="#1e293b" fontSize={18} fontWeight={700}>
           {(blocked + warned).toLocaleString()}
         </text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fill="#94a3b8" fontSize={10}>
-          탐지
-        </text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fill="#94a3b8" fontSize={10}>탐지</text>
       </svg>
       <div className="flex flex-col gap-2">
         {segments.map((seg) => (
@@ -282,10 +290,7 @@ export default function AdminModeration() {
   };
 
   useEffect(() => {
-    if (mainTab === '통계') {
-      void loadStats();
-      void loadTrend(trendPeriod);
-    }
+    if (mainTab === '통계') { void loadStats(); void loadTrend(trendPeriod); }
   }, [mainTab]);
 
   useEffect(() => {
@@ -338,16 +343,12 @@ export default function AdminModeration() {
     setBusyId(null);
   };
 
-  // ── 로그 탭 — 유저 채팅 차단 해제 ──
   const handleUnblockUser = async (senderId: string, chatId: string) => {
     setUnblockBusyId(chatId);
     try {
       await fetch(`${API}/unblock/user/${senderId}`, { method: 'POST' });
-      // 상태를 false_positive로 변경해 로그에 반영
       await updateAdminChatModerationStatus(chatId, 'false_positive');
-      setChats((prev) =>
-        prev.map((c) => c.id === chatId ? { ...c, moderationStatus: 'false_positive' } : c),
-      );
+      setChats((prev) => prev.map((c) => c.id === chatId ? { ...c, moderationStatus: 'false_positive' } : c));
     } catch (err) {
       setLogError(getAdminErrorMessage(err));
     }
@@ -414,9 +415,7 @@ export default function AdminModeration() {
         <div className="mx-auto max-w-7xl space-y-6">
           <section>
             <h1 className="text-2xl font-bold text-gray-900">채팅 모더레이션</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              탐지 파이프라인 설정 · 통계 분석 · AI 탐지 로그 관리
-            </p>
+            <p className="mt-1 text-sm text-gray-500">탐지 파이프라인 설정 · 통계 분석 · AI 탐지 로그 관리</p>
           </section>
 
           {/* 메인 탭 */}
@@ -426,9 +425,7 @@ export default function AdminModeration() {
                 key={t}
                 onClick={() => setMainTab(t)}
                 className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-all ${
-                  mainTab === t
-                    ? 'border-violet-600 text-violet-700'
-                    : 'border-transparent text-gray-400 hover:text-gray-700'
+                  mainTab === t ? 'border-violet-600 text-violet-700' : 'border-transparent text-gray-400 hover:text-gray-700'
                 }`}
               >
                 {t}
@@ -439,16 +436,13 @@ export default function AdminModeration() {
           {/* ── 설정 탭 ── */}
           {mainTab === '설정' && (
             <div className="space-y-5">
-              {/* 설정 서브탭 */}
               <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
                 {(['파이프라인', '규칙 단어', '프롬프트', '파인튜닝'] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setConfigTab(t)}
                     className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                      configTab === t
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                      configTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
                     {t}
@@ -460,7 +454,6 @@ export default function AdminModeration() {
                 <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">불러오는 중...</div>
               ) : config && (
                 <>
-                  {/* 파이프라인 */}
                   {configTab === '파이프라인' && (
                     <div className="grid md:grid-cols-2 gap-5">
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-1">
@@ -482,8 +475,7 @@ export default function AdminModeration() {
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input
-                                type="checkbox"
-                                className="sr-only peer"
+                                type="checkbox" className="sr-only peer"
                                 checked={config[key] as boolean}
                                 onChange={(e) => setConfig((c) => c ? { ...c, [key]: e.target.checked } : c)}
                               />
@@ -525,21 +517,15 @@ export default function AdminModeration() {
                         <button
                           onClick={() => fetch(`${API}/config/reset`, { method: 'POST' }).then((r) => r.json()).then(setConfig)}
                           className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
-                        >
-                          초기화
-                        </button>
+                        >초기화</button>
                         <button
-                          onClick={saveConfig}
-                          disabled={configSaving}
+                          onClick={saveConfig} disabled={configSaving}
                           className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 disabled:opacity-50"
-                        >
-                          {configSaving ? '저장 중...' : '저장'}
-                        </button>
+                        >{configSaving ? '저장 중...' : '저장'}</button>
                       </div>
                     </div>
                   )}
 
-                  {/* 규칙 단어 */}
                   {configTab === '규칙 단어' && (
                     <div className="grid md:grid-cols-2 gap-5">
                       {(([
@@ -559,8 +545,7 @@ export default function AdminModeration() {
                           </div>
                           <div className="flex gap-2">
                             <input
-                              value={val}
-                              onChange={(e) => setVal(e.target.value)}
+                              value={val} onChange={(e) => setVal(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && addWord(type)}
                               placeholder="단어 입력 후 추가"
                               className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400"
@@ -572,7 +557,6 @@ export default function AdminModeration() {
                     </div>
                   )}
 
-                  {/* 프롬프트 */}
                   {configTab === '프롬프트' && (
                     <div className="space-y-4">
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -585,7 +569,7 @@ export default function AdminModeration() {
                               <span className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold ${
                                 ex.label === 'none' ? 'bg-emerald-50 text-emerald-700' :
                                 ex.label === 'offensive' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
-                              }`}>{ex.label}</span>
+                              }`}>{EXAMPLE_LABEL_KO[ex.label] ?? ex.label}</span>
                               <button
                                 onClick={() => setConfig((c) => c ? { ...c, ollama_prompt_examples: c.ollama_prompt_examples.filter((_, j) => j !== i) } : c)}
                                 className="text-gray-300 hover:text-gray-600 text-lg leading-none"
@@ -598,16 +582,12 @@ export default function AdminModeration() {
                             className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400" />
                           <select value={exLabel} onChange={(e) => setExLabel(e.target.value)}
                             className="border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400 bg-white">
-                            <option value="none">none</option>
-                            <option value="offensive">offensive</option>
-                            <option value="hate">hate</option>
+                            <option value="none">정상</option>
+                            <option value="offensive">경고</option>
+                            <option value="hate">즉시차단</option>
                           </select>
                           <button
-                            onClick={() => {
-                              if (!exText.trim()) return;
-                              setConfig((c) => c ? { ...c, ollama_prompt_examples: [...c.ollama_prompt_examples, { text: exText.trim(), label: exLabel }] } : c);
-                              setExText('');
-                            }}
+                            onClick={() => { if (!exText.trim()) return; setConfig((c) => c ? { ...c, ollama_prompt_examples: [...c.ollama_prompt_examples, { text: exText.trim(), label: exLabel }] } : c); setExText(''); }}
                             className="px-4 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700"
                           >추가</button>
                         </div>
@@ -621,7 +601,6 @@ export default function AdminModeration() {
                     </div>
                   )}
 
-                  {/* 파인튜닝 */}
                   {configTab === '파인튜닝' && (
                     <div className="space-y-4">
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -655,10 +634,8 @@ export default function AdminModeration() {
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                         <p className="text-sm font-bold text-gray-800 mb-1">파인튜닝 실행</p>
                         <p className="text-xs text-gray-400 mb-4">GPU 서버의 smilegate 모델 기반으로 fine-tuning</p>
-                        <button
-                          disabled={!ftStats?.ready}
-                          className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
+                        <button disabled={!ftStats?.ready}
+                          className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed">
                           파인튜닝 시작
                         </button>
                       </div>
@@ -672,7 +649,6 @@ export default function AdminModeration() {
           {/* ── 통계 탭 ── */}
           {mainTab === '통계' && (
             <div className="space-y-5">
-              {/* 날짜 필터 */}
               <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex flex-col gap-1">
@@ -685,18 +661,12 @@ export default function AdminModeration() {
                     <input type="date" value={statsDateTo} onChange={(e) => setStatsDateTo(e.target.value)}
                       className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
                   </label>
-                  <button onClick={loadStats}
-                    className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 pb-2.5">
-                    조회
-                  </button>
+                  <button onClick={loadStats} className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 pb-2.5">조회</button>
                   <button onClick={() => { setStatsDateFrom(''); setStatsDateTo(''); void loadStats(); }}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 pb-2.5">
-                    초기화
-                  </button>
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 pb-2.5">초기화</button>
                 </div>
               </div>
 
-              {/* 요약 카드 + 도넛 */}
               <div className="grid md:grid-cols-3 gap-5">
                 <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
@@ -714,34 +684,23 @@ export default function AdminModeration() {
                 </div>
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm flex items-center justify-center">
                   {stats ? (
-                    <DonutChart
-                      blocked={stats.blocked}
-                      warned={stats.warned}
-                      falsePositive={stats.falsePositive}
-                      pending={stats.pending}
-                    />
+                    <DonutChart blocked={stats.blocked} warned={stats.warned} falsePositive={stats.falsePositive} pending={stats.pending} />
                   ) : (
                     <div className="text-sm text-gray-400">불러오는 중...</div>
                   )}
                 </div>
               </div>
 
-              {/* 추이 차트 */}
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <p className="text-sm font-bold text-gray-800">탐지 추이</p>
+                    <p className="text-sm font-bold text-gray-800">탐지 현황</p>
                     <p className="text-xs text-gray-400 mt-0.5">기간별 차단/경고/오탐지 현황</p>
                   </div>
                   <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                     {(['daily', 'weekly', 'monthly'] as const).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setTrendPeriod(p)}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                          trendPeriod === p ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
-                        }`}
-                      >
+                      <button key={p} onClick={() => setTrendPeriod(p)}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${trendPeriod === p ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}>
                         {p === 'daily' ? '일별' : p === 'weekly' ? '주별' : '월별'}
                       </button>
                     ))}
@@ -750,7 +709,7 @@ export default function AdminModeration() {
                 {trendLoading ? (
                   <div className="h-48 flex items-center justify-center text-sm text-gray-400">불러오는 중...</div>
                 ) : trend.length > 0 ? (
-                  <BarChart data={trend} />
+                  <BarChart data={trend} period={trendPeriod} />
                 ) : (
                   <div className="h-48 flex items-center justify-center text-sm text-gray-400">데이터가 없습니다.</div>
                 )}
@@ -781,10 +740,7 @@ export default function AdminModeration() {
                   </label>
                   <div className="flex gap-2 pb-0.5">
                     <button
-                      onClick={() => {
-                        setPage(1);
-                        void loadChats({ moderation_status: TAB_TO_STATUS[activeTab], keyword: search || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined });
-                      }}
+                      onClick={() => { setPage(1); void loadChats({ moderation_status: TAB_TO_STATUS[activeTab], keyword: search || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined }); }}
                       className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700"
                     >조회</button>
                     <button
@@ -806,11 +762,24 @@ export default function AdminModeration() {
 
               <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full border-collapse">
+                  <table className="w-full border-collapse table-fixed">
+                    <colgroup>
+                      <col style={{ width: '72px' }} />
+                      <col style={{ width: '110px' }} />
+                      <col style={{ width: '88px' }} />
+                      <col style={{ width: '110px' }} />
+                      <col style={{ width: '140px' }} />
+                      <col style={{ width: '76px' }} />
+                      <col style={{ width: '76px' }} />
+                      <col style={{ width: '68px' }} />
+                      <col style={{ width: '52px' }} />
+                      <col style={{ width: '128px' }} />
+                      <col style={{ width: '88px' }} />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
-                        {['상태', '파티', '발신자', '메시지', '탐지 사유', '신뢰도', '삭제', '발생일', '관리'].map((h) => (
-                          <th key={h} className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                        {['상태', '파티', '발신자', '메시지', '탐지 사유', '탐지 단계', 'ML 신뢰도', '경고 횟수', '삭제', '발생일', '관리'].map((h) => (
+                          <th key={h} className="px-3 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -823,39 +792,59 @@ export default function AdminModeration() {
                         return (
                           <>
                             <tr key={chat.id} className="border-b border-gray-100 transition hover:bg-gray-50/70">
-                              <td className="px-4 py-3.5">
-                                <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[statusKey] ?? STATUS_STYLE.pending}`}>
+                              <td className="px-3 py-3.5">
+                                <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[statusKey] ?? STATUS_STYLE.pending}`}>
                                   {STATUS_LABEL[statusKey] ?? statusKey}
                                 </span>
                               </td>
-                              <td className="px-4 py-3.5 text-sm text-gray-700 max-w-[120px] truncate">{chat.partyTitle}</td>
-                              <td className="px-4 py-3.5 text-sm text-gray-700">{chat.senderNickname}</td>
-                              <td className="px-4 py-3.5 max-w-xs">
+                              <td className="px-3 py-3.5">
+                                <span className="block truncate text-sm text-gray-700" title={chat.partyTitle}>{chat.partyTitle}</span>
+                              </td>
+                              <td className="px-3 py-3.5">
+                                <span className="block truncate text-sm text-gray-700" title={chat.senderNickname}>{chat.senderNickname}</span>
+                              </td>
+                              <td className="px-3 py-3.5">
                                 <span className={`block truncate text-sm ${chat.isDeleted ? 'line-through text-gray-400' : 'text-gray-800'}`} title={chat.message}>
                                   {chat.message}
                                 </span>
                               </td>
-                              <td className="px-4 py-3.5 text-sm text-gray-500">{chat.flagReason ?? '-'}</td>
-                              <td className="px-4 py-3.5 text-sm text-gray-500">
+                              <td className="px-3 py-3.5">
+                                <span className="block truncate text-sm text-gray-500" title={chat.flagReason ?? '-'}>{chat.flagReason ?? '-'}</span>
+                              </td>
+                              <td className="px-3 py-3.5">
+                                {chat.flagStage != null ? (
+                                  <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold ${STAGE_STYLE[chat.flagStage] ?? 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                                    {chat.flagStage}단계
+                                  </span>
+                                ) : <span className="text-sm text-gray-400">-</span>}
+                              </td>
+                              <td className="px-3 py-3.5 text-sm text-gray-500 whitespace-nowrap">
                                 {chat.flagConfidence != null ? `${(chat.flagConfidence * 100).toFixed(0)}%` : '-'}
                               </td>
-                              <td className="px-4 py-3.5 text-sm">
+                              <td className="px-3 py-3.5 whitespace-nowrap">
+                                {chat.warnCount != null ? (
+                                  <span className={`text-sm font-semibold ${chat.warnCount >= 3 ? 'text-red-500' : chat.warnCount >= 1 ? 'text-amber-500' : 'text-gray-400'}`}>
+                                    {chat.warnCount}회
+                                  </span>
+                                ) : <span className="text-sm text-gray-400">-</span>}
+                              </td>
+                              <td className="px-3 py-3.5 whitespace-nowrap">
                                 {chat.isDeleted
                                   ? <span className="text-xs text-gray-400">삭제됨</span>
                                   : <span className="text-xs text-emerald-500">유지</span>}
                               </td>
-                              <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">{chat.createdAt}</td>
-                              <td className="px-4 py-3.5">
-                                <div className="flex gap-1.5">
+                              <td className="px-3 py-3.5 text-xs text-gray-400 whitespace-nowrap">{chat.createdAt}</td>
+                              <td className="px-3 py-3.5">
+                                <div className="flex gap-1 whitespace-nowrap">
                                   <button
                                     onClick={() => setExpandedId((prev) => (prev === chat.id ? null : chat.id))}
-                                    className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${isExpanded ? 'border-violet-300 bg-violet-50 text-violet-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                    className={`rounded-md border px-2 py-1 text-xs font-medium transition ${isExpanded ? 'border-violet-300 bg-violet-50 text-violet-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                                   >{isExpanded ? '닫기' : '상세'}</button>
                                   {statusKey !== 'false_positive' && (
                                     <button
                                       disabled={isBusy}
                                       onClick={() => void handleStatusUpdate(chat.id, 'false_positive')}
-                                      className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                                      className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
                                     >{isBusy ? '...' : '오탐지'}</button>
                                   )}
                                 </div>
@@ -863,7 +852,7 @@ export default function AdminModeration() {
                             </tr>
                             {isExpanded && (
                               <tr key={`${chat.id}-detail`} className="bg-slate-50/70 border-b border-gray-100">
-                                <td colSpan={9} className="px-4 py-4">
+                                <td colSpan={11} className="px-4 py-4">
                                   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                     <div className="flex items-start justify-between mb-4">
                                       <div>
@@ -875,7 +864,16 @@ export default function AdminModeration() {
                                       </span>
                                     </div>
                                     <div className="grid gap-3 md:grid-cols-3 mb-4">
-                                      {([['파티', chat.partyTitle], ['발신자', chat.senderNickname], ['탐지 사유', chat.flagReason ?? '-'], ['신뢰도', chat.flagConfidence != null ? `${(chat.flagConfidence * 100).toFixed(1)}%` : '-'], ['삭제 여부', chat.isDeleted ? '삭제됨' : '유지'], ['발생일', chat.createdAt]] as [string, string][]).map(([label, value]) => (
+                                      {([
+                                        ['파티', chat.partyTitle],
+                                        ['발신자', chat.senderNickname],
+                                        ['탐지 사유', chat.flagReason ?? '-'],
+                                        ['탐지 단계', chat.flagStage != null ? `${chat.flagStage}단계` : '-'],
+                                        ['ML 신뢰도', chat.flagConfidence != null ? `${(chat.flagConfidence * 100).toFixed(1)}%` : '-'],
+                                        ['경고 누적', chat.warnCount != null ? `${chat.warnCount}회` : '-'],
+                                        ['삭제 여부', chat.isDeleted ? '삭제됨' : '유지'],
+                                        ['발생일', chat.createdAt],
+                                      ] as [string, string][]).map(([label, value]) => (
                                         <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
                                           <div className="text-xs text-slate-400 mb-0.5">{label}</div>
                                           <div className="text-sm font-semibold text-slate-800 break-all">{value}</div>
@@ -886,8 +884,6 @@ export default function AdminModeration() {
                                       <div className="text-xs text-slate-400 mb-1">원본 메시지</div>
                                       <p className={`text-sm break-all ${chat.isDeleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>{chat.message}</p>
                                     </div>
-
-                                    {/* 상태 변경 버튼 */}
                                     <div className="flex flex-wrap gap-2 items-center">
                                       <span className="text-xs font-semibold text-slate-600">상태 변경:</span>
                                       {(['blocked', 'warned', 'false_positive', 'pending'] as const).map((s) => (
@@ -899,8 +895,6 @@ export default function AdminModeration() {
                                         >{STATUS_LABEL[s]}</button>
                                       ))}
                                     </div>
-
-                                    {/* 채팅 차단 해제 버튼 — blocked 상태일 때만 표시 */}
                                     {statusKey === 'blocked' && (
                                       <div className="mt-3 pt-3 border-t border-slate-100">
                                         <p className="text-xs text-slate-400 mb-2">차단 해제 — Redis 차단 삭제, is_active 복구, banned_until 초기화</p>
@@ -922,7 +916,7 @@ export default function AdminModeration() {
                       })}
                       {paginated.length === 0 && !logLoading && (
                         <tr>
-                          <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">탐지된 메시지가 없습니다.</td>
+                          <td colSpan={11} className="px-4 py-10 text-center text-sm text-gray-400">탐지된 메시지가 없습니다.</td>
                         </tr>
                       )}
                     </tbody>
@@ -944,14 +938,10 @@ export default function AdminModeration() {
                   <h2 className="text-base font-bold text-gray-900">채팅 IP 벤 목록</h2>
                   <p className="text-xs text-gray-400 mt-0.5">욕설 감지로 IP 차단된 목록입니다. 해제 시 해당 IP로 다시 로그인 가능합니다.</p>
                 </div>
-                <button
-                  onClick={loadChatBans}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-                >
+                <button onClick={loadChatBans} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
                   새로고침
                 </button>
               </div>
-
               <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                 {chatBansLoading ? (
                   <div className="px-5 py-10 text-center text-sm text-gray-400">불러오는 중...</div>
