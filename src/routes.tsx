@@ -45,7 +45,7 @@ import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminPayments from './pages/admin/AdminPayments';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 import AdminModeration from './pages/admin/AdminModeration';
-import AdminCaptcha from './pages/admin/AdminCaptcha';
+import AdminHandOCR from './pages/admin/AdminHandOCR';
 
 const router = createBrowserRouter([
   {
@@ -192,6 +192,10 @@ const router = createBrowserRouter([
       {
         path: 'parties',
         Component: AdminParties,
+      },
+      {
+        path: 'handocr',
+        Component: AdminHandOCR,
       },
       {
         path: 'reports',
