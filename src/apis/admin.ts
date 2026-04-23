@@ -189,9 +189,7 @@ export type AdminPartyRecord = {
   category: string;
   leaderId: string;
   memberCount: number;
-  // 파티 종료 수정
   status: '운영중' | '모집중' | '위험' | '종료됨';
-  // 파티 종료 수정
   reportCount: number;
   monthlyAmount: number;
   lastPayment: string;
@@ -488,7 +486,6 @@ export async function changeAdminPartyMemberRole(
   return data;
 }
 
-// ── 7번: 채팅 AI 탐지 로그 & 통계 ──────────────────────────
 export type AdminChatFlagged = {
   id: string;
   partyId: string;
@@ -498,9 +495,11 @@ export type AdminChatFlagged = {
   message: string;
   flagReason?: string | null;
   flagConfidence?: number | null;
-  moderationStatus?: string | null; // blocked | warned | false_positive | pending
+  flagStage?: number | null;
+  moderationStatus?: string | null;
   isDeleted: boolean;
   createdAt: string;
+  warnCount?: number | null;
 };
 
 export type AdminModerationStat = {
@@ -549,11 +548,10 @@ export async function fetchAdminModerationStats(params?: {
   return data;
 }
 
-// ── 8번: 사용자 상태변경 이력 ───────────────────────────────
 export type AdminUserStatusLog = {
   id: string;
-  toStatus: string; // 정상 / 주의 / 정지
-  changedBy: string; // 관리자 닉네임 or "system"
+  toStatus: string; 
+  changedBy: string; 
   reason?: string | null;
   trigger: 'manual' | 'report' | 'auto';
   createdAt: string;
@@ -596,8 +594,6 @@ export function getAdminErrorMessage(error: unknown): string {
   return '관리자 요청 처리 중 오류가 발생했습니다.';
 }
 
-// ── LSTM Shadow Mode ──
-
 export type ShadowModeResponse = {
   shadow_mode: boolean;
   lstm_weight?: number;
@@ -614,8 +610,6 @@ export async function toggleShadowMode(): Promise<ShadowModeResponse> {
   const res = await api.put('/api/admin/captcha/shadow');
   return res.data;
 }
-
-// ── IP 제재 관리 ──
 
 export type BlockedIpEntry = {
   ip: string;
@@ -653,8 +647,6 @@ export async function unblockAllIps(): Promise<{
   return res.data;
 }
 
-// ── 캡챠 수치 설정 ──
-
 export type CaptchaConfigResponse = {
   lstm_weight: number;
   knn_weight: number;
@@ -676,8 +668,6 @@ export async function updateCaptchaConfig(
   return res.data;
 }
 
-// ── 챌린지 강제 발동 ──
-
 export async function forceChallenge(
   ip?: string,
 ): Promise<{ message: string }> {
@@ -687,8 +677,6 @@ export async function forceChallenge(
   );
   return res.data;
 }
-
-// ─── 결제 내역 ────────────────────────────────────────────────────────────────
 
 export type AdminPaymentRecord = {
   id: string;
@@ -736,8 +724,6 @@ export async function fetchAdminPayments(params?: {
   );
   return data;
 }
-
-// ── 캡챠 통계 (대시보드) ──
 
 export type CaptchaPeriod = 'daily' | 'weekly' | 'monthly';
 
