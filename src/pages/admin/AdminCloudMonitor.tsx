@@ -137,9 +137,7 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
     : [0, 25, 50, 75, 100].map(v => ({ v, label: `${v}` }));
 
   // X축 눈금: 기간에 따라 레이블 수 조정
-  const PERIOD_SECONDS: Record<string, number> = { '30m': 1800, '1h': 3600, '3h': 10800, '6h': 21600, '24h': 86400 };
-  const totalSec = PERIOD_SECONDS[period] ?? 3600;
-  const xTickCount = period === '30m' ? 6 : period === '1h' ? 6 : period === '3h' ? 6 : period === '6h' ? 6 : 8;
+  const xTickCount = period === '24h' ? 8 : 6;
   const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) => {
     const ts = data[0].ts + (i / xTickCount) * (data[data.length - 1].ts - data[0].ts);
     const d = new Date(ts);
