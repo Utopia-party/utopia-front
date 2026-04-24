@@ -471,7 +471,7 @@ export default function AdminCloudMonitor() {
             {/* 헤더 */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
-                <p className="text-sm font-bold text-gray-800">리소스 추이</p>
+                <p className="text-sm font-bold text-gray-800">리소스</p>
                 <p className="text-xs text-gray-400">서버 선택 후 기간별 그래프 확인</p>
               </div>
               <div className="flex gap-2 flex-wrap items-center">
