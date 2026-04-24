@@ -182,15 +182,13 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
 
       {/* 영역 + 라인 */}
       <path d={fill} fill={`url(#${gradId})`} />
-      <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.2" strokeLinejoin="round" />
 
       {/* 테두리 */}
       <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
       <line x1={PAD.left} x2={PAD.left + CW} y1={PAD.top + CH} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
     </svg>
   );
-}
-
 }
 
 // ── 게이지 바 ──
