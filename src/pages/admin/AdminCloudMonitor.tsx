@@ -57,10 +57,11 @@ function fmtBytes(b: number) {
 function fmtPct(v: number) { return `${v.toFixed(1)}%`; }
 function fmtStorage(val: number) {
   if (val <= 0) return null;
-  // 카카오클라우드 disk_used/disk_total/mem_used/mem_total 단위: KB
-  if (val >= 1024 * 1024) return `${(val / 1024 / 1024).toFixed(1)} GB`;
-  if (val >= 1024) return `${(val / 1024).toFixed(0)} MB`;
-  return `${val.toFixed(0)} KB`;
+  // 카카오클라우드 disk_used/disk_total/mem_used/mem_total 단위: 바이트(B)
+  if (val >= 1024 * 1024 * 1024) return `${(val / 1024 / 1024 / 1024).toFixed(1)} GB`;
+  if (val >= 1024 * 1024) return `${(val / 1024 / 1024).toFixed(0)} MB`;
+  if (val >= 1024) return `${(val / 1024).toFixed(0)} KB`;
+  return `${val.toFixed(0)} B`;
 }
 function fmtDatetime(d: Date) {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 `
@@ -145,6 +146,7 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
     : [0, 25, 50, 75, 100].map(v => ({ v, label: `${v}` }));
 
   // X축 눈금 — 기간별 포맷
+  // 기간별 눈금 수: 30m=6(5분간격), 1h=6(10분), 3h=6(30분), 6h=6(1시간), 24h=8(3시간)
   const xTickCount = period === '30m' ? 6 : period === '1h' ? 6 : period === '3h' ? 6 : period === '6h' ? 6 : 8;
   const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) => {
     const ts = data[0].ts + (i / xTickCount) * (data[data.length - 1].ts - data[0].ts);
@@ -152,10 +154,15 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
     let label: string;
     if (period === '24h') {
       label = `${String(d.getHours()).padStart(2,'0')}:00`;
-    } else if (period === '6h' || period === '3h') {
+    } else if (period === '6h') {
+      label = `${String(d.getHours()).padStart(2,'0')}:00`;
+    } else if (period === '3h') {
+      const min = d.getMinutes();
+      label = `${String(d.getHours()).padStart(2,'0')}:${String(Math.round(min/30)*30).padStart(2,'0')}`;
+    } else if (period === '1h') {
       label = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     } else {
-      // 30m, 1h: 분 단위
+      // 30m: 5분 단위
       label = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     }
     return { x: PAD.left + (i / xTickCount) * CW, label };
