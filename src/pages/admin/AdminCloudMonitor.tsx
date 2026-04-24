@@ -55,14 +55,6 @@ function fmtBytes(b: number) {
   return `${b.toFixed(0)} B/s`;
 }
 function fmtPct(v: number) { return `${v.toFixed(1)}%`; }
-function fmtStorage(val: number) {
-  if (val <= 0) return null;
-  // 카카오클라우드 disk_used/disk_total/mem_used/mem_total 단위: 바이트(B)
-  if (val >= 1024 * 1024 * 1024) return `${(val / 1024 / 1024 / 1024).toFixed(1)} GB`;
-  if (val >= 1024 * 1024) return `${(val / 1024 / 1024).toFixed(0)} MB`;
-  if (val >= 1024) return `${(val / 1024).toFixed(0)} KB`;
-  return `${val.toFixed(0)} B`;
-}
 function fmtDatetime(d: Date) {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 `
     + `${String(d.getHours()).padStart(2, '0')}시 `
