@@ -74,7 +74,7 @@ export default function Login() {
     try {
       setIsSubmitting(true);
 
-      const response = await login(
+      await login(
         {
           email: form.email.trim(),
           password: form.password,
@@ -84,7 +84,7 @@ export default function Login() {
 
       const { checkAuth } = useAuthStore.getState();
       await checkAuth();
-      
+
       navigate('/home', { replace: true });
     } catch (error: unknown) {
       const apiError = error as {
