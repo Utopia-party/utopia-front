@@ -145,28 +145,32 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
       }))
     : [0, 25, 50, 75, 100].map(v => ({ v, label: `${v}` }));
 
-  // X축 눈금 — 기간별 포맷
-  // 기간별 눈금 수: 30m=6(5분간격), 1h=6(10분), 3h=6(30분), 6h=6(1시간), 24h=8(3시간)
-  const xTickCount = period === '30m' ? 6 : period === '1h' ? 6 : period === '3h' ? 6 : period === '6h' ? 6 : 8;
-  const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) => {
-    const ts = data[0].ts + (i / xTickCount) * (data[data.length - 1].ts - data[0].ts);
+  // X축 눈금 — 시간 범위 기반 고정 틱 (데이터 중복 방지)
+  const PERIOD_INTERVAL_MS: Record<string, number> = {
+    '30m': 5 * 60 * 1000,      // 5분
+    '1h':  10 * 60 * 1000,     // 10분
+    '3h':  30 * 60 * 1000,     // 30분
+    '6h':  60 * 60 * 1000,     // 1시간
+    '24h': 3 * 60 * 60 * 1000, // 3시간
+  };
+  const intervalMs = PERIOD_INTERVAL_MS[period] ?? 10 * 60 * 1000;
+  const startTs = data[0].ts;
+  const endTs = data[data.length - 1].ts;
+  const totalMs = endTs - startTs;
+
+  // 틱 생성: interval 배수로 정렬된 시각
+  const xTicks: { x: number; label: string; showDate: boolean }[] = [];
+  const firstAligned = Math.ceil(startTs / intervalMs) * intervalMs;
+  let prevDate = '';
+  for (let ts = firstAligned; ts <= endTs; ts += intervalMs) {
     const d = new Date(ts);
-    let label: string;
-    if (period === '24h') {
-      label = `${String(d.getHours()).padStart(2,'0')}:00`;
-    } else if (period === '6h') {
-      label = `${String(d.getHours()).padStart(2,'0')}:00`;
-    } else if (period === '3h') {
-      const min = d.getMinutes();
-      label = `${String(d.getHours()).padStart(2,'0')}:${String(Math.round(min/30)*30).padStart(2,'0')}`;
-    } else if (period === '1h') {
-      label = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    } else {
-      // 30m: 5분 단위
-      label = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    }
-    return { x: PAD.left + (i / xTickCount) * CW, label };
-  });
+    const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const showDate = dateStr !== prevDate && d.getHours() === 0;
+    prevDate = dateStr;
+    const x = PAD.left + ((ts - startTs) / totalMs) * CW;
+    xTicks.push({ x, label: timeStr, showDate });
+  }
 
   const gradId = `lg_${color.replace('#', '')}`;
 
@@ -216,10 +220,15 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
       })}
 
       {/* X축 레이블 */}
-      {xTicks.map(({ x, label }, i) => (
+      {xTicks.map(({ x, label, showDate }, i) => (
         <g key={i}>
           <line x1={x} x2={x} y1={PAD.top} y2={PAD.top + CH} stroke="#f3f4f6" strokeWidth="1" />
-          <text x={x} y={H - 10} textAnchor="middle" fontSize="9" fill="#9ca3af">{label}</text>
+          <text x={x} y={H - 18} textAnchor="middle" fontSize="9" fill="#9ca3af">{label}</text>
+          {showDate && (
+            <text x={x} y={H - 6} textAnchor="middle" fontSize="8" fill="#c084fc" fontWeight="600">
+              {new Date(data[0].ts + ((x - PAD.left) / CW) * totalMs).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+            </text>
+          )}
         </g>
       ))}
 
@@ -588,9 +597,7 @@ export default function AdminCloudMonitor() {
                               <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.mem)}`}>{fmtPct(s.mem)}</span>
                               <div className="flex-1"><GaugeBar value={s.mem} /></div>
                             </div>
-                            {s.memTotal > 0 && fmtStorage(s.memUsed) && fmtStorage(s.memTotal) && (
-                              <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtStorage(s.memUsed)} / {fmtStorage(s.memTotal)}</p>
-                            )}
+
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 text-right tabular-nums whitespace-nowrap">{fmtBytes(s.netIn)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600 text-right tabular-nums whitespace-nowrap">{fmtBytes(s.netOut)}</td>
@@ -599,9 +606,7 @@ export default function AdminCloudMonitor() {
                               <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.disk)}`}>{fmtPct(s.disk)}</span>
                               <div className="flex-1"><GaugeBar value={s.disk} /></div>
                             </div>
-                            {s.diskTotal > 0 && fmtStorage(s.diskUsed) && fmtStorage(s.diskTotal) && (
-                              <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtStorage(s.diskUsed)} / {fmtStorage(s.diskTotal)}</p>
-                            )}
+
                           </td>
                         </tr>
                       );
