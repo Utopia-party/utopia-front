@@ -81,6 +81,9 @@ export default function AdminShell() {
     if (path.startsWith('/admin/captcha')) {
       return permissions?.canManageCaptcha ?? false;
     }
+    if (path.startsWith('/admin/cloud-monitor')) {
+      return true;
+    }
     if (path.startsWith('/admin/handocr')) {
       return permissions?.canManageHandOcr ?? false;
     }
