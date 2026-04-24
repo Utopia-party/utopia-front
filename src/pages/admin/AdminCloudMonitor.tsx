@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import AdminHeader from './components/AdminHeader';
 
 const API = '/api/admin/cloud-monitor';
@@ -57,10 +57,10 @@ function fmtBytes(b: number) {
 function fmtPct(v: number) { return `${v.toFixed(1)}%`; }
 function fmtStorage(val: number) {
   if (val <= 0) return null;
-  // 카카오클라우드 disk_used/disk_total 단위: MB
-  // 1GB = 1024MB 기준
-  if (val >= 1024) return `${(val / 1024).toFixed(1)} GB`;
-  return `${val.toFixed(0)} MB`;
+  // 카카오클라우드 disk_used/disk_total/mem_used/mem_total 단위: KB
+  if (val >= 1024 * 1024) return `${(val / 1024 / 1024).toFixed(1)} GB`;
+  if (val >= 1024) return `${(val / 1024).toFixed(0)} MB`;
+  return `${val.toFixed(0)} KB`;
 }
 function fmtDatetime(d: Date) {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 `
@@ -110,52 +110,90 @@ function SparkLine({ data, color = '#6366f1', height = 48 }: { data: RangePoint[
 function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
   data: RangePoint[]; color?: string; period: string; isBytes?: boolean;
 }) {
+  const [tooltip, setTooltip] = React.useState<{ x: number; y: number; val: number; time: string } | null>(null);
+
   if (data.length < 2) return (
     <div className="flex items-center justify-center h-full text-sm text-gray-400">
       데이터가 없습니다. 서버를 선택하거나 에이전트 설치를 확인해 주세요.
     </div>
   );
 
-  const W = 800, H = 160;
-  const PAD = { top: 8, right: 12, bottom: 28, left: 44 };
+  const W = 800, H = 180;
+  const PAD = { top: 12, right: 16, bottom: 32, left: 44 };
   const CW = W - PAD.left - PAD.right;
   const CH = H - PAD.top - PAD.bottom;
 
   const vals = data.map(d => d.val);
   const yMin = 0;
-  const yMax = isBytes ? Math.max(...vals) * 1.1 || 1 : 100;
+  const yMax = isBytes ? Math.max(...vals) * 1.15 || 1 : 100;
 
   const toX = (i: number) => PAD.left + (i / (data.length - 1)) * CW;
   const toY = (v: number) => PAD.top + CH - ((v - yMin) / (yMax - yMin)) * CH;
 
-  const path = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(d.val).toFixed(1)}`).join(' ');
-  const fill = `${path} L${toX(data.length - 1).toFixed(1)},${PAD.top + CH} L${toX(0).toFixed(1)},${PAD.top + CH} Z`;
+  const linePath = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(d.val).toFixed(1)}`).join(' ');
+  const fillPath = `${linePath} L${toX(data.length - 1).toFixed(1)},${PAD.top + CH} L${toX(0).toFixed(1)},${PAD.top + CH} Z`;
 
-  // Y축 눈금: 0, 25, 50, 75, 100 (퍼센트) 또는 isBytes면 0/max/2 3단계
+  // Y축 눈금
   const yTicks = isBytes
-    ? [0, yMax / 2, yMax].map(v => ({ v, label: v === 0 ? '0' : v >= 1024*1024 ? `${(v/1024/1024).toFixed(0)}M` : v >= 1024 ? `${(v/1024).toFixed(0)}K` : `${v.toFixed(0)}` }))
+    ? [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax].map(v => ({
+        v,
+        label: v === 0 ? '0'
+          : v >= 1024*1024 ? `${(v/1024/1024).toFixed(1)}M`
+          : v >= 1024 ? `${(v/1024).toFixed(0)}K`
+          : `${v.toFixed(0)}`
+      }))
     : [0, 25, 50, 75, 100].map(v => ({ v, label: `${v}` }));
 
-  // X축 눈금: 기간에 따라 레이블 수 조정
-  const xTickCount = period === '24h' ? 8 : 6;
+  // X축 눈금 — 기간별 포맷
+  const xTickCount = period === '30m' ? 6 : period === '1h' ? 6 : period === '3h' ? 6 : period === '6h' ? 6 : 8;
   const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) => {
     const ts = data[0].ts + (i / xTickCount) * (data[data.length - 1].ts - data[0].ts);
     const d = new Date(ts);
-    const label = period === '24h'
-      ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
-      : `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const x = PAD.left + (i / xTickCount) * CW;
-    return { x, label };
+    let label: string;
+    if (period === '24h') {
+      label = `${String(d.getHours()).padStart(2,'0')}:00`;
+    } else if (period === '6h' || period === '3h') {
+      label = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    } else {
+      // 30m, 1h: 분 단위
+      label = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    return { x: PAD.left + (i / xTickCount) * CW, label };
   });
 
   const gradId = `lg_${color.replace('#', '')}`;
 
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    const chartX = svgX - PAD.left;
+    if (chartX < 0 || chartX > CW) { setTooltip(null); return; }
+    const idx = Math.round((chartX / CW) * (data.length - 1));
+    const clamped = Math.max(0, Math.min(data.length - 1, idx));
+    const pt = data[clamped];
+    const d = new Date(pt.ts);
+    const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    setTooltip({ x: toX(clamped), y: toY(pt.val), val: pt.val, time });
+  };
+
+  const fmtVal = (v: number) => isBytes
+    ? v >= 1024*1024 ? `${(v/1024/1024).toFixed(2)} MB/s`
+      : v >= 1024 ? `${(v/1024).toFixed(1)} KB/s`
+      : `${v.toFixed(0)} B/s`
+    : `${v.toFixed(2)}%`;
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full h-full cursor-crosshair"
+      preserveAspectRatio="none"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => setTooltip(null)}
+    >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.01" />
         </linearGradient>
       </defs>
 
@@ -164,30 +202,57 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
         const y = toY(v);
         return (
           <g key={v}>
-            <line x1={PAD.left} x2={PAD.left + CW} y1={y} y2={y} stroke="#f0f0f0" strokeWidth="1" />
-            <text x={PAD.left - 4} y={y + 3} textAnchor="end" fontSize="9" fill="#9ca3af">{label}</text>
+            <line x1={PAD.left} x2={PAD.left + CW} y1={y} y2={y} stroke="#f3f4f6" strokeWidth="1" />
+            <text x={PAD.left - 5} y={y + 3.5} textAnchor="end" fontSize="9" fill="#9ca3af">{label}</text>
           </g>
         );
       })}
 
-      {/* X축 그리드 + 레이블 */}
+      {/* X축 레이블 */}
       {xTicks.map(({ x, label }, i) => (
         <g key={i}>
-          <line x1={x} x2={x} y1={PAD.top} y2={PAD.top + CH} stroke="#f0f0f0" strokeWidth="1" />
-          <text x={x} y={H - 8} textAnchor="middle" fontSize="9" fill="#9ca3af">{label}</text>
+          <line x1={x} x2={x} y1={PAD.top} y2={PAD.top + CH} stroke="#f3f4f6" strokeWidth="1" />
+          <text x={x} y={H - 10} textAnchor="middle" fontSize="9" fill="#9ca3af">{label}</text>
         </g>
       ))}
 
-      {/* 영역 + 라인 */}
-      <path d={fill} fill={`url(#${gradId})`} />
-      <path d={path} fill="none" stroke={color} strokeWidth="1.2" strokeLinejoin="round" />
+      {/* 영역 채우기 */}
+      <path d={fillPath} fill={`url(#${gradId})`} />
+
+      {/* 라인 */}
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
 
       {/* 테두리 */}
       <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
       <line x1={PAD.left} x2={PAD.left + CW} y1={PAD.top + CH} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
+
+      {/* 툴팁 */}
+      {tooltip && (
+        <g>
+          <line x1={tooltip.x} x2={tooltip.x} y1={PAD.top} y2={PAD.top + CH} stroke={color} strokeWidth="1" strokeDasharray="3,2" opacity="0.5" />
+          <circle cx={tooltip.x} cy={tooltip.y} r="3.5" fill={color} />
+          <rect
+            x={tooltip.x < W - 110 ? tooltip.x + 8 : tooltip.x - 108}
+            y={tooltip.y < 40 ? tooltip.y + 6 : tooltip.y - 36}
+            width="100" height="28" rx="5"
+            fill="white" stroke="#e5e7eb" strokeWidth="1"
+          />
+          <text
+            x={tooltip.x < W - 110 ? tooltip.x + 58 : tooltip.x - 58}
+            y={tooltip.y < 40 ? tooltip.y + 17 : tooltip.y - 25}
+            textAnchor="middle" fontSize="9" fill="#6b7280"
+          >{tooltip.time}</text>
+          <text
+            x={tooltip.x < W - 110 ? tooltip.x + 58 : tooltip.x - 58}
+            y={tooltip.y < 40 ? tooltip.y + 28 : tooltip.y - 14}
+            textAnchor="middle" fontSize="10" fontWeight="600" fill={color}
+          >{fmtVal(tooltip.val)}</text>
+        </g>
+      )}
     </svg>
   );
 }
+
 
 // ── 게이지 바 ──
 function GaugeBar({ value }: { value: number }) {
@@ -439,7 +504,7 @@ export default function AdminCloudMonitor() {
               </div>
             </div>
             {/* 차트 */}
-            <div className="relative h-44">
+            <div className="relative h-52">
               {rangeLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">불러오는 중...</div>
               ) : (
