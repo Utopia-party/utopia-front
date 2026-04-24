@@ -70,6 +70,11 @@ const allMenuItems: MenuItem[] = [
     visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
   },
   {
+    path: '/admin/cloud-monitor',
+    label: '클라우드 모니터링',
+    visibleIf: (permissions) => Boolean(permissions?.canViewLogs),
+  },
+  {
     path: '/admin/handocr',
     label: 'HandOCR CAPTCHA',
     visibleIf: (permissions) =>
