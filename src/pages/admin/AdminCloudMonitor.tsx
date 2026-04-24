@@ -23,15 +23,23 @@ type PromResult = { metric: Record<string, string>; value?: [number, string]; va
 type SummaryMetrics = { cpu: PromResult[]; mem: PromResult[]; mem_used: PromResult[]; mem_total: PromResult[]; net_in: PromResult[]; net_out: PromResult[]; disk: PromResult[]; disk_used: PromResult[]; disk_total: PromResult[] };
 type RangePoint = { ts: number; val: number };
 
+// ── ID → 서버 이름 매핑 (카카오클라우드 VM instance_id 기준) ──
+const INSTANCE_NAME_MAP: Record<string, string> = {
+  '0a54afc2-6d12-47a8-ac89-0f9a7c912805': 't1_4vm_t1i_large_front',
+  '21806463-9d53-48c6-81ef-fcf0ae960592': 't1_3vm_t1i_large_db',
+  'b3b9f672-01bd-4189-b8a3-6cfd8437abd3': 't1_2vm_t1i_xlarge_backend',
+  '3fd334a5-c5cc-49d9-84d5-f8918fb74196': 't1_1vm_gpu_gn1i_4xlarge',
+};
+
 // ── 레이블에서 인스턴스명 추출 ──
 function instanceName(r: PromResult): string {
   const m = r.metric;
+  const id = m?.instance_id;
+  if (id && INSTANCE_NAME_MAP[id]) return INSTANCE_NAME_MAP[id];
   return (
     m?.instance_name ?? m?.display_name ?? m?.name ??
     m?.hostname ?? m?.host ?? m?.instance ??
-    m?.resource_id ?? m?.resource_name ??
-    Object.values(m ?? {}).find(v => v?.includes('vm') || v?.includes('host')) ??
-    '알 수 없음'
+    m?.resource_id ?? id ?? '알 수 없음'
   );
 }
 
