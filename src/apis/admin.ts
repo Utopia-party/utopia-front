@@ -195,16 +195,6 @@ export type AdminPartyRecord = {
   lastPayment: string;
 };
 
-export type ReportRecord = {
-  id: string;
-  type: string;
-  target: string;
-  reason: string;
-  status: string;
-  content: string;
-  createdAt: string;
-};
-
 export type ReceiptRecord = {
   id: string;
   userId: string;
@@ -355,29 +345,6 @@ export async function forceEndAdminParty(partyId: string, reason?: string) {
   const { data } = await api.post<AdminPartyRecord>(
     `/api/admin/parties/${partyId}/force-end`,
     { reason },
-  );
-  return data;
-}
-
-export async function fetchAdminReports(params?: {
-  keyword?: string;
-  type?: string;
-  date_from?: string;
-  date_to?: string;
-}): Promise<ReportRecord[]> {
-  const { data } = await api.get<ReportRecord[]>('/api/admin/reports', {
-    params,
-  });
-  return data;
-}
-
-export async function updateAdminReportStatus(
-  reportId: string,
-  status: string,
-) {
-  const { data } = await api.patch<ReportRecord>(
-    `/api/admin/reports/${reportId}`,
-    { status },
   );
   return data;
 }
@@ -550,8 +517,8 @@ export async function fetchAdminModerationStats(params?: {
 
 export type AdminUserStatusLog = {
   id: string;
-  toStatus: string; 
-  changedBy: string; 
+  toStatus: string;
+  changedBy: string;
   reason?: string | null;
   trigger: 'manual' | 'report' | 'auto';
   createdAt: string;
