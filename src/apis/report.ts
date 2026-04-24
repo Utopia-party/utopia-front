@@ -10,6 +10,7 @@ export interface ReportEvidence {
   content_type?: string | null;
   file_size?: number | null;
   created_at: string;
+  url?: string | null;
 }
 
 export interface ReportItem {
