@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router';
 import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../apis/api';
 import type {
-  Member,
   Message,
   PartyInfo,
   ProfileDrawerState,
@@ -23,7 +22,7 @@ import {
   PARTY_STATUS_LABEL,
   formatCurrency,
   formatRate,
-} from './chatConstants';
+} from './ChatConstants';
 
 declare global {
   interface Window {
