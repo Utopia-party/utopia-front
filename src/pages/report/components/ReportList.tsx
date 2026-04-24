@@ -102,6 +102,9 @@ const formatFileSize = (size?: number | null) => {
   return `${(size / 1024 / 1024).toFixed(1)}MB`;
 };
 
+const isImageEvidence = (contentType?: string | null) =>
+  Boolean(contentType?.startsWith('image/'));
+
 function ReportDetailModal({
   report,
   onClose,
@@ -115,7 +118,7 @@ function ReportDetailModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 bg-slate-900 px-6 py-5">
@@ -216,27 +219,76 @@ function ReportDetailModal({
                 첨부된 증빙 파일이 없습니다.
               </div>
             ) : (
-              <div className="mt-3 space-y-2">
-                {report.evidences.map((evidence) => (
-                  <div
-                    key={evidence.id}
-                    className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3"
-                  >
-                    <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                      <p className="truncate text-sm font-bold text-gray-800">
-                        {evidence.original_filename ?? '첨부 파일'}
-                      </p>
-                      <span className="shrink-0 text-xs font-semibold text-gray-400">
-                        {formatFileSize(evidence.file_size)}
-                      </span>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {report.evidences.map((evidence) => {
+                  const isImage = isImageEvidence(evidence.content_type);
+                  const hasUrl = Boolean(evidence.url);
+
+                  return (
+                    <div
+                      key={evidence.id}
+                      className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50"
+                    >
+                      <div className="flex h-44 items-center justify-center bg-gray-100">
+                        {isImage && hasUrl ? (
+                          <a
+                            href={evidence.url ?? '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="h-full w-full"
+                          >
+                            <img
+                              src={evidence.url ?? ''}
+                              alt={
+                                evidence.original_filename ?? '신고 증빙 이미지'
+                              }
+                              className="h-full w-full object-cover"
+                            />
+                          </a>
+                        ) : hasUrl ? (
+                          <a
+                            href={evidence.url ?? '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex h-full w-full flex-col items-center justify-center gap-2 text-center transition hover:bg-gray-200"
+                          >
+                            <span className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+                              PDF
+                            </span>
+                            <span className="px-4 text-xs font-semibold text-gray-600">
+                              새 탭에서 파일 열기
+                            </span>
+                          </a>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-2 px-4 text-center">
+                            <span className="rounded-xl bg-gray-200 px-3 py-2 text-xs font-bold text-gray-500">
+                              NO URL
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              조회 URL이 없습니다.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="px-4 py-3">
+                        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                          <p className="truncate text-sm font-bold text-gray-800">
+                            {evidence.original_filename ?? '첨부 파일'}
+                          </p>
+                          <span className="shrink-0 text-xs font-semibold text-gray-400">
+                            {formatFileSize(evidence.file_size)}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
+                          <span>{evidence.content_type ?? 'unknown'}</span>
+                          <span>·</span>
+                          <span>{formatDateTime(evidence.created_at)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
-                      <span>{evidence.content_type ?? 'unknown'}</span>
-                      <span>·</span>
-                      <span>{formatDateTime(evidence.created_at)}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
