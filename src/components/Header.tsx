@@ -275,7 +275,6 @@ export default function Header() {
       console.error('로그아웃 실패', error);
     } finally {
       setIsProfileMenuOpen(false);
-      alert('로그아웃 되었습니다.');
       navigate('/home', { replace: true });
     }
   };
