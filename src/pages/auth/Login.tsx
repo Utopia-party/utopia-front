@@ -84,8 +84,7 @@ export default function Login() {
 
       const { checkAuth } = useAuthStore.getState();
       await checkAuth();
-
-      alert(response.message || '로그인에 성공했습니다.');
+      
       navigate('/home', { replace: true });
     } catch (error: unknown) {
       const apiError = error as {
