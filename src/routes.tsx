@@ -45,6 +45,7 @@ import AdminSettlements from './pages/admin/AdminSettlements';
 import AdminPayments from './pages/admin/AdminPayments';
 import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 import AdminModeration from './pages/admin/AdminModeration';
+import AdminCloudMonitor from './pages/admin/AdminCloudMonitor';
 import AdminHandOCR from './pages/admin/AdminHandOCR';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
 import AdminQuickMatch from './pages/admin/AdminQuickMatch';
@@ -226,6 +227,10 @@ const router = createBrowserRouter([
       {
         path: 'quick-match',
         Component: AdminQuickMatch,
+      },
+      {
+        path: 'cloud-monitor',
+        Component: AdminCloudMonitor,
       },
     ],
   },
