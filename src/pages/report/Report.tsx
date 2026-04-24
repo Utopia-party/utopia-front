@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ReportForm from './components/ReportForm';
 import ReportList from './components/ReportList';
 import { fetchMyReportSummary, type ReportSummary } from '../../apis/report';
@@ -13,21 +13,33 @@ const INITIAL_SUMMARY: ReportSummary = {
 
 export default function Report() {
   const [summary, setSummary] = useState<ReportSummary>(INITIAL_SUMMARY);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   usePageTitle('신고');
 
-  useEffect(() => {
-    const loadSummary = async () => {
-      try {
-        const data = await fetchMyReportSummary();
-        setSummary(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    void loadSummary();
+  const loadSummary = useCallback(async () => {
+    try {
+      const data = await fetchMyReportSummary();
+      setSummary(data);
+    } catch (error) {
+      console.error(error);
+    }
   }, []);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadSummary();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [loadSummary]);
+
+  const handleReportCreated = async () => {
+    await loadSummary();
+    setRefreshKey((prev) => prev + 1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,7 +59,7 @@ export default function Report() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
                 <div className="rounded-2xl bg-gray-50 px-4 py-3 text-center">
                   <p className="text-xs font-medium text-gray-500">접수 대기</p>
                   <p className="mt-1 text-xl font-bold text-gray-900">
@@ -78,8 +90,8 @@ export default function Report() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <ReportForm />
-          <ReportList />
+          <ReportForm onCreated={handleReportCreated} />
+          <ReportList refreshKey={refreshKey} />
         </div>
       </div>
     </div>
