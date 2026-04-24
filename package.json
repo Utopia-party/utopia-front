@@ -33,6 +33,7 @@
     "react-router-hash-link": "^2.4.3",
     "swiper": "^12.1.2",
     "tailwindcss": "^4.2.1",
+    "uuid": "^14.0.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
@@ -41,6 +42,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/react-router-hash-link": "^2.4.9",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^10.1.8",

@@ -6,6 +6,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { createReport, type ReportCategory } from '../../../apis/report';
 import { useAuthStore } from '../../../stores/authStore';
 
@@ -25,6 +26,14 @@ interface FilePreview {
   file: File;
   url: string | null;
   isImage: boolean;
+}
+
+interface ApiErrorShape {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
 }
 
 const REPORT_CATEGORIES: { label: string; value: ReportCategory }[] = [
@@ -51,15 +60,7 @@ const formatFileSize = (size: number) => {
 };
 
 const createFileId = (file: File) =>
-  `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`;
-
-interface ApiErrorShape {
-  response?: {
-    data?: {
-      detail?: string;
-    };
-  };
-}
+  `${file.name}-${file.size}-${file.lastModified}-${uuidv4()}`;
 
 const isApiErrorShape = (error: unknown): error is ApiErrorShape =>
   typeof error === 'object' && error !== null && 'response' in error;
@@ -76,15 +77,22 @@ export default function ReportForm({ onCreated }: ReportFormProps) {
   });
 
   const [filePreviews, setFilePreviews] = useState<FilePreview[]>([]);
+  const filePreviewsRef = useRef<FilePreview[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    filePreviewsRef.current = filePreviews;
+  }, [filePreviews]);
+
+  useEffect(() => {
     return () => {
-      filePreviews.forEach((preview) => {
-        if (preview.url) URL.revokeObjectURL(preview.url);
+      filePreviewsRef.current.forEach((preview) => {
+        if (preview.url) {
+          URL.revokeObjectURL(preview.url);
+        }
       });
     };
-  }, [filePreviews]);
+  }, []);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -97,6 +105,12 @@ export default function ReportForm({ onCreated }: ReportFormProps) {
     }));
   };
 
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const syncFiles = (nextPreviews: FilePreview[]) => {
     setFilePreviews(nextPreviews);
     setFormData((prev) => ({
@@ -105,10 +119,16 @@ export default function ReportForm({ onCreated }: ReportFormProps) {
     }));
   };
 
-  const resetFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const validateFile = (file: File) => {
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      return '이미지 또는 PDF 파일만 첨부할 수 있습니다.';
     }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return '파일은 5MB 이하만 첨부할 수 있습니다.';
+    }
+
+    return null;
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -125,20 +145,20 @@ export default function ReportForm({ onCreated }: ReportFormProps) {
     }
 
     const validFiles: File[] = [];
+    const errorMessages = new Set<string>();
 
     for (const file of selectedFiles) {
-      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-        alert('이미지 또는 PDF 파일만 첨부할 수 있습니다.');
-        continue;
-      }
+      const errorMessage = validateFile(file);
 
-      if (file.size > MAX_FILE_SIZE) {
-        alert('파일은 5MB 이하만 첨부할 수 있습니다.');
+      if (errorMessage) {
+        errorMessages.add(errorMessage);
         continue;
       }
 
       validFiles.push(file);
     }
+
+    errorMessages.forEach((message) => alert(message));
 
     const limitedFiles = validFiles.slice(0, availableCount);
 
@@ -146,21 +166,18 @@ export default function ReportForm({ onCreated }: ReportFormProps) {
       alert(`증빙 파일은 최대 ${MAX_FILE_COUNT}개까지 첨부할 수 있습니다.`);
     }
 
-    const nextPreviews: FilePreview[] = [
-      ...filePreviews,
-      ...limitedFiles.map((file) => {
-        const isImage = file.type.startsWith('image/');
+    const newPreviews: FilePreview[] = limitedFiles.map((file) => {
+      const isImage = file.type.startsWith('image/');
 
-        return {
-          id: createFileId(file),
-          file,
-          isImage,
-          url: isImage ? URL.createObjectURL(file) : null,
-        };
-      }),
-    ];
+      return {
+        id: createFileId(file),
+        file,
+        isImage,
+        url: isImage ? URL.createObjectURL(file) : null,
+      };
+    });
 
-    syncFiles(nextPreviews);
+    syncFiles([...filePreviews, ...newPreviews]);
     resetFileInput();
   };
 
@@ -178,7 +195,9 @@ export default function ReportForm({ onCreated }: ReportFormProps) {
 
   const clearFiles = () => {
     filePreviews.forEach((preview) => {
-      if (preview.url) URL.revokeObjectURL(preview.url);
+      if (preview.url) {
+        URL.revokeObjectURL(preview.url);
+      }
     });
 
     syncFiles([]);
@@ -186,14 +205,14 @@ export default function ReportForm({ onCreated }: ReportFormProps) {
   };
 
   const resetForm = () => {
+    clearFiles();
+
     setFormData({
       targetIdentifier: '',
       category: 'PROFANITY',
       description: '',
       files: [],
     });
-
-    clearFiles();
   };
 
   const normalizedInput = useMemo(
