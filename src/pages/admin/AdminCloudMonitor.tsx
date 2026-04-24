@@ -55,11 +55,12 @@ function fmtBytes(b: number) {
   return `${b.toFixed(0)} B/s`;
 }
 function fmtPct(v: number) { return `${v.toFixed(1)}%`; }
-function fmtGB(bytes: number) {
-  if (bytes <= 0) return null;
-  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
-  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
-  return `${(bytes / 1024).toFixed(0)} KB`;
+function fmtStorage(val: number) {
+  if (val <= 0) return null;
+  // 카카오클라우드 disk_used/disk_total 단위: MB
+  // 1GB = 1024MB 기준
+  if (val >= 1024) return `${(val / 1024).toFixed(1)} GB`;
+  return `${val.toFixed(0)} MB`;
 }
 function fmtDatetime(d: Date) {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 `
@@ -78,26 +79,20 @@ function barColor(pct: number) {
   return 'bg-emerald-500';
 }
 
-// ── 스파크라인 ──
+// ── 스파크라인 (요약카드용 미니) ──
 function SparkLine({ data, color = '#6366f1', height = 48 }: { data: RangePoint[]; color?: string; height?: number }) {
   if (data.length < 2) return (
-    <div className="flex items-center justify-center text-xs text-gray-300" style={{ height }}>
-      데이터 없음
-    </div>
+    <div className="flex items-center justify-center text-xs text-gray-300" style={{ height }}>데이터 없음</div>
   );
-  const W = 300, H = height, P = 3;
+  const W = 300, H = height, P = 2;
   const vals = data.map(d => d.val);
   const min = Math.min(...vals), max = Math.max(...vals) || 1;
   const xs = data.map((_, i) => P + (i / (data.length - 1)) * (W - P * 2));
   const ys = vals.map(v => H - P - ((v - min) / (max - min || 1)) * (H - P * 2));
   const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
   const fill = `${path} L${xs[xs.length - 1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`;
-  const gradId = `grad_${color.replace('#', '')}`;
-  const minVal = Math.min(...vals);
-  const maxVal = Math.max(...vals);
-  const lastVal = vals[vals.length - 1];
+  const gradId = `sg_${color.replace('#', '')}`;
   return (
-    <div>
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }} preserveAspectRatio="none">
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -106,16 +101,96 @@ function SparkLine({ data, color = '#6366f1', height = 48 }: { data: RangePoint[
         </linearGradient>
       </defs>
       <path d={fill} fill={`url(#${gradId})`} />
-      <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
-      <circle cx={xs[xs.length - 1].toFixed(1)} cy={ys[ys.length - 1].toFixed(1)} r="3" fill={color} />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
-    <div className="flex justify-between mt-0.5 px-0.5">
-      <span className="text-[10px] text-gray-300">{minVal.toFixed(1)}</span>
-      <span className="text-[10px] font-semibold" style={{ color }}>{lastVal.toFixed(1)}</span>
-      <span className="text-[10px] text-gray-300">{maxVal.toFixed(1)}</span>
-    </div>
+  );
+}
+
+// ── 메인 라인 차트 (리소스 추이용 — Y축 0~100, X축 시간) ──
+function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
+  data: RangePoint[]; color?: string; period: string; isBytes?: boolean;
+}) {
+  if (data.length < 2) return (
+    <div className="flex items-center justify-center h-full text-sm text-gray-400">
+      데이터가 없습니다. 서버를 선택하거나 에이전트 설치를 확인해 주세요.
     </div>
   );
+
+  const W = 800, H = 160;
+  const PAD = { top: 8, right: 12, bottom: 28, left: 44 };
+  const CW = W - PAD.left - PAD.right;
+  const CH = H - PAD.top - PAD.bottom;
+
+  const vals = data.map(d => d.val);
+  const yMin = 0;
+  const yMax = isBytes ? Math.max(...vals) * 1.1 || 1 : 100;
+
+  const toX = (i: number) => PAD.left + (i / (data.length - 1)) * CW;
+  const toY = (v: number) => PAD.top + CH - ((v - yMin) / (yMax - yMin)) * CH;
+
+  const path = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(d.val).toFixed(1)}`).join(' ');
+  const fill = `${path} L${toX(data.length - 1).toFixed(1)},${PAD.top + CH} L${toX(0).toFixed(1)},${PAD.top + CH} Z`;
+
+  // Y축 눈금: 0, 25, 50, 75, 100 (퍼센트) 또는 isBytes면 0/max/2 3단계
+  const yTicks = isBytes
+    ? [0, yMax / 2, yMax].map(v => ({ v, label: v === 0 ? '0' : v >= 1024*1024 ? `${(v/1024/1024).toFixed(0)}M` : v >= 1024 ? `${(v/1024).toFixed(0)}K` : `${v.toFixed(0)}` }))
+    : [0, 25, 50, 75, 100].map(v => ({ v, label: `${v}` }));
+
+  // X축 눈금: 기간에 따라 레이블 수 조정
+  const PERIOD_SECONDS: Record<string, number> = { '30m': 1800, '1h': 3600, '3h': 10800, '6h': 21600, '24h': 86400 };
+  const totalSec = PERIOD_SECONDS[period] ?? 3600;
+  const xTickCount = period === '30m' ? 6 : period === '1h' ? 6 : period === '3h' ? 6 : period === '6h' ? 6 : 8;
+  const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) => {
+    const ts = data[0].ts + (i / xTickCount) * (data[data.length - 1].ts - data[0].ts);
+    const d = new Date(ts);
+    const label = period === '24h'
+      ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+      : `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const x = PAD.left + (i / xTickCount) * CW;
+    return { x, label };
+  });
+
+  const gradId = `lg_${color.replace('#', '')}`;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+
+      {/* Y축 그리드 */}
+      {yTicks.map(({ v, label }) => {
+        const y = toY(v);
+        return (
+          <g key={v}>
+            <line x1={PAD.left} x2={PAD.left + CW} y1={y} y2={y} stroke="#f0f0f0" strokeWidth="1" />
+            <text x={PAD.left - 4} y={y + 3} textAnchor="end" fontSize="9" fill="#9ca3af">{label}</text>
+          </g>
+        );
+      })}
+
+      {/* X축 그리드 + 레이블 */}
+      {xTicks.map(({ x, label }, i) => (
+        <g key={i}>
+          <line x1={x} x2={x} y1={PAD.top} y2={PAD.top + CH} stroke="#f0f0f0" strokeWidth="1" />
+          <text x={x} y={H - 8} textAnchor="middle" fontSize="9" fill="#9ca3af">{label}</text>
+        </g>
+      ))}
+
+      {/* 영역 + 라인 */}
+      <path d={fill} fill={`url(#${gradId})`} />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
+
+      {/* 테두리 */}
+      <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
+      <line x1={PAD.left} x2={PAD.left + CW} y1={PAD.top + CH} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
+    </svg>
+  );
+}
+
 }
 
 // ── 게이지 바 ──
@@ -157,6 +232,7 @@ export default function AdminCloudMonitor() {
   const [rangeLoading, setRangeLoading] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState('cpu_usage');
   const [selectedPeriod, setSelectedPeriod] = useState('1h');
+  const [selectedServer, setSelectedServer] = useState<string>('all');
 
   const PERIOD_MAP: Record<string, { seconds: number; step: string }> = {
     '30m': { seconds: 1800, step: '30' },
@@ -192,12 +268,13 @@ export default function AdminCloudMonitor() {
     if (!silent) setLoading(false);
   }, []);
 
-  const loadRange = useCallback(async (metric: string, period: string) => {
+  const loadRange = useCallback(async (metric: string, period: string, server?: string) => {
     setRangeLoading(true);
     const { seconds, step } = PERIOD_MAP[period] ?? PERIOD_MAP['1h'];
     const now = Math.floor(Date.now() / 1000);
     try {
-      const res = await fetch(`${API}/range?metric=${metric}&start=${now - seconds}&end=${now}&step=${step}`);
+      const serverParam = server && server !== 'all' ? `&instance_id=${encodeURIComponent(server)}` : '';
+      const res = await fetch(`${API}/range?metric=${metric}&start=${now - seconds}&end=${now}&step=${step}${serverParam}`);
       const data = await res.json();
       if (res.ok) {
         const pts: RangePoint[] = [];
@@ -205,7 +282,8 @@ export default function AdminCloudMonitor() {
           for (const [ts, val] of s.values ?? [])
             pts.push({ ts: (ts as number) * 1000, val: parseFloat(val as string) || 0 });
         pts.sort((a, b) => a.ts - b.ts);
-        setRangeData(prev => ({ ...prev, [`${metric}_${period}`]: pts }));
+        const key = `${metric}_${period}_${server ?? 'all'}`;
+        setRangeData(prev => ({ ...prev, [key]: pts }));
       }
     } catch {}
     setRangeLoading(false);
@@ -220,7 +298,7 @@ export default function AdminCloudMonitor() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [liveActive, loadSummary]);
 
-  useEffect(() => { void loadRange(selectedMetric, selectedPeriod); }, [selectedMetric, selectedPeriod, loadRange]);
+  useEffect(() => { void loadRange(selectedMetric, selectedPeriod, selectedServer); }, [selectedMetric, selectedPeriod, selectedServer, loadRange]);
 
   // 서버별 집계
   const serverMap: Record<string, { cpu: number; mem: number; memUsed: number; memTotal: number; netIn: number; netOut: number; disk: number; diskUsed: number; diskTotal: number }> = {};
@@ -243,7 +321,7 @@ export default function AdminCloudMonitor() {
     merge(summary.disk_total ?? [], 'diskTotal');
   }
   const servers = Object.entries(serverMap);
-  const currentRange = rangeData[`${selectedMetric}_${selectedPeriod}`] ?? [];
+  const currentRange = rangeData[`${selectedMetric}_${selectedPeriod}_${selectedServer}`] ?? [];
   const cpuSpark = rangeData[`cpu_usage_${selectedPeriod}`] ?? [];
   const memSpark = rangeData[`mem_usage_${selectedPeriod}`] ?? [];
 
@@ -321,12 +399,26 @@ export default function AdminCloudMonitor() {
 
           {/* 리소스 추이 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            {/* 헤더 */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <p className="text-sm font-bold text-gray-800">리소스 추이</p>
-                <p className="text-xs text-gray-400">서버 전체 합산 기준</p>
+                <p className="text-xs text-gray-400">서버 선택 후 기간별 그래프 확인</p>
               </div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
+                {/* 서버 선택 */}
+                <select
+                  value={selectedServer}
+                  onChange={e => setSelectedServer(e.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400 bg-white"
+                >
+                  <option value="all">전체 합산</option>
+                  {servers.map(([label]) => {
+                    const idEntry = Object.entries(INSTANCE_NAME_MAP).find(([, v]) => v === label);
+                    return <option key={label} value={idEntry?.[0] ?? label}>{label}</option>;
+                  })}
+                </select>
+                {/* 메트릭 선택 */}
                 <select
                   value={selectedMetric}
                   onChange={e => setSelectedMetric(e.target.value)}
@@ -334,6 +426,7 @@ export default function AdminCloudMonitor() {
                 >
                   {METRIC_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+                {/* 기간 선택 */}
                 <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                   {Object.keys(PERIOD_MAP).map(p => (
                     <button
@@ -349,15 +442,17 @@ export default function AdminCloudMonitor() {
                 </div>
               </div>
             </div>
-            <div className="relative h-32">
+            {/* 차트 */}
+            <div className="relative h-44">
               {rangeLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">불러오는 중...</div>
-              ) : currentRange.length > 1 ? (
-                <SparkLine data={currentRange} color={currentColor} height={128} />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
-                  데이터가 없습니다. 에이전트 설치 여부를 확인해 주세요.
-                </div>
+                <LineChart
+                  data={currentRange}
+                  color={currentColor}
+                  period={selectedPeriod}
+                  isBytes={selectedMetric.includes('bytes')}
+                />
               )}
             </div>
           </div>
@@ -425,8 +520,8 @@ export default function AdminCloudMonitor() {
                               <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.mem)}`}>{fmtPct(s.mem)}</span>
                               <div className="flex-1"><GaugeBar value={s.mem} /></div>
                             </div>
-                            {s.memTotal > 0 && fmtGB(s.memUsed) && fmtGB(s.memTotal) && (
-                              <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtGB(s.memUsed)} / {fmtGB(s.memTotal)}</p>
+                            {s.memTotal > 0 && fmtStorage(s.memUsed) && fmtStorage(s.memTotal) && (
+                              <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtStorage(s.memUsed)} / {fmtStorage(s.memTotal)}</p>
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 text-right tabular-nums whitespace-nowrap">{fmtBytes(s.netIn)}</td>
@@ -436,8 +531,8 @@ export default function AdminCloudMonitor() {
                               <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.disk)}`}>{fmtPct(s.disk)}</span>
                               <div className="flex-1"><GaugeBar value={s.disk} /></div>
                             </div>
-                            {s.diskTotal > 0 && fmtGB(s.diskUsed) && fmtGB(s.diskTotal) && (
-                              <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtGB(s.diskUsed)} / {fmtGB(s.diskTotal)}</p>
+                            {s.diskTotal > 0 && fmtStorage(s.diskUsed) && fmtStorage(s.diskTotal) && (
+                              <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtStorage(s.diskUsed)} / {fmtStorage(s.diskTotal)}</p>
                             )}
                           </td>
                         </tr>
