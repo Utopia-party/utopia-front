@@ -5,6 +5,10 @@ import {
   type ReportStatus,
 } from '../../../apis/report';
 
+interface ReportListProps {
+  refreshKey?: number;
+}
+
 type FilterType = 'ALL' | ReportStatus;
 
 const FILTERS: { label: string; value: FilterType }[] = [
@@ -58,7 +62,7 @@ const getStatusClassName = (status: ReportStatus) => {
   }
 };
 
-export default function ReportList() {
+export default function ReportList({ refreshKey = 0 }: ReportListProps) {
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,9 +72,11 @@ export default function ReportList() {
     try {
       setIsLoading(true);
       setError(null);
+
       const data = await fetchMyReports(
         nextFilter === 'ALL' ? undefined : nextFilter,
       );
+
       setReports(data);
     } catch (err) {
       console.error(err);
@@ -82,7 +88,7 @@ export default function ReportList() {
 
   useEffect(() => {
     void loadReports(filter);
-  }, [filter]);
+  }, [filter, refreshKey]);
 
   return (
     <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm md:p-7">
@@ -99,6 +105,7 @@ export default function ReportList() {
             {FILTERS.map((f) => (
               <button
                 key={f.value}
+                type="button"
                 onClick={() => setFilter(f.value)}
                 className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                   filter === f.value
@@ -138,6 +145,7 @@ export default function ReportList() {
                 <tr className="text-sm text-gray-500">
                   <th className="px-5 py-4 font-semibold">신고 대상</th>
                   <th className="px-5 py-4 font-semibold">사유</th>
+                  <th className="px-5 py-4 font-semibold">첨부</th>
                   <th className="px-5 py-4 font-semibold">신고일</th>
                   <th className="px-5 py-4 text-center font-semibold">상태</th>
                 </tr>
@@ -153,6 +161,15 @@ export default function ReportList() {
                     </td>
                     <td className="px-5 py-4 text-gray-700">
                       {getCategoryLabel(report.category)}
+                    </td>
+                    <td className="px-5 py-4 text-gray-700">
+                      {report.evidences.length > 0 ? (
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
+                          {report.evidences.length}개
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">없음</span>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-gray-700">
                       {new Date(report.created_at).toLocaleDateString('ko-KR')}
