@@ -93,7 +93,11 @@ function SparkLine({ data, color = '#6366f1', height = 48 }: { data: RangePoint[
   const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
   const fill = `${path} L${xs[xs.length - 1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`;
   const gradId = `grad_${color.replace('#', '')}`;
+  const minVal = Math.min(...vals);
+  const maxVal = Math.max(...vals);
+  const lastVal = vals[vals.length - 1];
   return (
+    <div>
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }} preserveAspectRatio="none">
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -104,10 +108,13 @@ function SparkLine({ data, color = '#6366f1', height = 48 }: { data: RangePoint[
       <path d={fill} fill={`url(#${gradId})`} />
       <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
       <circle cx={xs[xs.length - 1].toFixed(1)} cy={ys[ys.length - 1].toFixed(1)} r="3" fill={color} />
-      <text x={W - P} y={P + 10} textAnchor="end" fontSize="9" fill={color} fontWeight="600">
-        {vals[vals.length - 1].toFixed(1)}
-      </text>
     </svg>
+    <div className="flex justify-between mt-0.5 px-0.5">
+      <span className="text-[10px] text-gray-300">{minVal.toFixed(1)}</span>
+      <span className="text-[10px] font-semibold" style={{ color }}>{lastVal.toFixed(1)}</span>
+      <span className="text-[10px] text-gray-300">{maxVal.toFixed(1)}</span>
+    </div>
+    </div>
   );
 }
 
@@ -418,7 +425,7 @@ export default function AdminCloudMonitor() {
                               <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.mem)}`}>{fmtPct(s.mem)}</span>
                               <div className="flex-1"><GaugeBar value={s.mem} /></div>
                             </div>
-                            {fmtGB(s.memUsed) && fmtGB(s.memTotal) && (
+                            {s.memTotal > 0 && fmtGB(s.memUsed) && fmtGB(s.memTotal) && (
                               <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtGB(s.memUsed)} / {fmtGB(s.memTotal)}</p>
                             )}
                           </td>
@@ -429,7 +436,7 @@ export default function AdminCloudMonitor() {
                               <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.disk)}`}>{fmtPct(s.disk)}</span>
                               <div className="flex-1"><GaugeBar value={s.disk} /></div>
                             </div>
-                            {fmtGB(s.diskUsed) && fmtGB(s.diskTotal) && (
+                            {s.diskTotal > 0 && fmtGB(s.diskUsed) && fmtGB(s.diskTotal) && (
                               <p className="text-xs text-gray-400 mt-0.5 text-right tabular-nums">{fmtGB(s.diskUsed)} / {fmtGB(s.diskTotal)}</p>
                             )}
                           </td>
