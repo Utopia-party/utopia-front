@@ -57,7 +57,6 @@ export default function Chat() {
   );
 
   const nicknameRef = useRef(user?.nickname ?? '익명');
-  // [FIX] userIdRef 제거 — WebSocket 인증은 서버에서 JWT 쿠키로 처리
   const myProfileImage = user?.profile_image ?? null;
   const currentNickname = user?.nickname ?? '익명';
   const currentUserId = user?.user_id ?? 'guest';
