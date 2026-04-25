@@ -57,14 +57,12 @@ export default function Chat() {
   );
 
   const nicknameRef = useRef(user?.nickname ?? '익명');
-  const userIdRef = useRef(user?.user_id ?? 'guest');
   const myProfileImage = user?.profile_image ?? null;
   const currentNickname = user?.nickname ?? '익명';
   const currentUserId = user?.user_id ?? 'guest';
 
   useEffect(() => {
     if (user?.nickname) nicknameRef.current = user.nickname;
-    if (user?.user_id) userIdRef.current = user.user_id;
   }, [user]);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -120,7 +118,7 @@ export default function Chat() {
       )
         return;
       const ws = new WebSocket(
-        `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nicknameRef.current)}&user_id=${encodeURIComponent(userIdRef.current)}`,
+        `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nicknameRef.current)}`,
       );
       wsRef.current = ws;
       ws.onopen = () => {
