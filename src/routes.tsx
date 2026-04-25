@@ -234,6 +234,9 @@ const router = createMemoryRouter([
       },
     ],
   },
-]);
+], {
+  initialEntries: ['/'],
+  initialIndex: 0,
+});
 
 export default router;
