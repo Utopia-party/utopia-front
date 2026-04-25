@@ -117,7 +117,6 @@ export default function Chat() {
           wsRef.current.readyState === WebSocket.CONNECTING)
       )
         return;
-      
       const ws = new WebSocket(
         `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nicknameRef.current)}`,
       );
