@@ -135,18 +135,22 @@ export default function AdminSidebar({
   return (
     <aside
       className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col border-r border-gray-200 bg-white py-6 transition-all duration-300 ${
-        collapsed ? 'w-[64px]' : 'w-[200px]'
+        collapsed ? 'w-18' : 'w-60'
       }`}
     >
       <div
-        className={`mb-6 flex items-center ${
-          collapsed ? 'justify-center px-0' : 'justify-between px-5'
+        className={`mb-6 flex ${
+          collapsed
+            ? 'flex-col items-center gap-4 px-0'
+            : 'items-center justify-between px-5'
         }`}
       >
         <a
           href="/home"
           title={collapsed ? 'Party-Up' : undefined}
-          className="flex items-center gap-2.5 text-lg font-bold text-foreground no-underline"
+          className={`flex items-center text-lg font-bold text-foreground no-underline ${
+            collapsed ? 'justify-center' : 'gap-2.5'
+          }`}
         >
           <span className="h-7 w-7 shrink-0 rounded-full bg-[#6C9FFF]" />
           {!collapsed && <span>Party-Up</span>}
@@ -157,15 +161,13 @@ export default function AdminSidebar({
           onClick={onToggleCollapsed}
           aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
           aria-expanded={!collapsed}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 ${
-            collapsed ? 'mt-4' : ''
-          }`}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
         >
-          <Menu size={20} strokeWidth={2} />
+          <Menu size={22} strokeWidth={2.25} />
         </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5">
+      <nav className="flex flex-1 flex-col gap-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
 
@@ -176,7 +178,7 @@ export default function AdminSidebar({
               end={item.end}
               title={collapsed ? item.label : undefined}
               className={({ isActive }) =>
-                `flex items-center border-l-4 py-2.5 text-sm font-medium no-underline transition-all ${
+                `flex items-center border-l-4 py-3 text-sm font-medium no-underline transition-all ${
                   collapsed ? 'justify-center px-0' : 'gap-3 px-5'
                 } ${
                   isActive
@@ -185,7 +187,7 @@ export default function AdminSidebar({
                 }`
               }
             >
-              <Icon size={18} strokeWidth={2} className="shrink-0" />
+              <Icon size={20} strokeWidth={2} className="shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </NavLink>
           );
@@ -196,11 +198,11 @@ export default function AdminSidebar({
         <NavLink
           to="/home"
           title={collapsed ? '사용자 홈' : undefined}
-          className={`flex items-center border-l-4 border-transparent py-2.5 text-sm font-medium text-gray-500 no-underline transition-all hover:bg-gray-50 hover:text-gray-900 ${
+          className={`flex items-center border-l-4 border-transparent py-3 text-sm font-medium text-gray-500 no-underline transition-all hover:bg-gray-50 hover:text-gray-900 ${
             collapsed ? 'justify-center px-0' : 'gap-3 px-5'
           }`}
         >
-          <Home size={18} strokeWidth={2} className="shrink-0" />
+          <Home size={20} strokeWidth={2} className="shrink-0" />
           {!collapsed && <span>사용자 홈</span>}
         </NavLink>
       </nav>
