@@ -149,7 +149,7 @@ export default function Chat() {
           if (msg.type === 'force_logout') {
             wsRef.current?.close();
             wsRef.current = null;
-            logout().then(() => navigate('/login?reason=banned'));
+            logout().then(() => navigate('/시작하기?reason=banned'));
             return;
           }
           setMessages((prev) => [...prev, msg as Message]);
@@ -439,7 +439,6 @@ export default function Chat() {
           referralDiscountRate={partyInfo?.referral_discount_rate ?? null}
           onPaymentComplete={() => {
             setAlreadyPaid(true);
-            setShowPaymentModal(false);
           }}
         />
       )}
