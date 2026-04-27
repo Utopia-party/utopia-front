@@ -17,6 +17,7 @@ export default function AdminShell() {
   const [permissions, setPermissions] = useState<AdminPermissions | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +49,7 @@ export default function AdminShell() {
 
   const allowedByPath = useMemo(() => {
     const path = location.pathname;
+
     if (path === '/admin') {
       return true;
     }
@@ -61,6 +63,9 @@ export default function AdminShell() {
       return permissions?.canManageParties ?? false;
     }
     if (path.startsWith('/admin/parties')) {
+      return permissions?.canManageParties ?? false;
+    }
+    if (path.startsWith('/admin/quick-match')) {
       return permissions?.canManageParties ?? false;
     }
     if (path.startsWith('/admin/reports')) {
@@ -82,11 +87,14 @@ export default function AdminShell() {
       return permissions?.canManageCaptcha ?? false;
     }
     if (path.startsWith('/admin/cloud-monitor')) {
-      return true;
+      return permissions?.canViewLogs ?? false;
     }
     if (path.startsWith('/admin/handocr')) {
-      return permissions?.canManageHandOcr ?? false;
+      return Boolean(
+        permissions?.canManageHandOcr ?? permissions?.canManageCaptcha ?? false,
+      );
     }
+
     return true;
   }, [location.pathname, permissions]);
 
@@ -110,8 +118,17 @@ export default function AdminShell() {
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f5] text-foreground">
-      <AdminSidebar permissions={permissions} />
-      <div className="flex-1 flex flex-col ml-[200px]">
+      <AdminSidebar
+        permissions={permissions}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((prev) => !prev)}
+      />
+
+      <div
+        className={`flex flex-1 flex-col transition-all duration-300 ${
+          sidebarCollapsed ? 'ml-16' : 'ml-50'
+        }`}
+      >
         <Outlet />
       </div>
     </div>
