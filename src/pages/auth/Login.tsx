@@ -113,7 +113,7 @@ export default function Login() {
     const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
     const state = createOAuthState();
 
-    sessionStorage.setItem('google_oauth_state', state);
+    localStorage.setItem('google_oauth_state', state);
 
     const googleAuthUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
@@ -134,7 +134,7 @@ export default function Login() {
     const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
     const state = createOAuthState();
 
-    sessionStorage.setItem('kakao_oauth_state', state);
+    localStorage.setItem('kakao_oauth_state', state);
 
     const kakaoAuthUrl =
       `https://kauth.kakao.com/oauth/authorize` +
@@ -151,7 +151,7 @@ export default function Login() {
     const redirectUri = import.meta.env.VITE_NAVER_REDIRECT_URI;
     const state = createOAuthState();
 
-    sessionStorage.setItem('naver_oauth_state', state);
+    localStorage.setItem('naver_oauth_state', state);
 
     const naverAuthUrl =
       `https://nid.naver.com/oauth2.0/authorize` +
