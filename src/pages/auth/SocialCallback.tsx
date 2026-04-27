@@ -130,7 +130,7 @@ export default function SocialCallback() {
         sessionStorage.removeItem(storageKey);
 
         // 쿠키 세팅 후 /me 조회 — 최대 3회 재시도
-        const { checkAuth, isLoggedIn } = useAuthStore.getState();
+        const { checkAuth } = useAuthStore.getState();
         for (let i = 0; i < 3; i++) {
           await checkAuth();
           if (useAuthStore.getState().isLoggedIn) break;
