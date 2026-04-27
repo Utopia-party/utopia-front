@@ -243,13 +243,12 @@ export default function Chat() {
   const closeProfileDrawer = useCallback(() => setProfileDrawer(null), []);
   const handleProfileInfo = useCallback(() => {
     if (!profileDrawer) return;
-
     toast('프로필 정보 기능은 준비 중입니다.', {
       icon: '👤',
     });
-
     setProfileDrawer(null);
   }, [profileDrawer]);
+
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
     setReportTarget(profileDrawer.user);
@@ -259,17 +258,13 @@ export default function Chat() {
 
   const handlePraiseUser = useCallback(() => {
     if (!profileDrawer) return;
-
     const targetUserId = profileDrawer.user.user_id;
-
     if (!targetUserId || targetUserId === currentUserId) return;
-
     if (praisedUserIds[targetUserId]) {
       toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
       setProfileDrawer(null);
       return;
     }
-
     setPraiseTarget(profileDrawer.user);
     setProfileDrawer(null);
     setShowPraiseModal(true);
@@ -284,10 +279,8 @@ export default function Chat() {
       message: string | null;
     }) => {
       if (!praiseTarget?.user_id) return;
-
       const targetUserId = String(praiseTarget.user_id);
       const targetNickname = praiseTarget.nickname ?? '상대방';
-
       try {
         await createPraise({
           party_id: partyId,
@@ -295,19 +288,12 @@ export default function Chat() {
           praise_type,
           message,
         });
-
-        setPraisedUserIds((prev) => ({
-          ...prev,
-          [targetUserId]: true,
-        }));
-
+        setPraisedUserIds((prev) => ({ ...prev, [targetUserId]: true }));
         setShowPraiseModal(false);
         setPraiseTarget(null);
-
         toast.success(`${targetNickname}님에게 칭찬을 보냈어요.`);
       } catch (err: unknown) {
         console.error('칭찬 실패:', err);
-
         const status =
           typeof err === 'object' &&
           err !== null &&
@@ -316,20 +302,13 @@ export default function Chat() {
             ?.status === 'number'
             ? (err as { response?: { status?: number } }).response?.status
             : undefined;
-
         if (status === 409) {
           toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
-
-          setPraisedUserIds((prev) => ({
-            ...prev,
-            [targetUserId]: true,
-          }));
-
+          setPraisedUserIds((prev) => ({ ...prev, [targetUserId]: true }));
           setShowPraiseModal(false);
           setPraiseTarget(null);
           return;
         }
-
         toast.error('칭찬을 보내지 못했습니다. 잠시 후 다시 시도해주세요.');
       }
     },
@@ -437,7 +416,6 @@ export default function Chat() {
           referralDiscountRate={partyInfo?.referral_discount_rate ?? null}
           onPaymentComplete={() => {
             setAlreadyPaid(true);
-            setShowPaymentModal(false);
           }}
         />
       )}
