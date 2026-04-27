@@ -115,7 +115,6 @@ export default function SocialCallback() {
 
         if (data.status === 'NEED_NICKNAME') {
           sessionStorage.removeItem(storageKey);
-
           navigate('/social-signup', {
             replace: true,
             state: {
@@ -130,10 +129,14 @@ export default function SocialCallback() {
 
         sessionStorage.removeItem(storageKey);
 
-        const { checkAuth } = useAuthStore.getState();
-        await checkAuth();
+        // 쿠키 세팅 후 /me 조회 — 최대 3회 재시도
+        const { checkAuth, isLoggedIn } = useAuthStore.getState();
+        for (let i = 0; i < 3; i++) {
+          await checkAuth();
+          if (useAuthStore.getState().isLoggedIn) break;
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
 
-        window.history.replaceState({}, document.title, '/home');
         navigate('/home', { replace: true });
       } catch (error: unknown) {
         sessionStorage.removeItem(storageKey);
