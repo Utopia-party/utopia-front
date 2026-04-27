@@ -1,4 +1,4 @@
-import { createMemoryRouter, redirect, Outlet } from 'react-router';
+import { createBrowserRouter, redirect, Outlet } from 'react-router';
 
 // 레이아웃 컴포넌트
 import App from './App';
@@ -50,7 +50,7 @@ import AdminHandOCR from './pages/admin/AdminHandOCR';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
 import AdminQuickMatch from './pages/admin/AdminQuickMatch';
 
-const router = createMemoryRouter([
+const router = createBrowserRouter([
   {
     index: true,
     Component: Landing,
