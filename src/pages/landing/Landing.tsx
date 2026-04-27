@@ -5,13 +5,11 @@ import SecuritySection from './components/SecuritySection';
 import TeamSection from './components/TeamSection';
 import Footer from '../../components/layout/Footer';
 import Navbar from '../../components/layout/Navbar';
-import { Toaster } from 'react-hot-toast';
 import DocumentShowcaseSection from './components/DocumentShowcaseSection';
 
 export default function Landing() {
   return (
     <div className="bg-white">
-      <Toaster position="top-center" />
       <Navbar />
 
       <Container className="py-4">

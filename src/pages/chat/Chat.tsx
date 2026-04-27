@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../apis/api';
+
 import type {
   Message,
   PartyInfo,
@@ -167,7 +169,7 @@ export default function Chat() {
         wsRef.current = null;
       }
     };
-  }, [partyId]);
+  }, [partyId, logout, navigate]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -241,9 +243,11 @@ export default function Chat() {
   const closeProfileDrawer = useCallback(() => setProfileDrawer(null), []);
   const handleProfileInfo = useCallback(() => {
     if (!profileDrawer) return;
-    alert(
-      `${profileDrawer.user.nickname ?? '사용자'} 프로필 정보를 여기에 연결하면 됩니다.`,
-    );
+
+    toast('프로필 정보 기능은 준비 중입니다.', {
+      icon: '👤',
+    });
+
     setProfileDrawer(null);
   }, [profileDrawer]);
   const handleReportUser = useCallback(() => {
@@ -261,7 +265,7 @@ export default function Chat() {
     if (!targetUserId || targetUserId === currentUserId) return;
 
     if (praisedUserIds[targetUserId]) {
-      alert('이미 최근 30일 안에 칭찬한 사용자입니다.');
+      toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
       setProfileDrawer(null);
       return;
     }
@@ -280,6 +284,7 @@ export default function Chat() {
       message: string | null;
     }) => {
       if (!praiseTarget?.user_id) return;
+
       const targetUserId = String(praiseTarget.user_id);
       const targetNickname = praiseTarget.nickname ?? '상대방';
 
@@ -296,17 +301,10 @@ export default function Chat() {
           [targetUserId]: true,
         }));
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: 'system',
-            content: `${currentNickname}님이 ${targetNickname}님을 칭찬했어요 💕`,
-            created_at: new Date().toISOString(),
-          } as Message,
-        ]);
-
         setShowPraiseModal(false);
         setPraiseTarget(null);
+
+        toast.success(`${targetNickname}님에게 칭찬을 보냈어요.`);
       } catch (err: unknown) {
         console.error('칭찬 실패:', err);
 
@@ -320,7 +318,7 @@ export default function Chat() {
             : undefined;
 
         if (status === 409) {
-          alert('이미 최근 30일 안에 칭찬한 사용자입니다.');
+          toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
 
           setPraisedUserIds((prev) => ({
             ...prev,
@@ -332,10 +330,10 @@ export default function Chat() {
           return;
         }
 
-        alert('칭찬을 보내지 못했습니다. 잠시 후 다시 시도해주세요.');
+        toast.error('칭찬을 보내지 못했습니다. 잠시 후 다시 시도해주세요.');
       }
     },
-    [praiseTarget, currentNickname, partyId],
+    [praiseTarget, partyId],
   );
 
   const renderMessage = useCallback(
