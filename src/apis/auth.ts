@@ -14,6 +14,10 @@ import type {
   LoginPayload,
   LoginResponse,
   MeResponse,
+  SocialLoginPayload,
+  SocialLoginResponse,
+  SocialSignupPayload,
+  SocialSignupResponse,
 } from '../types/auth';
 
 // 회원가입
@@ -120,6 +124,27 @@ export const login = async (
     headers: { 'X-Captcha-Token': captchaToken },
   });
 
+  return response.data;
+};
+
+// 소셜 로그인
+export const socialLogin = async (
+  payload: SocialLoginPayload,
+): Promise<SocialLoginResponse> => {
+  const response = await api.post<SocialLoginResponse>(
+    '/api/auth/login',
+    payload,
+  );
+  return response.data;
+};
+
+export const socialSignup = async (
+  payload: SocialSignupPayload,
+): Promise<SocialSignupResponse> => {
+  const response = await api.post<SocialSignupResponse>(
+    '/api/auth/social/signup',
+    payload,
+  );
   return response.data;
 };
 

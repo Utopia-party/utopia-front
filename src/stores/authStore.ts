@@ -12,6 +12,7 @@ type AuthState = {
   clearUser: () => void;
   checkAuth: () => Promise<void>;
   logout: () => Promise<void>;
+  withdraw: () => void;
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -77,6 +78,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       loading: false,
     });
   },
+
+  withdraw: () =>
+    set({
+      user: null,
+      isLoggedIn: false,
+      loading: false,
+    }),
 
   clearUser: () =>
     set({

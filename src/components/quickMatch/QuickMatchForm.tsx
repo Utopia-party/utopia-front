@@ -10,7 +10,7 @@ type QuickMatchFormProps = {
     service_id: string;
     preferred_conditions?: {
       price_range?: string;
-      duration_preference?: 'short_term' | 'long_term' | 'flexible';
+      duration_preference?: 'under_1_month' | '1_3_months' | 'over_3_months';
     };
   }) => void;
   isSubmitting?: boolean;
@@ -61,9 +61,9 @@ const PRICE_RANGE_OPTIONS = [
 
 const DURATION_OPTIONS = [
   { value: '', label: '상관없음' },
-  { value: 'short_term', label: '단기 이용 선호' },
-  { value: 'long_term', label: '장기 이용 선호' },
-  { value: 'flexible', label: '유연하게 가능' },
+  { value: 'under_1_month', label: '1개월 이하' },
+  { value: '1_3_months', label: '1~3개월' },
+  { value: 'over_3_months', label: '3개월 이상' },
 ] as const;
 
 export default function QuickMatchForm({
@@ -80,7 +80,7 @@ export default function QuickMatchForm({
   const [serviceId, setServiceId] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [durationPreference, setDurationPreference] = useState<
-    '' | 'short_term' | 'long_term' | 'flexible'
+    '' | 'under_1_month' | '1_3_months' | 'over_3_months'
   >('');
 
   const resetForm = () => {
@@ -134,7 +134,7 @@ export default function QuickMatchForm({
 
     const preferredConditions: {
       price_range?: string;
-      duration_preference?: 'short_term' | 'long_term' | 'flexible';
+      duration_preference?: 'under_1_month' | '1_3_months' | 'over_3_months';
     } = {};
 
     if (priceRange) {
@@ -214,7 +214,7 @@ export default function QuickMatchForm({
             </select>
           </div>
 
-          <div>
+          {/* <div>
             <label className="mb-2 block text-sm font-semibold text-slate-800">
               희망 가격대 <span className="text-slate-400">(선택)</span>
             </label>
@@ -230,11 +230,11 @@ export default function QuickMatchForm({
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-800">
-              이용 기간 성향 <span className="text-slate-400">(선택)</span>
+              이용 기간 <span className="text-slate-400">(선택)</span>
             </label>
             <select
               value={durationPreference}
@@ -242,9 +242,9 @@ export default function QuickMatchForm({
                 setDurationPreference(
                   e.target.value as
                     | ''
-                    | 'short_term'
-                    | 'long_term'
-                    | 'flexible',
+                    | 'under_1_month'
+                    | '1_3_months'
+                    | 'over_3_months',
                 )
               }
               disabled={isSubmitting || loading}
@@ -259,10 +259,10 @@ export default function QuickMatchForm({
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700">
+        {/* <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700">
           ⚠️ 빠른매칭은 자동으로 파티를 탐색하고 참여까지 진행하는 기능이며,
           서비스에 따라 수수료가 발생할 수 있습니다.
-        </div>
+        </div> */}
 
         <div className="mt-6 flex gap-3">
           <button

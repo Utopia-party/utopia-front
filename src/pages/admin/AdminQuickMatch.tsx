@@ -1,312 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import AdminHeader from './components/AdminHeader';
+import FilterTabs from './components/FilterTabs';
+import Pagination from './components/Pagination';
+import { useAdminQuickMatch } from '../../hooks/admin/useAdminQuickMatch';
+import type {
+  CandidateStatus,
+  MainTab,
+  QuickMatchStatus,
+  TuningPolicy,
+} from '../../types/admin/admin-quick-match';
 
-type QuickMatchStatus =
-  | 'REQUESTED'
-  | 'MATCHED'
-  | 'FAILED'
-  | 'EXPIRED'
-  | 'REMATCHING';
+const MAIN_TABS: MainTab[] = ['요청 관리', '튜닝 설정'];
 
-type CandidateStatus = 'SELECTED' | 'PENDING' | 'REJECTED' | 'FAILED';
-
-type FilterReasonMap = Record<string, unknown>;
-
-type QuickMatchCandidateRow = {
-  candidateId: string;
-  partyId: string;
-  partyName: string;
-  rank: number;
-  status: CandidateStatus;
-  ruleScore: number;
-  vectorScore: number;
-  llmScore: number;
-  aiScore: number;
-  llmApplied: boolean;
-  filterReasons: FilterReasonMap;
-};
-
-type QuickMatchRequestRow = {
-  requestId: string;
-  requestedAt: string;
-  userId: string;
-  userNickname: string;
-  serviceName: string;
-  status: QuickMatchStatus;
-  matchedPartyId?: string | null;
-  matchedPartyName?: string | null;
-  totalMatchSeconds?: number | null;
-  retryCount: number;
-  failReason?: string | null;
-  aiProfileSnapshot: {
-    trustScore: number;
-    preferredConditions: {
-      category?: string;
-      platform?: string;
-      priceRange?: string;
-      durationPreference?: string;
-    };
-    activitySummary: {
-      totalPartyJoinCount: number;
-      servicePartyJoinCount: number;
-      activePartyCount: number;
-    };
-    paymentSummary: {
-      averagePaymentAmount: number;
-      settlementSuccessCount: number;
-    };
-    riskSummary: {
-      reportCount: number;
-      leaveCount: number;
-      isCurrentlyBanned: boolean;
-    };
-  };
-  candidates: QuickMatchCandidateRow[];
-};
-
-const SUMMARY = {
-  totalRequestsToday: 128,
-  successCount: 94,
-  failCount: 21,
-  successRate: 73.4,
-  avgMatchSeconds: 1.8,
-  rematchCount: 14,
-  missingPartyEmbeddingCount: 3,
-};
-
-const MOCK_ROWS: QuickMatchRequestRow[] = [
-  {
-    requestId: 'qm_req_20260423_001',
-    requestedAt: '2026-04-23 13:42:11',
-    userId: 'user_1024',
-    userNickname: 'ott매니아',
-    serviceName: 'Netflix',
-    status: 'MATCHED',
-    matchedPartyId: 'party_55',
-    matchedPartyName: '넷플릭스 장기팟 A',
-    totalMatchSeconds: 1.42,
-    retryCount: 0,
-    failReason: null,
-    aiProfileSnapshot: {
-      trustScore: 72.0,
-      preferredConditions: {
-        category: 'ott',
-        platform: 'netflix',
-        priceRange: '10000-17000',
-        durationPreference: 'long_term',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 4,
-        servicePartyJoinCount: 2,
-        activePartyCount: 2,
-      },
-      paymentSummary: {
-        averagePaymentAmount: 14500,
-        settlementSuccessCount: 18,
-      },
-      riskSummary: {
-        reportCount: 1,
-        leaveCount: 2,
-        isCurrentlyBanned: false,
-      },
-    },
-    candidates: [
-      {
-        candidateId: 'cand_1',
-        partyId: 'party_55',
-        partyName: '넷플릭스 장기팟 A',
-        rank: 1,
-        status: 'SELECTED',
-        ruleScore: 0.91,
-        vectorScore: 0.88,
-        llmScore: 0.93,
-        aiScore: 0.908,
-        llmApplied: true,
-        filterReasons: {
-          llm_reason: '장기 이용 성향과 가격대가 잘 맞고 신뢰도 여유도 충분함',
-          llm_applied: true,
-          match_mode: 'normal',
-          hard_filter: {
-            category_match: true,
-            platform_match: true,
-            price_match: true,
-            duration_match: true,
-            trust_threshold_pass: true,
-            remaining_seat: 2,
-          },
-          rule_reason: {
-            trust_fit_score: 0.88,
-            capacity_score: 0.5,
-            price_score: 1,
-            duration_score: 1,
-          },
-        },
-      },
-      {
-        candidateId: 'cand_2',
-        partyId: 'party_89',
-        partyName: '넷플릭스 단기팟 B',
-        rank: 2,
-        status: 'PENDING',
-        ruleScore: 0.73,
-        vectorScore: 0.7,
-        llmScore: 0.76,
-        aiScore: 0.729,
-        llmApplied: true,
-        filterReasons: {
-          llm_reason: '조건은 맞지만 장기 유지 가능성은 상대적으로 낮음',
-          llm_applied: true,
-          match_mode: 'normal',
-        },
-      },
-    ],
-  },
-  {
-    requestId: 'qm_req_20260423_002',
-    requestedAt: '2026-04-23 13:45:29',
-    userId: 'user_2099',
-    userNickname: '정산왕',
-    serviceName: 'Wavve',
-    status: 'FAILED',
-    matchedPartyId: null,
-    matchedPartyName: null,
-    totalMatchSeconds: 0.94,
-    retryCount: 1,
-    failReason: 'NO_CANDIDATE',
-    aiProfileSnapshot: {
-      trustScore: 54.5,
-      preferredConditions: {
-        category: 'ott',
-        platform: 'wavve',
-        priceRange: '7000-10000',
-        durationPreference: 'short_term',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 1,
-        servicePartyJoinCount: 0,
-        activePartyCount: 0,
-      },
-      paymentSummary: {
-        averagePaymentAmount: 8900,
-        settlementSuccessCount: 3,
-      },
-      riskSummary: {
-        reportCount: 0,
-        leaveCount: 0,
-        isCurrentlyBanned: false,
-      },
-    },
-    candidates: [
-      {
-        candidateId: 'cand_3',
-        partyId: 'party_77',
-        partyName: '웨이브 프리미엄 4인팟',
-        rank: 1,
-        status: 'REJECTED',
-        ruleScore: 0,
-        vectorScore: 0,
-        llmScore: 0,
-        aiScore: 0,
-        llmApplied: false,
-        filterReasons: {
-          excluded_reason: 'trust_score_too_low',
-          hard_filter: {
-            user_trust_score: 54.5,
-            party_min_trust_score: 60,
-            trust_threshold_pass: false,
-          },
-        },
-      },
-      {
-        candidateId: 'cand_4',
-        partyId: 'party_78',
-        partyName: '웨이브 1개월 팟',
-        rank: 2,
-        status: 'REJECTED',
-        ruleScore: 0,
-        vectorScore: 0,
-        llmScore: 0,
-        aiScore: 0,
-        llmApplied: false,
-        filterReasons: {
-          excluded_reason: 'party_embedding_not_found',
-          normal_match_unavailable_reason: 'party_embedding_not_found',
-        },
-      },
-    ],
-  },
-  {
-    requestId: 'qm_req_20260423_003',
-    requestedAt: '2026-04-23 14:01:03',
-    userId: 'user_7751',
-    userNickname: '장기유저',
-    serviceName: 'YouTube Premium',
-    status: 'REMATCHING',
-    matchedPartyId: 'party_102',
-    matchedPartyName: '유튜브 패밀리 B',
-    totalMatchSeconds: 2.21,
-    retryCount: 1,
-    failReason: null,
-    aiProfileSnapshot: {
-      trustScore: 81.2,
-      preferredConditions: {
-        category: 'music',
-        platform: 'youtube',
-        priceRange: '5000-9000',
-        durationPreference: 'flexible',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 7,
-        servicePartyJoinCount: 3,
-        activePartyCount: 1,
-      },
-      paymentSummary: {
-        averagePaymentAmount: 7900,
-        settlementSuccessCount: 25,
-      },
-      riskSummary: {
-        reportCount: 0,
-        leaveCount: 1,
-        isCurrentlyBanned: false,
-      },
-    },
-    candidates: [
-      {
-        candidateId: 'cand_5',
-        partyId: 'party_100',
-        partyName: '유튜브 패밀리 A',
-        rank: 1,
-        status: 'FAILED',
-        ruleScore: 0.84,
-        vectorScore: 0.8,
-        llmScore: 0.85,
-        aiScore: 0.832,
-        llmApplied: true,
-        filterReasons: {
-          llm_reason: '최초 선택 후보였으나 join 시점에 파티가 가득 참',
-          llm_applied: true,
-          match_mode: 'normal',
-        },
-      },
-      {
-        candidateId: 'cand_6',
-        partyId: 'party_102',
-        partyName: '유튜브 패밀리 B',
-        rank: 2,
-        status: 'SELECTED',
-        ruleScore: 0.8,
-        vectorScore: 0.78,
-        llmScore: 0.81,
-        aiScore: 0.797,
-        llmApplied: true,
-        filterReasons: {
-          llm_reason: '재매칭 대상 중 가장 안정적인 대안',
-          llm_applied: true,
-          match_mode: 'normal',
-        },
-      },
-    ],
-  },
+const STATUS_FILTER_TABS: Array<QuickMatchStatus | '전체'> = [
+  '전체',
+  'REQUESTED',
+  'MATCHED',
+  'FAILED',
+  'EXPIRED',
+  'REMATCHING',
 ];
 
 const STATUS_STYLE: Record<QuickMatchStatus, string> = {
@@ -324,9 +36,54 @@ const CANDIDATE_STATUS_STYLE: Record<CandidateStatus, string> = {
   FAILED: 'bg-amber-50 text-amber-600 border-amber-100',
 };
 
+const FAILURE_REASON_LABELS: Record<string, string> = {
+  NO_CANDIDATE: '조건 통과 후보 없음',
+  NO_RECRUITING_PARTY: '모집중 파티 없음',
+  USER_EMBEDDING_NOT_FOUND: '사용자 임베딩 없음',
+  party_embedding_not_found: '파티 임베딩 없음',
+  trust_score_too_low: '신뢰도 부족',
+  duration_mismatch: '기간 불일치',
+  category_mismatch: '카테고리 불일치',
+  platform_mismatch: '플랫폼 불일치',
+  party_full: '정원 초과',
+  PARTY_FULL: '가입 시점 정원 초과',
+  PARTY_STATUS_CHANGED: '가입 시점 파티 상태 변경',
+  ALREADY_JOINED: '이미 가입된 파티',
+  MAX_RETRY_EXCEEDED: '최대 재시도 초과',
+  NO_MORE_CANDIDATES: '남은 후보 없음',
+};
+
+const DEFAULT_POLICY: TuningPolicy = {
+  quickMatchEnabled: true,
+  topN: 5,
+  maxCandidates: 30,
+  minMatchScore: 0.7,
+  vectorWeight: 0.5,
+  trustWeight: 0.4,
+  capacityWeight: 0.3,
+  durationWeight: 0.3,
+  joinPartyLockTtlSeconds: 30,
+  maxRetry: 3,
+};
+
 function formatSeconds(value?: number | null) {
   if (value == null) return '-';
   return `${value.toFixed(2)}초`;
+}
+
+function formatMs(value?: number | null) {
+  if (value == null) return '-';
+  return `${value.toLocaleString()}ms`;
+}
+
+function labelFailureReason(value?: string | null) {
+  if (!value) return '-';
+  return FAILURE_REASON_LABELS[value] ?? value;
+}
+
+function formatOptional(value?: string | number | null) {
+  if (value === undefined || value === null || value === '') return '-';
+  return String(value);
 }
 
 function SummaryCard({
@@ -351,752 +108,1052 @@ function SummaryCard({
   );
 }
 
-function ToggleCard({
-  title,
+function PolicyField({
+  label,
   description,
-  enabled,
-  onToggle,
+  children,
 }: {
-  title: string;
+  label: string;
   description: string;
-  enabled: boolean;
-  onToggle: () => void;
+  children: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold text-slate-900">{title}</div>
-          <div className="mt-1 text-xs leading-5 text-slate-500">
-            {description}
-          </div>
-        </div>
-        <button
-          onClick={onToggle}
-          className={`min-w-[72px] rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-            enabled
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-slate-100 text-slate-500'
-          }`}
-        >
-          {enabled ? 'ON' : 'OFF'}
-        </button>
-      </div>
-    </div>
+    <label className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-sm font-semibold text-slate-900">{label}</div>
+      <div className="mt-1 text-xs leading-5 text-slate-500">{description}</div>
+      <div className="mt-3">{children}</div>
+    </label>
+  );
+}
+
+function NumberInput({
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+}) {
+  return (
+    <input
+      type="number"
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
+    />
   );
 }
 
 export default function AdminQuickMatch() {
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<'전체' | QuickMatchStatus>('전체');
-  const [serviceName, setServiceName] = useState('전체');
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
-    MOCK_ROWS[0]?.requestId ?? null,
-  );
+  const [activeMainTab, setActiveMainTab] = useState<MainTab>('요청 관리');
+  const [policyDraft, setPolicyDraft] = useState<TuningPolicy | null>(null);
+  const [policyDirty, setPolicyDirty] = useState(false);
+  const [policySaved, setPolicySaved] = useState(false);
+  const [backfillRequested, setBackfillRequested] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const [quickMatchEnabled, setQuickMatchEnabled] = useState(true);
-  const [llmEnabled, setLlmEnabled] = useState(true);
-  const [fallbackOnlyEnabled, setFallbackOnlyEnabled] = useState(false);
-  const [maxRetry, setMaxRetry] = useState(3);
-  const [llmTopN, setLlmTopN] = useState(5);
-  const [ruleWeight, setRuleWeight] = useState(0.4);
-  const [vectorWeight, setVectorWeight] = useState(0.3);
-  const [llmWeight, setLlmWeight] = useState(0.3);
+  const {
+    rows,
+    summary,
+    total,
+    policy,
+    selected,
+    loading,
+    policyLoading,
+    error,
+    params,
+    selectedRequestId,
+    setSelectedRequestId,
+    updateParams,
+    resetParams,
+    savePolicy,
+    retryRequest,
+    forceFailRequest,
+    regenerateUserEmbedding,
+    regeneratePartyEmbedding,
+    runEmbeddingBackfill,
+  } = useAdminQuickMatch();
 
-  const weightSum = Number((ruleWeight + vectorWeight + llmWeight).toFixed(2));
-  const isWeightValid = weightSum === 1;
+  useEffect(() => {
+    if (policy) {
+      setPolicyDraft(policy);
+      setPolicyDirty(false);
+    }
+  }, [policy]);
 
   const services = useMemo(
-    () => [
-      '전체',
-      ...Array.from(new Set(MOCK_ROWS.map((row) => row.serviceName))),
-    ],
-    [],
+    () => ['전체', ...Array.from(new Set(rows.map((row) => row.serviceName)))],
+    [rows],
   );
 
-  const filtered = useMemo(() => {
-    return MOCK_ROWS.filter((row) => {
-      const keyword = search.trim().toLowerCase();
-      const matchesKeyword =
-        !keyword ||
-        row.requestId.toLowerCase().includes(keyword) ||
-        row.userId.toLowerCase().includes(keyword) ||
-        row.userNickname.toLowerCase().includes(keyword) ||
-        row.serviceName.toLowerCase().includes(keyword) ||
-        (row.matchedPartyName ?? '').toLowerCase().includes(keyword);
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 20;
+  const selectedPolicy = policyDraft ?? policy ?? DEFAULT_POLICY;
 
-      const matchesStatus = status === '전체' || row.status === status;
-      const matchesService =
-        serviceName === '전체' || row.serviceName === serviceName;
+  const rejectedCount =
+    selected?.candidates.filter((candidate) => candidate.status === 'REJECTED')
+      .length ?? 0;
+  const failedCandidates =
+    selected?.candidates.filter((candidate) => candidate.status === 'FAILED') ??
+    [];
 
-      return matchesKeyword && matchesStatus && matchesService;
-    });
-  }, [search, status, serviceName]);
+  const ruleWeightSum =
+    selectedPolicy.trustWeight +
+    selectedPolicy.capacityWeight +
+    selectedPolicy.durationWeight;
+  const isRuleWeightInvalid = Math.abs(ruleWeightSum - 1) > 0.001;
+  const vectorWeightPercent = Math.round(selectedPolicy.vectorWeight * 100);
+  const ruleWeightPercent = 100 - vectorWeightPercent;
 
-  const selected = useMemo(
-    () =>
-      filtered.find((row) => row.requestId === selectedRequestId) ??
-      filtered[0] ??
-      null,
-    [filtered, selectedRequestId],
-  );
+  const updatePolicyDraft = <K extends keyof TuningPolicy>(
+    key: K,
+    value: TuningPolicy[K],
+  ) => {
+    setPolicyDraft((prev) => ({
+      ...(prev ?? DEFAULT_POLICY),
+      [key]: value,
+    }));
+    setPolicyDirty(true);
+    setPolicySaved(false);
+  };
 
-  const handleSavePolicy = () => {
-    if (!isWeightValid) {
-      alert('AI score 가중치 합계는 1.0이어야 합니다.');
-      return;
+  const handleResetFilter = () => {
+    resetParams();
+  };
+
+  const handleSavePolicy = async () => {
+    if (!policyDraft || isRuleWeightInvalid) return;
+
+    try {
+      setActionLoading('save-policy');
+      await savePolicy(policyDraft);
+      setPolicyDirty(false);
+      setPolicySaved(true);
+      setTimeout(() => setPolicySaved(false), 2000);
+    } finally {
+      setActionLoading(null);
     }
+  };
 
-    // TODO: 실제 API 호출
-    console.log('저장', {
-      ruleWeight,
-      vectorWeight,
-      llmWeight,
-      llmTopN,
-      maxRetry,
-    });
+  const handleResetPolicy = () => {
+    setPolicyDraft(DEFAULT_POLICY);
+    setPolicyDirty(true);
+    setPolicySaved(false);
+  };
+
+  const handleBackfill = async () => {
+    try {
+      setActionLoading('backfill');
+      await runEmbeddingBackfill();
+      setBackfillRequested(true);
+      setTimeout(() => setBackfillRequested(false), 2500);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAction = async (
+    actionKey: string,
+    action: () => Promise<void>,
+  ) => {
+    try {
+      setActionLoading(actionKey);
+      await action();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
     <>
       <AdminHeader
         placeholder="요청 ID / 유저 / 서비스 / 파티 검색"
-        onSearch={setSearch}
-        rightContent={
-          <div className="flex items-center gap-2">
-            <button className="rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-              임베딩 백필 실행
-            </button>
-            <button className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">
-              지표 새로고침
-            </button>
-          </div>
-        }
+        onSearch={(value: string) => {
+          updateParams({ keyword: value });
+          setActiveMainTab('요청 관리');
+        }}
       />
 
       <div className="p-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">빠른매칭 관리</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            빠른매칭 요청 현황, 운영 제어, 실패 원인, 후보 점수 상세, 임베딩
-            상태를 한 화면에서 관리합니다.
-          </p>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">빠른매칭 관리</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              상단에서는 빠른매칭 핵심 지표를 보고, 아래 탭에서 요청 관리와 튜닝
+              설정을 처리합니다.
+            </p>
+          </div>
+
+          {loading && (
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+              데이터 불러오는 중...
+            </div>
+          )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {error && (
+          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            {error}
+          </div>
+        )}
+
+        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
-            title="오늘 요청 수"
-            value={SUMMARY.totalRequestsToday.toLocaleString()}
-            description="당일 생성된 빠른매칭 요청 수"
+            title="총 요청 수"
+            value={(summary?.total ?? 0).toLocaleString()}
+            description="전체 빠른매칭 요청 수"
             tone="border-slate-200 bg-white text-slate-900"
           />
           <SummaryCard
+            title="오늘 요청 수"
+            value={(summary?.todayTotal ?? 0).toLocaleString()}
+            description="당일 생성된 빠른매칭 요청 수"
+            tone="border-indigo-200 bg-indigo-50 text-indigo-700"
+          />
+          <SummaryCard
             title="성공률"
-            value={`${SUMMARY.successRate.toFixed(1)}%`}
-            description={`${SUMMARY.successCount}건 성공 · ${SUMMARY.failCount}건 실패`}
+            value={`${(summary?.successRate ?? 0).toFixed(1)}%`}
+            description={`${summary?.matched ?? 0}건 성공 · 실패 상세는 요청 관리에서 확인`}
             tone="border-emerald-200 bg-emerald-50 text-emerald-700"
           />
           <SummaryCard
             title="평균 매칭 시간"
-            value={`${SUMMARY.avgMatchSeconds.toFixed(1)}초`}
-            description="요청 생성부터 실제 매칭 완료까지 평균"
+            value={formatSeconds(summary?.avgSeconds)}
+            description="요청 생성부터 매칭 완료까지 평균"
             tone="border-blue-200 bg-blue-50 text-blue-700"
-          />
-          <SummaryCard
-            title="운영 주의"
-            value={`${SUMMARY.missingPartyEmbeddingCount}건`}
-            description={`재매칭 ${SUMMARY.rematchCount}건 · 파티 임베딩 누락`}
-            tone="border-amber-200 bg-amber-50 text-amber-700"
           />
         </div>
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="mb-4">
-            <h2 className="text-base font-bold text-slate-900">운영 제어</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              전체 스위치, LLM 사용 여부, fallback 정책, 재매칭 정책을
-              관리자에서 제어합니다.
-            </p>
-          </div>
+        <div className="mb-6 flex gap-1 border-b border-gray-200">
+          {MAIN_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveMainTab(tab)}
+              className={`border-b-2 px-5 py-2.5 text-sm font-semibold transition-all ${
+                activeMainTab === tab
+                  ? 'border-indigo-600 text-indigo-700'
+                  : 'border-transparent text-gray-400 hover:text-gray-700'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            <ToggleCard
-              title="빠른매칭 전체 사용"
-              description="장애 또는 운영 이슈 시 빠른매칭 전체를 즉시 중단하는 kill switch"
-              enabled={quickMatchEnabled}
-              onToggle={() => setQuickMatchEnabled((prev) => !prev)}
-            />
-            <ToggleCard
-              title="LLM 판단 사용"
-              description="상위 후보 LLM 판단 사용 여부. 끄면 rule + vector 기반으로만 운영"
-              enabled={llmEnabled}
-              onToggle={() => setLlmEnabled((prev) => !prev)}
-            />
-            <ToggleCard
-              title="Fallback only 모드"
-              description="긴급 시 LLM을 완전히 우회하고 fallback 점수만 사용"
-              enabled={fallbackOnlyEnabled}
-              onToggle={() => setFallbackOnlyEnabled((prev) => !prev)}
-            />
-          </div>
+        {activeMainTab === '요청 관리' && (
+          <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-5 pt-4">
+                <FilterTabs
+                  tabs={STATUS_FILTER_TABS}
+                  activeTab={params.status ?? '전체'}
+                  onTabChange={(tab: string) => {
+                    updateParams({ status: tab as QuickMatchStatus | '전체' });
+                  }}
+                />
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm font-semibold text-slate-900">
-                정책 튜닝
-              </div>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <div className="mb-2 text-xs font-medium text-slate-500">
-                    LLM 적용 후보 수
-                  </div>
-                  <select
-                    value={llmTopN}
-                    onChange={(e) => setLlmTopN(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
+                <div className="mb-4 mt-4 flex flex-wrap items-end gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      키워드
+                    </span>
+                    <input
+                      type="text"
+                      value={params.keyword ?? ''}
+                      onChange={(e) => {
+                        updateParams({ keyword: e.target.value });
+                      }}
+                      placeholder="요청ID / 유저 / 서비스"
+                      className="w-44 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      서비스
+                    </span>
+                    <select
+                      value={params.serviceName ?? '전체'}
+                      onChange={(e) => {
+                        updateParams({ serviceName: e.target.value });
+                      }}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
+                    >
+                      {services.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      시작일
+                    </span>
+                    <input
+                      type="date"
+                      value={params.dateFrom ?? ''}
+                      onChange={(e) => {
+                        updateParams({ dateFrom: e.target.value });
+                      }}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      종료일
+                    </span>
+                    <input
+                      type="date"
+                      value={params.dateTo ?? ''}
+                      onChange={(e) => {
+                        updateParams({ dateTo: e.target.value });
+                      }}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </label>
+
+                  <button
+                    onClick={handleResetFilter}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
                   >
-                    {[1, 3, 5, 10].map((n) => (
-                      <option key={n} value={n}>
-                        상위 {n}개
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    초기화
+                  </button>
 
-                <label className="block">
-                  <div className="mb-2 text-xs font-medium text-slate-500">
-                    최대 재시도 횟수
+                  <div className="ml-auto self-end pb-2 text-xs text-slate-400">
+                    총 {total.toLocaleString()}건
                   </div>
-                  <select
-                    value={maxRetry}
-                    onChange={(e) => setMaxRetry(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
-                  >
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <option key={n} value={n}>
-                        {n}회
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  onClick={handleSavePolicy}
-                  className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
-                >
-                  정책 저장
-                </button>
-                <button className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-                  기본값 복원
-                </button>
-              </div>
-            </div>
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-900">
-                AI Score 가중치 설정
-              </div>
-              <p className="mt-1 text-xs text-slate-500">
-                합계는 1.0이어야 합니다. 현재 식:
-                <span className="ml-1 font-mono text-slate-700">
-                  AI = rule * {ruleWeight.toFixed(2)} + vector *{' '}
-                  {vectorWeight.toFixed(2)} + llm * {llmWeight.toFixed(2)}
-                </span>
-              </p>
-
-              <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                <label className="block">
-                  <div className="mb-2 text-xs font-medium text-slate-500">
-                    Rule weight
-                  </div>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="1"
-                    value={ruleWeight}
-                    onChange={(e) => setRuleWeight(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
-                  />
-                </label>
-
-                <label className="block">
-                  <div className="mb-2 text-xs font-medium text-slate-500">
-                    Vector weight
-                  </div>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="1"
-                    value={vectorWeight}
-                    onChange={(e) => setVectorWeight(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
-                  />
-                </label>
-
-                <label className="block">
-                  <div className="mb-2 text-xs font-medium text-slate-500">
-                    LLM weight
-                  </div>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="1"
-                    value={llmWeight}
-                    onChange={(e) => setLlmWeight(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
-                  />
-                </label>
-              </div>
-
-              <div
-                className="mt-3 flex items-center justify-between rounded-lg border px-3 py-2 text-sm
-    ${isWeightValid ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}"
-              >
-                <span>가중치 합계</span>
-                <span className="font-semibold">{weightSum.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm font-semibold text-slate-900">
-                운영 액션
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition">
-                  전체 파티 임베딩 백필
-                </button>
-                <button className="rounded-md border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition">
-                  임베딩 누락 파티 조회
-                </button>
-                <button className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100 transition">
-                  실패 요청 재처리
-                </button>
-                <button className="rounded-md border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition">
-                  긴급 중지
-                </button>
-              </div>
-
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-                현재 설정: 빠른매칭 {quickMatchEnabled ? 'ON' : 'OFF'} · LLM{' '}
-                {llmEnabled ? 'ON' : 'OFF'} · fallback only{' '}
-                {fallbackOnlyEnabled ? 'ON' : 'OFF'} · LLM 상위 {llmTopN}개 ·
-                최대 재시도 {maxRetry}회
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
-                  value={status}
-                  onChange={(e) =>
-                    setStatus(e.target.value as '전체' | QuickMatchStatus)
-                  }
-                >
-                  <option value="전체">전체 상태</option>
-                  <option value="REQUESTED">REQUESTED</option>
-                  <option value="MATCHED">MATCHED</option>
-                  <option value="FAILED">FAILED</option>
-                  <option value="EXPIRED">EXPIRED</option>
-                  <option value="REMATCHING">REMATCHING</option>
-                </select>
-
-                <select
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
-                  value={serviceName}
-                  onChange={(e) => setServiceName(e.target.value)}
-                >
-                  {services.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                <div className="ml-auto text-xs text-slate-400">
-                  총 {filtered.length}건
                 </div>
               </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    {[
-                      '요청 시각',
-                      '요청 ID',
-                      '사용자',
-                      '서비스',
-                      '상태',
-                      '선택 파티',
-                      '소요 시간',
-                      '재시도',
-                    ].map((head) => (
-                      <th
-                        key={head}
-                        className="px-4 py-3.5 text-left text-sm font-semibold text-slate-500"
-                      >
-                        {head}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((row) => {
-                    const isSelected = selected?.requestId === row.requestId;
-
-                    return (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      {[
+                        '요청 시각',
+                        '요청 ID',
+                        '사용자',
+                        '서비스',
+                        '상태',
+                        '선택 파티',
+                        '소요 시간',
+                        // '재시도',
+                      ].map((head) => (
+                        <th
+                          key={head}
+                          className="px-4 py-3 text-left text-xs font-semibold text-slate-500"
+                        >
+                          {head}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
                       <tr
                         key={row.requestId}
-                        className={`cursor-pointer border-b border-slate-100 transition hover:bg-slate-50 ${
-                          isSelected ? 'bg-indigo-50/50' : ''
-                        }`}
                         onClick={() => setSelectedRequestId(row.requestId)}
+                        className={`cursor-pointer border-b border-slate-100 transition hover:bg-indigo-50/40 ${
+                          selectedRequestId === row.requestId
+                            ? 'bg-indigo-50/60'
+                            : 'bg-white'
+                        }`}
                       >
-                        <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-500">
                           {row.requestedAt}
                         </td>
-                        <td className="px-4 py-3.5 text-sm font-medium text-slate-800">
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-900">
                           {row.requestId}
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-slate-700">
-                          <div>{row.userNickname}</div>
-                          <div className="mt-0.5 text-xs text-slate-400">
+                        <td className="px-4 py-3 text-sm">
+                          <div className="font-semibold text-slate-800">
+                            {row.userNickname}
+                          </div>
+                          <div className="text-xs text-slate-400">
                             {row.userId}
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-slate-700">
+                        <td className="px-4 py-3 text-sm text-slate-600">
                           {row.serviceName}
                         </td>
-                        <td className="px-4 py-3.5 text-sm">
+                        <td className="px-4 py-3">
                           <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                              STATUS_STYLE[row.status]
-                            }`}
+                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[row.status]}`}
                           >
                             {row.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-slate-700">
-                          {row.matchedPartyName ?? '-'}
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          {formatOptional(row.matchedPartyName)}
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-slate-700">
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
                           {formatSeconds(row.totalMatchSeconds)}
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-slate-700">
+                        {/* <td className="px-4 py-3 text-sm text-slate-600">
                           {row.retryCount}회
+                        </td> */}
+                      </tr>
+                    ))}
+
+                    {!loading && rows.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="px-4 py-8 text-center text-sm text-slate-400"
+                        >
+                          조건에 맞는 빠른매칭 요청이 없습니다.
                         </td>
                       </tr>
-                    );
-                  })}
+                    )}
 
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="px-4 py-10 text-center text-sm text-slate-400"
-                      >
-                        검색 결과가 없습니다.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {!selected ? (
-              <div className="px-6 py-10 text-center text-sm text-slate-400">
-                상세를 볼 요청을 선택해주세요.
+                    {loading && rows.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="px-4 py-8 text-center text-sm text-slate-400"
+                        >
+                          요청 목록을 불러오는 중입니다.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Request Detail
-                    </div>
-                    <h2 className="mt-1 text-lg font-bold text-slate-900">
-                      {selected.requestId}
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {selected.userNickname} · {selected.serviceName}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
-                      STATUS_STYLE[selected.status]
-                    }`}
-                  >
-                    {selected.status}
-                  </span>
-                </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {[
-                    ['선택 파티', selected.matchedPartyName ?? '-'],
-                    ['실패 사유', selected.failReason ?? '-'],
-                    ['총 소요 시간', formatSeconds(selected.totalMatchSeconds)],
-                    ['재시도 횟수', `${selected.retryCount}회`],
-                  ].map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+              <div className="border-t border-slate-100 px-5 py-4">
+                <Pagination
+                  total={total}
+                  page={page}
+                  pageSize={pageSize}
+                  onChange={(nextPage: number) => {
+                    updateParams({ page: nextPage });
+                  }}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              {!selected ? (
+                <div className="p-8 text-center text-sm text-slate-400">
+                  선택된 요청이 없습니다.
+                </div>
+              ) : (
+                <div className="p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        요청 상세
+                      </div>
+                      <h2 className="mt-1 text-lg font-bold text-slate-900">
+                        {selected.requestId}
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {selected.userNickname} · {selected.serviceName} ·{' '}
+                        {selected.requestedAt}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[selected.status]}`}
                     >
-                      <div className="text-xs font-medium text-slate-400">
-                        {label}
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-slate-800">
-                        {value}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    사용자 프로필 스냅샷
-                  </h3>
-                  <div className="mt-3 grid gap-3">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                      <div className="text-xs font-medium text-slate-400">
-                        선호 조건
-                      </div>
-                      <div className="mt-1 text-sm text-slate-700">
-                        {
-                          selected.aiProfileSnapshot.preferredConditions
-                            .category
-                        }{' '}
-                        /{' '}
-                        {
-                          selected.aiProfileSnapshot.preferredConditions
-                            .platform
-                        }{' '}
-                        /{' '}
-                        {
-                          selected.aiProfileSnapshot.preferredConditions
-                            .priceRange
-                        }{' '}
-                        /{' '}
-                        {
-                          selected.aiProfileSnapshot.preferredConditions
-                            .durationPreference
-                        }
-                      </div>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <div className="text-xs font-medium text-slate-400">
-                          활동 요약
-                        </div>
-                        <div className="mt-1 text-sm text-slate-700">
-                          총{' '}
-                          {
-                            selected.aiProfileSnapshot.activitySummary
-                              .totalPartyJoinCount
-                          }
-                          회 · 서비스{' '}
-                          {
-                            selected.aiProfileSnapshot.activitySummary
-                              .servicePartyJoinCount
-                          }
-                          회 · 활성{' '}
-                          {
-                            selected.aiProfileSnapshot.activitySummary
-                              .activePartyCount
-                          }
-                          개
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <div className="text-xs font-medium text-slate-400">
-                          리스크 / 신뢰도
-                        </div>
-                        <div className="mt-1 text-sm text-slate-700">
-                          신뢰도{' '}
-                          {selected.aiProfileSnapshot.trustScore.toFixed(1)} ·
-                          신고{' '}
-                          {selected.aiProfileSnapshot.riskSummary.reportCount}회
-                          · 이탈{' '}
-                          {selected.aiProfileSnapshot.riskSummary.leaveCount}회
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      후보 점수 상세
-                    </h3>
-                    <div className="text-xs text-slate-400">
-                      rule / vector / llm / final
-                    </div>
+                      {selected.status}
+                    </span>
                   </div>
 
-                  <div className="space-y-3">
-                    {selected.candidates.map((candidate) => (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    {[
+                      ['최종 결과', formatOptional(selected.matchedPartyName)],
+                      ['실패 사유', labelFailureReason(selected.failReason)],
+                      ['후보 수', `${selected.candidates.length}개`],
+                      ['제외 후보 수', `${rejectedCount}개`],
+                      ['가입 실패 후보', `${failedCandidates.length}개`],
+                      [
+                        '총 소요 시간',
+                        formatSeconds(selected.totalMatchSeconds),
+                      ],
+                    ].map(([label, value]) => (
                       <div
-                        key={candidate.candidateId}
-                        className="rounded-2xl border border-slate-200 bg-white p-4"
+                        key={label}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <div className="text-sm font-semibold text-slate-900">
-                              #{candidate.rank} {candidate.partyName}
-                            </div>
-                            <div className="mt-1 text-xs text-slate-400">
-                              {candidate.partyId}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                                CANDIDATE_STATUS_STYLE[candidate.status]
-                              }`}
-                            >
-                              {candidate.status}
-                            </span>
-                            <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600">
-                              AI {candidate.aiScore.toFixed(3)}
-                            </span>
-                          </div>
+                        <div className="text-xs font-medium text-slate-400">
+                          {label}
                         </div>
-
-                        <div className="mt-4 grid gap-2 sm:grid-cols-4">
-                          {[
-                            ['Rule', candidate.ruleScore.toFixed(3)],
-                            ['Vector', candidate.vectorScore.toFixed(3)],
-                            ['LLM', candidate.llmScore.toFixed(3)],
-                            ['Final', candidate.aiScore.toFixed(3)],
-                          ].map(([label, value]) => (
-                            <div
-                              key={label}
-                              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
-                            >
-                              <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                                {label}
-                              </div>
-                              <div className="mt-1 text-sm font-semibold text-slate-800">
-                                {value}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                          <div className="text-xs font-medium text-slate-400">
-                            판단 근거
-                          </div>
-                          <pre className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-slate-600">
-                            {JSON.stringify(candidate.filterReasons, null, 2)}
-                          </pre>
+                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                          {value}
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
 
-                <div className="mt-6 border-t border-slate-100 pt-5">
-                  <div className="mb-3 text-sm font-semibold text-slate-900">
-                    요청 단위 제어
+                  <div className="mt-6">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      단계별 소요 시간
+                    </h3>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {[
+                        ['요청 검증', selected.stepTimings.validationMs],
+                        [
+                          '프로필/임베딩',
+                          selected.stepTimings.profileEmbeddingMs,
+                        ],
+                        ['하드 필터링', selected.stepTimings.hardFilterMs],
+                        ['Rule 점수', selected.stepTimings.ruleScoringMs],
+                        ['Vector 점수', selected.stepTimings.vectorScoringMs],
+                        ['join_party()', selected.stepTimings.joinPartyMs],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+                        >
+                          <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                            {label}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-slate-800">
+                            {formatMs(Number(value))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100 transition">
-                      수동 재매칭
-                    </button>
-                    <button className="rounded-md border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition">
-                      요청 강제 실패
-                    </button>
-                    <button className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-                      재매칭 중단
-                    </button>
+
+                  <div className="mt-6">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      사용자 프로필 스냅샷
+                    </h3>
+                    <div className="mt-3 grid gap-3">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="text-xs font-medium text-slate-400">
+                          요청 조건
+                        </div>
+                        <div className="mt-1 text-sm text-slate-700">
+                          카테고리{' '}
+                          {formatOptional(
+                            selected.aiProfileSnapshot.preferredConditions
+                              .category,
+                          )}{' '}
+                          · 플랫폼{' '}
+                          {formatOptional(
+                            selected.aiProfileSnapshot.preferredConditions
+                              .platform,
+                          )}{' '}
+                          · 선호기간{' '}
+                          {formatOptional(
+                            selected.aiProfileSnapshot.preferredConditions
+                              .durationPreference,
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <div className="text-xs font-medium text-slate-400">
+                            활동 요약
+                          </div>
+                          <div className="mt-1 text-sm text-slate-700">
+                            총{' '}
+                            {
+                              selected.aiProfileSnapshot.activitySummary
+                                .totalPartyJoinCount
+                            }
+                            회 · 서비스{' '}
+                            {
+                              selected.aiProfileSnapshot.activitySummary
+                                .servicePartyJoinCount
+                            }
+                            회 · 활성{' '}
+                            {
+                              selected.aiProfileSnapshot.activitySummary
+                                .activePartyCount
+                            }
+                            개
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <div className="text-xs font-medium text-slate-400">
+                            리스크 / 신뢰도
+                          </div>
+                          <div className="mt-1 text-sm text-slate-700">
+                            신뢰도{' '}
+                            {selected.aiProfileSnapshot.trustScore.toFixed(1)} ·
+                            신고{' '}
+                            {selected.aiProfileSnapshot.riskSummary.reportCount}
+                            회 · 이탈{' '}
+                            {selected.aiProfileSnapshot.riskSummary.leaveCount}
+                            회 · 정산 성공{' '}
+                            {
+                              selected.aiProfileSnapshot.paymentSummary
+                                .settlementSuccessCount
+                            }
+                            회
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-900">
+                        후보 / 결과 상세
+                      </h3>
+                      <div className="text-xs text-slate-400">
+                        rule / vector / final
+                      </div>
+                    </div>
+
+                    <div className="max-h-[480px] space-y-3 overflow-y-auto pr-1">
+                      {selected.candidates.map((candidate) => (
+                        <div
+                          key={candidate.candidateId}
+                          className="rounded-2xl border border-slate-200 bg-white p-4"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-900">
+                                #{candidate.rank ?? '-'} {candidate.partyName}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-400">
+                                {candidate.partyId}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${CANDIDATE_STATUS_STYLE[candidate.status]}`}
+                              >
+                                {candidate.status}
+                              </span>
+                              <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600">
+                                Final {candidate.finalScore.toFixed(3)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                            {[
+                              ['Rule', candidate.ruleScore.toFixed(3)],
+                              ['Vector', candidate.vectorScore.toFixed(3)],
+                              ['Final', candidate.finalScore.toFixed(3)],
+                            ].map(([label, value]) => (
+                              <div
+                                key={label}
+                                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+                              >
+                                <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                                  {label}
+                                </div>
+                                <div className="mt-1 text-sm font-semibold text-slate-800">
+                                  {value}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                            <div className="text-xs font-medium text-slate-400">
+                              필터 / 점수 근거
+                            </div>
+                            <pre className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-slate-600">
+                              {JSON.stringify(candidate.filterReasons, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      ))}
+
+                      {selected.candidates.length === 0 && (
+                        <div className="py-4 text-center text-sm text-slate-400">
+                          후보 데이터가 없습니다.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 border-t border-slate-100 pt-5">
+                    <div className="mb-3 text-sm font-semibold text-slate-900">
+                      운영 액션
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        disabled={actionLoading !== null}
+                        onClick={() =>
+                          handleAction(`retry-${selected.requestId}`, () =>
+                            retryRequest(selected.requestId),
+                          )
+                        }
+                        className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        실패 요청 재시도
+                      </button>
+                      <button
+                        disabled={actionLoading !== null}
+                        onClick={() =>
+                          handleAction(
+                            `user-embedding-${selected.userId}`,
+                            () => regenerateUserEmbedding(selected.userId),
+                          )
+                        }
+                        className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        사용자 임베딩 재생성
+                      </button>
+                      <button
+                        disabled={
+                          actionLoading !== null || !selected.matchedPartyId
+                        }
+                        onClick={() => {
+                          if (!selected.matchedPartyId) return;
+                          handleAction(
+                            `party-embedding-${selected.matchedPartyId}`,
+                            () =>
+                              regeneratePartyEmbedding(
+                                selected.matchedPartyId as string,
+                              ),
+                          );
+                        }}
+                        className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        파티 임베딩 재생성
+                      </button>
+                      <button
+                        disabled={actionLoading !== null}
+                        onClick={() =>
+                          handleAction(`force-fail-${selected.requestId}`, () =>
+                            forceFailRequest(selected.requestId),
+                          )
+                        }
+                        className="rounded-md border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        요청 강제 실패
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="mt-4 border-t border-slate-100 pt-5">
-                  <div className="mb-3 text-sm font-semibold text-slate-900">
-                    사용자 / 파티 제어
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition">
-                      사용자 임베딩 재생성
-                    </button>
-                    <button className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition">
-                      파티 임베딩 재생성
-                    </button>
-                    <button className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-                      사용자 매칭 차단
-                    </button>
-                    <button className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-                      파티 매칭 제외
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-        </div>
-
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">
-              빠른매칭 운영 포인트
-            </h2>
-            <p className="mt-1 text-xs text-slate-400">
-              실패 사유, 임베딩 누락, 상위 5개 LLM 적용 여부를 중심으로
-              운영합니다.
-            </p>
+              )}
+            </section>
           </div>
+        )}
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-900">
-                실패 사유 TOP
-              </div>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>• NO_CANDIDATE</li>
-                <li>• PARTY_FULL</li>
-                <li>• party_embedding_not_found</li>
-                <li>• trust_score_too_low</li>
-              </ul>
-            </div>
+        {activeMainTab === '튜닝 설정' && (
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    튜닝 설정
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    관리자는 운영 중 바로 조정해도 되는 값만 수정합니다. Rule
+                    종류 추가, 하드필터 조건 추가, 점수 산식 변경은 코드 배포로
+                    관리하세요.
+                  </p>
+                </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-900">
-                임베딩 운영
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleResetPolicy}
+                    className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    기본값 복원
+                  </button>
+                  <button
+                    onClick={handleSavePolicy}
+                    disabled={
+                      !policyDirty ||
+                      isRuleWeightInvalid ||
+                      policyLoading ||
+                      actionLoading === 'save-policy'
+                    }
+                    className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {policySaved ? '저장됨 ✓' : '튜닝값 저장'}
+                  </button>
+                </div>
               </div>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>• 파티 생성/수정 시 임베딩 재생성</li>
-                <li>• 사용자 변경 이벤트 시 프로필/임베딩 갱신</li>
-                <li>• 누락 파티 백필 실행</li>
-              </ul>
-            </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-900">
-                성능 점검
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">
+                        빠른매칭 전체 사용
+                      </div>
+                      <div className="mt-1 text-xs leading-5 text-slate-500">
+                        장애나 배포 직후 문제가 생겼을 때 빠른매칭 요청을 잠시
+                        막는 운영용 스위치입니다.
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        updatePolicyDraft(
+                          'quickMatchEnabled',
+                          !selectedPolicy.quickMatchEnabled,
+                        )
+                      }
+                      className={`min-w-[72px] rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        selectedPolicy.quickMatchEnabled
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-slate-200 text-slate-500'
+                      }`}
+                    >
+                      {selectedPolicy.quickMatchEnabled ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="text-xs font-medium text-slate-400">
+                      현재 최종 점수 비율
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-slate-800">
+                      Vector {vectorWeightPercent}% · Rule {ruleWeightPercent}%
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-indigo-500"
+                        style={{ width: `${vectorWeightPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-700">
+                    초반 운영에서는 Vector 50%, Rule 50%를 기본으로 두고, 실제
+                    실패 로그를 보면서 한 번에 5~10%p씩만 조정하는 것을
+                    권장합니다.
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PolicyField
+                    label="최종 추천 개수"
+                    description="사용자에게 적용할 최종 상위 후보 수입니다. 보통 1~5개면 충분합니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.topN}
+                      min={1}
+                      max={20}
+                      onChange={(value) => updatePolicyDraft('topN', value)}
+                    />
+                  </PolicyField>
+
+                  <PolicyField
+                    label="후보 탐색 개수"
+                    description="하드필터 통과 후 Vector 점수를 계산할 후보 수입니다. 너무 크면 느려집니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.maxCandidates}
+                      min={5}
+                      max={200}
+                      onChange={(value) =>
+                        updatePolicyDraft('maxCandidates', value)
+                      }
+                    />
+                  </PolicyField>
+
+                  <PolicyField
+                    label="최소 매칭 점수"
+                    description="final_score가 이 값보다 낮으면 무리하게 매칭하지 않고 실패 처리합니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.minMatchScore}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      onChange={(value) =>
+                        updatePolicyDraft('minMatchScore', value)
+                      }
+                    />
+                  </PolicyField>
+
+                  <PolicyField
+                    label="최대 재시도 횟수"
+                    description="join_party 실패, 정원 초과, 상태 변경 시 다음 후보를 시도하는 최대 횟수입니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.maxRetry}
+                      min={0}
+                      max={10}
+                      onChange={(value) => updatePolicyDraft('maxRetry', value)}
+                    />
+                  </PolicyField>
+                </div>
               </div>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>• create_request 평균 시간</li>
-                <li>• find_candidates 평균 시간</li>
-                <li>• 상위 5개 LLM 적용 비율</li>
-                <li>• fallback 점수 사용 비율</li>
-              </ul>
-            </div>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">
+                      점수 비율
+                    </h2>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Vector는 사용자-파티 프로필 유사도, Rule은
+                      신뢰도/좌석/기간 적합도입니다.
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                      isRuleWeightInvalid
+                        ? 'border-rose-200 bg-rose-50 text-rose-600'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                    }`}
+                  >
+                    Rule 합계 {ruleWeightSum.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="mt-5 grid gap-4">
+                  <PolicyField
+                    label="Vector 가중치"
+                    description="임베딩 유사도를 최종 점수에 반영하는 비율입니다. 나머지는 Rule 점수 비율로 봅니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.vectorWeight}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      onChange={(value) =>
+                        updatePolicyDraft('vectorWeight', value)
+                      }
+                    />
+                  </PolicyField>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <PolicyField
+                      label="신뢰도"
+                      description="사용자 신뢰도와 파티 최소 신뢰도 차이"
+                    >
+                      <NumberInput
+                        value={selectedPolicy.trustWeight}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(value) =>
+                          updatePolicyDraft('trustWeight', value)
+                        }
+                      />
+                    </PolicyField>
+
+                    <PolicyField
+                      label="좌석"
+                      description="remaining_seat 기반 안정성"
+                    >
+                      <NumberInput
+                        value={selectedPolicy.capacityWeight}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(value) =>
+                          updatePolicyDraft('capacityWeight', value)
+                        }
+                      />
+                    </PolicyField>
+
+                    <PolicyField
+                      label="기간"
+                      description="사용자 선호기간과 파티 조건"
+                    >
+                      <NumberInput
+                        value={selectedPolicy.durationWeight}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(value) =>
+                          updatePolicyDraft('durationWeight', value)
+                        }
+                      />
+                    </PolicyField>
+                  </div>
+
+                  {isRuleWeightInvalid && (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-700">
+                      Rule 내부 가중치 합계가 1.00이 되도록 맞추세요. 합계가
+                      맞지 않으면 저장 버튼이 비활성화됩니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">
+                      운영 안정화
+                    </h2>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      동시 가입, 임베딩 누락, 장애 대응처럼 운영자가 바로
+                      처리해야 하는 항목입니다.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleBackfill}
+                    disabled={actionLoading !== null}
+                    className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {backfillRequested ? '백필 요청됨 ✓' : '임베딩 백필 실행'}
+                  </button>
+                </div>
+
+                <div className="mt-5 grid gap-4">
+                  <PolicyField
+                    label="Redis Lock TTL"
+                    description="join_party()에서 current_members 증가를 보호하는 분산락 TTL입니다. 평균 join_party 시간보다 충분히 길어야 합니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.joinPartyLockTtlSeconds}
+                      min={5}
+                      max={120}
+                      onChange={(value) =>
+                        updatePolicyDraft('joinPartyLockTtlSeconds', value)
+                      }
+                    />
+                  </PolicyField>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium text-slate-400">
+                        평균 join_party()
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        {formatMs(summary?.stepAvg.joinPartyMs)}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium text-slate-400">
+                        현재 TTL
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        {selectedPolicy.joinPartyLockTtlSeconds}초
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium text-slate-400">
+                        평균 매칭 시간
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        {formatSeconds(summary?.avgSeconds)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+                    임베딩 백필은 파티 생성/수정 로직이 바뀌었거나 기존 파티에
+                    임베딩이 없는 경우에만 실행하세요. 반복 실행은 비용과 시간이
+                    증가할 수 있습니다.
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-        </section>
+        )}
       </div>
     </>
   );

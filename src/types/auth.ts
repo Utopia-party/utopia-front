@@ -83,6 +83,62 @@ export interface AuthErrorResponse {
   message?: string;
 }
 
+// 소셜 로그인
+export type SocialProvider = 'google' | 'kakao' | 'naver';
+
+export interface SocialLoginPayload {
+  oauth: string;
+  code: string;
+  state?: string;
+}
+
+export interface SocialLoginNeedNicknameResponse {
+  status: 'NEED_NICKNAME';
+  oauth: string;
+  oauth_id: string;
+  email: string | null;
+  name: string | null;
+}
+
+export interface SocialLoginSuccessResponse {
+  status: 'LOGIN_SUCCESS' | 'SIGNUP_SUCCESS';
+  message?: string;
+  user?: {
+    email: string;
+    nickname: string;
+    name?: string | null;
+  };
+}
+
+export type SocialLoginResponse =
+  | SocialLoginNeedNicknameResponse
+  | SocialLoginSuccessResponse;
+
+export interface SocialSignupPayload {
+  oauth: string;
+  oauth_id: string;
+  email: string | null;
+  name: string | null;
+  nickname: string;
+  phone: string | null;
+}
+
+export interface SocialSignupResponse {
+  status: 'LOGIN_SUCCESS' | 'SIGNUP_SUCCESS';
+  message: string;
+  user: {
+    email: string;
+    nickname: string;
+  };
+}
+
+export interface SocialSignupLocationState {
+  oauth: string;
+  oauth_id: string;
+  email: string | null;
+  name: string | null;
+}
+
 // 회원 정보 및 로그인 상태 관리
 export interface AuthUser {
   user_id: string;

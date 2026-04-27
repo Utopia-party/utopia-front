@@ -1,22 +1,18 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { api } from '../../apis/api';
+import axios from 'axios';
+import { socialSignup } from '../../apis/auth';
 import { useAuthStore } from '../../stores/authStore';
+import type { SocialSignupLocationState } from '../../types/auth';
 
 // 소셜로그인 추가 정보 입력 페이지(닉네임, 전화번호(선택))
-
-type SocialState = {
-  oauth: string;
-  oauth_id: string;
-  email: string | null;
-  nickname: string | null;
-};
 
 export default function SocialSignup() {
   const navigate = useNavigate();
   const location = useLocation();
   const { checkAuth } = useAuthStore();
-  const socialData = location.state as SocialState | null;
+
+  const socialData = location.state as SocialSignupLocationState | null;
 
   const [form, setForm] = useState({
     nickname: '',
@@ -25,7 +21,6 @@ export default function SocialSignup() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ❗ 잘못된 접근 방지 (직접 URL 접근)
   if (!socialData) {
     navigate('/login', { replace: true });
     return null;
@@ -50,13 +45,19 @@ export default function SocialSignup() {
     if (numbers.length < 8) {
       return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
     }
-    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(
+      7,
+      11,
+    )}`;
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!form.nickname.trim()) {
+    const nickname = form.nickname.trim();
+
+    if (!nickname) {
       alert('닉네임은 필수 입력입니다.');
       return;
     }
@@ -64,28 +65,31 @@ export default function SocialSignup() {
     try {
       setIsSubmitting(true);
 
-      await api.post('/api/auth/social/signup', {
+      await socialSignup({
         oauth: socialData.oauth,
         oauth_id: socialData.oauth_id,
         email: socialData.email,
-        name: socialData.nickname,
-        nickname: form.nickname.trim(),
+        name: socialData.name,
+        nickname,
         phone: form.phone || null,
       });
 
-      // 로그인 상태 갱신
       await checkAuth();
 
       navigate('/home', { replace: true });
     } catch (error: unknown) {
-      const axiosError = error as {
-        response?: { data?: { detail?: string; message?: string } };
-      };
-      alert(
-        axiosError?.response?.data?.detail ||
-          axiosError?.response?.data?.message ||
-          '회원가입에 실패했습니다.',
-      );
+      let errorMessage = '회원가입에 실패했습니다.';
+
+      if (axios.isAxiosError(error)) {
+        errorMessage =
+          error.response?.data?.detail ||
+          error.response?.data?.message ||
+          errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,11 +104,11 @@ export default function SocialSignup() {
       </p>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {/* 닉네임 */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
             닉네임 <span className="text-red-500">*</span>
           </label>
+
           <input
             name="nickname"
             type="text"
@@ -116,11 +120,11 @@ export default function SocialSignup() {
           />
         </div>
 
-        {/* 전화번호 (선택) */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
             전화번호 (선택)
           </label>
+
           <input
             name="phone"
             type="text"
@@ -131,7 +135,6 @@ export default function SocialSignup() {
           />
         </div>
 
-        {/* 버튼 */}
         <button
           type="submit"
           disabled={isSubmitting}
