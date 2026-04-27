@@ -1,473 +1,18 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import Pagination from './components/Pagination';
-
-// ─── 타입 ────────────────────────────────────────────────────────────────────
-
-type QuickMatchStatus =
-  | 'REQUESTED'
-  | 'MATCHED'
-  | 'FAILED'
-  | 'EXPIRED'
-  | 'REMATCHING';
-type CandidateStatus = 'SELECTED' | 'PENDING' | 'REJECTED' | 'FAILED';
-type MainTab = '요청 관리' | '튜닝 설정';
-
-type HardFilterResult = {
-  category_match?: boolean;
-  platform_match?: boolean;
-  duration_match?: boolean;
-  trust_threshold_pass?: boolean;
-  remaining_seat?: number;
-  user_trust_score?: number;
-  party_min_trust_score?: number;
-};
-
-type RuleReason = {
-  trust_fit_score?: number;
-  capacity_score?: number;
-  duration_score?: number;
-};
-
-type FilterReasons = {
-  score_basis?: string;
-  match_mode?: string;
-  vector_target?: boolean;
-  vector_target_limit?: number;
-  hard_filter?: HardFilterResult;
-  rule_reason?: RuleReason;
-  excluded_reason?: string;
-  normal_match_unavailable_reason?: string;
-  join_failure_reason?: string;
-  lock_key?: string;
-  retry_selected?: boolean;
-};
-
-type StepTimings = {
-  validationMs: number;
-  profileEmbeddingMs: number;
-  hardFilterMs: number;
-  ruleScoringMs: number;
-  vectorScoringMs: number;
-  joinPartyMs: number;
-};
-
-type QuickMatchCandidateRow = {
-  candidateId: string;
-  partyId: string;
-  partyName: string;
-  rank: number | null;
-  status: CandidateStatus;
-  ruleScore: number;
-  vectorScore: number;
-  finalScore: number;
-  filterReasons: FilterReasons;
-};
-
-type QuickMatchRequestRow = {
-  requestId: string;
-  requestedAt: string;
-  userId: string;
-  userNickname: string;
-  serviceName: string;
-  status: QuickMatchStatus;
-  matchedPartyId?: string | null;
-  matchedPartyName?: string | null;
-  totalMatchSeconds?: number | null;
-  retryCount: number;
-  failReason?: string | null;
-  stepTimings: StepTimings;
-  aiProfileSnapshot: {
-    trustScore: number;
-    preferredConditions: {
-      category?: string;
-      platform?: string;
-      durationPreference?: string;
-    };
-    activitySummary: {
-      totalPartyJoinCount: number;
-      servicePartyJoinCount: number;
-      activePartyCount: number;
-    };
-    paymentSummary: {
-      settlementSuccessCount: number;
-    };
-    riskSummary: {
-      reportCount: number;
-      leaveCount: number;
-      isCurrentlyBanned: boolean;
-    };
-  };
-  candidates: QuickMatchCandidateRow[];
-};
-
-type TuningPolicy = {
-  quickMatchEnabled: boolean;
-  topN: number;
-  maxCandidates: number;
-  minMatchScore: number;
-  vectorWeight: number;
-  trustWeight: number;
-  capacityWeight: number;
-  durationWeight: number;
-  joinPartyLockTtlSeconds: number;
-  maxRetry: number;
-};
-
-// ─── Mock 데이터 ──────────────────────────────────────────────────────────────
-
-const MOCK_POLICY: TuningPolicy = {
-  quickMatchEnabled: true,
-  topN: 5,
-  maxCandidates: 30,
-  minMatchScore: 0.7,
-  vectorWeight: 0.5,
-  trustWeight: 0.4,
-  capacityWeight: 0.3,
-  durationWeight: 0.3,
-  joinPartyLockTtlSeconds: 30,
-  maxRetry: 3,
-};
-
-const MOCK_ROWS: QuickMatchRequestRow[] = [
-  {
-    requestId: 'qm_req_20260423_001',
-    requestedAt: '2026-04-23 13:42:11',
-    userId: 'user_1024',
-    userNickname: 'ott매니아',
-    serviceName: 'Netflix',
-    status: 'MATCHED',
-    matchedPartyId: 'party_55',
-    matchedPartyName: '넷플릭스 장기팟 A',
-    totalMatchSeconds: 1.42,
-    retryCount: 0,
-    failReason: null,
-    stepTimings: {
-      validationMs: 80,
-      profileEmbeddingMs: 310,
-      hardFilterMs: 140,
-      ruleScoringMs: 120,
-      vectorScoringMs: 460,
-      joinPartyMs: 310,
-    },
-    aiProfileSnapshot: {
-      trustScore: 72.0,
-      preferredConditions: {
-        category: 'ott',
-        platform: 'netflix',
-        durationPreference: 'over_3_months',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 4,
-        servicePartyJoinCount: 2,
-        activePartyCount: 2,
-      },
-      paymentSummary: { settlementSuccessCount: 18 },
-      riskSummary: { reportCount: 1, leaveCount: 2, isCurrentlyBanned: false },
-    },
-    candidates: [
-      {
-        candidateId: 'cand_1',
-        partyId: 'party_55',
-        partyName: '넷플릭스 장기팟 A',
-        rank: 1,
-        status: 'SELECTED',
-        ruleScore: 0.91,
-        vectorScore: 0.88,
-        finalScore: 0.895,
-        filterReasons: {
-          score_basis: 'rule_vector_only',
-          match_mode: 'normal',
-          vector_target: true,
-          vector_target_limit: 30,
-          hard_filter: {
-            category_match: true,
-            platform_match: true,
-            duration_match: true,
-            trust_threshold_pass: true,
-            remaining_seat: 2,
-          },
-          rule_reason: {
-            trust_fit_score: 0.88,
-            capacity_score: 0.5,
-            duration_score: 1,
-          },
-        },
-      },
-      {
-        candidateId: 'cand_2',
-        partyId: 'party_89',
-        partyName: '넷플릭스 단기팟 B',
-        rank: 2,
-        status: 'PENDING',
-        ruleScore: 0.73,
-        vectorScore: 0.7,
-        finalScore: 0.715,
-        filterReasons: {
-          score_basis: 'rule_vector_only',
-          match_mode: 'normal',
-          vector_target: true,
-          vector_target_limit: 30,
-          hard_filter: {
-            category_match: true,
-            platform_match: true,
-            duration_match: false,
-            trust_threshold_pass: true,
-            remaining_seat: 1,
-          },
-          rule_reason: {
-            trust_fit_score: 0.8,
-            capacity_score: 0.3,
-            duration_score: 0.6,
-          },
-        },
-      },
-    ],
-  },
-  {
-    requestId: 'qm_req_20260423_002',
-    requestedAt: '2026-04-23 13:45:29',
-    userId: 'user_2099',
-    userNickname: '정산왕',
-    serviceName: 'Wavve',
-    status: 'FAILED',
-    matchedPartyId: null,
-    matchedPartyName: null,
-    totalMatchSeconds: 0.94,
-    retryCount: 1,
-    failReason: 'NO_CANDIDATE',
-    stepTimings: {
-      validationMs: 60,
-      profileEmbeddingMs: 240,
-      hardFilterMs: 210,
-      ruleScoringMs: 160,
-      vectorScoringMs: 0,
-      joinPartyMs: 0,
-    },
-    aiProfileSnapshot: {
-      trustScore: 54.5,
-      preferredConditions: {
-        category: 'ott',
-        platform: 'wavve',
-        durationPreference: 'under_1_month',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 1,
-        servicePartyJoinCount: 0,
-        activePartyCount: 0,
-      },
-      paymentSummary: { settlementSuccessCount: 3 },
-      riskSummary: { reportCount: 0, leaveCount: 0, isCurrentlyBanned: false },
-    },
-    candidates: [
-      {
-        candidateId: 'cand_3',
-        partyId: 'party_77',
-        partyName: '웨이브 프리미엄 4인팟',
-        rank: null,
-        status: 'REJECTED',
-        ruleScore: 0,
-        vectorScore: 0,
-        finalScore: 0,
-        filterReasons: {
-          excluded_reason: 'trust_score_too_low',
-          hard_filter: {
-            user_trust_score: 54.5,
-            party_min_trust_score: 60,
-            trust_threshold_pass: false,
-          },
-        },
-      },
-      {
-        candidateId: 'cand_4',
-        partyId: 'party_78',
-        partyName: '웨이브 1개월 팟',
-        rank: null,
-        status: 'REJECTED',
-        ruleScore: 0,
-        vectorScore: 0,
-        finalScore: 0,
-        filterReasons: {
-          excluded_reason: 'party_embedding_not_found',
-          normal_match_unavailable_reason: 'party_embedding_not_found',
-        },
-      },
-    ],
-  },
-  {
-    requestId: 'qm_req_20260423_003',
-    requestedAt: '2026-04-23 14:01:03',
-    userId: 'user_7751',
-    userNickname: '장기유저',
-    serviceName: 'YouTube Premium',
-    status: 'REMATCHING',
-    matchedPartyId: 'party_102',
-    matchedPartyName: '유튜브 패밀리 B',
-    totalMatchSeconds: 2.21,
-    retryCount: 1,
-    failReason: null,
-    stepTimings: {
-      validationMs: 90,
-      profileEmbeddingMs: 350,
-      hardFilterMs: 180,
-      ruleScoringMs: 170,
-      vectorScoringMs: 520,
-      joinPartyMs: 900,
-    },
-    aiProfileSnapshot: {
-      trustScore: 81.2,
-      preferredConditions: {
-        category: 'music',
-        platform: 'youtube',
-        durationPreference: 'flexible',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 7,
-        servicePartyJoinCount: 3,
-        activePartyCount: 1,
-      },
-      paymentSummary: { settlementSuccessCount: 25 },
-      riskSummary: { reportCount: 0, leaveCount: 1, isCurrentlyBanned: false },
-    },
-    candidates: [
-      {
-        candidateId: 'cand_5',
-        partyId: 'party_100',
-        partyName: '유튜브 패밀리 A',
-        rank: 1,
-        status: 'FAILED',
-        ruleScore: 0.84,
-        vectorScore: 0.8,
-        finalScore: 0.82,
-        filterReasons: {
-          score_basis: 'rule_vector_only',
-          match_mode: 'normal',
-          join_failure_reason: 'PARTY_FULL',
-          lock_key: 'quick_match_lock:party_100',
-          hard_filter: {
-            category_match: true,
-            platform_match: true,
-            duration_match: true,
-            trust_threshold_pass: true,
-            remaining_seat: 0,
-          },
-          rule_reason: {
-            trust_fit_score: 0.9,
-            capacity_score: 0.1,
-            duration_score: 1,
-          },
-        },
-      },
-      {
-        candidateId: 'cand_6',
-        partyId: 'party_102',
-        partyName: '유튜브 패밀리 B',
-        rank: 2,
-        status: 'SELECTED',
-        ruleScore: 0.8,
-        vectorScore: 0.78,
-        finalScore: 0.79,
-        filterReasons: {
-          score_basis: 'rule_vector_only',
-          match_mode: 'normal',
-          retry_selected: true,
-          hard_filter: {
-            category_match: true,
-            platform_match: true,
-            duration_match: true,
-            trust_threshold_pass: true,
-            remaining_seat: 2,
-          },
-          rule_reason: {
-            trust_fit_score: 0.85,
-            capacity_score: 0.5,
-            duration_score: 1,
-          },
-        },
-      },
-    ],
-  },
-  {
-    requestId: 'qm_req_20260423_004',
-    requestedAt: '2026-04-23 14:22:55',
-    userId: 'user_3301',
-    userNickname: '스트리밍고수',
-    serviceName: 'Netflix',
-    status: 'REQUESTED',
-    matchedPartyId: null,
-    matchedPartyName: null,
-    totalMatchSeconds: null,
-    retryCount: 0,
-    failReason: null,
-    stepTimings: {
-      validationMs: 40,
-      profileEmbeddingMs: 0,
-      hardFilterMs: 0,
-      ruleScoringMs: 0,
-      vectorScoringMs: 0,
-      joinPartyMs: 0,
-    },
-    aiProfileSnapshot: {
-      trustScore: 65.0,
-      preferredConditions: {
-        category: 'ott',
-        platform: 'netflix',
-        durationPreference: '1_3_months',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 2,
-        servicePartyJoinCount: 1,
-        activePartyCount: 0,
-      },
-      paymentSummary: { settlementSuccessCount: 7 },
-      riskSummary: { reportCount: 0, leaveCount: 0, isCurrentlyBanned: false },
-    },
-    candidates: [],
-  },
-  {
-    requestId: 'qm_req_20260423_005',
-    requestedAt: '2026-04-23 14:55:10',
-    userId: 'user_5512',
-    userNickname: '음악러버',
-    serviceName: 'Spotify',
-    status: 'EXPIRED',
-    matchedPartyId: null,
-    matchedPartyName: null,
-    totalMatchSeconds: null,
-    retryCount: 3,
-    failReason: 'NO_RECRUITING_PARTY',
-    stepTimings: {
-      validationMs: 70,
-      profileEmbeddingMs: 290,
-      hardFilterMs: 260,
-      ruleScoringMs: 0,
-      vectorScoringMs: 0,
-      joinPartyMs: 0,
-    },
-    aiProfileSnapshot: {
-      trustScore: 77.3,
-      preferredConditions: {
-        category: 'music',
-        platform: 'spotify',
-        durationPreference: 'over_3_months',
-      },
-      activitySummary: {
-        totalPartyJoinCount: 5,
-        servicePartyJoinCount: 2,
-        activePartyCount: 1,
-      },
-      paymentSummary: { settlementSuccessCount: 14 },
-      riskSummary: { reportCount: 0, leaveCount: 1, isCurrentlyBanned: false },
-    },
-    candidates: [],
-  },
-];
-
-// ─── 상수 ────────────────────────────────────────────────────────────────────
+import { useAdminQuickMatch } from '../../hooks/admin/useAdminQuickMatch';
+import type {
+  CandidateStatus,
+  MainTab,
+  QuickMatchStatus,
+  TuningPolicy,
+} from '../../types/admin/admin-quick-match';
 
 const MAIN_TABS: MainTab[] = ['요청 관리', '튜닝 설정'];
-const STATUS_FILTER_TABS = [
+
+const STATUS_FILTER_TABS: Array<QuickMatchStatus | '전체'> = [
   '전체',
   'REQUESTED',
   'MATCHED',
@@ -502,9 +47,24 @@ const FAILURE_REASON_LABELS: Record<string, string> = {
   platform_mismatch: '플랫폼 불일치',
   party_full: '정원 초과',
   PARTY_FULL: '가입 시점 정원 초과',
+  PARTY_STATUS_CHANGED: '가입 시점 파티 상태 변경',
+  ALREADY_JOINED: '이미 가입된 파티',
+  MAX_RETRY_EXCEEDED: '최대 재시도 초과',
+  NO_MORE_CANDIDATES: '남은 후보 없음',
 };
 
-// ─── 유틸 ────────────────────────────────────────────────────────────────────
+const DEFAULT_POLICY: TuningPolicy = {
+  quickMatchEnabled: true,
+  topN: 5,
+  maxCandidates: 30,
+  minMatchScore: 0.7,
+  vectorWeight: 0.5,
+  trustWeight: 0.4,
+  capacityWeight: 0.3,
+  durationWeight: 0.3,
+  joinPartyLockTtlSeconds: 30,
+  maxRetry: 3,
+};
 
 function formatSeconds(value?: number | null) {
   if (value == null) return '-';
@@ -525,17 +85,6 @@ function formatOptional(value?: string | number | null) {
   if (value === undefined || value === null || value === '') return '-';
   return String(value);
 }
-
-function getFailureReasonFromCandidate(candidate: QuickMatchCandidateRow) {
-  return (
-    candidate.filterReasons.excluded_reason ||
-    candidate.filterReasons.normal_match_unavailable_reason ||
-    candidate.filterReasons.join_failure_reason ||
-    null
-  );
-}
-
-// ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
 function SummaryCard({
   title,
@@ -603,187 +152,124 @@ function NumberInput({
   );
 }
 
-// ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
-
 export default function AdminQuickMatch() {
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('요청 관리');
-
-  // 운영 필터
-  const [search, setSearch] = useState('');
-  const [activeStatusTab, setActiveStatusTab] = useState('전체');
-  const [serviceName, setServiceName] = useState('전체');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [page, setPage] = useState(1);
-  const [selectedRequestId, setSelectedRequestId] = useState<string>(
-    MOCK_ROWS[0]?.requestId ?? '',
-  );
-
-  // 튜닝 정책 상태
-  const [policy, setPolicy] = useState<TuningPolicy>(MOCK_POLICY);
+  const [policyDraft, setPolicyDraft] = useState<TuningPolicy | null>(null);
   const [policyDirty, setPolicyDirty] = useState(false);
   const [policySaved, setPolicySaved] = useState(false);
   const [backfillRequested, setBackfillRequested] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const {
+    rows,
+    summary,
+    total,
+    policy,
+    selected,
+    loading,
+    policyLoading,
+    error,
+    params,
+    selectedRequestId,
+    setSelectedRequestId,
+    updateParams,
+    resetParams,
+    savePolicy,
+    retryRequest,
+    forceFailRequest,
+    regenerateUserEmbedding,
+    regeneratePartyEmbedding,
+    runEmbeddingBackfill,
+  } = useAdminQuickMatch();
+
+  useEffect(() => {
+    if (policy) {
+      setPolicyDraft(policy);
+      setPolicyDirty(false);
+    }
+  }, [policy]);
 
   const services = useMemo(
-    () => ['전체', ...Array.from(new Set(MOCK_ROWS.map((r) => r.serviceName)))],
-    [],
+    () => ['전체', ...Array.from(new Set(rows.map((row) => row.serviceName)))],
+    [rows],
   );
 
-  const monitoringSummary = useMemo(() => {
-    const total = MOCK_ROWS.length;
-    const matched = MOCK_ROWS.filter(
-      (row) => row.status === 'MATCHED' || row.status === 'REMATCHING',
-    ).length;
-    const failed = MOCK_ROWS.filter(
-      (row) => row.status === 'FAILED' || row.status === 'EXPIRED',
-    ).length;
-    const completedWithTime = MOCK_ROWS.filter(
-      (row) => row.totalMatchSeconds != null,
-    );
-    const avgSeconds = completedWithTime.length
-      ? completedWithTime.reduce(
-          (sum, row) => sum + (row.totalMatchSeconds ?? 0),
-          0,
-        ) / completedWithTime.length
-      : 0;
-
-    const reasonMap = new Map<string, number>();
-    MOCK_ROWS.forEach((row) => {
-      if (row.failReason)
-        reasonMap.set(row.failReason, (reasonMap.get(row.failReason) ?? 0) + 1);
-      row.candidates.forEach((candidate) => {
-        const reason = getFailureReasonFromCandidate(candidate);
-        if (reason) reasonMap.set(reason, (reasonMap.get(reason) ?? 0) + 1);
-      });
-    });
-
-    const stepAvg = {
-      validationMs: Math.round(
-        MOCK_ROWS.reduce((sum, row) => sum + row.stepTimings.validationMs, 0) /
-          total,
-      ),
-      profileEmbeddingMs: Math.round(
-        MOCK_ROWS.reduce(
-          (sum, row) => sum + row.stepTimings.profileEmbeddingMs,
-          0,
-        ) / total,
-      ),
-      hardFilterMs: Math.round(
-        MOCK_ROWS.reduce((sum, row) => sum + row.stepTimings.hardFilterMs, 0) /
-          total,
-      ),
-      ruleScoringMs: Math.round(
-        MOCK_ROWS.reduce((sum, row) => sum + row.stepTimings.ruleScoringMs, 0) /
-          total,
-      ),
-      vectorScoringMs: Math.round(
-        MOCK_ROWS.reduce(
-          (sum, row) => sum + row.stepTimings.vectorScoringMs,
-          0,
-        ) / total,
-      ),
-      joinPartyMs: Math.round(
-        MOCK_ROWS.reduce((sum, row) => sum + row.stepTimings.joinPartyMs, 0) /
-          total,
-      ),
-    };
-
-    return {
-      total,
-      matched,
-      failed,
-      successRate: total ? (matched / total) * 100 : 0,
-      failRate: total ? (failed / total) * 100 : 0,
-      avgSeconds,
-      recentErrorCount: MOCK_ROWS.filter(
-        (row) => row.status === 'FAILED' || row.status === 'EXPIRED',
-      ).length,
-      userEmbeddingMissingCount: 0,
-      partyEmbeddingMissingCount:
-        Array.from(reasonMap.entries()).find(
-          ([key]) => key === 'party_embedding_not_found',
-        )?.[1] ?? 0,
-      failureReasons: Array.from(reasonMap.entries()).sort(
-        (a, b) => b[1] - a[1],
-      ),
-      stepAvg,
-    };
-  }, []);
-
-  const filtered = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    return MOCK_ROWS.filter((row) => {
-      const matchesKeyword =
-        !keyword ||
-        row.requestId.toLowerCase().includes(keyword) ||
-        row.userId.toLowerCase().includes(keyword) ||
-        row.userNickname.toLowerCase().includes(keyword) ||
-        row.serviceName.toLowerCase().includes(keyword) ||
-        (row.matchedPartyName ?? '').toLowerCase().includes(keyword);
-
-      const matchesStatus =
-        activeStatusTab === '전체' || row.status === activeStatusTab;
-      const matchesService =
-        serviceName === '전체' || row.serviceName === serviceName;
-      const rowDate = row.requestedAt.slice(0, 10);
-      const matchesFrom = !dateFrom || rowDate >= dateFrom;
-      const matchesTo = !dateTo || rowDate <= dateTo;
-
-      return (
-        matchesKeyword &&
-        matchesStatus &&
-        matchesService &&
-        matchesFrom &&
-        matchesTo
-      );
-    });
-  }, [search, activeStatusTab, serviceName, dateFrom, dateTo]);
-
-  const paginatedRows = filtered.slice((page - 1) * 20, page * 20);
-
-  const selected = useMemo(
-    () =>
-      filtered.find((r) => r.requestId === selectedRequestId) ??
-      filtered[0] ??
-      null,
-    [filtered, selectedRequestId],
-  );
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 20;
+  const selectedPolicy = policyDraft ?? policy ?? DEFAULT_POLICY;
 
   const rejectedCount =
-    selected?.candidates.filter((c) => c.status === 'REJECTED').length ?? 0;
+    selected?.candidates.filter((candidate) => candidate.status === 'REJECTED')
+      .length ?? 0;
   const failedCandidates =
-    selected?.candidates.filter((c) => c.status === 'FAILED') ?? [];
+    selected?.candidates.filter((candidate) => candidate.status === 'FAILED') ??
+    [];
 
-  const handleReset = () => {
-    setSearch('');
-    setActiveStatusTab('전체');
-    setServiceName('전체');
-    setDateFrom('');
-    setDateTo('');
-    setPage(1);
-  };
+  const ruleWeightSum =
+    selectedPolicy.trustWeight +
+    selectedPolicy.capacityWeight +
+    selectedPolicy.durationWeight;
+  const isRuleWeightInvalid = Math.abs(ruleWeightSum - 1) > 0.001;
+  const vectorWeightPercent = Math.round(selectedPolicy.vectorWeight * 100);
+  const ruleWeightPercent = 100 - vectorWeightPercent;
 
-  const updatePolicy = <K extends keyof TuningPolicy>(
+  const updatePolicyDraft = <K extends keyof TuningPolicy>(
     key: K,
     value: TuningPolicy[K],
   ) => {
-    setPolicy((prev) => ({ ...prev, [key]: value }));
+    setPolicyDraft((prev) => ({
+      ...(prev ?? DEFAULT_POLICY),
+      [key]: value,
+    }));
     setPolicyDirty(true);
     setPolicySaved(false);
   };
 
-  const handleSavePolicy = () => {
-    // TODO: PATCH /admin/quick-match/policy 연동
-    setPolicyDirty(false);
-    setPolicySaved(true);
-    setTimeout(() => setPolicySaved(false), 2000);
+  const handleResetFilter = () => {
+    resetParams();
   };
 
-  const handleBackfill = () => {
-    // TODO: POST /admin/quick-match/embedding-backfill 연동
-    setBackfillRequested(true);
-    setTimeout(() => setBackfillRequested(false), 2500);
+  const handleSavePolicy = async () => {
+    if (!policyDraft || isRuleWeightInvalid) return;
+
+    try {
+      setActionLoading('save-policy');
+      await savePolicy(policyDraft);
+      setPolicyDirty(false);
+      setPolicySaved(true);
+      setTimeout(() => setPolicySaved(false), 2000);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResetPolicy = () => {
+    setPolicyDraft(DEFAULT_POLICY);
+    setPolicyDirty(true);
+    setPolicySaved(false);
+  };
+
+  const handleBackfill = async () => {
+    try {
+      setActionLoading('backfill');
+      await runEmbeddingBackfill();
+      setBackfillRequested(true);
+      setTimeout(() => setBackfillRequested(false), 2500);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAction = async (
+    actionKey: string,
+    action: () => Promise<void>,
+  ) => {
+    try {
+      setActionLoading(actionKey);
+      await action();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -791,7 +277,7 @@ export default function AdminQuickMatch() {
       <AdminHeader
         placeholder="요청 ID / 유저 / 서비스 / 파티 검색"
         onSearch={(value: string) => {
-          setSearch(value);
+          updateParams({ keyword: value });
           setActiveMainTab('요청 관리');
         }}
       />
@@ -805,32 +291,44 @@ export default function AdminQuickMatch() {
               설정을 처리합니다.
             </p>
           </div>
+
+          {loading && (
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+              데이터 불러오는 중...
+            </div>
+          )}
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            {error}
+          </div>
+        )}
 
         <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
-            title="오늘 요청 수"
-            value={monitoringSummary.total.toLocaleString()}
-            description="당일 생성된 빠른매칭 요청 수"
+            title="총 요청 수"
+            value={(summary?.total ?? 0).toLocaleString()}
+            description="전체 빠른매칭 요청 수"
             tone="border-slate-200 bg-white text-slate-900"
           />
           <SummaryCard
-            title="성공 / 실패율"
-            value={`${monitoringSummary.successRate.toFixed(1)}% / ${monitoringSummary.failRate.toFixed(1)}%`}
-            description={`${monitoringSummary.matched}건 성공 · ${monitoringSummary.failed}건 실패/만료`}
+            title="오늘 요청 수"
+            value={(summary?.todayTotal ?? 0).toLocaleString()}
+            description="당일 생성된 빠른매칭 요청 수"
+            tone="border-indigo-200 bg-indigo-50 text-indigo-700"
+          />
+          <SummaryCard
+            title="성공률"
+            value={`${(summary?.successRate ?? 0).toFixed(1)}%`}
+            description={`${summary?.matched ?? 0}건 성공 · 실패 상세는 요청 관리에서 확인`}
             tone="border-emerald-200 bg-emerald-50 text-emerald-700"
           />
           <SummaryCard
             title="평균 매칭 시간"
-            value={formatSeconds(monitoringSummary.avgSeconds)}
+            value={formatSeconds(summary?.avgSeconds)}
             description="요청 생성부터 매칭 완료까지 평균"
             tone="border-blue-200 bg-blue-50 text-blue-700"
-          />
-          <SummaryCard
-            title="최근 에러 / 임베딩"
-            value={`${monitoringSummary.recentErrorCount}건`}
-            description={`사용자 임베딩 누락 ${monitoringSummary.userEmbeddingMissingCount}건 · 파티 임베딩 누락 ${monitoringSummary.partyEmbeddingMissingCount}건`}
-            tone="border-amber-200 bg-amber-50 text-amber-700"
           />
         </div>
 
@@ -849,16 +347,16 @@ export default function AdminQuickMatch() {
             </button>
           ))}
         </div>
+
         {activeMainTab === '요청 관리' && (
           <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-5 pt-4">
                 <FilterTabs
                   tabs={STATUS_FILTER_TABS}
-                  activeTab={activeStatusTab}
+                  activeTab={params.status ?? '전체'}
                   onTabChange={(tab: string) => {
-                    setActiveStatusTab(tab);
-                    setPage(1);
+                    updateParams({ status: tab as QuickMatchStatus | '전체' });
                   }}
                 />
 
@@ -869,10 +367,9 @@ export default function AdminQuickMatch() {
                     </span>
                     <input
                       type="text"
-                      value={search}
+                      value={params.keyword ?? ''}
                       onChange={(e) => {
-                        setSearch(e.target.value);
-                        setPage(1);
+                        updateParams({ keyword: e.target.value });
                       }}
                       placeholder="요청ID / 유저 / 서비스"
                       className="w-44 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
@@ -884,10 +381,9 @@ export default function AdminQuickMatch() {
                       서비스
                     </span>
                     <select
-                      value={serviceName}
+                      value={params.serviceName ?? '전체'}
                       onChange={(e) => {
-                        setServiceName(e.target.value);
-                        setPage(1);
+                        updateParams({ serviceName: e.target.value });
                       }}
                       className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
                     >
@@ -905,10 +401,9 @@ export default function AdminQuickMatch() {
                     </span>
                     <input
                       type="date"
-                      value={dateFrom}
+                      value={params.dateFrom ?? ''}
                       onChange={(e) => {
-                        setDateFrom(e.target.value);
-                        setPage(1);
+                        updateParams({ dateFrom: e.target.value });
                       }}
                       className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
                     />
@@ -920,24 +415,23 @@ export default function AdminQuickMatch() {
                     </span>
                     <input
                       type="date"
-                      value={dateTo}
+                      value={params.dateTo ?? ''}
                       onChange={(e) => {
-                        setDateTo(e.target.value);
-                        setPage(1);
+                        updateParams({ dateTo: e.target.value });
                       }}
                       className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
                     />
                   </label>
 
                   <button
-                    onClick={handleReset}
+                    onClick={handleResetFilter}
                     className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
                   >
                     초기화
                   </button>
 
                   <div className="ml-auto self-end pb-2 text-xs text-slate-400">
-                    총 {filtered.length}건
+                    총 {total.toLocaleString()}건
                   </div>
                 </div>
               </div>
@@ -954,7 +448,7 @@ export default function AdminQuickMatch() {
                         '상태',
                         '선택 파티',
                         '소요 시간',
-                        '재시도',
+                        // '재시도',
                       ].map((head) => (
                         <th
                           key={head}
@@ -966,12 +460,12 @@ export default function AdminQuickMatch() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedRows.map((row) => (
+                    {rows.map((row) => (
                       <tr
                         key={row.requestId}
                         onClick={() => setSelectedRequestId(row.requestId)}
                         className={`cursor-pointer border-b border-slate-100 transition hover:bg-indigo-50/40 ${
-                          selected?.requestId === row.requestId
+                          selectedRequestId === row.requestId
                             ? 'bg-indigo-50/60'
                             : 'bg-white'
                         }`}
@@ -1003,21 +497,33 @@ export default function AdminQuickMatch() {
                         <td className="px-4 py-3 text-sm text-slate-600">
                           {formatOptional(row.matchedPartyName)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
                           {formatSeconds(row.totalMatchSeconds)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">
+                        {/* <td className="px-4 py-3 text-sm text-slate-600">
                           {row.retryCount}회
-                        </td>
+                        </td> */}
                       </tr>
                     ))}
-                    {paginatedRows.length === 0 && (
+
+                    {!loading && rows.length === 0 && (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={7}
                           className="px-4 py-8 text-center text-sm text-slate-400"
                         >
                           조건에 맞는 빠른매칭 요청이 없습니다.
+                        </td>
+                      </tr>
+                    )}
+
+                    {loading && rows.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="px-4 py-8 text-center text-sm text-slate-400"
+                        >
+                          요청 목록을 불러오는 중입니다.
                         </td>
                       </tr>
                     )}
@@ -1027,10 +533,12 @@ export default function AdminQuickMatch() {
 
               <div className="border-t border-slate-100 px-5 py-4">
                 <Pagination
-                  total={filtered.length}
+                  total={total}
                   page={page}
-                  pageSize={20}
-                  onChange={setPage}
+                  pageSize={pageSize}
+                  onChange={(nextPage: number) => {
+                    updateParams({ page: nextPage });
+                  }}
                 />
               </div>
             </section>
@@ -1260,6 +768,7 @@ export default function AdminQuickMatch() {
                           </div>
                         </div>
                       ))}
+
                       {selected.candidates.length === 0 && (
                         <div className="py-4 text-center text-sm text-slate-400">
                           후보 데이터가 없습니다.
@@ -1273,16 +782,56 @@ export default function AdminQuickMatch() {
                       운영 액션
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100">
+                      <button
+                        disabled={actionLoading !== null}
+                        onClick={() =>
+                          handleAction(`retry-${selected.requestId}`, () =>
+                            retryRequest(selected.requestId),
+                          )
+                        }
+                        className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         실패 요청 재시도
                       </button>
-                      <button className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">
+                      <button
+                        disabled={actionLoading !== null}
+                        onClick={() =>
+                          handleAction(
+                            `user-embedding-${selected.userId}`,
+                            () => regenerateUserEmbedding(selected.userId),
+                          )
+                        }
+                        className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         사용자 임베딩 재생성
                       </button>
-                      <button className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">
+                      <button
+                        disabled={
+                          actionLoading !== null || !selected.matchedPartyId
+                        }
+                        onClick={() => {
+                          if (!selected.matchedPartyId) return;
+                          handleAction(
+                            `party-embedding-${selected.matchedPartyId}`,
+                            () =>
+                              regeneratePartyEmbedding(
+                                selected.matchedPartyId as string,
+                              ),
+                          );
+                        }}
+                        className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         파티 임베딩 재생성
                       </button>
-                      <button className="rounded-md border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">
+                      <button
+                        disabled={actionLoading !== null}
+                        onClick={() =>
+                          handleAction(`force-fail-${selected.requestId}`, () =>
+                            forceFailRequest(selected.requestId),
+                          )
+                        }
+                        className="rounded-md border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                         요청 강제 실패
                       </button>
                     </div>
@@ -1294,28 +843,35 @@ export default function AdminQuickMatch() {
         )}
 
         {activeMainTab === '튜닝 설정' && (
-          <div className="space-y-8">
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">
                     튜닝 설정
                   </h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Rule 종류 추가는 코드 수정 영역이고, 관리자 페이지에서는
-                    기준값/가중치/락 TTL만 조정합니다.
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    관리자는 운영 중 바로 조정해도 되는 값만 수정합니다. Rule
+                    종류 추가, 하드필터 조건 추가, 점수 산식 변경은 코드 배포로
+                    관리하세요.
                   </p>
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={handleBackfill}
-                    className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                    onClick={handleResetPolicy}
+                    className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
-                    {backfillRequested ? '백필 요청됨 ✓' : '임베딩 백필 실행'}
+                    기본값 복원
                   </button>
                   <button
                     onClick={handleSavePolicy}
-                    disabled={!policyDirty}
+                    disabled={
+                      !policyDirty ||
+                      isRuleWeightInvalid ||
+                      policyLoading ||
+                      actionLoading === 'save-policy'
+                    }
                     className="rounded-md border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {policySaved ? '저장됨 ✓' : '튜닝값 저장'}
@@ -1323,205 +879,275 @@ export default function AdminQuickMatch() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-slate-900">
                         빠른매칭 전체 사용
                       </div>
                       <div className="mt-1 text-xs leading-5 text-slate-500">
-                        장애 시 전체 요청을 막는 kill switch입니다.
+                        장애나 배포 직후 문제가 생겼을 때 빠른매칭 요청을 잠시
+                        막는 운영용 스위치입니다.
                       </div>
                     </div>
                     <button
                       onClick={() =>
-                        updatePolicy(
+                        updatePolicyDraft(
                           'quickMatchEnabled',
-                          !policy.quickMatchEnabled,
+                          !selectedPolicy.quickMatchEnabled,
                         )
                       }
                       className={`min-w-[72px] rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        policy.quickMatchEnabled
+                        selectedPolicy.quickMatchEnabled
                           ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
+                          : 'bg-slate-200 text-slate-500'
                       }`}
                     >
-                      {policy.quickMatchEnabled ? 'ON' : 'OFF'}
+                      {selectedPolicy.quickMatchEnabled ? 'ON' : 'OFF'}
                     </button>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="text-xs font-medium text-slate-400">
+                      현재 최종 점수 비율
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-slate-800">
+                      Vector {vectorWeightPercent}% · Rule {ruleWeightPercent}%
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-indigo-500"
+                        style={{ width: `${vectorWeightPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-700">
+                    초반 운영에서는 Vector 50%, Rule 50%를 기본으로 두고, 실제
+                    실패 로그를 보면서 한 번에 5~10%p씩만 조정하는 것을
+                    권장합니다.
                   </div>
                 </div>
 
-                <PolicyField
-                  label="최종 추천 개수 N"
-                  description="Rule + Vector 정렬 후 사용자에게 적용할 최종 상위 N개입니다."
-                >
-                  <NumberInput
-                    value={policy.topN}
-                    min={1}
-                    max={20}
-                    onChange={(value) => updatePolicy('topN', value)}
-                  />
-                </PolicyField>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PolicyField
+                    label="최종 추천 개수"
+                    description="사용자에게 적용할 최종 상위 후보 수입니다. 보통 1~5개면 충분합니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.topN}
+                      min={1}
+                      max={20}
+                      onChange={(value) => updatePolicyDraft('topN', value)}
+                    />
+                  </PolicyField>
 
-                <PolicyField
-                  label="후보 탐색 개수"
-                  description="하드필터 통과 후 vector score를 계산할 최대 후보 수입니다."
-                >
-                  <NumberInput
-                    value={policy.maxCandidates}
-                    min={5}
-                    max={200}
-                    onChange={(value) => updatePolicy('maxCandidates', value)}
-                  />
-                </PolicyField>
+                  <PolicyField
+                    label="후보 탐색 개수"
+                    description="하드필터 통과 후 Vector 점수를 계산할 후보 수입니다. 너무 크면 느려집니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.maxCandidates}
+                      min={5}
+                      max={200}
+                      onChange={(value) =>
+                        updatePolicyDraft('maxCandidates', value)
+                      }
+                    />
+                  </PolicyField>
 
-                <PolicyField
-                  label="최소 매칭 점수"
-                  description="final_score가 이 값보다 낮으면 매칭 실패로 처리합니다."
-                >
-                  <NumberInput
-                    value={policy.minMatchScore}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={(value) => updatePolicy('minMatchScore', value)}
-                  />
-                </PolicyField>
+                  <PolicyField
+                    label="최소 매칭 점수"
+                    description="final_score가 이 값보다 낮으면 무리하게 매칭하지 않고 실패 처리합니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.minMatchScore}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      onChange={(value) =>
+                        updatePolicyDraft('minMatchScore', value)
+                      }
+                    />
+                  </PolicyField>
 
-                <PolicyField
-                  label="Vector 가중치"
-                  description="임베딩 유사도 점수가 최종 점수에 반영되는 비율입니다."
-                >
-                  <NumberInput
-                    value={policy.vectorWeight}
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    onChange={(value) => updatePolicy('vectorWeight', value)}
-                  />
-                </PolicyField>
-
-                <PolicyField
-                  label="최대 재시도 횟수"
-                  description="join_party 실패, 정원 초과, 상태 변경 시 다음 후보를 시도하는 횟수입니다."
-                >
-                  <NumberInput
-                    value={policy.maxRetry}
-                    min={0}
-                    max={10}
-                    onChange={(value) => updatePolicy('maxRetry', value)}
-                  />
-                </PolicyField>
+                  <PolicyField
+                    label="최대 재시도 횟수"
+                    description="join_party 실패, 정원 초과, 상태 변경 시 다음 후보를 시도하는 최대 횟수입니다."
+                  >
+                    <NumberInput
+                      value={selectedPolicy.maxRetry}
+                      min={0}
+                      max={10}
+                      onChange={(value) => updatePolicyDraft('maxRetry', value)}
+                    />
+                  </PolicyField>
+                </div>
               </div>
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-base font-bold text-slate-900">
-                  Rule 점수 가중치
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  현재 Rule은 신뢰도/좌석/기간 적합도 기준값만 관리자에서
-                  조정합니다.
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">
+                      점수 비율
+                    </h2>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Vector는 사용자-파티 프로필 유사도, Rule은
+                      신뢰도/좌석/기간 적합도입니다.
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                      isRuleWeightInvalid
+                        ? 'border-rose-200 bg-rose-50 text-rose-600'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                    }`}
+                  >
+                    Rule 합계 {ruleWeightSum.toFixed(2)}
+                  </span>
+                </div>
 
                 <div className="mt-5 grid gap-4">
                   <PolicyField
-                    label="신뢰도 적합도 가중치"
-                    description="사용자 신뢰도와 파티 최소 신뢰도 차이를 점수화합니다."
+                    label="Vector 가중치"
+                    description="임베딩 유사도를 최종 점수에 반영하는 비율입니다. 나머지는 Rule 점수 비율로 봅니다."
                   >
                     <NumberInput
-                      value={policy.trustWeight}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      onChange={(value) => updatePolicy('trustWeight', value)}
-                    />
-                  </PolicyField>
-                  <PolicyField
-                    label="좌석 여유도 가중치"
-                    description="remaining_seat가 많은 파티를 더 안정적으로 추천합니다."
-                  >
-                    <NumberInput
-                      value={policy.capacityWeight}
+                      value={selectedPolicy.vectorWeight}
                       min={0}
                       max={1}
                       step={0.05}
                       onChange={(value) =>
-                        updatePolicy('capacityWeight', value)
+                        updatePolicyDraft('vectorWeight', value)
                       }
                     />
                   </PolicyField>
-                  <PolicyField
-                    label="기간 적합도 가중치"
-                    description="사용자 선호기간과 파티 기간 조건의 적합도를 반영합니다."
-                  >
-                    <NumberInput
-                      value={policy.durationWeight}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      onChange={(value) =>
-                        updatePolicy('durationWeight', value)
-                      }
-                    />
-                  </PolicyField>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <PolicyField
+                      label="신뢰도"
+                      description="사용자 신뢰도와 파티 최소 신뢰도 차이"
+                    >
+                      <NumberInput
+                        value={selectedPolicy.trustWeight}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(value) =>
+                          updatePolicyDraft('trustWeight', value)
+                        }
+                      />
+                    </PolicyField>
+
+                    <PolicyField
+                      label="좌석"
+                      description="remaining_seat 기반 안정성"
+                    >
+                      <NumberInput
+                        value={selectedPolicy.capacityWeight}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(value) =>
+                          updatePolicyDraft('capacityWeight', value)
+                        }
+                      />
+                    </PolicyField>
+
+                    <PolicyField
+                      label="기간"
+                      description="사용자 선호기간과 파티 조건"
+                    >
+                      <NumberInput
+                        value={selectedPolicy.durationWeight}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(value) =>
+                          updatePolicyDraft('durationWeight', value)
+                        }
+                      />
+                    </PolicyField>
+                  </div>
+
+                  {isRuleWeightInvalid && (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-700">
+                      Rule 내부 가중치 합계가 1.00이 되도록 맞추세요. 합계가
+                      맞지 않으면 저장 버튼이 비활성화됩니다.
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-base font-bold text-slate-900">
-                  join_party() / Redis Lock
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  락 TTL 설정값은 튜닝하고, 실제 소요 시간은 모니터링/운영에서
-                  확인합니다.
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">
+                      운영 안정화
+                    </h2>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      동시 가입, 임베딩 누락, 장애 대응처럼 운영자가 바로
+                      처리해야 하는 항목입니다.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleBackfill}
+                    disabled={actionLoading !== null}
+                    className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {backfillRequested ? '백필 요청됨 ✓' : '임베딩 백필 실행'}
+                  </button>
+                </div>
 
                 <div className="mt-5 grid gap-4">
                   <PolicyField
                     label="Redis Lock TTL"
-                    description="join_party()에서 current_members 증가를 보호하는 분산락 TTL입니다."
+                    description="join_party()에서 current_members 증가를 보호하는 분산락 TTL입니다. 평균 join_party 시간보다 충분히 길어야 합니다."
                   >
                     <NumberInput
-                      value={policy.joinPartyLockTtlSeconds}
+                      value={selectedPolicy.joinPartyLockTtlSeconds}
                       min={5}
                       max={120}
                       onChange={(value) =>
-                        updatePolicy('joinPartyLockTtlSeconds', value)
+                        updatePolicyDraft('joinPartyLockTtlSeconds', value)
                       }
                     />
                   </PolicyField>
 
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-sm font-semibold text-slate-900">
-                      현재 관측값
-                    </div>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="text-xs font-medium text-slate-400">
-                          평균 join_party()
-                        </div>
-                        <div className="mt-1 text-lg font-bold text-slate-900">
-                          {formatMs(monitoringSummary.stepAvg.joinPartyMs)}
-                        </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium text-slate-400">
+                        평균 join_party()
                       </div>
-                      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="text-xs font-medium text-slate-400">
-                          현재 TTL
-                        </div>
-                        <div className="mt-1 text-lg font-bold text-slate-900">
-                          {policy.joinPartyLockTtlSeconds}초
-                        </div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        {formatMs(summary?.stepAvg.joinPartyMs)}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium text-slate-400">
+                        현재 TTL
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        {selectedPolicy.joinPartyLockTtlSeconds}초
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium text-slate-400">
+                        평균 매칭 시간
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        {formatSeconds(summary?.avgSeconds)}
                       </div>
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-                    Rule 종류 추가, 하드필터 조건 추가, 점수 산식 자체 변경은
-                    관리자 페이지에서 바로 열지 말고 코드 배포로 관리하는 것을
-                    권장합니다.
+                    임베딩 백필은 파티 생성/수정 로직이 바뀌었거나 기존 파티에
+                    임베딩이 없는 경우에만 실행하세요. 반복 실행은 비용과 시간이
+                    증가할 수 있습니다.
                   </div>
                 </div>
               </div>
