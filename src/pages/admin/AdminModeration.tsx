@@ -190,6 +190,7 @@ export default function AdminModeration() {
   const [config, setConfig] = useState<Config | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [configSaving, setConfigSaving] = useState(false);
+  const [configMsg, setConfigMsg] = useState('');
   const [configTab, setConfigTab] = useState<'파이프라인' | '규칙 단어' | '프롬프트' | '파인튜닝'>('파이프라인');
   const [ftStats, setFtStats] = useState<FinetuneStats | null>(null);
   const [wlInput, setWlInput] = useState('');
@@ -241,12 +242,18 @@ export default function AdminModeration() {
   const saveConfig = async () => {
     if (!config) return;
     setConfigSaving(true);
-    await fetch(`${API}/config`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config),
-    });
+    try {
+      const res = await fetch(`${API}/config`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      setConfigMsg(res.ok ? '저장되었습니다.' : '저장 실패');
+    } catch {
+      setConfigMsg('저장 실패');
+    }
     setConfigSaving(false);
+    setTimeout(() => setConfigMsg(''), 3000);
   };
 
   const addWord = async (type: 'whitelist' | 'blacklist') => {
@@ -522,6 +529,11 @@ export default function AdminModeration() {
                           onClick={saveConfig} disabled={configSaving}
                           className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 disabled:opacity-50"
                         >{configSaving ? '저장 중...' : '저장'}</button>
+                        {configMsg && (
+                          <span className={`text-xs font-medium self-center ${configMsg.includes('실패') ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {configMsg}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
