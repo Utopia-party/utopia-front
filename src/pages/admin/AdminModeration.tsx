@@ -256,17 +256,28 @@ export default function AdminModeration() {
     setTimeout(() => setConfigMsg(''), 3000);
   };
 
+  const [wordMsg, setWordMsg] = useState<{type: 'whitelist'|'blacklist', text: string} | null>(null);
+
   const addWord = async (type: 'whitelist' | 'blacklist') => {
-    const word = type === 'whitelist' ? wlInput.trim() : blInput.trim();
-    if (!word || !config) return;
-    const updated = config[type].includes(word) ? config[type] : [...config[type], word];
-    setConfig((c) => c ? { ...c, [type]: updated } : c);
+    const raw = type === 'whitelist' ? wlInput.trim() : blInput.trim();
+    if (!raw || !config) return;
+    // 쉼표 또는 줄바꿈으로 분리해 다중 추가
+    const words = raw.split(/[,\n]/).map((w) => w.trim()).filter((w) => w.length > 0);
+    const newList = [...config[type]];
+    for (const word of words) {
+      if (!newList.includes(word)) {
+        newList.push(word);
+        await fetch(`${API}/${type}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word }),
+        });
+      }
+    }
+    setConfig((c) => c ? { ...c, [type]: newList } : c);
     type === 'whitelist' ? setWlInput('') : setBlInput('');
-    await fetch(`${API}/${type}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ word }),
-    });
+    setWordMsg({ type, text: `${words.length}개 추가되었습니다.` });
+    setTimeout(() => setWordMsg(null), 3000);
   };
 
   const removeWord = async (type: 'whitelist' | 'blacklist', word: string) => {
@@ -556,14 +567,18 @@ export default function AdminModeration() {
                             ))}
                           </div>
                           <div className="flex gap-2">
-                            <input
+                            <textarea
                               value={val} onChange={(e) => setVal(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && addWord(type)}
-                              placeholder="단어 입력 후 추가"
-                              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400"
+                              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), addWord(type))}
+                              placeholder={"단어 입력 후 추가\n여러 개는 쉼표(,) 또는 줄바꿈으로 구분"}
+                              rows={2}
+                              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400 resize-none"
                             />
                             <button onClick={() => addWord(type)} className={`px-4 py-2 text-white rounded-xl text-sm font-semibold ${btnStyle}`}>추가</button>
                           </div>
+                          {wordMsg?.type === type && (
+                            <p className="text-xs text-emerald-600 font-medium mt-2">{wordMsg.text}</p>
+                          )}
                         </div>
                       ))}
                     </div>
