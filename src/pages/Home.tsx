@@ -830,7 +830,6 @@ export default function Home() {
   const handleQuickMatchSubmit = async (payload: {
     service_id: string;
     preferred_conditions?: {
-      price_range?: string;
       duration_preference?: 'under_1_month' | '1_3_months' | 'over_3_months';
     };
   }) => {
