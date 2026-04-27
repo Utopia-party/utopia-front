@@ -374,15 +374,7 @@ function ProfileDashboard() {
             </div>
 
             {recentActivities.length > RECENT_ACTIVITY_PREVIEW_COUNT ? (
-              <div className="mt-4 flex justify-center">
-                {/* <button
-                  type="button"
-                  onClick={() => navigate('/mypage/activity')}
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 transition hover:bg-white"
-                >
-                  전체 활동 보기
-                </button> */}
-              </div>
+              <div className="mt-4 flex justify-center"></div>
             ) : null}
           </section>
         </div>
