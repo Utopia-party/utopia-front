@@ -9,7 +9,6 @@ type QuickMatchFormProps = {
   onSubmit: (payload: {
     service_id: string;
     preferred_conditions?: {
-      price_range?: string;
       duration_preference?: 'under_1_month' | '1_3_months' | 'over_3_months';
     };
   }) => void;
@@ -51,14 +50,6 @@ const CATEGORY_OPTIONS = [
   '생산성/기타',
 ] as const;
 
-const PRICE_RANGE_OPTIONS = [
-  { value: '', label: '상관없음' },
-  { value: '0-5000', label: '5,000원 이하' },
-  { value: '5000-10000', label: '5,000원 ~ 10,000원' },
-  { value: '10000-20000', label: '10,000원 ~ 20,000원' },
-  { value: '20000-999999', label: '20,000원 이상' },
-];
-
 const DURATION_OPTIONS = [
   { value: '', label: '상관없음' },
   { value: 'under_1_month', label: '1개월 이하' },
@@ -78,7 +69,6 @@ export default function QuickMatchForm({
 
   const [category, setCategory] = useState('');
   const [serviceId, setServiceId] = useState('');
-  const [priceRange, setPriceRange] = useState('');
   const [durationPreference, setDurationPreference] = useState<
     '' | 'under_1_month' | '1_3_months' | 'over_3_months'
   >('');
@@ -86,7 +76,6 @@ export default function QuickMatchForm({
   const resetForm = () => {
     setCategory('');
     setServiceId('');
-    setPriceRange('');
     setDurationPreference('');
   };
 
@@ -133,13 +122,8 @@ export default function QuickMatchForm({
     }
 
     const preferredConditions: {
-      price_range?: string;
       duration_preference?: 'under_1_month' | '1_3_months' | 'over_3_months';
     } = {};
-
-    if (priceRange) {
-      preferredConditions.price_range = priceRange;
-    }
 
     if (durationPreference) {
       preferredConditions.duration_preference = durationPreference;
@@ -213,24 +197,6 @@ export default function QuickMatchForm({
               ))}
             </select>
           </div>
-
-          {/* <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-800">
-              희망 가격대 <span className="text-slate-400">(선택)</span>
-            </label>
-            <select
-              value={priceRange}
-              onChange={(e) => setPriceRange(e.target.value)}
-              disabled={isSubmitting || loading}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
-            >
-              {PRICE_RANGE_OPTIONS.map((option) => (
-                <option key={option.value || 'empty'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div> */}
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-800">
