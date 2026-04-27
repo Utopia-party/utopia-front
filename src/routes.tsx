@@ -55,6 +55,10 @@ const router = createBrowserRouter([
     index: true,
     Component: Landing,
   },
+  {
+    path: '/%EC%9C%A0%ED%86%A0%ED%94%BC%EC%95%84-Partyup-%ED%8C%8C%ED%8B%B0-%EB%A7%A4%EC%B9%AD-%ED%94%8C%EB%9E%AB%ED%8F%BC',
+    Component: Landing,
+  },
 
   {
     path: '/',
