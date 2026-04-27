@@ -9,6 +9,7 @@ interface CaptchaGridProps {
   challenge: CaptchaChallengeResponse;
   onSubmit: (selectedIndices: number[]) => void;
   onCancel: () => void;
+  onRefresh: () => void;
   isSubmitting: boolean;
   errorMessage?: string;
   remainingAttempts?: number;
@@ -18,6 +19,7 @@ export default function CaptchaGrid({
   challenge,
   onSubmit,
   onCancel,
+  onRefresh,
   isSubmitting,
   errorMessage,
   remainingAttempts,
@@ -206,6 +208,14 @@ export default function CaptchaGrid({
             </div>
 
             <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={isSubmitting}
+                className="px-3 py-1.5 text-sm text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                새로고침
+              </button>
               <button
                 type="button"
                 onClick={handleReset}
