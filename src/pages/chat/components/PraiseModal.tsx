@@ -90,10 +90,6 @@ export default function PraiseModal({
             <h2 className="text-xl font-extrabold text-slate-900">
               {targetUser.nickname ?? '상대방'}님 칭찬하기
             </h2>
-
-            <p className="mt-1 text-sm leading-relaxed text-slate-500">
-              같은 사람에게는 30일에 한 번만 칭찬할 수 있어요.
-            </p>
           </div>
 
           <button
