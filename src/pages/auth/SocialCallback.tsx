@@ -78,7 +78,7 @@ export default function SocialCallback() {
       }
 
       const storageKey = `${oauth}_oauth_state`;
-      const savedState = sessionStorage.getItem(storageKey);
+      const savedState = localStorage.getItem(storageKey);
 
       if (!state) {
         navigate('/login', {
@@ -89,7 +89,7 @@ export default function SocialCallback() {
       }
 
       if (!savedState || state !== savedState) {
-        sessionStorage.removeItem(storageKey);
+        localStorage.removeItem(storageKey);
         navigate('/login', {
           replace: true,
           state: {
@@ -114,7 +114,7 @@ export default function SocialCallback() {
         const data = response.data;
 
         if (data.status === 'NEED_NICKNAME') {
-          sessionStorage.removeItem(storageKey);
+          localStorage.removeItem(storageKey);
           navigate('/social-signup', {
             replace: true,
             state: {
@@ -127,7 +127,7 @@ export default function SocialCallback() {
           return;
         }
 
-        sessionStorage.removeItem(storageKey);
+        localStorage.removeItem(storageKey);
 
         // 쿠키 세팅 후 /me 조회 — 최대 3회 재시도
         const { checkAuth } = useAuthStore.getState();
@@ -139,7 +139,7 @@ export default function SocialCallback() {
 
         navigate('/home', { replace: true });
       } catch (error: unknown) {
-        sessionStorage.removeItem(storageKey);
+        localStorage.removeItem(storageKey);
 
         let errorMessage = `${oauth} 로그인에 실패했습니다.`;
 
