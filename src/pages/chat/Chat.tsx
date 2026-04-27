@@ -23,6 +23,8 @@ import {
   formatCurrency,
   formatRate,
 } from './ChatConstants';
+import PraiseModal from './components/PraiseModal';
+import { createPraise } from '../../apis/praises';
 
 declare global {
   interface Window {
@@ -54,6 +56,15 @@ export default function Chat() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(
     null,
+  );
+
+  const [showPraiseModal, setShowPraiseModal] = useState(false);
+  const [praiseTarget, setPraiseTarget] = useState<ProfileDrawerUser | null>(
+    null,
+  );
+
+  const [praisedUserIds, setPraisedUserIds] = useState<Record<string, boolean>>(
+    {},
   );
 
   const nicknameRef = useRef(user?.nickname ?? '익명');
@@ -212,7 +223,7 @@ export default function Chat() {
       e.stopPropagation();
       const rect = e.currentTarget.getBoundingClientRect();
       const drawerWidth = 280;
-      const drawerHeight = 210;
+      const drawerHeight = 270;
       const hasRightSpace =
         rect.right + 12 + drawerWidth <= window.innerWidth - 12;
       const left = hasRightSpace
@@ -241,6 +252,91 @@ export default function Chat() {
     setProfileDrawer(null);
     setShowReportModal(true);
   }, [profileDrawer]);
+
+  const handlePraiseUser = useCallback(() => {
+    if (!profileDrawer) return;
+
+    const targetUserId = profileDrawer.user.user_id;
+
+    if (!targetUserId || targetUserId === currentUserId) return;
+
+    if (praisedUserIds[targetUserId]) {
+      alert('이미 최근 30일 안에 칭찬한 사용자입니다.');
+      setProfileDrawer(null);
+      return;
+    }
+
+    setPraiseTarget(profileDrawer.user);
+    setProfileDrawer(null);
+    setShowPraiseModal(true);
+  }, [profileDrawer, currentUserId, praisedUserIds]);
+
+  const handleSubmitPraise = useCallback(
+    async ({
+      praise_type,
+      message,
+    }: {
+      praise_type: Parameters<typeof createPraise>[0]['praise_type'];
+      message: string | null;
+    }) => {
+      if (!praiseTarget?.user_id) return;
+      const targetUserId = String(praiseTarget.user_id);
+      const targetNickname = praiseTarget.nickname ?? '상대방';
+
+      try {
+        await createPraise({
+          party_id: partyId,
+          to_user_id: targetUserId,
+          praise_type,
+          message,
+        });
+
+        setPraisedUserIds((prev) => ({
+          ...prev,
+          [targetUserId]: true,
+        }));
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'system',
+            content: `${currentNickname}님이 ${targetNickname}님을 칭찬했어요 💕`,
+            created_at: new Date().toISOString(),
+          } as Message,
+        ]);
+
+        setShowPraiseModal(false);
+        setPraiseTarget(null);
+      } catch (err: unknown) {
+        console.error('칭찬 실패:', err);
+
+        const status =
+          typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          typeof (err as { response?: { status?: unknown } }).response
+            ?.status === 'number'
+            ? (err as { response?: { status?: number } }).response?.status
+            : undefined;
+
+        if (status === 409) {
+          alert('이미 최근 30일 안에 칭찬한 사용자입니다.');
+
+          setPraisedUserIds((prev) => ({
+            ...prev,
+            [targetUserId]: true,
+          }));
+
+          setShowPraiseModal(false);
+          setPraiseTarget(null);
+          return;
+        }
+
+        alert('칭찬을 보내지 못했습니다. 잠시 후 다시 시도해주세요.');
+      }
+    },
+    [praiseTarget, currentNickname, partyId],
+  );
 
   const renderMessage = useCallback(
     (msg: Message, i: number, currentUserId: string) => {
@@ -356,6 +452,18 @@ export default function Chat() {
           }}
         />
       )}
+
+      {showPraiseModal && (
+        <PraiseModal
+          targetUser={praiseTarget}
+          onClose={() => {
+            setShowPraiseModal(false);
+            setPraiseTarget(null);
+          }}
+          onSubmit={handleSubmitPraise}
+        />
+      )}
+
       {profileDrawer && (
         <ProfileDrawer
           user={profileDrawer.user}
@@ -364,6 +472,12 @@ export default function Chat() {
           isMe={profileDrawer.user.user_id === currentUserId}
           onClose={closeProfileDrawer}
           onProfileInfo={handleProfileInfo}
+          onPraise={handlePraiseUser}
+          praiseDisabled={
+            !!profileDrawer.user.user_id &&
+            !!praisedUserIds[profileDrawer.user.user_id]
+          }
+          praiseDisabledLabel="30일 뒤 다시 가능"
           onReport={handleReportUser}
         />
       )}

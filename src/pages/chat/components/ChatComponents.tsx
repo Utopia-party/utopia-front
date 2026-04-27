@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, AlertTriangle } from 'lucide-react';
+import { User, AlertTriangle, Heart } from 'lucide-react';
 import type { Member, ProfileDrawerUser } from '../../../types/chat';
 import {
   getProfileInitial,
@@ -65,6 +65,9 @@ export function ProfileDrawer({
   onClose,
   onProfileInfo,
   onReport,
+  onPraise,
+  praiseDisabled = false,
+  praiseDisabledLabel = '30일 뒤 다시 가능',
 }: {
   user: ProfileDrawerUser;
   top: number;
@@ -73,6 +76,9 @@ export function ProfileDrawer({
   onClose: () => void;
   onProfileInfo: () => void;
   onReport: () => void;
+  onPraise?: () => void;
+  praiseDisabled?: boolean;
+  praiseDisabledLabel?: string;
 }) {
   return (
     <div className="fixed inset-0 z-[70]" onClick={onClose}>
@@ -122,6 +128,23 @@ export function ProfileDrawer({
         {!isMe && (
           <>
             <div className="mx-5 h-px bg-slate-200" />
+
+            <button
+              type="button"
+              onClick={onPraise}
+              disabled={praiseDisabled}
+              className={`flex w-full items-center gap-3 px-5 py-4 text-left text-base font-semibold transition ${
+                praiseDisabled
+                  ? 'cursor-not-allowed text-slate-400'
+                  : 'text-pink-600 hover:bg-pink-50'
+              }`}
+            >
+              <Heart size={18} fill="currentColor" />
+              {praiseDisabled ? praiseDisabledLabel : '칭찬하기'}
+            </button>
+
+            <div className="mx-5 h-px bg-slate-200" />
+
             <button
               type="button"
               onClick={onReport}
