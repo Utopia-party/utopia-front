@@ -263,7 +263,9 @@ export default function CaptchaWidget({
     setRemainingAttempts(undefined);
 
     try {
-      const nextChallenge = await captchaChallenge(currentSessionId);
+      const nextChallenge = await captchaChallenge(currentSessionId, {
+        forceRefresh: true,
+      });
       setChallenge(nextChallenge);
       setPhase('challenge');
     } catch {

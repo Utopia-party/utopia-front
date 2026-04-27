@@ -39,6 +39,13 @@ function fmtDate(iso: string | null) {
   });
 }
 
+function getCommissionLabel(payment: AdminPaymentRecord) {
+  if (payment.discountReason?.includes('방장 할인')) {
+    return '(5%)';
+  }
+  return `(${Math.round(payment.commissionRate * 100)}%)`;
+}
+
 export default function AdminPayments() {
   const [payments, setPayments] = useState<AdminPaymentRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -338,7 +345,7 @@ export default function AdminPayments() {
                       <td className="px-4 py-3 text-right font-semibold text-orange-500">
                         {fmt(p.commissionAmount)}
                         <span className="ml-1 text-xs font-normal text-gray-400">
-                          ({Math.round(p.commissionRate * 100)}%)
+                          {getCommissionLabel(p)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
