@@ -831,7 +831,7 @@ export default function Home() {
     service_id: string;
     preferred_conditions?: {
       price_range?: string;
-      duration_preference?: 'short_term' | 'long_term' | 'flexible';
+      duration_preference?: 'under_1_month' | '1_3_months' | 'over_3_months';
     };
   }) => {
     try {
