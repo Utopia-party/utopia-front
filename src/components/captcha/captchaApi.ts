@@ -43,12 +43,16 @@ export async function captchaInit(
 // 상원: 1차 판정 결과가 challenge일 때 현재 세션의 3x3 이미지 문제를 불러옵니다.
 export async function captchaChallenge(
   sessionId: string,
+  options?: { forceRefresh?: boolean },
 ): Promise<CaptchaChallengeResponse> {
   // 상원: 현재 세션 id를 query parameter로 보내 challenge 이미지 세트를 요청합니다.
   const { data } = await api.get<CaptchaChallengeResponse>(
     '/api/captcha/challenge',
     {
-      params: { session_id: sessionId },
+      params: {
+        session_id: sessionId,
+        ...(options?.forceRefresh ? { force_refresh: true } : {}),
+      },
     },
   );
   // 상원: 이모지 3개와 사진 9개가 담긴 challenge 응답을 돌려줍니다.
