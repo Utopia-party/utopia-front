@@ -126,6 +126,8 @@ export default function Login() {
       `&include_granted_scopes=true` +
       `&prompt=select_account`;
 
+    localStorage.setItem('last_google_auth_url', googleAuthUrl);
+
     window.location.href = googleAuthUrl;
   };
 
@@ -168,7 +170,10 @@ export default function Login() {
       {isBanned && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-bold">계정이 정지되었습니다.</p>
-          <p className="mt-1 text-red-600">욕설 등 위반 행위로 인해 자동 로그아웃 처리되었습니다. 문의가 필요하면 고객센터로 연락해주세요.</p>
+          <p className="mt-1 text-red-600">
+            욕설 등 위반 행위로 인해 자동 로그아웃 처리되었습니다. 문의가
+            필요하면 고객센터로 연락해주세요.
+          </p>
         </div>
       )}
       <div className="flex justify-between mb-4">

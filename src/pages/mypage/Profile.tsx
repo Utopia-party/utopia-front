@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../../stores/authStore';
 import ProfileEditModal from './components/ProfileEditModal';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import WithdrawModal from './components/WithdrawModal';
 import {
   getMyProfile,
   type GetMyProfileResponse,
@@ -103,6 +104,7 @@ function ProfileDashboard() {
   const [profile, setProfile] = useState<GetMyProfileResponse | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!isLoggedIn) return;
@@ -264,6 +266,13 @@ function ProfileDashboard() {
                 >
                   프로필 수정
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIsWithdrawOpen(true)}
+                  className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-500 transition hover:bg-rose-100"
+                >
+                  회원탈퇴
+                </button>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -387,6 +396,10 @@ function ProfileDashboard() {
           phone: rawPhone,
           profileImage: profileImageUrl,
         }}
+      />
+      <WithdrawModal
+        open={isWithdrawOpen}
+        onClose={() => setIsWithdrawOpen(false)}
       />
     </>
   );

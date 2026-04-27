@@ -567,7 +567,7 @@ function CategorySidebar({
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">
                 Create
               </p>
-              <p className="mt-1 text-base font-extrabold">+ 파티 생성하기</p>
+              <p className="mt-1 text-base font-extrabold">+ 파티 생성하기 </p>
               <p className="mt-1 text-sm text-white/70">
                 직접 모집글을 올리고 멤버를 모아보세요.
               </p>
@@ -592,10 +592,10 @@ function CategorySidebar({
                 조건만 입력하면 맞는 파티를 더 빠르게 찾아드려요.
               </p>
               <p className="mt-1 text-xs text-amber-600">
-                * 일부 빠른매칭에는 수수료가 발생할 수 있어요.
+                * 빠른 매칭 이용 시 수수료가 부과됩니다.
               </p>
             </div>
-            <span className="text-2xl">🥷</span>
+            <span className="text-2xl">⚡️</span>
           </div>
         </button>
       </div>
@@ -625,6 +625,7 @@ export default function Home() {
   const [matchStep, setMatchStep] = useState<MatchStep>('idle');
   const [matchResult, setMatchResult] = useState<JoinResult | null>(null);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [matchErrorCode, setMatchErrorCode] = useState<string | null>(null);
 
   const quickMatchRequestMutation = useQuickMatchRequest();
   const quickMatchCandidatesMutation = useQuickMatchCandidates();
@@ -787,6 +788,45 @@ export default function Home() {
     }
   }, [matchStep]);
 
+  const normalizeQuickMatchErrorCode = (error: any): string => {
+    const rawCode = error?.response?.data?.code;
+    const detail = error?.response?.data?.detail;
+    const message = error?.response?.data?.message || error?.message;
+
+    const raw = String(rawCode || detail || message || '').trim();
+
+    if (
+      raw === 'ALREADY_IN_ACTIVE_PARTY' ||
+      raw.includes('이미 참여 중인 활성 파티') ||
+      raw.includes('이미 가입') ||
+      raw.includes('활성 파티가 있습니다')
+    ) {
+      return 'ALREADY_IN_ACTIVE_PARTY';
+    }
+
+    if (raw === 'ALREADY_REQUESTED' || raw.includes('이미 빠른매칭')) {
+      return 'ALREADY_REQUESTED';
+    }
+
+    if (raw === 'NO_RECRUITING_PARTY') {
+      return 'NO_RECRUITING_PARTY';
+    }
+
+    if (raw === 'NO_CANDIDATE') {
+      return 'NO_CANDIDATE';
+    }
+
+    if (raw === 'USER_BANNED') {
+      return 'USER_BANNED';
+    }
+
+    if (raw === 'USER_INACTIVE') {
+      return 'USER_INACTIVE';
+    }
+
+    return raw || 'UNKNOWN_ERROR';
+  };
+
   const handleQuickMatchSubmit = async (payload: {
     service_id: string;
     preferred_conditions?: {
@@ -799,6 +839,7 @@ export default function Home() {
       setMatchStep('requesting');
       setMatchResult(null);
       setMatchError(null);
+      setMatchErrorCode(null);
       setShowQuickMatch(false);
 
       const requestResponse =
@@ -863,12 +904,15 @@ export default function Home() {
     } catch (error: any) {
       console.error('빠른 매칭 실패:', error?.response?.data || error);
 
+      const errorCode = normalizeQuickMatchErrorCode(error);
+
       const errorMessage =
-        error?.response?.data?.detail ||
         error?.response?.data?.message ||
+        error?.response?.data?.detail ||
         error?.message ||
         '빠른 매칭 요청 중 오류가 발생했습니다.';
 
+      setMatchErrorCode(errorCode);
       setMatchError(errorMessage);
     } finally {
       setIsMatching(false);
@@ -1057,7 +1101,11 @@ export default function Home() {
       <MatchingErrorModal
         open={!!matchError}
         message={matchError ?? ''}
-        onClose={() => setMatchError(null)}
+        errorCode={matchErrorCode ?? undefined}
+        onClose={() => {
+          setMatchError(null);
+          setMatchErrorCode(null);
+        }}
       />
       <MatchingSuccessModal
         open={!!matchResult && !isMatching && !matchError}

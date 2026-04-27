@@ -103,3 +103,24 @@ export async function fetchMyPayments(): Promise<MyPaymentItem[]> {
 
   return data.items ?? [];
 }
+
+// ==============================
+// 회원탈퇴
+// ==============================
+export interface DeleteMyAccountPayload {
+  password?: string;
+}
+
+export interface DeleteMyAccountResponse {
+  message: string;
+}
+
+export async function deleteMyAccount(
+  payload?: DeleteMyAccountPayload,
+): Promise<DeleteMyAccountResponse> {
+  const { data } = await api.delete<DeleteMyAccountResponse>('/api/users/me', {
+    data: payload ?? {},
+  });
+
+  return data;
+}

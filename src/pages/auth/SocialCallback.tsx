@@ -1,30 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import axios from 'axios';
-import { api } from '../../apis/api';
+import { socialLogin } from '../../apis/auth';
 import { useAuthStore } from '../../stores/authStore';
-
-type SocialLoginNeedNicknameResponse = {
-  status: 'NEED_NICKNAME';
-  oauth: string;
-  oauth_id: string;
-  email: string | null;
-  name: string | null;
-};
-
-type SocialLoginSuccessResponse = {
-  status?: 'LOGIN_SUCCESS' | 'SIGNUP_SUCCESS';
-  message?: string;
-  user?: {
-    email: string;
-    nickname: string;
-    name: string;
-  };
-};
-
-type SocialLoginResponse =
-  | SocialLoginNeedNicknameResponse
-  | SocialLoginSuccessResponse;
+import type { SocialProvider } from '../../types/auth';
 
 const supportedProviders = ['google', 'kakao', 'naver'] as const;
 
@@ -40,11 +19,7 @@ export default function SocialCallback() {
     const handleSocialCallback = async () => {
       const oauth = (provider || '').toLowerCase();
 
-      if (
-        !supportedProviders.includes(
-          oauth as (typeof supportedProviders)[number],
-        )
-      ) {
+      if (!supportedProviders.includes(oauth as SocialProvider)) {
         navigate('/login', {
           replace: true,
           state: { errorMessage: '지원하지 않는 소셜 로그인 경로입니다.' },
@@ -55,6 +30,7 @@ export default function SocialCallback() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       const state = params.get('state');
+
       const error = params.get('error');
       const errorDescription =
         params.get('error_description') || params.get('error_message');
@@ -90,6 +66,7 @@ export default function SocialCallback() {
 
       if (!savedState || state !== savedState) {
         sessionStorage.removeItem(storageKey);
+
         navigate('/login', {
           replace: true,
           state: {
@@ -100,22 +77,15 @@ export default function SocialCallback() {
       }
 
       try {
-        const payload: { oauth: string; code: string; state?: string } = {
+        const data = await socialLogin({
           oauth,
           code,
           state,
-        };
+        });
 
-        const response = await api.post<SocialLoginResponse>(
-          '/api/auth/login',
-          payload,
-        );
-
-        const data = response.data;
+        sessionStorage.removeItem(storageKey);
 
         if (data.status === 'NEED_NICKNAME') {
-          sessionStorage.removeItem(storageKey);
-
           navigate('/social-signup', {
             replace: true,
             state: {
@@ -127,8 +97,6 @@ export default function SocialCallback() {
           });
           return;
         }
-
-        sessionStorage.removeItem(storageKey);
 
         const { checkAuth } = useAuthStore.getState();
         await checkAuth();
