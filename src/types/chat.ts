@@ -30,6 +30,8 @@ export interface PartyInfo {
   leader_discount_rate?: number | null;
   referral_discount_rate?: number | null;
   monthly_per_person?: number | null;
+  is_leader?: boolean;
+  has_referrer_discount?: boolean;
   start_date?: string | null;
   end_date?: string | null;
   category_name?: string | null;

@@ -56,6 +56,22 @@ function getTrustTone(score: number) {
   return 'bg-red-500';
 }
 
+function formatAdminDateTime(value?: string | null) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString('ko-KR', {
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
 export default function AdminUsers() {
   const currentUserId = useAuthStore((state) => state.user?.user_id);
   const [activeTab, setActiveTab] = useState('전체');
@@ -788,8 +804,10 @@ export default function AdminUsers() {
                                                     )}
                                                     <p className="mt-2 text-xs text-slate-400">
                                                       {history.changedBy} ·{' '}
-                                                      {history.createdAt} · 반영
-                                                      후{' '}
+                                                      {formatAdminDateTime(
+                                                        history.createdAt,
+                                                      )}{' '}
+                                                      · 반영 후{' '}
                                                       {history.trustScoreAfter.toFixed(
                                                         1,
                                                       )}
@@ -1204,15 +1222,7 @@ export default function AdminUsers() {
                         )}
                         <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
                           <span>→ {h.trustScoreAfter.toFixed(1)}</span>
-                          <span>
-                            {new Date(h.createdAt).toLocaleDateString('ko-KR', {
-                              year: '2-digit',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
+                          <span>{formatAdminDateTime(h.createdAt)}</span>
                         </div>
                       </div>
                     ))

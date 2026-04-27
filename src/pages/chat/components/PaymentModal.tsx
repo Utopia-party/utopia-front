@@ -7,28 +7,50 @@ import {
   BANK_INFO,
 } from '../ChatConstants';
 
+interface PaymentModalProps {
+  onClose: () => void;
+  partyId: string;
+  partyTitle: string;
+  nickname: string;
+  monthlyPerPerson: number | null;
+  isLeader: boolean;
+  hasReferrerDiscount: boolean;
+  leaderDiscountRate: number | null;
+  referralDiscountRate: number | null;
+  onPaymentComplete: () => void;
+}
+
 export function PaymentModal({
   onClose,
   partyId,
   partyTitle,
   nickname,
   monthlyPerPerson,
+  isLeader,
+  hasReferrerDiscount,
+  leaderDiscountRate,
+  referralDiscountRate,
   onPaymentComplete,
-}: {
-  onClose: () => void;
-  partyId: string;
-  partyTitle: string;
-  nickname: string;
-  monthlyPerPerson: number | null;
-  onPaymentComplete: () => void;
-}) {
+}: PaymentModalProps) {
   const [step, setStep] = useState<PaymentStep>('select');
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [done, setDone] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
 
-  const payAmount = monthlyPerPerson ?? 100;
+  const base = monthlyPerPerson ?? 0;
+  if (!base) return null;
+
+  const hasLeaderDiscount =
+    isLeader && !!leaderDiscountRate && leaderDiscountRate > 0;
+  const hasDiscount = hasLeaderDiscount || hasReferrerDiscount;
+
+  let discountRate = 0;
+  if (hasLeaderDiscount) discountRate += leaderDiscountRate ?? 0;
+  if (hasReferrerDiscount) discountRate += referralDiscountRate ?? 0;
+  discountRate = Math.min(discountRate, 1);
+
+  const payAmount = Math.round(base * (1 - discountRate));
 
   useEffect(() => {
     if (document.getElementById('portone-sdk')) return;
@@ -79,11 +101,8 @@ export function PaymentModal({
     } catch (err: unknown) {
       const detail =
         typeof err === 'object' && err !== null && 'response' in err
-          ? (
-              err as {
-                response?: { data?: { detail?: string } };
-              }
-            ).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string } } }).response
+              ?.data?.detail
           : undefined;
       alert(detail ?? '결제 처리 중 오류가 발생했습니다.');
     } finally {
@@ -106,11 +125,8 @@ export function PaymentModal({
     } catch (err: unknown) {
       const detail =
         typeof err === 'object' && err !== null && 'response' in err
-          ? (
-              err as {
-                response?: { data?: { detail?: string } };
-              }
-            ).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string } } }).response
+              ?.data?.detail
           : undefined;
       alert(detail ?? '등록 중 오류가 발생했습니다.');
     } finally {
@@ -124,6 +140,34 @@ export function PaymentModal({
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  const DiscountSummary = () => (
+    <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex flex-col gap-1.5">
+      {hasLeaderDiscount && (
+        <div className="flex justify-between text-sm">
+          <span className="text-green-700 font-medium">방장 할인</span>
+          <span className="text-green-700 font-bold">
+            -{Math.round((leaderDiscountRate ?? 0) * 100)}%
+          </span>
+        </div>
+      )}
+      {hasReferrerDiscount && (
+        <div className="flex justify-between text-sm">
+          <span className="text-green-700 font-medium">추천인 할인</span>
+          <span className="text-green-700 font-bold">
+            -{Math.round((referralDiscountRate ?? 0) * 100)}%
+          </span>
+        </div>
+      )}
+      <div className="flex justify-between text-xs text-green-600 border-t border-green-200 pt-1.5 mt-0.5">
+        <span>총 할인</span>
+        <span className="font-bold">
+          -{Math.round(discountRate * 100)}% (
+          {(base - payAmount).toLocaleString()}원 절약)
+        </span>
+      </div>
+    </div>
+  );
 
   if (done) {
     return (
@@ -180,12 +224,14 @@ export function PaymentModal({
             ✕
           </button>
         </div>
+
         <div className="p-6">
           {step === 'select' && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-slate-600 font-medium">
                 결제 수단을 선택해주세요
               </p>
+              {hasDiscount && <DiscountSummary />}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setStep('card')}
@@ -218,14 +264,22 @@ export function PaymentModal({
               </div>
               <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between text-sm">
                 <span className="text-slate-500">이번 달 결제 금액</span>
-                <span className="font-extrabold text-slate-900">
-                  {payAmount.toLocaleString()}원
-                </span>
+                <div className="flex items-center gap-2">
+                  {hasDiscount && (
+                    <span className="text-xs text-slate-400 line-through">
+                      {base.toLocaleString()}원
+                    </span>
+                  )}
+                  <span className="font-extrabold text-slate-900">
+                    {payAmount.toLocaleString()}원
+                  </span>
+                </div>
               </div>
             </div>
           )}
+
           {step === 'card' && (
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-4">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">파티명</span>
@@ -239,6 +293,34 @@ export function PaymentModal({
                     {nickname}
                   </span>
                 </div>
+                {hasDiscount && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">정가</span>
+                    <span className="text-slate-400 line-through">
+                      {base.toLocaleString()}원
+                    </span>
+                  </div>
+                )}
+                {hasLeaderDiscount && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 font-medium">
+                      방장 할인
+                    </span>
+                    <span className="text-green-600 font-bold">
+                      -{Math.round((leaderDiscountRate ?? 0) * 100)}%
+                    </span>
+                  </div>
+                )}
+                {hasReferrerDiscount && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 font-medium">
+                      추천인 할인
+                    </span>
+                    <span className="text-green-600 font-bold">
+                      -{Math.round((referralDiscountRate ?? 0) * 100)}%
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">결제 금액</span>
                   <span className="font-extrabold text-primary text-base">
@@ -278,8 +360,9 @@ export function PaymentModal({
               </div>
             </div>
           )}
+
           {step === 'transfer' && (
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-4">
               <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-3">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   입금 계좌 정보
@@ -306,11 +389,38 @@ export function PaymentModal({
                   <span className="text-slate-500">예금주</span>
                   <span className="font-semibold">{BANK_INFO.holder}</span>
                 </div>
+                {hasLeaderDiscount && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 font-medium">
+                      방장 할인
+                    </span>
+                    <span className="text-green-600 font-bold">
+                      -{Math.round((leaderDiscountRate ?? 0) * 100)}%
+                    </span>
+                  </div>
+                )}
+                {hasReferrerDiscount && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 font-medium">
+                      추천인 할인
+                    </span>
+                    <span className="text-green-600 font-bold">
+                      -{Math.round((referralDiscountRate ?? 0) * 100)}%
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">입금 금액</span>
-                  <span className="font-extrabold text-slate-900">
-                    {payAmount.toLocaleString()}원
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {hasDiscount && (
+                      <span className="text-xs text-slate-400 line-through">
+                        {base.toLocaleString()}원
+                      </span>
+                    )}
+                    <span className="font-extrabold text-slate-900">
+                      {payAmount.toLocaleString()}원
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">

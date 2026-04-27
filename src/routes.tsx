@@ -50,196 +50,194 @@ import AdminHandOCR from './pages/admin/AdminHandOCR';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
 import AdminQuickMatch from './pages/admin/AdminQuickMatch';
 
-const router = createBrowserRouter(
-  [
-    {
-      index: true,
-      Component: Landing,
-    },
+const router = createBrowserRouter([
+  {
+    index: true,
+    Component: Landing,
+  },
+  {
+    path: '/유토피아-Partyup-파티-매칭-플랫폼',
+    Component: Landing,
+  },
 
-    {
-      path: '/',
-      Component: App,
-      children: [
-        {
-          path: 'home',
-          Component: Home,
-        },
-        {
-          path: 'login',
-          Component: Login,
-        },
-        {
-          path: 'signup',
-          Component: Signup,
-        },
-        {
-          path: 'find-id',
-          Component: FindId,
-        },
-        {
-          path: 'find-password',
-          Component: FindPassword,
-        },
-        {
-          path: 'reset-password',
-          Component: ResetPassword,
-        },
-        {
-          path: 'handcaptcha',
-          element: (
-            <ProtectedRoute>
-              <HandOcrCaptcha />
-            </ProtectedRoute>
-          ),
-        },
-        {
-          path: 'oauth/callback/:provider',
-          Component: SocialCallback,
-        },
-        {
-          path: 'social-signup',
-          Component: SocialSignup,
-        },
-        {
-          path: 'party/:partyId/chat',
-          Component: Chat,
-        },
-        {
-          path: 'party/create',
-          element: (
-            <ProtectedRoute>
-              <CreateParty />
-            </ProtectedRoute>
-          ),
-        },
-      ],
-    },
+  {
+    path: '/',
+    Component: App,
+    children: [
+      {
+        path: 'home',
+        Component: Home,
+      },
+      {
+        path: 'login',
+        Component: Login,
+      },
+      {
+        path: 'signup',
+        Component: Signup,
+      },
+      {
+        path: 'find-id',
+        Component: FindId,
+      },
+      {
+        path: 'find-password',
+        Component: FindPassword,
+      },
+      {
+        path: 'reset-password',
+        Component: ResetPassword,
+      },
+      {
+        path: 'handcaptcha',
+        element: (
+          <ProtectedRoute>
+            <HandOcrCaptcha />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'oauth/callback/:provider',
+        Component: SocialCallback,
+      },
+      {
+        path: 'social-signup',
+        Component: SocialSignup,
+      },
+      {
+        path: 'party/:partyId/chat',
+        Component: Chat,
+      },
+      {
+        path: 'party/create',
+        element: (
+          <ProtectedRoute>
+            <CreateParty />
+          </ProtectedRoute>
+        ),
+      },
+    ],
+  },
 
-    {
-      path: '/',
-      Component: AppShell,
-      children: [
-        {
-          path: 'report',
-          element: (
-            <ProtectedRoute>
-              <Report />
-            </ProtectedRoute>
-          ),
-        },
-        {
-          path: 'party/:partyId',
-          Component: Party,
-        },
-        {
-          path: 'mypage',
-          element: (
-            <ProtectedRoute>
-              <Outlet />
-            </ProtectedRoute>
-          ),
-          children: [
-            {
-              index: true,
-              loader: () => redirect('/mypage/profile'),
-            },
-            {
-              path: 'profile',
-              element: <Profile />,
-            },
-            {
-              path: 'party',
-              element: <MyParty />,
-            },
-            {
-              path: 'my_trust_history',
-              element: <MyTrustHistory />,
-            },
-            {
-              path: '/mypage/report',
-              element: <MyReport />,
-            },
-            {
-              path: 'payment',
-              element: <MyPayment />,
-            },
-          ],
-        },
-      ],
-    },
+  {
+    path: '/',
+    Component: AppShell,
+    children: [
+      {
+        path: 'report',
+        element: (
+          <ProtectedRoute>
+            <Report />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'party/:partyId',
+        Component: Party,
+      },
+      {
+        path: 'mypage',
+        element: (
+          <ProtectedRoute>
+            <Outlet />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            index: true,
+            loader: () => redirect('/mypage/profile'),
+          },
+          {
+            path: 'profile',
+            element: <Profile />,
+          },
+          {
+            path: 'party',
+            element: <MyParty />,
+          },
+          {
+            path: 'my_trust_history',
+            element: <MyTrustHistory />,
+          },
+          {
+            path: '/mypage/report',
+            element: <MyReport />,
+          },
+          {
+            path: 'payment',
+            element: <MyPayment />,
+          },
+        ],
+      },
+    ],
+  },
 
-    {
-      path: '/admin',
-      element: (
-        <AdminRoute>
-          <AdminShell />
-        </AdminRoute>
-      ),
-      children: [
-        {
-          index: true,
-          Component: AdminDashboard,
-        },
-        {
-          path: 'roles',
-          Component: AdminRoles,
-        },
-        {
-          path: 'users',
-          Component: AdminUsers,
-        },
-        {
-          path: 'services',
-          Component: AdminServices,
-        },
-        {
-          path: 'parties',
-          Component: AdminParties,
-        },
-        {
-          path: 'handocr',
-          Component: AdminHandOCR,
-        },
-        {
-          path: 'reports',
-          Component: AdminReports,
-        },
-        {
-          path: 'settlements',
-          Component: AdminSettlements,
-        },
-        {
-          path: 'payments',
-          Component: AdminPayments,
-        },
-        {
-          path: 'logs',
-          Component: AdminSystemLogs,
-        },
-        {
-          path: 'moderation',
-          Component: AdminModeration,
-        },
-        {
-          path: 'captcha',
-          Component: AdminCaptcha,
-        },
-        {
-          path: 'quick-match',
-          Component: AdminQuickMatch,
-        },
-        {
-          path: 'cloud-monitor',
-          Component: AdminCloudMonitor,
-        },
-      ],
-    },
-  ],
-  // {
-  //   initialEntries: ['/'],
-  //   initialIndex: 0,
-  // }
-);
+  {
+    path: '/admin',
+    element: (
+      <AdminRoute>
+        <AdminShell />
+      </AdminRoute>
+    ),
+    children: [
+      {
+        index: true,
+        Component: AdminDashboard,
+      },
+      {
+        path: 'roles',
+        Component: AdminRoles,
+      },
+      {
+        path: 'users',
+        Component: AdminUsers,
+      },
+      {
+        path: 'services',
+        Component: AdminServices,
+      },
+      {
+        path: 'parties',
+        Component: AdminParties,
+      },
+      {
+        path: 'handocr',
+        Component: AdminHandOCR,
+      },
+      {
+        path: 'reports',
+        Component: AdminReports,
+      },
+      {
+        path: 'settlements',
+        Component: AdminSettlements,
+      },
+      {
+        path: 'payments',
+        Component: AdminPayments,
+      },
+      {
+        path: 'logs',
+        Component: AdminSystemLogs,
+      },
+      {
+        path: 'moderation',
+        Component: AdminModeration,
+      },
+      {
+        path: 'captcha',
+        Component: AdminCaptcha,
+      },
+      {
+        path: 'quick-match',
+        Component: AdminQuickMatch,
+      },
+      {
+        path: 'cloud-monitor',
+        Component: AdminCloudMonitor,
+      },
+    ],
+  },
+]);
 
 export default router;

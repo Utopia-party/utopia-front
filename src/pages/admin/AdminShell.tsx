@@ -126,7 +126,7 @@ export default function AdminShell() {
 
       <div
         className={`flex flex-1 flex-col transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-16' : 'ml-50'
+          sidebarCollapsed ? 'ml-[72px]' : 'ml-[240px]'
         }`}
       >
         <Outlet />

@@ -54,7 +54,7 @@ export default function SocialCallback() {
       }
 
       const storageKey = `${oauth}_oauth_state`;
-      const savedState = sessionStorage.getItem(storageKey);
+      const savedState = localStorage.getItem(storageKey);
 
       if (!state) {
         navigate('/login', {
@@ -65,8 +65,7 @@ export default function SocialCallback() {
       }
 
       if (!savedState || state !== savedState) {
-        sessionStorage.removeItem(storageKey);
-
+        localStorage.removeItem(storageKey);
         navigate('/login', {
           replace: true,
           state: {
@@ -86,6 +85,7 @@ export default function SocialCallback() {
         sessionStorage.removeItem(storageKey);
 
         if (data.status === 'NEED_NICKNAME') {
+          localStorage.removeItem(storageKey);
           navigate('/social-signup', {
             replace: true,
             state: {
@@ -98,13 +98,14 @@ export default function SocialCallback() {
           return;
         }
 
+        localStorage.removeItem(storageKey);
+
         const { checkAuth } = useAuthStore.getState();
         await checkAuth();
 
-        window.history.replaceState({}, document.title, '/home');
         navigate('/home', { replace: true });
       } catch (error: unknown) {
-        sessionStorage.removeItem(storageKey);
+        localStorage.removeItem(storageKey);
 
         let errorMessage = `${oauth} 로그인에 실패했습니다.`;
 

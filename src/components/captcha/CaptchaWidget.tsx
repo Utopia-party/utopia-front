@@ -255,6 +255,26 @@ export default function CaptchaWidget({
     setPhase('idle');
   }, [resetChallengeView]);
 
+  const handleGridRefresh = useCallback(async () => {
+    if (!currentSessionId || isRetrying || phase === 'submitting') return;
+
+    setIsRetrying(true);
+    setErrorMessage(undefined);
+    setRemainingAttempts(undefined);
+
+    try {
+      const nextChallenge = await captchaChallenge(currentSessionId, {
+        forceRefresh: true,
+      });
+      setChallenge(nextChallenge);
+      setPhase('challenge');
+    } catch {
+      setErrorMessage('새 문제를 불러오지 못했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [currentSessionId, isRetrying, phase]);
+
   // 상원: WAIT, LOCKED, BANNED 상태 카드가 필요한 경우에만 화면에 노출할 값을 정리합니다.
   let visibleStatus:
     | (CaptchaStatusResponse & { status: 'WAIT' | 'LOCKED' | 'BANNED' })
@@ -291,6 +311,7 @@ export default function CaptchaWidget({
           challenge={challenge}
           onSubmit={handleGridSubmit}
           onCancel={handleGridCancel}
+          onRefresh={handleGridRefresh}
           isSubmitting={phase === 'submitting'}
           errorMessage={errorMessage}
           remainingAttempts={remainingAttempts}

@@ -22,6 +22,8 @@ const getLogoSrc = (service: AdminServiceRecord) =>
   service.logoImageUrl || null;
 const getDiscountedPrice = (price: number, discountRate: number) =>
   Math.round(price * (1 - discountRate));
+const getSellingPrice = (originalPrice: number, commissionRate: number) =>
+  Math.round(originalPrice * (1 + commissionRate));
 
 const validateServiceDraft = (draft: AdminServiceUpdatePayload) => {
   if (!Number.isInteger(draft.maxMembers) || draft.maxMembers < 1) {
@@ -159,12 +161,21 @@ export default function AdminServices() {
       if (!current) {
         return prev;
       }
+      const nextDraft = {
+        ...current,
+        [key]: value,
+      };
+
+      if (key === 'originalPrice' || key === 'commissionRate') {
+        nextDraft.monthlyPrice = getSellingPrice(
+          Number(nextDraft.originalPrice),
+          Number(nextDraft.commissionRate),
+        );
+      }
+
       return {
         ...prev,
-        [serviceId]: {
-          ...current,
-          [key]: value,
-        },
+        [serviceId]: nextDraft,
       };
     });
   };
@@ -502,15 +513,13 @@ export default function AdminServices() {
                                         max={MAX_SERVICE_PRICE}
                                         step={1}
                                         value={draft.monthlyPrice}
-                                        onChange={(event) =>
-                                          handleDraftChange(
-                                            service.id,
-                                            'monthlyPrice',
-                                            Number(event.target.value),
-                                          )
-                                        }
-                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                        readOnly
+                                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 outline-none"
                                       />
+                                      <span className="text-xs text-slate-400">
+                                        원가 + 수수료율 기준으로 자동
+                                        계산됩니다.
+                                      </span>
                                     </label>
                                     <label className="flex flex-col gap-2">
                                       <span className="text-sm font-medium text-slate-700">
