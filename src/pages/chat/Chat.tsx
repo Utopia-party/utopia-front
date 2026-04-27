@@ -149,7 +149,7 @@ export default function Chat() {
           if (msg.type === 'force_logout') {
             wsRef.current?.close();
             wsRef.current = null;
-            logout().then(() => navigate('/시작하기?reason=banned'));
+            logout().then(() => navigate('/login?reason=banned'));
             return;
           }
           setMessages((prev) => [...prev, msg as Message]);
