@@ -337,6 +337,10 @@ export default function Chat() {
           partyTitle={partyInfo?.title ?? '파티'}
           nickname={currentNickname}
           monthlyPerPerson={partyInfo?.monthly_per_person ?? null}
+          isLeader={partyInfo?.is_leader ?? false}
+          hasReferrerDiscount={partyInfo?.has_referrer_discount ?? false}
+          leaderDiscountRate={partyInfo?.leader_discount_rate ?? null}
+          referralDiscountRate={partyInfo?.referral_discount_rate ?? null}
           onPaymentComplete={() => {
             setAlreadyPaid(true);
             setShowPaymentModal(false);
