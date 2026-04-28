@@ -6,6 +6,7 @@ import {
   CreditCard,
   CalendarDays,
   ShieldCheck,
+  UserMinus,
 } from 'lucide-react';
 import type { Member, ProfileDrawerUser } from '../../../types/chat';
 import {
@@ -73,8 +74,10 @@ export function ProfileDrawer({
   onProfileInfo,
   onReport,
   onPraise,
+  onKick,
   praiseDisabled = false,
   praiseDisabledLabel = '30일 뒤 다시 가능',
+  canKick = false,
 }: {
   user: ProfileDrawerUser;
   top: number;
@@ -84,8 +87,10 @@ export function ProfileDrawer({
   onProfileInfo: () => void;
   onReport: () => void;
   onPraise?: () => void;
+  onKick?: () => void;
   praiseDisabled?: boolean;
   praiseDisabledLabel?: string;
+  canKick?: boolean;
 }) {
   const paymentStatusLabel =
     user.payment_status === 'completed' ? '결제 완료' : '결제 미완료';
@@ -165,6 +170,19 @@ export function ProfileDrawer({
               <AlertTriangle size={18} />
               신고
             </button>
+            {canKick && onKick && (
+              <>
+                <div className="mx-5 h-px bg-slate-200" />
+                <button
+                  type="button"
+                  onClick={onKick}
+                  className="flex w-full items-center gap-3 px-5 py-4 text-left text-base font-semibold text-rose-600 hover:bg-rose-50"
+                >
+                  <UserMinus size={18} />
+                  파티에서 강퇴
+                </button>
+              </>
+            )}
             <div className="mx-5 h-px bg-slate-200" />
             <div className="flex items-center gap-3 px-5 py-4 text-left text-base font-semibold text-slate-700">
               <CreditCard size={18} className={paymentStatusTone} />
