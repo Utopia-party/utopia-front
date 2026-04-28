@@ -15,6 +15,7 @@ import { PaymentModal } from './components/PaymentModal';
 import {
   Avatar,
   ProfileDrawer,
+  ProfileInfoModal,
   DetailRow,
   MemberItem,
 } from './components/ChatComponents';
@@ -87,6 +88,8 @@ export default function Chat() {
   const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
     null,
   );
+  const [profileInfoUser, setProfileInfoUser] =
+    useState<ProfileDrawerUser | null>(null);
   const [alreadyPaid, setAlreadyPaid] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(
@@ -283,6 +286,9 @@ export default function Chat() {
         return {
           role: undefined,
           status: undefined,
+          trust_score: undefined,
+          joined_at: undefined,
+          payment_status: null as 'completed' | 'pending' | null,
           profile_image: null as string | null,
         };
       }
@@ -290,6 +296,9 @@ export default function Chat() {
       return {
         role: member.role,
         status: member.status,
+        trust_score: member.trust_score,
+        joined_at: member.joined_at,
+        payment_status: member.payment_status ?? null,
         profile_image: member.profile_image ?? null,
       };
     },
@@ -363,9 +372,7 @@ export default function Chat() {
 
   const handleProfileInfo = useCallback(() => {
     if (!profileDrawer) return;
-    toast('프로필 정보 기능은 준비 중입니다.', {
-      icon: '👤',
-    });
+    setProfileInfoUser(profileDrawer.user);
     setProfileDrawer(null);
   }, [profileDrawer]);
 
@@ -509,6 +516,9 @@ export default function Chat() {
                     profile_image: senderImage,
                     role: memberMeta.role,
                     status: memberMeta.status,
+                    trust_score: memberMeta.trust_score,
+                    joined_at: memberMeta.joined_at,
+                    payment_status: memberMeta.payment_status,
                   })
                 }
               />
@@ -630,6 +640,12 @@ export default function Chat() {
           onReport={handleReportUser}
         />
       )}
+      {profileInfoUser && (
+        <ProfileInfoModal
+          user={profileInfoUser}
+          onClose={() => setProfileInfoUser(null)}
+        />
+      )}
 
       <div className="bg-card border-b border-border px-6 py-3 flex items-center gap-3 shrink-0">
         <button
@@ -720,6 +736,9 @@ export default function Chat() {
                         profile_image: member.profile_image ?? null,
                         role: member.role,
                         status: member.status,
+                        trust_score: member.trust_score,
+                        joined_at: member.joined_at,
+                        payment_status: member.payment_status ?? null,
                       })
                     }
                   />
