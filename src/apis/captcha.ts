@@ -8,6 +8,7 @@ export const startCaptcha = async (): Promise<StartCaptchaResponse> => {
   const response = await api.post<StartCaptchaResponse>(
     '/api/captcha/handocr/start',
   );
+
   return response.data;
 };
 
