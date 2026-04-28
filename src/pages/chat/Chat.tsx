@@ -71,6 +71,17 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [partyInfo, setPartyInfo] = useState<PartyInfo | null>(null);
+  const [paymentPreview, setPaymentPreview] = useState<{
+    amount: number;
+    base_price: number;
+    commission_rate: number;
+    commission_amount: number;
+    discount_reason?: string | null;
+    pricing_type: 'normal' | 'quick_match';
+    is_quick_match: boolean;
+    quick_match_fee_rate: number;
+  } | null>(null);
+
   const [connected, setConnected] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
@@ -138,6 +149,14 @@ export default function Chat() {
       .catch((err) => {
         console.error('파티 정보 로딩 실패:', err);
         setPartyInfo(null);
+      });
+
+    api
+      .get(`/api/payments/preview?party_id=${partyId}`)
+      .then(({ data }) => setPaymentPreview(data))
+      .catch((err) => {
+        console.error('빠른매칭 정산 금액 로딩 실패:', err);
+        setPaymentPreview(null);
       });
 
     const t = window.setTimeout(() => {
@@ -552,6 +571,8 @@ export default function Chat() {
           partyTitle={partyInfo?.title ?? '파티'}
           nickname={currentNickname}
           monthlyPerPerson={partyInfo?.monthly_per_person ?? null}
+          paymentPreviewAmount={paymentPreview?.amount ?? null}
+          isQuickMatchPrice={paymentPreview?.is_quick_match ?? false}
           isLeader={partyInfo?.is_leader ?? false}
           hasReferrerDiscount={partyInfo?.has_referrer_discount ?? false}
           leaderDiscountRate={partyInfo?.leader_discount_rate ?? null}
@@ -752,9 +773,16 @@ export default function Chat() {
               />
               <DetailRow
                 label="1인 부담"
-                value={formatCurrency(partyInfo?.monthly_per_person)}
+                value={formatCurrency(
+                  paymentPreview?.amount ?? partyInfo?.monthly_per_person,
+                )}
                 emphasized
               />
+              {paymentPreview?.is_quick_match && (
+                <p className="text-[11px] text-indigo-500 text-right">
+                  빠른매칭 수수료 포함 금액
+                </p>
+              )}
               <DetailRow
                 label="인원"
                 value={`${partyInfo?.member_count ?? '-'} / ${

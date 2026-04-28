@@ -106,6 +106,11 @@ function getNotificationTargetPath(item: NotificationItem) {
   return null;
 }
 
+function getNotificationReadId(item: NotificationItem) {
+  // 읽음 처리 API는 reference_id(파티/신고 ID)가 아니라 notifications 테이블의 PK인 id를 사용해야 함
+  return String(item.id);
+}
+
 function getProfileInitial(nickname?: string | null) {
   if (!nickname) return 'PU';
   return nickname.trim().slice(0, 2).toUpperCase();
@@ -286,7 +291,7 @@ export default function Header() {
 
     try {
       if (!item.is_read) {
-        await markOneAsReadMutation.mutateAsync(String(item.id));
+        await markOneAsReadMutation.mutateAsync(getNotificationReadId(item));
       }
     } catch (error) {
       console.error('개별 알림 읽음 처리 실패', error);

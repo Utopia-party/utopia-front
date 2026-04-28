@@ -13,6 +13,8 @@ interface PaymentModalProps {
   partyTitle: string;
   nickname: string;
   monthlyPerPerson: number | null;
+  paymentPreviewAmount?: number | null;
+  isQuickMatchPrice?: boolean;
   isLeader: boolean;
   hasReferrerDiscount: boolean;
   leaderDiscountRate: number | null;
@@ -26,6 +28,8 @@ export function PaymentModal({
   partyTitle,
   nickname,
   monthlyPerPerson,
+  paymentPreviewAmount,
+  isQuickMatchPrice = false,
   isLeader,
   hasReferrerDiscount,
   leaderDiscountRate,
@@ -50,7 +54,8 @@ export function PaymentModal({
   if (hasReferrerDiscount) discountRate += referralDiscountRate ?? 0;
   discountRate = Math.min(discountRate, 1);
 
-  const payAmount = Math.round(base * (1 - discountRate));
+  const payAmount =
+    paymentPreviewAmount ?? Math.round(base * (1 - discountRate));
 
   useEffect(() => {
     if (document.getElementById('portone-sdk')) return;
@@ -163,7 +168,11 @@ export function PaymentModal({
         <span>총 할인</span>
         <span className="font-bold">
           -{Math.round(discountRate * 100)}% (
-          {(base - payAmount).toLocaleString()}원 절약)
+          {Math.max(
+            base - Math.round(base * (1 - discountRate)),
+            0,
+          ).toLocaleString()}
+          원 절약)
         </span>
       </div>
     </div>
@@ -270,9 +279,16 @@ export function PaymentModal({
                       {base.toLocaleString()}원
                     </span>
                   )}
-                  <span className="font-extrabold text-slate-900">
-                    {payAmount.toLocaleString()}원
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="font-extrabold text-slate-900">
+                      {payAmount.toLocaleString()}원
+                    </span>
+                    {isQuickMatchPrice && (
+                      <p className="text-[11px] text-indigo-500">
+                        빠른매칭 수수료 포함
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -323,9 +339,16 @@ export function PaymentModal({
                 )}
                 <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
                   <span className="text-slate-500">결제 금액</span>
-                  <span className="font-extrabold text-primary text-base">
-                    {payAmount.toLocaleString()}원
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="font-extrabold text-primary text-base">
+                      {payAmount.toLocaleString()}원
+                    </span>
+                    {isQuickMatchPrice && (
+                      <p className="text-[11px] text-indigo-500">
+                        빠른매칭 수수료 포함
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
@@ -417,9 +440,16 @@ export function PaymentModal({
                         {base.toLocaleString()}원
                       </span>
                     )}
-                    <span className="font-extrabold text-slate-900">
-                      {payAmount.toLocaleString()}원
-                    </span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-extrabold text-slate-900">
+                        {payAmount.toLocaleString()}원
+                      </span>
+                      {isQuickMatchPrice && (
+                        <p className="text-[11px] text-indigo-500">
+                          빠른매칭 수수료 포함
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

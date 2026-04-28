@@ -5,6 +5,7 @@ import type {
   QuickMatchCandidate,
   QuickMatchResultResponse,
   QuickMatchDetailResponse,
+  PaymentPreviewResponse,
 } from '../types/quickMatch';
 
 export const requestQuickMatch = async (
@@ -46,5 +47,13 @@ export const getQuickMatchDetail = async (
   requestId: string,
 ): Promise<QuickMatchDetailResponse> => {
   const { data } = await api.get(`/api/quick-match/${requestId}`);
+  return data;
+};
+
+// 빠른매칭 수수료 포함 표시
+export const getPaymentPreview = async (
+  partyId: string,
+): Promise<PaymentPreviewResponse> => {
+  const { data } = await api.get(`/api/payments/preview?party_id=${partyId}`);
   return data;
 };
