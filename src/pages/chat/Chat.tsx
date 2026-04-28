@@ -122,6 +122,18 @@ export default function Chat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const userReadyRef = useRef(false);
 
+  const loadPartyInfo = useCallback(async () => {
+    if (!partyId) return;
+
+    try {
+      const { data } = await api.get(`/api/chat/parties/${partyId}/info`);
+      setPartyInfo(data);
+    } catch (err) {
+      console.error('파티 정보 로딩 실패:', err);
+      setPartyInfo(null);
+    }
+  }, [partyId]);
+
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
 
@@ -146,13 +158,7 @@ export default function Chat() {
         setMessages([]);
       });
 
-    api
-      .get(`/api/chat/parties/${partyId}/info`)
-      .then(({ data }) => setPartyInfo(data))
-      .catch((err) => {
-        console.error('파티 정보 로딩 실패:', err);
-        setPartyInfo(null);
-      });
+    void loadPartyInfo();
 
     api
       .get(`/api/payments/preview?party_id=${partyId}`)
@@ -169,7 +175,7 @@ export default function Chat() {
     return () => {
       window.clearTimeout(t);
     };
-  }, [partyId, checkPaymentStatus]);
+  }, [partyId, checkPaymentStatus, loadPartyInfo]);
 
   useEffect(() => {
     if (!partyId) return;
@@ -400,6 +406,27 @@ export default function Chat() {
     setProfileDrawer(null);
     setShowPraiseModal(true);
   }, [profileDrawer, currentUserId, praisedUserIds]);
+
+  const handleKickUser = useCallback(async () => {
+    if (!profileDrawer?.user.user_id || !partyId) return;
+
+    const targetUserId = String(profileDrawer.user.user_id);
+    const targetNickname = profileDrawer.user.nickname ?? '해당 멤버';
+
+    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/api/parties/${partyId}/members/${targetUserId}`);
+      setProfileDrawer(null);
+      await loadPartyInfo();
+      toast.success(`${targetNickname}님을 파티에서 강퇴했습니다.`);
+    } catch (err) {
+      console.error('멤버 강퇴 실패:', err);
+      toast.error('멤버를 강퇴하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }, [loadPartyInfo, partyId, profileDrawer]);
 
   const handleSubmitPraise = useCallback(
     async ({
@@ -638,6 +665,12 @@ export default function Chat() {
               : '30일 뒤 다시 가능'
           }
           onReport={handleReportUser}
+          canKick={
+            Boolean(partyInfo?.is_leader) &&
+            profileDrawer.user.user_id !== currentUserId &&
+            profileDrawer.user.role !== 'leader'
+          }
+          onKick={handleKickUser}
         />
       )}
       {profileInfoUser && (
