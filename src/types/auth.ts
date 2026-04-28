@@ -13,7 +13,7 @@ export interface SignupPayload {
   name: string;
   nickname: string;
   phone: string;
-  referrer?: string;
+  referrers: string[];
 }
 
 export interface CheckExistsResponse {
