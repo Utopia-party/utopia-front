@@ -3,8 +3,7 @@ import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import Pagination from './components/Pagination';
 import {
-  fetchAdminFlaggedChats,
-  fetchAdminModerationStats,
+  fetchAdminFlaggedChats, 
   fetchModerationTrend,
   getAdminErrorMessage,
   updateAdminChatModerationStatus,
@@ -217,7 +216,6 @@ export default function AdminModeration() {
   const [logError, setLogError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [unblockBusyId, setUnblockBusyId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   // ── IP 벤 상태 ──
@@ -347,30 +345,24 @@ export default function AdminModeration() {
     });
   };
 
+  // 오탐지 처리 시 blocked 상태였다면 Redis 차단 해제도 함께 수행
+  // — 별도 '채팅 차단 해제' 버튼을 없애고 여기서 단일 처리하여 이중 신뢰도 복구 방지
   const handleStatusUpdate = async (
     chatId: string,
     status: 'blocked' | 'warned' | 'false_positive' | 'pending',
   ) => {
     setBusyId(chatId);
     try {
+      const chat = chats.find((c) => c.id === chatId);
+      if (status === 'false_positive' && chat?.moderationStatus === 'blocked' && chat.senderId) {
+        await fetch(`${API}/unblock/user/${chat.senderId}`, { method: 'POST' });
+      }
       await updateAdminChatModerationStatus(chatId, status);
       setChats((prev) => prev.map((c) => c.id === chatId ? { ...c, moderationStatus: status } : c));
     } catch (err) {
       setLogError(getAdminErrorMessage(err));
     }
     setBusyId(null);
-  };
-
-  const handleUnblockUser = async (senderId: string, chatId: string) => {
-    setUnblockBusyId(chatId);
-    try {
-      await fetch(`${API}/unblock/user/${senderId}`, { method: 'POST' });
-      await updateAdminChatModerationStatus(chatId, 'false_positive');
-      setChats((prev) => prev.map((c) => c.id === chatId ? { ...c, moderationStatus: 'false_positive' } : c));
-    } catch (err) {
-      setLogError(getAdminErrorMessage(err));
-    }
-    setUnblockBusyId(null);
   };
 
   // ── IP 벤 로드 ──
@@ -476,7 +468,7 @@ export default function AdminModeration() {
                     <div className="grid md:grid-cols-2 gap-5">
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-1">
                         <p className="text-sm font-bold text-gray-800 mb-4">탐지 단계 활성화</p>
-                        {(([
+                        {((([
                           ['stage1_enabled', '1단계 — 규칙 기반', '화이트/블랙리스트 (0ms)', 'bg-emerald-100 text-emerald-700'],
                           ['stage2_enabled', '2단계 — ML 모델', 'GPU 서버 HTTP 호출 (10~30ms)', 'bg-blue-100 text-blue-700'],
                           ['stage3_enabled', '3단계 — Ollama Exaone', '문맥 판단 (500ms~3s)', 'bg-violet-100 text-violet-700'],
@@ -500,13 +492,13 @@ export default function AdminModeration() {
                               <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-violet-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5" />
                             </label>
                           </div>
-                        ))}
+                        )))}
                       </div>
 
                       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                         <p className="text-sm font-bold text-gray-800 mb-1">2단계 임계값</p>
                         <p className="text-xs text-gray-400 mb-5">통과~차단 사이 점수는 3단계(Ollama)로 전달</p>
-                        {(([
+                        {((([
                           ['stage2_pass_threshold', '통과 임계값', '이하이면 정상 처리', 0.5, 0.9],
                           ['stage2_block_threshold', '차단 임계값', '이상이면 즉시 차단', 0.7, 0.99],
                         ]) as [keyof Config, string, string, number, number][]).map(([key, label, sub, min, max]) => (
@@ -525,7 +517,7 @@ export default function AdminModeration() {
                               className="w-full accent-violet-600 h-1.5"
                             />
                           </div>
-                        ))}
+                        )))}
                         <div className="mt-4 rounded-xl bg-violet-50 border border-violet-100 px-4 py-2.5 text-xs text-violet-700 font-medium">
                           {`점수 < ${config.stage2_pass_threshold.toFixed(2)} → 통과  |  ${config.stage2_pass_threshold.toFixed(2)} ~ ${config.stage2_block_threshold.toFixed(2)} → Ollama  |  점수 ≥ ${config.stage2_block_threshold.toFixed(2)} → 차단`}
                         </div>
@@ -551,7 +543,7 @@ export default function AdminModeration() {
 
                   {configTab === '규칙 단어' && (
                     <div className="grid md:grid-cols-2 gap-5">
-                      {(([
+                      {((([
                         ['whitelist', '화이트리스트', '항상 정상 처리 — 오탐지된 단어 추가', wlInput, setWlInput, 'bg-emerald-50 text-emerald-700 border-emerald-200', 'bg-emerald-600 hover:bg-emerald-700'] as const,
                         ['blacklist', '블랙리스트', '항상 즉시 차단 — 명백한 욕설 축약어', blInput, setBlInput, 'bg-red-50 text-red-700 border-red-200', 'bg-red-600 hover:bg-red-700'] as const,
                       ])).map(([type, title, sub, val, setVal, tagStyle, btnStyle]) => (
@@ -580,7 +572,7 @@ export default function AdminModeration() {
                             <p className="text-xs text-emerald-600 font-medium mt-2">{wordMsg.text}</p>
                           )}
                         </div>
-                      ))}
+                      )))}
                     </div>
                   )}
 
@@ -814,7 +806,6 @@ export default function AdminModeration() {
                       {paginated.map((chat) => {
                         const isExpanded = expandedId === chat.id;
                         const isBusy = busyId === chat.id;
-                        const isUnblockBusy = unblockBusyId === chat.id;
                         const statusKey = chat.moderationStatus ?? 'pending';
                         return (
                           <>
@@ -922,18 +913,6 @@ export default function AdminModeration() {
                                         >{STATUS_LABEL[s]}</button>
                                       ))}
                                     </div>
-                                    {statusKey === 'blocked' && (
-                                      <div className="mt-3 pt-3 border-t border-slate-100">
-                                        <p className="text-xs text-slate-400 mb-2">차단 해제 — Redis 차단 삭제, is_active 복구, banned_until 초기화</p>
-                                        <button
-                                          disabled={isUnblockBusy}
-                                          onClick={() => void handleUnblockUser(chat.senderId, chat.id)}
-                                          className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"
-                                        >
-                                          {isUnblockBusy ? '처리 중...' : '채팅 차단 해제'}
-                                        </button>
-                                      </div>
-                                    )}
                                   </div>
                                 </td>
                               </tr>
