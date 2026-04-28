@@ -6,6 +6,8 @@ import {
   RefreshCcw,
   MessageCircle,
   Trash2,
+  X,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -82,6 +84,115 @@ function PraiseAvatar({
   );
 }
 
+function DeletePraiseModal({
+  praise,
+  direction,
+  deleting,
+  onClose,
+  onConfirm,
+}: {
+  praise: MyPraiseItem | null;
+  direction: PraiseDirection;
+  deleting: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!praise) return null;
+
+  const targetNickname =
+    direction === 'received'
+      ? (praise.from_nickname ?? '사용자')
+      : (praise.to_nickname ?? '사용자');
+
+  const relationText =
+    direction === 'received'
+      ? `${targetNickname}님에게 받은 칭찬`
+      : `${targetNickname}님에게 보낸 칭찬`;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm"
+      onClick={deleting ? undefined : onClose}
+    >
+      <div
+        className="w-full max-w-[420px] overflow-hidden rounded-[28px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between px-6 pt-6">
+          <div>
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+              <AlertTriangle size={24} />
+            </div>
+
+            <h2 className="text-xl font-extrabold text-slate-900">
+              칭찬 내역 삭제
+            </h2>
+
+            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+              이 내역은 내 칭찬 목록에서만 숨겨져요.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={deleting}
+            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="닫기"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="px-6 py-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-sm font-bold text-slate-900">{relationText}</p>
+
+            <div className="mt-2 flex items-center gap-2">
+              <Heart size={16} className="text-pink-500" fill="currentColor" />
+              <p className="text-sm text-slate-600">
+                {PRAISE_TYPE_LABEL[praise.praise_type] ?? praise.praise_type}
+              </p>
+            </div>
+
+            {praise.message && (
+              <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-500">
+                {praise.message}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3">
+            <p className="text-sm font-semibold leading-relaxed text-amber-700">
+              삭제해도 이미 반영된 신뢰도 이력은 유지됩니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 border-t border-slate-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={deleting}
+            className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            취소
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-bold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {deleting ? '삭제 중...' : '삭제하기'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PraiseCard({
   praise,
   direction,
@@ -89,7 +200,7 @@ function PraiseCard({
 }: {
   praise: MyPraiseItem;
   direction: PraiseDirection;
-  onDelete: (praiseId: string) => void;
+  onDelete: (praise: MyPraiseItem) => void;
 }) {
   const targetNickname =
     direction === 'received'
@@ -138,7 +249,7 @@ function PraiseCard({
 
             <button
               type="button"
-              onClick={() => onDelete(praise.id)}
+              onClick={() => onDelete(praise)}
               className="shrink-0 rounded-full p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
               aria-label="칭찬 내역 삭제"
               title="삭제"
@@ -201,6 +312,7 @@ export default function MyPraises() {
   const [direction, setDirection] = useState<PraiseDirection>('received');
   const [items, setItems] = useState<MyPraiseItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<MyPraiseItem | null>(null);
   const [deletingPraiseId, setDeletingPraiseId] = useState<string | null>(null);
 
   const title = useMemo(() => {
@@ -222,23 +334,28 @@ export default function MyPraises() {
     }
   };
 
-  const handleDeletePraise = async (praiseId: string) => {
+  const openDeleteModal = (praise: MyPraiseItem) => {
     if (deletingPraiseId) return;
+    setDeleteTarget(praise);
+  };
 
-    const ok = window.confirm(
-      '이 칭찬 내역을 삭제할까요?\n삭제해도 신뢰도 반영 내역은 유지됩니다.',
-    );
+  const closeDeleteModal = () => {
+    if (deletingPraiseId) return;
+    setDeleteTarget(null);
+  };
 
-    if (!ok) return;
+  const handleConfirmDeletePraise = async () => {
+    if (!deleteTarget || deletingPraiseId) return;
 
     try {
-      setDeletingPraiseId(praiseId);
+      setDeletingPraiseId(deleteTarget.id);
 
-      await deletePraise(praiseId);
+      await deletePraise(deleteTarget.id);
 
-      setItems((prev) => prev.filter((item) => item.id !== praiseId));
+      setItems((prev) => prev.filter((item) => item.id !== deleteTarget.id));
 
       toast.success('칭찬 내역을 삭제했어요.');
+      setDeleteTarget(null);
     } catch (err) {
       console.error('칭찬 내역 삭제 실패:', err);
       toast.error('칭찬 내역을 삭제하지 못했습니다.');
@@ -254,6 +371,14 @@ export default function MyPraises() {
 
   return (
     <div className="min-h-screen bg-slate-50 px-5 py-8">
+      <DeletePraiseModal
+        praise={deleteTarget}
+        direction={direction}
+        deleting={!!deletingPraiseId}
+        onClose={closeDeleteModal}
+        onConfirm={handleConfirmDeletePraise}
+      />
+
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <header className="rounded-3xl bg-white px-6 py-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -337,7 +462,7 @@ export default function MyPraises() {
                   key={praise.id}
                   praise={praise}
                   direction={direction}
-                  onDelete={handleDeletePraise}
+                  onDelete={openDeleteModal}
                 />
               ))}
             </div>
