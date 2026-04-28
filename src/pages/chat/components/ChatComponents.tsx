@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { User, AlertTriangle, Heart } from 'lucide-react';
+import {
+  User,
+  AlertTriangle,
+  Heart,
+  CreditCard,
+  CalendarDays,
+  ShieldCheck,
+} from 'lucide-react';
 import type { Member, ProfileDrawerUser } from '../../../types/chat';
 import {
   getProfileInitial,
@@ -80,6 +87,11 @@ export function ProfileDrawer({
   praiseDisabled?: boolean;
   praiseDisabledLabel?: string;
 }) {
+  const paymentStatusLabel =
+    user.payment_status === 'completed' ? '결제 완료' : '결제 미완료';
+  const paymentStatusTone =
+    user.payment_status === 'completed' ? 'text-emerald-600' : 'text-amber-600';
+
   return (
     <div className="fixed inset-0 z-[70]" onClick={onClose}>
       <div
@@ -153,8 +165,127 @@ export function ProfileDrawer({
               <AlertTriangle size={18} />
               신고
             </button>
+            <div className="mx-5 h-px bg-slate-200" />
+            <div className="flex items-center gap-3 px-5 py-4 text-left text-base font-semibold text-slate-700">
+              <CreditCard size={18} className={paymentStatusTone} />
+              <div className="flex min-w-0 flex-col">
+                <span>결제 상태</span>
+                <span className={`text-sm font-medium ${paymentStatusTone}`}>
+                  {paymentStatusLabel}
+                </span>
+              </div>
+            </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function ProfileInfoModal({
+  user,
+  onClose,
+}: {
+  user: ProfileDrawerUser;
+  onClose: () => void;
+}) {
+  const trustScoreText =
+    typeof user.trust_score === 'number'
+      ? `${user.trust_score.toFixed(1)}점`
+      : '-';
+  const joinedAtText = user.joined_at
+    ? new Date(user.joined_at).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+    : '-';
+  const paymentStatusText =
+    user.payment_status === 'completed' ? '완료' : '미완료';
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/35 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.2)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 pt-6 pb-5">
+          <div className="flex items-center gap-3">
+            <Avatar
+              nickname={user.nickname}
+              profileImage={user.profile_image}
+              size="md"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-lg font-bold text-slate-900">
+                {user.nickname ?? '익명'}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {user.role && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    {ROLE_LABEL[user.role] ?? user.role}
+                  </span>
+                )}
+                {user.status && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    {MEMBER_STATUS_LABEL[user.status] ?? user.status}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 px-6 py-5">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2 text-slate-500">
+                <ShieldCheck size={16} />
+                신뢰도
+              </div>
+              <span className="font-semibold text-slate-900">
+                {trustScoreText}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2 text-slate-500">
+                <CalendarDays size={16} />
+                파티 참여일
+              </div>
+              <span className="font-semibold text-slate-900">
+                {joinedAtText}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2 text-slate-500">
+                <CreditCard size={16} />
+                이번 달 결제 상태
+              </div>
+              <span
+                className={`font-semibold ${
+                  user.payment_status === 'completed'
+                    ? 'text-emerald-600'
+                    : 'text-amber-600'
+                }`}
+              >
+                {paymentStatusText}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            닫기
+          </button>
+        </div>
       </div>
     </div>
   );
