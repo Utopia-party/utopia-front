@@ -141,8 +141,10 @@ export default function Header() {
     queryKey: notificationKeys.me,
     queryFn: fetchMyNotifications,
     enabled: isLoggedIn,
-    staleTime: Infinity,
+    staleTime: 1000 * 15,
     gcTime: 1000 * 60 * 30,
+    refetchInterval: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
 
   const latestNotifications = useMemo(() => {

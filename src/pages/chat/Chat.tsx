@@ -26,7 +26,7 @@ import {
   formatRate,
 } from './ChatConstants';
 import PraiseModal from './components/PraiseModal';
-import { createPraise } from '../../apis/praises';
+import { createPraise, getPraiseAvailability } from '../../apis/praises';
 
 declare global {
   interface Window {
@@ -39,6 +39,28 @@ declare global {
       }>;
     };
   }
+}
+
+function getErrorStatus(err: unknown) {
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'response' in err &&
+    typeof (err as { response?: { status?: unknown } }).response?.status ===
+      'number'
+  ) {
+    return (err as { response?: { status?: number } }).response?.status;
+  }
+
+  return undefined;
+}
+
+function getPraiseDisabledLabel(remainingDays?: number) {
+  if (typeof remainingDays === 'number' && remainingDays > 0) {
+    return `${remainingDays}일 뒤 다시 가능`;
+  }
+
+  return '30일 뒤 다시 가능';
 }
 
 export default function Chat() {
@@ -80,6 +102,10 @@ export default function Chat() {
     {},
   );
 
+  const [praiseDisabledLabels, setPraiseDisabledLabels] = useState<
+    Record<string, string>
+  >({});
+
   const nicknameRef = useRef(user?.nickname ?? '익명');
   const myProfileImage = user?.profile_image ?? null;
   const currentNickname = user?.nickname ?? '익명';
@@ -95,6 +121,7 @@ export default function Chat() {
 
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
+
     try {
       const { data } = await api.get(
         `/api/payments/status?party_id=${partyId}`,
@@ -107,6 +134,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!partyId) return;
+
     api
       .get(`/api/chat/parties/${partyId}/messages`)
       .then(({ data }) => setMessages(Array.isArray(data) ? data : []))
@@ -114,6 +142,7 @@ export default function Chat() {
         console.error('메시지 로딩 실패:', err);
         setMessages([]);
       });
+
     api
       .get(`/api/chat/parties/${partyId}/info`)
       .then(({ data }) => setPartyInfo(data))
@@ -133,6 +162,7 @@ export default function Chat() {
     const t = window.setTimeout(() => {
       void checkPaymentStatus();
     }, 0);
+
     return () => {
       window.clearTimeout(t);
     };
@@ -140,48 +170,65 @@ export default function Chat() {
 
   useEffect(() => {
     if (!partyId) return;
+
     let cancelled = false;
+
     const connect = async () => {
       if (!userReadyRef.current) await new Promise((r) => setTimeout(r, 600));
       if (cancelled) return;
+
       if (
         wsRef.current &&
         (wsRef.current.readyState === WebSocket.OPEN ||
           wsRef.current.readyState === WebSocket.CONNECTING)
-      )
+      ) {
         return;
+      }
+
       const ws = new WebSocket(
-        `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(nicknameRef.current)}`,
+        `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(
+          nicknameRef.current,
+        )}`,
       );
+
       wsRef.current = ws;
+
       ws.onopen = () => {
         setConnected(true);
         userReadyRef.current = true;
       };
+
       ws.onclose = () => setConnected(false);
+
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
+
           if (msg.type === 'message_deleted') {
             setMessages((prev) =>
               prev.filter((m) => m.content !== msg.content),
             );
             return;
           }
+
           if (msg.type === 'force_logout') {
             wsRef.current?.close();
             wsRef.current = null;
             logout().then(() => navigate('/login?reason=banned'));
             return;
           }
+
           setMessages((prev) => [...prev, msg as Message]);
         } catch (err) {
           console.error('메시지 파싱 에러:', err);
         }
       };
+
       ws.onerror = (e) => console.error('WebSocket 에러:', e);
     };
+
     connect();
+
     return () => {
       cancelled = true;
       if (wsRef.current) {
@@ -197,12 +244,16 @@ export default function Chat() {
 
   useEffect(() => {
     if (!profileDrawer) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setProfileDrawer(null);
     };
+
     const handleResize = () => setProfileDrawer(null);
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', handleResize);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
@@ -214,8 +265,10 @@ export default function Chat() {
       !input.trim() ||
       !wsRef.current ||
       wsRef.current.readyState !== WebSocket.OPEN
-    )
+    ) {
       return;
+    }
+
     wsRef.current.send(input.trim());
     setInput('');
   }, [input]);
@@ -225,12 +278,15 @@ export default function Chat() {
       const member = partyInfo?.members?.find(
         (m) => m.user_id === targetUserId,
       );
-      if (!member)
+
+      if (!member) {
         return {
           role: undefined,
           status: undefined,
           profile_image: null as string | null,
         };
+      }
+
       return {
         role: member.role,
         status: member.status,
@@ -243,24 +299,68 @@ export default function Chat() {
   const openProfileDrawer = useCallback(
     (e: React.MouseEvent<HTMLElement>, targetUser: ProfileDrawerUser) => {
       e.stopPropagation();
+
       const rect = e.currentTarget.getBoundingClientRect();
       const drawerWidth = 280;
       const drawerHeight = 270;
+
       const hasRightSpace =
         rect.right + 12 + drawerWidth <= window.innerWidth - 12;
+
       const left = hasRightSpace
         ? rect.right + 12
         : Math.max(12, rect.left - drawerWidth - 12);
+
       const top = Math.min(
         Math.max(12, rect.top - 8),
         window.innerHeight - drawerHeight - 12,
       );
+
       setProfileDrawer({ user: targetUser, top, left });
+
+      const targetUserId = targetUser.user_id;
+
+      if (!targetUserId || targetUserId === currentUserId) return;
+
+      const targetUserIdText = String(targetUserId);
+
+      void getPraiseAvailability(targetUserIdText, partyId)
+        .then((data) => {
+          if (!data.can_praise) {
+            setPraisedUserIds((prev) => ({
+              ...prev,
+              [targetUserIdText]: true,
+            }));
+
+            setPraiseDisabledLabels((prev) => ({
+              ...prev,
+              [targetUserIdText]: getPraiseDisabledLabel(data.remaining_days),
+            }));
+
+            return;
+          }
+
+          setPraisedUserIds((prev) => {
+            const next = { ...prev };
+            delete next[targetUserIdText];
+            return next;
+          });
+
+          setPraiseDisabledLabels((prev) => {
+            const next = { ...prev };
+            delete next[targetUserIdText];
+            return next;
+          });
+        })
+        .catch((err) => {
+          console.error('칭찬 가능 여부 조회 실패:', err);
+        });
     },
-    [],
+    [currentUserId, partyId],
   );
 
   const closeProfileDrawer = useCallback(() => setProfileDrawer(null), []);
+
   const handleProfileInfo = useCallback(() => {
     if (!profileDrawer) return;
     toast('프로필 정보 기능은 준비 중입니다.', {
@@ -271,6 +371,7 @@ export default function Chat() {
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
+
     setReportTarget(profileDrawer.user);
     setProfileDrawer(null);
     setShowReportModal(true);
@@ -280,7 +381,10 @@ export default function Chat() {
     if (!profileDrawer) return;
     const targetUserId = profileDrawer.user.user_id;
     if (!targetUserId || targetUserId === currentUserId) return;
-    if (praisedUserIds[targetUserId]) {
+
+    const targetUserIdText = String(targetUserId);
+
+    if (praisedUserIds[targetUserIdText]) {
       toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
       setProfileDrawer(null);
       return;
@@ -308,23 +412,38 @@ export default function Chat() {
           praise_type,
           message,
         });
-        setPraisedUserIds((prev) => ({ ...prev, [targetUserId]: true }));
+
+        setPraisedUserIds((prev) => ({
+          ...prev,
+          [targetUserId]: true,
+        }));
+
+        setPraiseDisabledLabels((prev) => ({
+          ...prev,
+          [targetUserId]: '30일 뒤 다시 가능',
+        }));
+
         setShowPraiseModal(false);
         setPraiseTarget(null);
         toast.success(`${targetNickname}님에게 칭찬을 보냈어요.`);
       } catch (err: unknown) {
         console.error('칭찬 실패:', err);
-        const status =
-          typeof err === 'object' &&
-          err !== null &&
-          'response' in err &&
-          typeof (err as { response?: { status?: unknown } }).response
-            ?.status === 'number'
-            ? (err as { response?: { status?: number } }).response?.status
-            : undefined;
+
+        const status = getErrorStatus(err);
+
         if (status === 409) {
           toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
-          setPraisedUserIds((prev) => ({ ...prev, [targetUserId]: true }));
+
+          setPraisedUserIds((prev) => ({
+            ...prev,
+            [targetUserId]: true,
+          }));
+
+          setPraiseDisabledLabels((prev) => ({
+            ...prev,
+            [targetUserId]: '30일 뒤 다시 가능',
+          }));
+
           setShowPraiseModal(false);
           setPraiseTarget(null);
           return;
@@ -339,6 +458,7 @@ export default function Chat() {
     (msg: Message, i: number, currentUserId: string) => {
       const isMe = msg.user_id === currentUserId;
       const memberMeta = getMemberMeta(msg.user_id);
+
       if (msg.type === 'system') {
         return (
           <div key={i} className="flex justify-center">
@@ -348,21 +468,29 @@ export default function Chat() {
           </div>
         );
       }
+
       if (msg.type === 'warning' || msg.type === 'error') {
         const isError = msg.type === 'error';
+
         return (
           <div key={i} className="flex justify-center">
             <span
-              className={`text-xs border px-3 py-1.5 rounded-xl ${isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-orange-600 bg-orange-50 border-orange-200'}`}
+              className={`text-xs border px-3 py-1.5 rounded-xl ${
+                isError
+                  ? 'text-red-600 bg-red-50 border-red-200'
+                  : 'text-orange-600 bg-orange-50 border-orange-200'
+              }`}
             >
               {msg.content}
             </span>
           </div>
         );
       }
+
       const senderImage = isMe
         ? myProfileImage
         : (msg.profile_image ?? memberMeta.profile_image ?? null);
+
       return (
         <div
           key={i}
@@ -386,28 +514,41 @@ export default function Chat() {
               />
             </div>
           )}
+
           <div
-            className={`flex flex-col gap-0.5 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}
+            className={`flex flex-col gap-0.5 max-w-xs ${
+              isMe ? 'items-end' : 'items-start'
+            }`}
           >
             {!isMe && (
               <p className="text-xs text-muted-foreground px-1">
                 {msg.nickname ?? '익명'}
               </p>
             )}
+
             <div
-              className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isMe ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-foreground rounded-bl-sm'}`}
+              className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                isMe
+                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                  : 'bg-card border border-border text-foreground rounded-bl-sm'
+              }`}
             >
               {msg.content}
             </div>
+
             <p className="text-[10px] text-muted-foreground px-1">
               {(() => {
                 if (!msg.created_at) return '';
+
                 const raw =
                   msg.created_at.endsWith('Z') || msg.created_at.includes('+')
                     ? msg.created_at
                     : msg.created_at.replace(' ', 'T') + 'Z';
+
                 const d = new Date(raw);
+
                 if (isNaN(d.getTime())) return '';
+
                 return d.toLocaleTimeString('ko-KR', {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -441,6 +582,7 @@ export default function Chat() {
           }}
         />
       )}
+
       {showReportModal && (
         <ReportModal
           targetUser={reportTarget}
@@ -477,9 +619,14 @@ export default function Chat() {
           onPraise={handlePraiseUser}
           praiseDisabled={
             !!profileDrawer.user.user_id &&
-            !!praisedUserIds[profileDrawer.user.user_id]
+            !!praisedUserIds[String(profileDrawer.user.user_id)]
           }
-          praiseDisabledLabel="30일 뒤 다시 가능"
+          praiseDisabledLabel={
+            profileDrawer.user.user_id
+              ? (praiseDisabledLabels[String(profileDrawer.user.user_id)] ??
+                '30일 뒤 다시 가능')
+              : '30일 뒤 다시 가능'
+          }
           onReport={handleReportUser}
         />
       )}
@@ -491,6 +638,7 @@ export default function Chat() {
         >
           ← 파티 목록
         </button>
+
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-extrabold text-foreground truncate">
             {partyInfo?.title ?? '채팅방'}
@@ -504,6 +652,7 @@ export default function Chat() {
           <div className="px-5 pt-4 pb-1">
             <p className="text-sm font-bold text-foreground">메시지</p>
           </div>
+
           <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-3 border border-border rounded-xl mx-5 mb-3 bg-white min-h-0">
             {messages.length > 0 ? (
               messages.map((msg, i) => renderMessage(msg, i, currentUserId))
@@ -512,8 +661,10 @@ export default function Chat() {
                 [시스템] 채팅방이 생성되었습니다.
               </p>
             )}
+
             <div ref={bottomRef} />
           </div>
+
           <div className="mx-5 mb-3 flex gap-2">
             <input
               className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm outline-none focus:border-primary bg-background"
@@ -521,10 +672,12 @@ export default function Chat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                   sendMessage();
+                }
               }}
             />
+
             <button
               onClick={sendMessage}
               disabled={!connected || !input.trim()}
@@ -533,6 +686,7 @@ export default function Chat() {
               전송
             </button>
           </div>
+
           <div className="mx-5 mb-4">
             <button
               onClick={() => !alreadyPaid && setShowPaymentModal(true)}
@@ -551,6 +705,7 @@ export default function Chat() {
         <div className="w-80 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
           <div className="p-5 border-b border-border">
             <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
+
             {Array.isArray(partyInfo?.members) &&
             partyInfo.members.length > 0 ? (
               <div className="flex flex-col gap-2">
@@ -576,22 +731,29 @@ export default function Chat() {
               </p>
             )}
           </div>
+
           <div className="p-5">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {partyInfo?.category_name && (
                 <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'}`}
+                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                    CATEGORY_COLOR[partyInfo.category_name] ??
+                    'bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {partyInfo.category_name}
                 </span>
               )}
+
               {partyInfo?.status && (
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
                   {PARTY_STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
                 </span>
               )}
             </div>
+
             <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
+
             <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <DetailRow
                 label="서비스명"
@@ -623,7 +785,9 @@ export default function Chat() {
               )}
               <DetailRow
                 label="인원"
-                value={`${partyInfo?.member_count ?? '-'} / ${partyInfo?.max_members ?? '-'}`}
+                value={`${partyInfo?.member_count ?? '-'} / ${
+                  partyInfo?.max_members ?? '-'
+                }`}
               />
             </div>
           </div>

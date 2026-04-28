@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { api } from '../../apis/api';
 
 import {
   approveApplication,
@@ -19,6 +20,18 @@ import type { MyParty, PartyMember } from '../../types/party';
 type ModalMode = 'kick' | 'transfer' | 'leaderLeave';
 
 const ITEMS_PER_PAGE = 6;
+
+interface PaymentPreview {
+  party_id: string;
+  base_price: number;
+  amount: number;
+  commission_rate: number;
+  commission_amount: number;
+  discount_reason?: string | null;
+  pricing_type: 'normal' | 'quick_match';
+  is_quick_match: boolean;
+  quick_match_fee_rate: number;
+}
 
 interface MemberPickerModalProps {
   partyId: string;
@@ -91,6 +104,7 @@ function MemberPickerModal({
   const handleConfirm = async () => {
     if (!selected) return;
     setErrMsg(null);
+
     try {
       if (mode === 'kick') {
         await kickMut.mutateAsync(selected);
@@ -100,10 +114,12 @@ function MemberPickerModal({
         await transferMut.mutateAsync(selected);
         await leaveMut.mutateAsync();
       }
+
       await queryClient.invalidateQueries({ queryKey: ['my-parties'] });
       await queryClient.invalidateQueries({
         queryKey: ['party-members', partyId],
       });
+
       onDone();
     } catch (e) {
       setErrMsg(errorMessage(e, '처리 중 오류가 발생했습니다.'));
@@ -194,6 +210,7 @@ function ConfirmLeaveModal({
 }: ConfirmLeaveModalProps) {
   const queryClient = useQueryClient();
   const [errMsg, setErrMsg] = useState<string | null>(null);
+
   const mut = useMutation({
     mutationFn: () => leaveParty(partyId),
     onSuccess: async () => {
@@ -213,9 +230,11 @@ function ConfirmLeaveModal({
         <p className="mt-2 text-sm font-medium text-slate-500">
           탈퇴 후에는 다시 리더의 승인이 있어야 참여할 수 있습니다.
         </p>
+
         {errMsg ? (
           <p className="mt-3 text-sm font-semibold text-red-500">{errMsg}</p>
         ) : null}
+
         <div className="mt-6 flex gap-3">
           <button
             type="button"
@@ -313,6 +332,7 @@ function ApplicationsModal({ partyId, onClose }: ApplicationsModalProps) {
                   <span className="font-semibold text-slate-800">
                     {m.nickname ?? '이름 없음'}
                   </span>
+
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -376,13 +396,66 @@ export default function MyParty() {
 
   const parties: MyParty[] = data?.parties ?? [];
 
+  const [paymentPreviews, setPaymentPreviews] = useState<
+    Record<string, PaymentPreview>
+  >({});
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    if (parties.length === 0) {
+      setPaymentPreviews({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPaymentPreviews = async () => {
+      const entries = await Promise.all(
+        parties.map(async (party) => {
+          try {
+            const { data } = await api.get<PaymentPreview>(
+              `/api/payments/preview?party_id=${party.id}`,
+            );
+
+            return [party.id, data] as const;
+          } catch (err) {
+            console.error(
+              `정산 금액 미리보기 로딩 실패 party_id=${party.id}`,
+              err,
+            );
+
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      const next: Record<string, PaymentPreview> = {};
+
+      entries.forEach((entry) => {
+        if (!entry) return;
+        const [partyId, preview] = entry;
+        next[partyId] = preview;
+      });
+
+      setPaymentPreviews(next);
+    };
+
+    void loadPaymentPreviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [parties]);
 
   const categories = useMemo(() => {
     const names = parties
       .map((p) => p.category_name)
       .filter((c): c is string => c != null);
+
     return [...new Set(names)].sort();
   }, [parties]);
 
@@ -441,10 +514,12 @@ export default function MyParty() {
             >
               전체 ({parties.length})
             </button>
+
             {categories.map((cat) => {
               const count = parties.filter(
                 (p) => p.category_name === cat,
               ).length;
+
               return (
                 <button
                   key={cat}
@@ -489,11 +564,18 @@ export default function MyParty() {
               {pagedParties.map((party) => {
                 const isOwner = party.is_owner;
                 const statusLabel = isOwner ? '내가 만든 파티' : '참여중';
-                const perPersonPrice = party.monthly_price;
+
+                const preview = paymentPreviews[party.id];
+                const perPersonPrice =
+                  preview?.amount ?? party.monthly_price ?? null;
+
                 const serviceTotalPrice = party.service_total_price;
+
                 const refundAmount =
-                  isOwner && serviceTotalPrice != null && perPersonPrice != null
-                    ? serviceTotalPrice - perPersonPrice
+                  isOwner &&
+                  serviceTotalPrice != null &&
+                  party.monthly_price != null
+                    ? serviceTotalPrice - party.monthly_price
                     : null;
 
                 return (
@@ -517,12 +599,20 @@ export default function MyParty() {
                         👥 {party.member_count}/{party.max_members ?? '?'}
                       </p>
                       <p className="text-[16px] font-bold">📍 온라인</p>
-                      <p className="text-[16px] font-extrabold text-slate-800">
-                        💰 월 1인 ₩{' '}
-                        {perPersonPrice != null
-                          ? perPersonPrice.toLocaleString()
-                          : '-'}
-                      </p>
+                      <div>
+                        <p className="text-[16px] font-extrabold text-slate-800">
+                          💰 월 1인 ₩{' '}
+                          {perPersonPrice != null
+                            ? perPersonPrice.toLocaleString()
+                            : '-'}
+                        </p>
+                        {preview?.is_quick_match ? (
+                          <p className="mt-1 text-[12px] font-bold text-indigo-500">
+                            빠른매칭 수수료 포함 금액
+                          </p>
+                        ) : null}
+                      </div>
+
                       {isOwner && refundAmount != null && (
                         <p className="text-[15px] font-bold text-emerald-600">
                           💸 결제 후 환급 ₩ {refundAmount.toLocaleString()}
@@ -582,7 +672,7 @@ export default function MyParty() {
 
                       <button
                         type="button"
-                        className="h-14 rounded-full border border-blue-200 bg-primary text-[16px] font-extrabold text-white text-primary transition hover:opacity-90"
+                        className="h-14 rounded-full border border-blue-200 bg-primary text-[16px] font-extrabold text-white transition hover:opacity-90"
                         onClick={() => navigate(`/party/${party.id}/chat`)}
                       >
                         채팅방
