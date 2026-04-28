@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ChangeEvent, DragEvent } from 'react';
 import { useNavigate } from 'react-router';
-import Container from '../../components/layout/Container';
 import {
   FiClock,
   FiShield,
@@ -53,6 +53,9 @@ type CaptchaUiFailureReason =
 
 const TOTAL_SECONDS = 5 * 60;
 
+const MAX_UPLOAD_IMAGE_SIZE_MB = 10;
+const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
+
 const EXAMPLES = [
   { id: 1, image: fist, pose: '주먹 ✊' },
   { id: 2, image: palm, pose: '손바닥 🖐️' },
@@ -97,26 +100,8 @@ const formatRetryTime = (seconds?: number) => {
 
 const formatPercent = (value?: number | null) => {
   if (typeof value !== 'number') return undefined;
-
-  if (value <= 1) {
-    return `${Math.round(value * 100)}%`;
-  }
-
+  if (value <= 1) return `${Math.round(value * 100)}%`;
   return `${Math.round(value)}%`;
-};
-
-const getRetryAfterSeconds = (
-  failureReason?: CaptchaUiFailureReason,
-): number | undefined => {
-  if (
-    failureReason &&
-    'retryAfterSeconds' in failureReason &&
-    typeof failureReason.retryAfterSeconds === 'number'
-  ) {
-    return failureReason.retryAfterSeconds;
-  }
-
-  return undefined;
 };
 
 const getReasonField = (
@@ -126,13 +111,19 @@ const getReasonField = (
   return (failureReason as Record<string, unknown> | undefined)?.[key];
 };
 
+const getRetryAfterSeconds = (
+  failureReason?: CaptchaUiFailureReason,
+): number | undefined => {
+  const value = getReasonField(failureReason, 'retryAfterSeconds');
+  return typeof value === 'number' ? value : undefined;
+};
+
 const getStringField = (
   failureReason: CaptchaUiFailureReason | undefined,
   key: string,
 ): string | undefined => {
   const value = getReasonField(failureReason, key);
-  if (typeof value === 'string') return value;
-  return undefined;
+  return typeof value === 'string' ? value : undefined;
 };
 
 const getNullableStringField = (
@@ -140,7 +131,6 @@ const getNullableStringField = (
   key: string,
 ): string | null | undefined => {
   const value = getReasonField(failureReason, key);
-
   if (typeof value === 'string') return value;
   if (value === null) return null;
   return undefined;
@@ -151,9 +141,7 @@ const getNumberField = (
   key: string,
 ): number | undefined => {
   const value = getReasonField(failureReason, key);
-
-  if (typeof value === 'number') return value;
-  return undefined;
+  return typeof value === 'number' ? value : undefined;
 };
 
 const getStringArrayField = (
@@ -161,7 +149,6 @@ const getStringArrayField = (
   key: string,
 ): string[] => {
   const value = getReasonField(failureReason, key);
-
   if (!Array.isArray(value)) return [];
 
   return value
@@ -169,17 +156,10 @@ const getStringArrayField = (
     .slice(0, 5);
 };
 
-const getAiErrorCode = (
-  failureReason?: CaptchaUiFailureReason,
-): string | undefined => {
-  return getStringField(failureReason, 'aiErrorCode');
-};
-
 const getDetectedTextLabel = (text?: string | null) => {
   if (text === null || text === undefined || text.trim() === '') {
     return '인식하지 못함';
   }
-
   return text;
 };
 
@@ -187,7 +167,6 @@ const getDetectedPoseLabel = (pose?: string | null) => {
   if (pose === null || pose === undefined || pose.trim() === '') {
     return '인식하지 못함';
   }
-
   return pose;
 };
 
@@ -204,10 +183,7 @@ const buildMismatchDetailRows = (
   const rows: CaptchaErrorDetailRow[] = [];
 
   if (expectedPose) {
-    rows.push({
-      label: '요구한 손 포즈',
-      value: expectedPose,
-    });
+    rows.push({ label: '요구한 손 포즈', value: expectedPose });
   }
 
   rows.push({
@@ -216,10 +192,7 @@ const buildMismatchDetailRows = (
   });
 
   if (expectedText) {
-    rows.push({
-      label: '요구한 문자',
-      value: expectedText,
-    });
+    rows.push({ label: '요구한 문자', value: expectedText });
   }
 
   rows.push({
@@ -229,18 +202,12 @@ const buildMismatchDetailRows = (
 
   const poseConfidenceText = formatPercent(poseConfidence);
   if (poseConfidenceText) {
-    rows.push({
-      label: '손 포즈 신뢰도',
-      value: poseConfidenceText,
-    });
+    rows.push({ label: '손 포즈 신뢰도', value: poseConfidenceText });
   }
 
   const ocrConfidenceText = formatPercent(ocrConfidence);
   if (ocrConfidenceText) {
-    rows.push({
-      label: '문자 인식 신뢰도',
-      value: ocrConfidenceText,
-    });
+    rows.push({ label: '문자 인식 신뢰도', value: ocrConfidenceText });
   }
 
   return rows;
@@ -250,7 +217,6 @@ const buildOcrCandidateRows = (
   failureReason?: CaptchaUiFailureReason,
 ): CaptchaErrorDetailRow[] => {
   const candidates = getStringArrayField(failureReason, 'ocrCandidates');
-
   if (candidates.length === 0) return [];
 
   return [
@@ -267,8 +233,7 @@ const getCaptchaErrorContent = (
 ): Omit<CaptchaErrorModalState, 'onConfirm'> => {
   const type = failureReason?.type;
   const retryAfterSeconds = getRetryAfterSeconds(failureReason);
-  const aiErrorCode = getAiErrorCode(failureReason);
-
+  const aiErrorCode = getStringField(failureReason, 'aiErrorCode');
   const aiDetail = getStringField(failureReason, 'aiDetail');
   const aiGuide = getStringField(failureReason, 'aiGuide');
   const userHint = getStringField(failureReason, 'userHint');
@@ -283,18 +248,16 @@ const getCaptchaErrorContent = (
         buttonText: '확인',
       };
 
-    case 'MISSION_MISMATCH': {
-      const detailRows = [
-        ...buildMismatchDetailRows(failureReason),
-        ...buildOcrCandidateRows(failureReason),
-      ];
-
+    case 'MISSION_MISMATCH':
       return {
         title: '미션이 일치하지 않아요',
         description:
           userHint ||
           'AI가 손 포즈 또는 문자를 미션과 다르게 판단했어요. 사진 안에 문제 문자 외의 다른 글자가 함께 보이면 문자 인식이 틀릴 수 있어요.',
-        detailRows,
+        detailRows: [
+          ...buildMismatchDetailRows(failureReason),
+          ...buildOcrCandidateRows(failureReason),
+        ],
         tips: [
           '종이에는 화면에 나온 5자리 문자만 적어주세요.',
           '다른 글자, 숫자, 로고, 모니터 화면이 사진에 들어가지 않게 해주세요.',
@@ -303,7 +266,6 @@ const getCaptchaErrorContent = (
         ],
         buttonText: '다시 촬영하기',
       };
-    }
 
     case 'AI_DETECTION_FAILED':
       switch (aiErrorCode) {
@@ -447,7 +409,7 @@ export default function HandOcrCaptcha() {
   const [step, setStep] = useState<Step>('intro');
   const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
-  const [sessionId, setSessionId] = useState<string>('');
+  const [sessionId, setSessionId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [currentExampleIdx, setCurrentExampleIdx] = useState(0);
@@ -455,13 +417,12 @@ export default function HandOcrCaptcha() {
     null,
   );
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const revokePreviewImage = useCallback((url: string | null) => {
-    if (url) {
-      URL.revokeObjectURL(url);
-    }
+    if (url) URL.revokeObjectURL(url);
   }, []);
 
   const clearSelectedImage = useCallback(() => {
@@ -471,6 +432,7 @@ export default function HandOcrCaptcha() {
     });
 
     setSelectedFile(null);
+    setIsDragActive(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -500,27 +462,47 @@ export default function HandOcrCaptcha() {
 
   const closeErrorModal = useCallback(() => {
     const onConfirm = errorModal?.onConfirm;
-
     setErrorModal(null);
     onConfirm?.();
   }, [errorModal]);
+
+  const applyImageFile = useCallback(
+    (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        toast.error('이미지 파일만 업로드할 수 있어요.');
+        return;
+      }
+
+      if (file.size > MAX_UPLOAD_IMAGE_SIZE_BYTES) {
+        toast.error(
+          `이미지는 ${MAX_UPLOAD_IMAGE_SIZE_MB}MB 이하로 업로드해주세요.`,
+        );
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+
+      setPreviewImage((prev) => {
+        revokePreviewImage(prev);
+        return objectUrl;
+      });
+
+      setSelectedFile(file);
+      setIsDragActive(false);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [revokePreviewImage],
+  );
 
   const fetchChallenge = async (): Promise<boolean> => {
     try {
       const data = await startCaptcha();
 
       if (!data.success) {
-        if (data.failureReason?.type === 'IP_BLOCKED') {
-          toast.error(
-            data.message ||
-              `요청이 차단되었습니다. ${
-                data.failureReason.retryAfterSeconds ?? 0
-              }초 후 다시 시도해주세요.`,
-          );
-        } else {
-          toast.error(data.message || '문제를 불러오는 데 실패했습니다.');
-        }
-
+        toast.error(data.message || '문제를 불러오는 데 실패했습니다.');
         return false;
       }
 
@@ -555,12 +537,7 @@ export default function HandOcrCaptcha() {
     setBackConfirmOpen(false);
 
     const isSuccess = await fetchChallenge();
-
-    if (isSuccess) {
-      setStep('challenge');
-    } else {
-      setStep('intro');
-    }
+    setStep(isSuccess ? 'challenge' : 'intro');
   };
 
   const handleRefreshChallenge = async () => {
@@ -569,12 +546,7 @@ export default function HandOcrCaptcha() {
     setBackConfirmOpen(false);
 
     const isSuccess = await fetchChallenge();
-
-    if (isSuccess) {
-      setStep('challenge');
-    } else {
-      setStep('intro');
-    }
+    setStep(isSuccess ? 'challenge' : 'intro');
   };
 
   const requestBackToIntro = () => {
@@ -592,19 +564,60 @@ export default function HandOcrCaptcha() {
     setStep('intro');
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
-    const objectUrl = URL.createObjectURL(file);
+    applyImageFile(file);
+  };
 
-    setPreviewImage((prev) => {
-      revokePreviewImage(prev);
-      return objectUrl;
-    });
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(true);
+  };
 
-    setSelectedFile(file);
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentTarget = e.currentTarget;
+    const relatedTarget = e.relatedTarget as Node | null;
+
+    if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+
+    const files = Array.from(e.dataTransfer.files || []);
+    const imageFile = files.find((file) => file.type.startsWith('image/'));
+
+    if (!imageFile) {
+      toast.error('업로드할 이미지 파일을 찾지 못했어요.');
+      return;
+    }
+
+    if (files.length > 1) {
+      toast('여러 파일 중 첫 번째 이미지 파일만 사용합니다.');
+    }
+
+    applyImageFile(imageFile);
   };
 
   const handleSubmit = async () => {
@@ -635,16 +648,8 @@ export default function HandOcrCaptcha() {
         return;
       }
 
-      if (data.failureReason?.type === 'SESSION_EXPIRED') {
-        setStep('challenge');
-        openErrorModal(data.failureReason, data.message, () => {
-          resetChallengeState();
-          setStep('intro');
-        });
-        return;
-      }
-
       if (
+        data.failureReason?.type === 'SESSION_EXPIRED' ||
         data.failureReason?.type === 'IP_BLOCKED' ||
         data.failureReason?.type === 'MAX_SESSION_ATTEMPTS_EXCEEDED' ||
         data.failureReason?.type === 'SESSION_IP_MISMATCH'
@@ -710,7 +715,6 @@ export default function HandOcrCaptcha() {
   const formatTime = (seconds: number) => {
     const helperDate = new Date(0);
     helperDate.setSeconds(seconds);
-
     return format(helperDate, 'mm:ss');
   };
 
@@ -718,87 +722,92 @@ export default function HandOcrCaptcha() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-6 md:py-10">
       <Toaster position="top-center" />
 
-      <Container className="w-full max-w-5xl">
-        <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg">
-          <div className="bg-linear-to-r from-purple-600 to-blue-500 px-6 py-7 text-center md:px-10">
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-xl">
+          <div className="bg-gradient-to-r from-purple-600 to-blue-500 px-6 py-7 text-center">
             <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm">
               <FiShield size={24} />
             </div>
 
-            <h2 className="mb-1 text-2xl font-bold text-white md:text-3xl">
+            <h2 className="mb-1 text-2xl font-bold text-white">
               AI 행동 기반 인증
             </h2>
 
-            <p className="text-sm text-blue-100 md:text-base">
+            <p className="text-sm text-blue-100">
               안전한 서비스 이용을 위해 봇이 아님을 증명해주세요.
             </p>
           </div>
 
-          <div className="p-5 md:p-8 lg:p-10">
+          <div className="p-5 md:p-7">
             {step === 'intro' && (
-              <div className="animate-fadeIn">
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                  <div className="rounded-3xl border border-gray-100 bg-gray-50 p-6">
-                    <h3 className="mb-3 text-xl font-bold text-gray-900">
-                      인증 방법
-                    </h3>
+              <div className="space-y-5 animate-fadeIn">
+                <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5">
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-[320px_1fr]">
+                    <div>
+                      <h3 className="mb-2 text-lg font-bold text-gray-900">
+                        인증 방법
+                      </h3>
 
-                    <p className="mb-5 text-sm leading-7 text-gray-600 md:text-base">
-                      화면에 제시되는 5자리 문자를 종이에 적고,
-                      <br className="hidden sm:block" />
-                      요구하는 손 포즈와 함께 사진을 찍어주세요.
-                    </p>
-
-                    <Slide
-                      examples={EXAMPLES}
-                      onSlideChange={setCurrentExampleIdx}
-                    />
-
-                    <div className="rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-700">
-                      <span className="font-semibold">예시</span>
-                      <p className="mt-1">
-                        [ <span className="font-mono font-bold">A1B2C</span> ]
-                        글씨와 [{' '}
-                        <span className="font-semibold">
-                          {EXAMPLES[currentExampleIdx].pose}
-                        </span>{' '}
-                        ] 포즈가 함께 담긴 사진
+                      <p className="text-sm leading-6 text-gray-600">
+                        화면에 제시되는 5자리 문자를 종이에 적고, 요구하는 손
+                        포즈와 함께 사진을 찍어주세요.
                       </p>
+                    </div>
+
+                    <div className="mx-auto w-full max-w-md">
+                      <Slide
+                        examples={EXAMPLES}
+                        onSlideChange={setCurrentExampleIdx}
+                      />
+
+                      <div className="rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-700">
+                        <span className="font-semibold">예시</span>
+                        <p className="mt-1">
+                          [ <span className="font-mono font-bold">A1B2C</span> ]
+                          글씨와 [{' '}
+                          <span className="font-semibold">
+                            {EXAMPLES[currentExampleIdx].pose}
+                          </span>{' '}
+                          ] 포즈가 함께 담긴 사진
+                        </p>
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex flex-col gap-6">
-                    <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6">
-                      <div className="mb-3 flex items-center gap-2 text-base font-bold text-blue-900">
-                        <FiInfo />
-                        <span>촬영 전에 꼭 확인해주세요</span>
-                      </div>
-
-                      <ul className="space-y-2 text-sm leading-6 text-blue-900/80">
-                        {CAPTURE_GUIDELINES.map((guide) => (
-                          <li key={guide} className="flex gap-2">
-                            <span className="mt-[10px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-                            <span>{guide}</span>
-                          </li>
-                        ))}
-                      </ul>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-5">
+                    <div className="mb-3 flex items-center gap-2 text-base font-bold text-blue-900">
+                      <FiInfo />
+                      <span>촬영 전 확인</span>
                     </div>
 
-                    <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-                      <h4 className="mb-2 text-base font-bold text-gray-900">
-                        준비되셨나요?
-                      </h4>
-                      <p className="mb-5 text-sm leading-6 text-gray-600">
-                        문제를 시작하면 5분 안에 사진을 제출해야 합니다.
-                      </p>
+                    <ul className="space-y-2 text-sm leading-6 text-blue-900/80">
+                      {CAPTURE_GUIDELINES.slice(0, 4).map((guide) => (
+                        <li key={guide} className="flex gap-2">
+                          <span className="mt-[10px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                          <span>{guide}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                      <button
-                        onClick={handleStart}
-                        className="w-full rounded-2xl bg-gray-900 py-4 font-bold text-white transition hover:bg-gray-800"
-                      >
-                        문제 풀기 시작
-                      </button>
-                    </div>
+                  <div className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <h4 className="mb-2 text-base font-bold text-gray-900">
+                      준비되셨나요?
+                    </h4>
+
+                    <p className="mb-5 text-sm leading-6 text-gray-600">
+                      문제를 시작하면 5분 안에 사진을 제출해야 합니다. 손 1개와
+                      미션 문자 5자리만 보이게 촬영해주세요.
+                    </p>
+
+                    <button
+                      onClick={handleStart}
+                      className="w-full rounded-2xl bg-gray-900 py-4 font-bold text-white transition hover:bg-gray-800"
+                    >
+                      문제 풀기 시작
+                    </button>
                   </div>
                 </div>
               </div>
@@ -837,19 +846,19 @@ export default function HandOcrCaptcha() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                   <div className="space-y-5">
-                    <div className="rounded-3xl border border-purple-100 bg-linear-to-br from-purple-50 to-blue-50 p-6">
+                    <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-blue-50 p-5">
                       <p className="mb-4 text-sm font-medium text-gray-500">
                         다음 미션을 수행해주세요
                       </p>
 
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
                         <div className="rounded-2xl border border-gray-100 bg-white px-4 py-5 text-center shadow-sm">
                           <p className="mb-2 text-xs font-medium text-gray-400">
                             요구 문자
                           </p>
-                          <div className="font-mono text-4xl font-extrabold tracking-[0.25em] text-gray-800">
+                          <div className="font-mono text-3xl font-extrabold tracking-[0.2em] text-gray-800">
                             {challenge.text}
                           </div>
                         </div>
@@ -875,28 +884,6 @@ export default function HandOcrCaptcha() {
                         AI가 잘못 읽을 수 있어요.
                       </p>
                     </div>
-
-                    <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5">
-                      <p className="mb-3 text-sm font-bold text-gray-900">
-                        빠른 체크
-                      </p>
-                      <ul className="space-y-2 text-sm text-gray-700">
-                        <li className="flex gap-2">
-                          <span className="text-green-600">✓</span>
-                          <span>손은 1개만 보여야 해요.</span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="text-green-600">✓</span>
-                          <span>종이에는 미션 문자 5자리만 적어주세요.</span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="text-green-600">✓</span>
-                          <span>
-                            손과 종이가 한 장의 사진에 모두 보여야 해요.
-                          </span>
-                        </li>
-                      </ul>
-                    </div>
                   </div>
 
                   <div className="space-y-5">
@@ -906,12 +893,33 @@ export default function HandOcrCaptcha() {
                       </p>
 
                       {previewImage ? (
-                        <div className="relative overflow-hidden rounded-2xl border-2 border-purple-500">
+                        <div
+                          onDragEnter={handleDragEnter}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`relative overflow-hidden rounded-2xl border-2 transition-colors ${
+                            isDragActive
+                              ? 'border-purple-500 bg-purple-50'
+                              : 'border-purple-500'
+                          }`}
+                        >
                           <img
                             src={previewImage}
                             alt="미리보기"
-                            className="h-80 w-full object-cover"
+                            className={`h-72 w-full object-cover transition ${
+                              isDragActive ? 'opacity-40' : 'opacity-100'
+                            }`}
                           />
+
+                          {isDragActive && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-purple-50/80 text-purple-700">
+                              <FiCamera size={40} className="mb-3" />
+                              <p className="font-bold">
+                                새 이미지를 놓으면 교체됩니다
+                              </p>
+                            </div>
+                          )}
 
                           <button
                             onClick={clearSelectedImage}
@@ -923,16 +931,32 @@ export default function HandOcrCaptcha() {
                       ) : (
                         <div
                           onClick={() => fileInputRef.current?.click()}
-                          className="flex h-80 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-purple-500 hover:bg-purple-50"
+                          onDragEnter={handleDragEnter}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`flex h-72 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed text-gray-500 transition-colors ${
+                            isDragActive
+                              ? 'border-purple-500 bg-purple-50 text-purple-600'
+                              : 'border-gray-300 hover:border-purple-500 hover:bg-purple-50'
+                          }`}
                         >
-                          <FiCamera size={44} className="mb-4 text-gray-400" />
+                          <FiCamera
+                            size={44}
+                            className={`mb-4 ${
+                              isDragActive ? 'text-purple-500' : 'text-gray-400'
+                            }`}
+                          />
 
                           <p className="font-medium text-gray-700">
-                            클릭하여 사진 촬영 또는 업로드
+                            {isDragActive
+                              ? '여기에 이미지를 놓아주세요'
+                              : '클릭하거나 이미지를 드래그해서 업로드'}
                           </p>
 
                           <p className="mt-2 px-6 text-center text-sm leading-6 text-gray-400">
-                            손 1개와 미션 문자 5자리만 선명하게 보이도록
+                            JPG, PNG, WEBP 이미지를 업로드할 수 있어요.
+                            <br />손 1개와 미션 문자 5자리만 선명하게 보이도록
                             찍어주세요.
                           </p>
 
@@ -997,7 +1021,7 @@ export default function HandOcrCaptcha() {
                       <button
                         onClick={handleSubmit}
                         disabled={!selectedFile}
-                        className="rounded-2xl bg-linear-to-r from-purple-600 to-blue-500 py-4 font-bold text-white shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="rounded-2xl bg-gradient-to-r from-purple-600 to-blue-500 py-4 font-bold text-white shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         인증 제출하기
                       </button>
@@ -1043,7 +1067,7 @@ export default function HandOcrCaptcha() {
             )}
           </div>
         </div>
-      </Container>
+      </div>
 
       {backConfirmOpen && (
         <div
