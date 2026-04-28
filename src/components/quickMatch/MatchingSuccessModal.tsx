@@ -3,6 +3,15 @@
 type MatchingSuccessModalProps = {
   open: boolean;
   matchedParty?: any;
+  paymentPreview?: {
+    amount: number;
+    base_price: number;
+    commission_rate: number;
+    commission_amount: number;
+    pricing_type: string;
+    is_quick_match: boolean;
+    quick_match_fee_rate: number;
+  } | null;
   onClose: () => void;
   onGoParty?: () => void;
 };
@@ -10,6 +19,7 @@ type MatchingSuccessModalProps = {
 export default function MatchingSuccessModal({
   open,
   matchedParty,
+  paymentPreview,
   onClose,
   onGoParty,
 }: MatchingSuccessModalProps) {
@@ -45,9 +55,18 @@ export default function MatchingSuccessModal({
                 👥 {matchedParty?.member_count}/{matchedParty?.max_members}명
               </p>
               <p>👤 호스트: {matchedParty?.host_nickname}</p>
-              {matchedParty?.monthly_price && (
+              {paymentPreview?.amount != null ? (
+                <>
+                  <p>💰 월 {paymentPreview.amount.toLocaleString()}원</p>
+                  {paymentPreview.is_quick_match && (
+                    <p className="text-[11px] text-indigo-500">
+                      빠른매칭 수수료 포함 금액
+                    </p>
+                  )}
+                </>
+              ) : matchedParty?.monthly_price ? (
                 <p>💰 월 {matchedParty.monthly_price.toLocaleString()}원</p>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

@@ -31,6 +31,8 @@ import {
 } from '../hooks/useQuickMatch';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAuthStore } from '../stores/authStore';
+import { getPaymentPreview } from '../apis/quickMatchApi';
+import type { PaymentPreviewResponse } from '../types/quickMatch';
 
 type PartyWithDetails = Party & {
   description?: string;
@@ -624,6 +626,9 @@ export default function Home() {
   const [isMatching, setIsMatching] = useState(false);
   const [matchStep, setMatchStep] = useState<MatchStep>('idle');
   const [matchResult, setMatchResult] = useState<JoinResult | null>(null);
+  const [matchPaymentPreview, setMatchPaymentPreview] =
+    useState<PaymentPreviewResponse | null>(null);
+
   const [matchError, setMatchError] = useState<string | null>(null);
   const [matchErrorCode, setMatchErrorCode] = useState<string | null>(null);
 
@@ -840,6 +845,7 @@ export default function Home() {
       setMatchError(null);
       setMatchErrorCode(null);
       setShowQuickMatch(false);
+      setMatchPaymentPreview(null);
 
       const requestResponse =
         await quickMatchRequestMutation.mutateAsync(payload);
@@ -860,6 +866,16 @@ export default function Home() {
 
       if (!matchedPartyId) {
         throw new Error('매칭된 파티 정보를 찾을 수 없습니다.');
+      }
+
+      let paymentPreview: PaymentPreviewResponse | null = null;
+
+      try {
+        paymentPreview = await getPaymentPreview(String(matchedPartyId));
+        setMatchPaymentPreview(paymentPreview);
+      } catch (previewError) {
+        console.warn('결제 금액 미리보기 조회 실패:', previewError);
+        setMatchPaymentPreview(null);
       }
 
       let detailedParty: any = null;
@@ -1109,10 +1125,15 @@ export default function Home() {
       <MatchingSuccessModal
         open={!!matchResult && !isMatching && !matchError}
         matchedParty={matchedParty}
-        onClose={() => setMatchResult(null)}
+        paymentPreview={matchPaymentPreview}
+        onClose={() => {
+          setMatchResult(null);
+          setMatchPaymentPreview(null);
+        }}
         onGoParty={() => {
           if (matchedParty?.id) {
             setMatchResult(null);
+            setMatchPaymentPreview(null);
             navigate(`/party/${matchedParty.id}/chat`);
           }
         }}

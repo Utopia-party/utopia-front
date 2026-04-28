@@ -70,3 +70,16 @@ export interface QuickMatchDetailResponse {
   candidates: QuickMatchCandidate[];
   result?: QuickMatchResultResponse | null;
 }
+
+// 성공모달 정산 금액 표시
+export interface PaymentPreviewResponse {
+  party_id: string;
+  base_price: number;
+  amount: number;
+  commission_rate: number;
+  commission_amount: number;
+  discount_reason?: string | null;
+  pricing_type: 'normal' | 'quick_match';
+  is_quick_match: boolean;
+  quick_match_fee_rate: number;
+}

@@ -25,6 +25,7 @@ export const fetchLatestNotifications = async (
   return Array.isArray(data) ? sortNotificationsByCreatedAt(data) : [];
 };
 
+// 개별 읽음
 export const markNotificationAsRead = async (
   notificationId: string,
 ): Promise<{ message?: string }> => {
