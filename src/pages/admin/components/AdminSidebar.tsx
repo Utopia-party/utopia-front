@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router';
+import { Link, NavLink } from 'react-router';
 import {
   BadgeCheck,
   CloudCog,
@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminPermissions } from '../../../apis/admin';
+import logoImage from '../../../assets/logo.png';
 
 type MenuItem = {
   path: string;
@@ -188,16 +189,22 @@ export default function AdminSidebar({
             : 'items-center justify-between px-5'
         }`}
       >
-        <a
-          href="/home"
+        <Link
+          to="/home"
           title={collapsed ? 'Party-Up' : undefined}
           className={`flex items-center text-lg font-bold text-foreground no-underline ${
             collapsed ? 'justify-center' : 'gap-2.5'
           }`}
         >
-          <span className="h-7 w-7 shrink-0 rounded-full bg-[#6C9FFF]" />
+          <img
+            src={logoImage}
+            alt="Party-Up"
+            className={`shrink-0 object-contain ${
+              collapsed ? 'h-8 w-8' : 'h-8 w-8'
+            }`}
+          />
           {!collapsed && <span>Party-Up</span>}
-        </a>
+        </Link>
 
         <button
           type="button"
