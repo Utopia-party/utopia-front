@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ChangeEvent, DragEvent } from 'react';
 import { useNavigate } from 'react-router';
 import {
   FiClock,
@@ -51,6 +52,9 @@ type CaptchaUiFailureReason =
     };
 
 const TOTAL_SECONDS = 5 * 60;
+
+const MAX_UPLOAD_IMAGE_SIZE_MB = 10;
+const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 
 const EXAMPLES = [
   { id: 1, image: fist, pose: '주먹 ✊' },
@@ -413,6 +417,7 @@ export default function HandOcrCaptcha() {
     null,
   );
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -427,6 +432,7 @@ export default function HandOcrCaptcha() {
     });
 
     setSelectedFile(null);
+    setIsDragActive(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -459,6 +465,37 @@ export default function HandOcrCaptcha() {
     setErrorModal(null);
     onConfirm?.();
   }, [errorModal]);
+
+  const applyImageFile = useCallback(
+    (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        toast.error('이미지 파일만 업로드할 수 있어요.');
+        return;
+      }
+
+      if (file.size > MAX_UPLOAD_IMAGE_SIZE_BYTES) {
+        toast.error(
+          `이미지는 ${MAX_UPLOAD_IMAGE_SIZE_MB}MB 이하로 업로드해주세요.`,
+        );
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+
+      setPreviewImage((prev) => {
+        revokePreviewImage(prev);
+        return objectUrl;
+      });
+
+      setSelectedFile(file);
+      setIsDragActive(false);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [revokePreviewImage],
+  );
 
   const fetchChallenge = async (): Promise<boolean> => {
     try {
@@ -527,18 +564,60 @@ export default function HandOcrCaptcha() {
     setStep('intro');
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const objectUrl = URL.createObjectURL(file);
+    applyImageFile(file);
+  };
 
-    setPreviewImage((prev) => {
-      revokePreviewImage(prev);
-      return objectUrl;
-    });
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(true);
+  };
 
-    setSelectedFile(file);
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentTarget = e.currentTarget;
+    const relatedTarget = e.relatedTarget as Node | null;
+
+    if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+
+    const files = Array.from(e.dataTransfer.files || []);
+    const imageFile = files.find((file) => file.type.startsWith('image/'));
+
+    if (!imageFile) {
+      toast.error('업로드할 이미지 파일을 찾지 못했어요.');
+      return;
+    }
+
+    if (files.length > 1) {
+      toast('여러 파일 중 첫 번째 이미지 파일만 사용합니다.');
+    }
+
+    applyImageFile(imageFile);
   };
 
   const handleSubmit = async () => {
@@ -814,12 +893,33 @@ export default function HandOcrCaptcha() {
                       </p>
 
                       {previewImage ? (
-                        <div className="relative overflow-hidden rounded-2xl border-2 border-purple-500">
+                        <div
+                          onDragEnter={handleDragEnter}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`relative overflow-hidden rounded-2xl border-2 transition-colors ${
+                            isDragActive
+                              ? 'border-purple-500 bg-purple-50'
+                              : 'border-purple-500'
+                          }`}
+                        >
                           <img
                             src={previewImage}
                             alt="미리보기"
-                            className="h-72 w-full object-cover"
+                            className={`h-72 w-full object-cover transition ${
+                              isDragActive ? 'opacity-40' : 'opacity-100'
+                            }`}
                           />
+
+                          {isDragActive && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-purple-50/80 text-purple-700">
+                              <FiCamera size={40} className="mb-3" />
+                              <p className="font-bold">
+                                새 이미지를 놓으면 교체됩니다
+                              </p>
+                            </div>
+                          )}
 
                           <button
                             onClick={clearSelectedImage}
@@ -831,16 +931,32 @@ export default function HandOcrCaptcha() {
                       ) : (
                         <div
                           onClick={() => fileInputRef.current?.click()}
-                          className="flex h-72 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-purple-500 hover:bg-purple-50"
+                          onDragEnter={handleDragEnter}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`flex h-72 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed text-gray-500 transition-colors ${
+                            isDragActive
+                              ? 'border-purple-500 bg-purple-50 text-purple-600'
+                              : 'border-gray-300 hover:border-purple-500 hover:bg-purple-50'
+                          }`}
                         >
-                          <FiCamera size={44} className="mb-4 text-gray-400" />
+                          <FiCamera
+                            size={44}
+                            className={`mb-4 ${
+                              isDragActive ? 'text-purple-500' : 'text-gray-400'
+                            }`}
+                          />
 
                           <p className="font-medium text-gray-700">
-                            클릭하여 사진 촬영 또는 업로드
+                            {isDragActive
+                              ? '여기에 이미지를 놓아주세요'
+                              : '클릭하거나 이미지를 드래그해서 업로드'}
                           </p>
 
                           <p className="mt-2 px-6 text-center text-sm leading-6 text-gray-400">
-                            손 1개와 미션 문자 5자리만 선명하게 보이도록
+                            JPG, PNG, WEBP 이미지를 업로드할 수 있어요.
+                            <br />손 1개와 미션 문자 5자리만 선명하게 보이도록
                             찍어주세요.
                           </p>
 
