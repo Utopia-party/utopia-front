@@ -13,6 +13,7 @@ const mypageMenus = [
   { label: '프로필', to: '/mypage/profile' },
   { label: '내 파티', to: '/mypage/party' },
   { label: '신뢰도 변화', to: '/mypage/my_trust_history' },
+  { label: '칭찬 내역', to: '/mypage/praises' },
   { label: '결제 내역', to: '/mypage/payment' },
   { label: '신고 내역', to: '/mypage/report' },
 ];

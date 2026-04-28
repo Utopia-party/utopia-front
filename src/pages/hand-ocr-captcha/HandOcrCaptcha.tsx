@@ -8,6 +8,9 @@ import {
   FiRefreshCw,
   FiCheckCircle,
   FiAlertCircle,
+  FiInfo,
+  FiArrowLeft,
+  FiXCircle,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import Slide from './components/Slide';
@@ -28,9 +31,15 @@ interface ChallengeData {
   pose: string;
 }
 
+interface CaptchaErrorDetailRow {
+  label: string;
+  value: string;
+}
+
 interface CaptchaErrorModalState {
   title: string;
   description: string;
+  detailRows?: CaptchaErrorDetailRow[];
   tips?: string[];
   buttonText?: string;
   onConfirm?: () => void;
@@ -51,6 +60,24 @@ const EXAMPLES = [
   { id: 4, image: thumbs_up, pose: '따봉 👍' },
 ];
 
+const CAPTURE_GUIDELINES = [
+  '종이에는 화면에 나온 5자리 문자만 크게 적어주세요.',
+  '문제 문자열 외의 다른 글자, 숫자, 낙서, 로고가 사진에 보이지 않게 해주세요.',
+  '책, 포스터, 모니터, 키보드, 옷의 글자 등이 함께 찍히면 AI가 엉뚱한 문자를 읽을 수 있어요.',
+  '종이는 가능하면 빈 배경 위에 놓고 촬영해주세요.',
+  '손 1개와 종이의 5자리 문자가 한 장의 사진 안에 모두 보여야 해요.',
+  '손 전체가 잘리거나 가려지지 않게 찍어주세요.',
+  '문자는 흐림, 그림자, 빛 반사 없이 정면에서 보여야 해요.',
+];
+
+const PRE_SUBMIT_CHECKLIST = [
+  '종이에 적힌 문자는 미션 문자 5자리뿐인가요?',
+  '배경에 다른 글자, 숫자, 로고, 화면 글자가 보이지 않나요?',
+  '손은 1개만 보이나요?',
+  '손 전체와 5자리 문자가 모두 선명하게 보이나요?',
+  '빛 반사나 흔들림 없이 촬영되었나요?',
+];
+
 const formatRetryTime = (seconds?: number) => {
   if (!seconds || seconds <= 0) return '잠시 후';
 
@@ -68,6 +95,16 @@ const formatRetryTime = (seconds?: number) => {
   return `${remainSeconds}초 후`;
 };
 
+const formatPercent = (value?: number | null) => {
+  if (typeof value !== 'number') return undefined;
+
+  if (value <= 1) {
+    return `${Math.round(value * 100)}%`;
+  }
+
+  return `${Math.round(value)}%`;
+};
+
 const getRetryAfterSeconds = (
   failureReason?: CaptchaUiFailureReason,
 ): number | undefined => {
@@ -82,18 +119,146 @@ const getRetryAfterSeconds = (
   return undefined;
 };
 
+const getReasonField = (
+  failureReason: CaptchaUiFailureReason | undefined,
+  key: string,
+): unknown => {
+  return (failureReason as Record<string, unknown> | undefined)?.[key];
+};
+
+const getStringField = (
+  failureReason: CaptchaUiFailureReason | undefined,
+  key: string,
+): string | undefined => {
+  const value = getReasonField(failureReason, key);
+  if (typeof value === 'string') return value;
+  return undefined;
+};
+
+const getNullableStringField = (
+  failureReason: CaptchaUiFailureReason | undefined,
+  key: string,
+): string | null | undefined => {
+  const value = getReasonField(failureReason, key);
+
+  if (typeof value === 'string') return value;
+  if (value === null) return null;
+  return undefined;
+};
+
+const getNumberField = (
+  failureReason: CaptchaUiFailureReason | undefined,
+  key: string,
+): number | undefined => {
+  const value = getReasonField(failureReason, key);
+
+  if (typeof value === 'number') return value;
+  return undefined;
+};
+
+const getStringArrayField = (
+  failureReason: CaptchaUiFailureReason | undefined,
+  key: string,
+): string[] => {
+  const value = getReasonField(failureReason, key);
+
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .slice(0, 5);
+};
+
 const getAiErrorCode = (
   failureReason?: CaptchaUiFailureReason,
 ): string | undefined => {
-  if (
-    failureReason &&
-    'aiErrorCode' in failureReason &&
-    typeof failureReason.aiErrorCode === 'string'
-  ) {
-    return failureReason.aiErrorCode;
+  return getStringField(failureReason, 'aiErrorCode');
+};
+
+const getDetectedTextLabel = (text?: string | null) => {
+  if (text === null || text === undefined || text.trim() === '') {
+    return '인식하지 못함';
   }
 
-  return undefined;
+  return text;
+};
+
+const getDetectedPoseLabel = (pose?: string | null) => {
+  if (pose === null || pose === undefined || pose.trim() === '') {
+    return '인식하지 못함';
+  }
+
+  return pose;
+};
+
+const buildMismatchDetailRows = (
+  failureReason?: CaptchaUiFailureReason,
+): CaptchaErrorDetailRow[] => {
+  const expectedPose = getStringField(failureReason, 'expectedPose');
+  const detectedPose = getNullableStringField(failureReason, 'detectedPose');
+  const expectedText = getStringField(failureReason, 'expectedText');
+  const detectedText = getNullableStringField(failureReason, 'detectedText');
+  const poseConfidence = getNumberField(failureReason, 'poseConfidence');
+  const ocrConfidence = getNumberField(failureReason, 'ocrConfidence');
+
+  const rows: CaptchaErrorDetailRow[] = [];
+
+  if (expectedPose) {
+    rows.push({
+      label: '요구한 손 포즈',
+      value: expectedPose,
+    });
+  }
+
+  rows.push({
+    label: 'AI가 판단한 손 포즈',
+    value: getDetectedPoseLabel(detectedPose),
+  });
+
+  if (expectedText) {
+    rows.push({
+      label: '요구한 문자',
+      value: expectedText,
+    });
+  }
+
+  rows.push({
+    label: 'AI가 읽은 문자',
+    value: getDetectedTextLabel(detectedText),
+  });
+
+  const poseConfidenceText = formatPercent(poseConfidence);
+  if (poseConfidenceText) {
+    rows.push({
+      label: '손 포즈 신뢰도',
+      value: poseConfidenceText,
+    });
+  }
+
+  const ocrConfidenceText = formatPercent(ocrConfidence);
+  if (ocrConfidenceText) {
+    rows.push({
+      label: '문자 인식 신뢰도',
+      value: ocrConfidenceText,
+    });
+  }
+
+  return rows;
+};
+
+const buildOcrCandidateRows = (
+  failureReason?: CaptchaUiFailureReason,
+): CaptchaErrorDetailRow[] => {
+  const candidates = getStringArrayField(failureReason, 'ocrCandidates');
+
+  if (candidates.length === 0) return [];
+
+  return [
+    {
+      label: 'AI가 추가로 본 문자 후보',
+      value: candidates.join(', '),
+    },
+  ];
 };
 
 const getCaptchaErrorContent = (
@@ -103,6 +268,10 @@ const getCaptchaErrorContent = (
   const type = failureReason?.type;
   const retryAfterSeconds = getRetryAfterSeconds(failureReason);
   const aiErrorCode = getAiErrorCode(failureReason);
+
+  const aiDetail = getStringField(failureReason, 'aiDetail');
+  const aiGuide = getStringField(failureReason, 'aiGuide');
+  const userHint = getStringField(failureReason, 'userHint');
 
   switch (type) {
     case 'TIME_EXPIRED':
@@ -114,18 +283,27 @@ const getCaptchaErrorContent = (
         buttonText: '확인',
       };
 
-    case 'MISSION_MISMATCH':
+    case 'MISSION_MISMATCH': {
+      const detailRows = [
+        ...buildMismatchDetailRows(failureReason),
+        ...buildOcrCandidateRows(failureReason),
+      ];
+
       return {
-        title: '미션이 정확히 확인되지 않았어요',
+        title: '미션이 일치하지 않아요',
         description:
-          '손 포즈 또는 종이에 적은 5자리 문자를 정확하게 인식하지 못했어요.',
+          userHint ||
+          'AI가 손 포즈 또는 문자를 미션과 다르게 판단했어요. 사진 안에 문제 문자 외의 다른 글자가 함께 보이면 문자 인식이 틀릴 수 있어요.',
+        detailRows,
         tips: [
-          '손 1개와 종이를 한 장의 사진 안에 함께 담아주세요.',
-          '문자 5자리가 흐리지 않게 선명하게 보여야 해요.',
-          '손 포즈가 가려지지 않도록 손 전체를 보여주세요.',
+          '종이에는 화면에 나온 5자리 문자만 적어주세요.',
+          '다른 글자, 숫자, 로고, 모니터 화면이 사진에 들어가지 않게 해주세요.',
+          '요구한 손 포즈와 실제 손 포즈가 같은지 확인해주세요.',
+          '손 1개와 문자 5자리가 모두 선명하게 보여야 해요.',
         ],
-        buttonText: '확인',
+        buttonText: '다시 촬영하기',
       };
+    }
 
     case 'AI_DETECTION_FAILED':
       switch (aiErrorCode) {
@@ -133,22 +311,28 @@ const getCaptchaErrorContent = (
         case 'HAND_TOO_SMALL':
           return {
             title: '손이 잘 보이지 않아요',
-            description: '사진에서 손을 찾기 어렵거나 너무 작게 보였어요.',
+            description:
+              aiDetail || '사진에서 손을 찾기 어렵거나 너무 작게 보였어요.',
             tips: [
-              '손이 화면에서 더 크게 보이도록 가까이에서 촬영해주세요.',
+              aiGuide ||
+                '손이 화면에서 더 크게 보이도록 가까이에서 촬영해주세요.',
               '손 전체가 잘 보이게 해주세요.',
+              '손은 1개만 보여야 해요.',
+              '종이나 문자에 손이 가려지지 않게 해주세요.',
             ],
-            buttonText: '확인',
+            buttonText: '다시 촬영하기',
           };
 
         case 'MULTIPLE_HANDS_DETECTED':
           return {
             title: '손이 여러 개 보여요',
-            description: '한 장의 사진에는 손 1개만 보여야 해요.',
+            description: aiDetail || '한 장의 사진에는 손 1개만 보여야 해요.',
             tips: [
-              '다른 손이나 다른 사람의 손이 보이지 않게 다시 촬영해주세요.',
+              aiGuide ||
+                '다른 손이나 다른 사람의 손이 보이지 않게 다시 촬영해주세요.',
+              '손 포즈를 취한 손 1개만 화면에 담아주세요.',
             ],
-            buttonText: '확인',
+            buttonText: '다시 촬영하기',
           };
 
         case 'TEXT_NOT_DETECTED':
@@ -157,34 +341,45 @@ const getCaptchaErrorContent = (
           return {
             title: '문자를 읽기 어려워요',
             description:
-              '종이에 적은 5자리 문자와 숫자가 선명하게 보이지 않았어요.',
+              aiDetail ||
+              '종이에 적은 5자리 문자와 숫자를 정확히 찾지 못했어요. 사진 안에 다른 글자나 숫자가 함께 보이면 AI가 엉뚱한 문자를 읽을 수 있어요.',
+            detailRows: buildOcrCandidateRows(failureReason),
             tips: [
-              '글씨를 진하게 써주세요.',
+              aiGuide || '종이에는 미션 문자 5자리만 적어주세요.',
+              '배경의 책, 포스터, 모니터, 옷 로고, 키보드 글자가 보이지 않게 해주세요.',
+              '글씨를 굵고 크게 써주세요.',
               '종이가 접히거나 가려지지 않게 해주세요.',
               '빛 반사 없이 정면에서 찍어주세요.',
             ],
-            buttonText: '확인',
+            buttonText: '다시 촬영하기',
           };
 
         case 'LOW_CONFIDENCE':
           return {
             title: '사진이 조금 더 선명해야 해요',
             description:
+              aiDetail ||
               '손 포즈나 문자가 흐리게 보여서 확실하게 판별하지 못했어요.',
             tips: [
-              '밝은 곳에서 촬영해주세요.',
+              aiGuide || '밝은 곳에서 촬영해주세요.',
               '손과 문자가 모두 흔들리지 않게 찍어주세요.',
+              '사진 안에 미션 문자 외의 다른 글자가 보이지 않게 해주세요.',
             ],
-            buttonText: '확인',
+            buttonText: '다시 촬영하기',
           };
 
         default:
           return {
             title: '사진을 다시 확인해주세요',
             description:
-              '손 포즈 또는 문자를 정확히 판독하지 못했어요. 사진을 다시 촬영해 주세요.',
-            tips: ['손 1개와 5자리 문자가 함께 선명하게 보여야 해요.'],
-            buttonText: '확인',
+              aiDetail ||
+              fallbackMessage ||
+              '손 포즈 또는 문자를 정확히 판독하지 못했어요.',
+            tips: [
+              aiGuide || '손 1개와 5자리 문자가 함께 선명하게 보여야 해요.',
+              '사진 안에는 미션 문자 외의 다른 글자나 숫자가 보이지 않게 해주세요.',
+            ],
+            buttonText: '다시 촬영하기',
           };
       }
 
@@ -237,7 +432,10 @@ const getCaptchaErrorContent = (
         title: '인증에 실패했어요',
         description:
           fallbackMessage || '사진을 다시 확인한 뒤 한 번 더 시도해주세요.',
-        tips: ['손 1개와 5자리 문자가 함께 선명하게 보여야 해요.'],
+        tips: [
+          '손 1개와 5자리 문자가 함께 선명하게 보여야 해요.',
+          '사진 안에는 미션 문자 외의 다른 글자나 숫자가 보이지 않게 해주세요.',
+        ],
         buttonText: '확인',
       };
   }
@@ -245,6 +443,7 @@ const getCaptchaErrorContent = (
 
 export default function HandOcrCaptcha() {
   const navigate = useNavigate();
+
   const [step, setStep] = useState<Step>('intro');
   const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
@@ -255,16 +454,28 @@ export default function HandOcrCaptcha() {
   const [errorModal, setErrorModal] = useState<CaptchaErrorModalState | null>(
     null,
   );
+  const [backConfirmOpen, setBackConfirmOpen] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const revokePreviewImage = useCallback((url: string | null) => {
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+  }, []);
+
   const clearSelectedImage = useCallback(() => {
-    setPreviewImage(null);
+    setPreviewImage((prev) => {
+      revokePreviewImage(prev);
+      return null;
+    });
+
     setSelectedFile(null);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, []);
+  }, [revokePreviewImage]);
 
   const resetChallengeState = useCallback(() => {
     setChallenge(null);
@@ -289,6 +500,7 @@ export default function HandOcrCaptcha() {
 
   const closeErrorModal = useCallback(() => {
     const onConfirm = errorModal?.onConfirm;
+
     setErrorModal(null);
     onConfirm?.();
   }, [errorModal]);
@@ -308,6 +520,7 @@ export default function HandOcrCaptcha() {
         } else {
           toast.error(data.message || '문제를 불러오는 데 실패했습니다.');
         }
+
         return false;
       }
 
@@ -339,8 +552,10 @@ export default function HandOcrCaptcha() {
   const handleStart = async () => {
     resetChallengeState();
     setErrorModal(null);
+    setBackConfirmOpen(false);
 
     const isSuccess = await fetchChallenge();
+
     if (isSuccess) {
       setStep('challenge');
     } else {
@@ -351,8 +566,10 @@ export default function HandOcrCaptcha() {
   const handleRefreshChallenge = async () => {
     resetChallengeState();
     setErrorModal(null);
+    setBackConfirmOpen(false);
 
     const isSuccess = await fetchChallenge();
+
     if (isSuccess) {
       setStep('challenge');
     } else {
@@ -360,13 +577,34 @@ export default function HandOcrCaptcha() {
     }
   };
 
+  const requestBackToIntro = () => {
+    setBackConfirmOpen(true);
+  };
+
+  const cancelBackToIntro = () => {
+    setBackConfirmOpen(false);
+  };
+
+  const confirmBackToIntro = () => {
+    setBackConfirmOpen(false);
+    setErrorModal(null);
+    resetChallengeState();
+    setStep('intro');
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
     if (!file) return;
 
+    const objectUrl = URL.createObjectURL(file);
+
+    setPreviewImage((prev) => {
+      revokePreviewImage(prev);
+      return objectUrl;
+    });
+
     setSelectedFile(file);
-    setPreviewImage(URL.createObjectURL(file));
   };
 
   const handleSubmit = async () => {
@@ -393,6 +631,7 @@ export default function HandOcrCaptcha() {
         setTimeout(() => {
           navigate('/party/create');
         }, 1000);
+
         return;
       }
 
@@ -422,6 +661,7 @@ export default function HandOcrCaptcha() {
       openErrorModal(data.failureReason, data.message);
     } catch (error) {
       console.error('검증 요청 실패:', error);
+
       setStep('challenge');
       openErrorModal(
         undefined,
@@ -432,6 +672,7 @@ export default function HandOcrCaptcha() {
 
   useEffect(() => {
     const passToken = captchaTokenStorage.get();
+
     if (passToken) {
       navigate('/party/create', { replace: true });
     }
@@ -462,171 +703,339 @@ export default function HandOcrCaptcha() {
 
   useEffect(() => {
     return () => {
-      if (previewImage) {
-        URL.revokeObjectURL(previewImage);
-      }
+      revokePreviewImage(previewImage);
     };
-  }, [previewImage]);
+  }, [previewImage, revokePreviewImage]);
 
   const formatTime = (seconds: number) => {
     const helperDate = new Date(0);
     helperDate.setSeconds(seconds);
+
     return format(helperDate, 'mm:ss');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
+    <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-6 md:py-10">
       <Toaster position="top-center" />
 
-      <Container className="max-w-xl w-full">
-        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="bg-linear-to-r from-purple-600 to-blue-500 p-6 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/20 text-white mb-4 backdrop-blur-sm">
+      <Container className="w-full max-w-5xl">
+        <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg">
+          <div className="bg-linear-to-r from-purple-600 to-blue-500 px-6 py-7 text-center md:px-10">
+            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm">
               <FiShield size={24} />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-1">
+
+            <h2 className="mb-1 text-2xl font-bold text-white md:text-3xl">
               AI 행동 기반 인증
             </h2>
-            <p className="text-blue-100 text-sm">
+
+            <p className="text-sm text-blue-100 md:text-base">
               안전한 서비스 이용을 위해 봇이 아님을 증명해주세요.
             </p>
           </div>
 
-          <div className="p-8">
+          <div className="p-5 md:p-8 lg:p-10">
             {step === 'intro' && (
-              <div className="flex flex-col items-center text-center animate-fadeIn">
-                <div className="bg-gray-50 p-6 rounded-2xl w-full mb-6 border border-gray-100">
-                  <h3 className="font-bold text-gray-900 mb-3">인증 방법</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                    화면에 제시되는 5자리 문자를 종이에 적고, <br />
-                    요구하는 손 포즈와 함께 사진을 찍어주세요.
-                  </p>
+              <div className="animate-fadeIn">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                  <div className="rounded-3xl border border-gray-100 bg-gray-50 p-6">
+                    <h3 className="mb-3 text-xl font-bold text-gray-900">
+                      인증 방법
+                    </h3>
 
-                  <Slide
-                    examples={EXAMPLES}
-                    onSlideChange={setCurrentExampleIdx}
-                  />
+                    <p className="mb-5 text-sm leading-7 text-gray-600 md:text-base">
+                      화면에 제시되는 5자리 문자를 종이에 적고,
+                      <br className="hidden sm:block" />
+                      요구하는 손 포즈와 함께 사진을 찍어주세요.
+                    </p>
 
-                  <p className="text-xs text-gray-700 bg-blue-50/50 py-2 px-3 rounded-lg font-medium">
-                    💡 예시: [ A1B2C ] 글씨와 [{' '}
-                    {EXAMPLES[currentExampleIdx].pose} ] 포즈가 담긴 사진
-                  </p>
+                    <Slide
+                      examples={EXAMPLES}
+                      onSlideChange={setCurrentExampleIdx}
+                    />
+
+                    <div className="rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-700">
+                      <span className="font-semibold">예시</span>
+                      <p className="mt-1">
+                        [ <span className="font-mono font-bold">A1B2C</span> ]
+                        글씨와 [{' '}
+                        <span className="font-semibold">
+                          {EXAMPLES[currentExampleIdx].pose}
+                        </span>{' '}
+                        ] 포즈가 함께 담긴 사진
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-6">
+                    <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6">
+                      <div className="mb-3 flex items-center gap-2 text-base font-bold text-blue-900">
+                        <FiInfo />
+                        <span>촬영 전에 꼭 확인해주세요</span>
+                      </div>
+
+                      <ul className="space-y-2 text-sm leading-6 text-blue-900/80">
+                        {CAPTURE_GUIDELINES.map((guide) => (
+                          <li key={guide} className="flex gap-2">
+                            <span className="mt-[10px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                            <span>{guide}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                      <h4 className="mb-2 text-base font-bold text-gray-900">
+                        준비되셨나요?
+                      </h4>
+                      <p className="mb-5 text-sm leading-6 text-gray-600">
+                        문제를 시작하면 5분 안에 사진을 제출해야 합니다.
+                      </p>
+
+                      <button
+                        onClick={handleStart}
+                        className="w-full rounded-2xl bg-gray-900 py-4 font-bold text-white transition hover:bg-gray-800"
+                      >
+                        문제 풀기 시작
+                      </button>
+                    </div>
+                  </div>
                 </div>
-
-                <button
-                  onClick={handleStart}
-                  className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl"
-                >
-                  문제 풀기 시작
-                </button>
               </div>
             )}
 
             {step === 'challenge' && challenge && (
-              <div className="flex flex-col items-center animate-fadeIn">
-                <div className="flex justify-between items-center w-full mb-6">
+              <div className="animate-fadeIn">
+                <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div
-                    className={`flex items-center gap-2 font-bold text-lg ${
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-lg font-bold ${
                       timeLeft <= 60
-                        ? 'text-red-500 animate-pulse'
-                        : 'text-gray-700'
+                        ? 'bg-red-50 text-red-500'
+                        : 'bg-gray-50 text-gray-700'
                     }`}
                   >
                     <FiClock />
                     <span>{formatTime(timeLeft)}</span>
                   </div>
 
-                  <button
-                    onClick={handleRefreshChallenge}
-                    className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-purple-600 transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200"
-                  >
-                    <FiRefreshCw size={14} />
-                    다른 문제 풀기
-                  </button>
-                </div>
-
-                <div className="w-full bg-linear-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-6 text-center mb-6">
-                  <p className="text-sm text-gray-500 font-medium mb-2">
-                    다음 미션을 수행해주세요
-                  </p>
-
-                  <div className="flex flex-col gap-3">
-                    <div className="bg-white px-4 py-3 rounded-xl shadow-sm font-mono text-3xl font-extrabold text-gray-800 tracking-widest border border-gray-100">
-                      {challenge.text}
-                    </div>
-                    <div className="bg-white px-4 py-3 rounded-xl shadow-sm text-xl font-bold text-blue-600 border border-gray-100">
-                      {challenge.pose}
-                    </div>
-                  </div>
-                </div>
-
-                {previewImage ? (
-                  <div className="w-full relative mb-6 rounded-2xl overflow-hidden border-2 border-purple-500">
-                    <img
-                      src={previewImage}
-                      alt="미리보기"
-                      className="w-full h-64 object-cover"
-                    />
+                  <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={clearSelectedImage}
-                      className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1.5 rounded-full text-xs hover:bg-black/80 backdrop-blur-sm"
+                      onClick={requestBackToIntro}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
-                      다시 선택
+                      <FiArrowLeft size={16} />
+                      뒤로 가기
+                    </button>
+
+                    <button
+                      onClick={handleRefreshChallenge}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <FiRefreshCw size={14} />
+                      다른 문제 풀기
                     </button>
                   </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:border-purple-500 hover:bg-purple-50 transition-colors cursor-pointer mb-6"
-                  >
-                    <FiCamera size={40} className="mb-3 text-gray-400" />
-                    <p className="font-medium text-gray-600">
-                      클릭하여 사진 촬영 또는 업로드
-                    </p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      ref={fileInputRef}
-                      onChange={handleImageUpload}
-                    />
-                  </div>
-                )}
+                </div>
 
-                <button
-                  onClick={handleSubmit}
-                  disabled={!selectedFile}
-                  className="w-full py-4 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 bg-linear-to-r from-purple-600 to-blue-500 text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  인증 제출하기
-                </button>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+                  <div className="space-y-5">
+                    <div className="rounded-3xl border border-purple-100 bg-linear-to-br from-purple-50 to-blue-50 p-6">
+                      <p className="mb-4 text-sm font-medium text-gray-500">
+                        다음 미션을 수행해주세요
+                      </p>
+
+                      <div className="space-y-3">
+                        <div className="rounded-2xl border border-gray-100 bg-white px-4 py-5 text-center shadow-sm">
+                          <p className="mb-2 text-xs font-medium text-gray-400">
+                            요구 문자
+                          </p>
+                          <div className="font-mono text-4xl font-extrabold tracking-[0.25em] text-gray-800">
+                            {challenge.text}
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-white px-4 py-5 text-center shadow-sm">
+                          <p className="mb-2 text-xs font-medium text-gray-400">
+                            요구 손 포즈
+                          </p>
+                          <div className="text-2xl font-bold text-blue-600">
+                            {challenge.pose}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-yellow-100 bg-yellow-50 p-5">
+                      <p className="mb-2 text-sm font-bold text-yellow-900">
+                        중요한 촬영 주의사항
+                      </p>
+                      <p className="text-sm leading-6 text-yellow-900/85">
+                        사진 안에는 위 5자리 문자 외의 다른 글자나 숫자가 보이지
+                        않게 해주세요. 배경의 책, 포스터, 모니터 글자, 로고도
+                        AI가 잘못 읽을 수 있어요.
+                      </p>
+                    </div>
+
+                    <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5">
+                      <p className="mb-3 text-sm font-bold text-gray-900">
+                        빠른 체크
+                      </p>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        <li className="flex gap-2">
+                          <span className="text-green-600">✓</span>
+                          <span>손은 1개만 보여야 해요.</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="text-green-600">✓</span>
+                          <span>종이에는 미션 문자 5자리만 적어주세요.</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="text-green-600">✓</span>
+                          <span>
+                            손과 종이가 한 장의 사진에 모두 보여야 해요.
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+                      <p className="mb-4 text-base font-bold text-gray-900">
+                        사진 업로드
+                      </p>
+
+                      {previewImage ? (
+                        <div className="relative overflow-hidden rounded-2xl border-2 border-purple-500">
+                          <img
+                            src={previewImage}
+                            alt="미리보기"
+                            className="h-80 w-full object-cover"
+                          />
+
+                          <button
+                            onClick={clearSelectedImage}
+                            className="absolute right-3 top-3 rounded-full bg-black/65 px-3 py-1.5 text-xs text-white backdrop-blur-sm hover:bg-black/80"
+                          >
+                            다시 선택
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex h-80 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-purple-500 hover:bg-purple-50"
+                        >
+                          <FiCamera size={44} className="mb-4 text-gray-400" />
+
+                          <p className="font-medium text-gray-700">
+                            클릭하여 사진 촬영 또는 업로드
+                          </p>
+
+                          <p className="mt-2 px-6 text-center text-sm leading-6 text-gray-400">
+                            손 1개와 미션 문자 5자리만 선명하게 보이도록
+                            찍어주세요.
+                          </p>
+
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {previewImage && (
+                      <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5">
+                        <p className="mb-3 text-base font-bold text-gray-900">
+                          제출 전 확인
+                        </p>
+
+                        <div className="mb-4 grid grid-cols-1 gap-2 rounded-2xl border border-gray-100 bg-white p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-sm text-gray-500">
+                              요구 문자
+                            </span>
+                            <span className="font-mono font-bold tracking-wider text-gray-900">
+                              {challenge.text}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-sm text-gray-500">
+                              요구 포즈
+                            </span>
+                            <span className="font-bold text-blue-600">
+                              {challenge.pose}
+                            </span>
+                          </div>
+                        </div>
+
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          {PRE_SUBMIT_CHECKLIST.map((item) => (
+                            <li key={item} className="flex gap-2">
+                              <span className="text-green-600">✓</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <button
+                        onClick={requestBackToIntro}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white py-4 font-bold text-gray-700 transition hover:bg-gray-50"
+                      >
+                        <FiXCircle />
+                        문제 그만두기
+                      </button>
+
+                      <button
+                        onClick={handleSubmit}
+                        disabled={!selectedFile}
+                        className="rounded-2xl bg-linear-to-r from-purple-600 to-blue-500 py-4 font-bold text-white shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        인증 제출하기
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
             {step === 'evaluating' && (
-              <div className="flex flex-col items-center justify-center py-12 animate-fadeIn">
-                <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <div className="flex flex-col items-center justify-center py-20 animate-fadeIn">
+                <div className="mb-6 h-16 w-16 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
+
+                <h3 className="mb-2 text-xl font-bold text-gray-900">
                   AI 모델 분석 중...
                 </h3>
-                <p className="text-gray-500 text-sm">
+
+                <p className="text-sm text-gray-500">
                   제출하신 사진을 판독하고 있습니다.
                 </p>
               </div>
             )}
 
             {step === 'success' && (
-              <div className="flex flex-col items-center text-center py-8 animate-fadeIn">
-                <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6">
+              <div className="flex flex-col items-center py-12 text-center animate-fadeIn">
+                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-green-500">
                   <FiCheckCircle size={40} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+
+                <h3 className="mb-2 text-2xl font-bold text-gray-900">
                   인증 완료!
                 </h3>
-                <p className="text-gray-600 mb-8">사람으로 확인되었습니다.</p>
+
+                <p className="mb-8 text-gray-600">사람으로 확인되었습니다.</p>
+
                 <button
                   onClick={() => navigate('/party/create')}
-                  className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors"
+                  className="w-full max-w-sm rounded-2xl bg-gray-900 py-4 font-bold text-white transition-colors hover:bg-gray-800"
                 >
                   다음 단계로 이동
                 </button>
@@ -635,6 +1044,49 @@ export default function HandOcrCaptcha() {
           </div>
         </div>
       </Container>
+
+      {backConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-start gap-4">
+              <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                <FiAlertCircle size={22} />
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  문제를 그만둘까요?
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  현재 진행 중인 문제와 선택한 사진이 초기화됩니다. 다시
+                  시작하려면 새 문제를 받아야 해요.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={cancelBackToIntro}
+                className="rounded-xl border border-gray-200 bg-white py-3.5 font-bold text-gray-700 transition hover:bg-gray-50"
+              >
+                계속 풀기
+              </button>
+
+              <button
+                onClick={confirmBackToIntro}
+                className="rounded-xl bg-gray-900 py-3.5 font-bold text-white transition hover:bg-gray-800"
+              >
+                그만두기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {errorModal && (
         <div
@@ -657,8 +1109,32 @@ export default function HandOcrCaptcha() {
                   {errorModal.description}
                 </p>
 
+                {errorModal.detailRows && errorModal.detailRows.length > 0 && (
+                  <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                    <p className="mb-2 text-sm font-semibold text-gray-800">
+                      AI 판단 결과
+                    </p>
+
+                    <div className="space-y-2">
+                      {errorModal.detailRows.map((row) => (
+                        <div
+                          key={`${row.label}-${row.value}`}
+                          className="flex justify-between gap-3 text-sm"
+                        >
+                          <span className="shrink-0 text-gray-500">
+                            {row.label}
+                          </span>
+                          <span className="break-all text-right font-semibold text-gray-900">
+                            {row.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {errorModal.tips && errorModal.tips.length > 0 && (
-                  <div className="mt-4 rounded-2xl bg-gray-50 px-4 py-3">
+                  <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
                     <p className="mb-2 text-sm font-semibold text-gray-800">
                       다시 시도할 때 확인해주세요
                     </p>
