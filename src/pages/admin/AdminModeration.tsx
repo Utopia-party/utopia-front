@@ -3,7 +3,8 @@ import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import Pagination from './components/Pagination';
 import {
-  fetchAdminFlaggedChats, 
+  fetchAdminFlaggedChats,
+  fetchAdminModerationStats,
   fetchModerationTrend,
   getAdminErrorMessage,
   updateAdminChatModerationStatus,
