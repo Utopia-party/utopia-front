@@ -320,6 +320,22 @@ function ProfileDashboard() {
                     현재 진행 중인 파티 수
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/mypage')}
+                  className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-left transition hover:bg-blue-100"
+                >
+                  <p className="text-xs font-semibold text-primary">
+                    추천인 수정
+                  </p>
+                  <p className="mt-2 text-lg font-extrabold tracking-tight text-slate-900">
+                    추천인 정보 변경
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    등록된 추천인을 확인하고 수정합니다.
+                  </p>
+                </button>
               </div>
             </div>
           </section>
