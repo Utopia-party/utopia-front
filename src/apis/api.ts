@@ -9,6 +9,19 @@ let isRefreshing = false; // refresh 중복 호출 방지 플래그
 let failedQueue: any[] = []; // refresh 완료 후 재시도할 요청들
 
 const SESSION_EXPIRED_MESSAGE = '로그인이 만료되었습니다. 다시 로그인해주세요.';
+const NO_REFRESH_RETRY_PATHS = new Set([
+  '/api/login',
+  '/api/refresh',
+  '/api/me',
+  '/api/users',
+  '/api/users/find-id',
+  '/api/users/find-password',
+  '/api/users/reset-password',
+  '/api/users/check-email',
+  '/api/users/check-nickname',
+  '/api/email-request',
+  '/api/email-verify',
+]);
 
 const isRefreshTokenErrorMessage = (message: unknown) => {
   if (typeof message !== 'string') return false;
@@ -18,6 +31,11 @@ const isRefreshTokenErrorMessage = (message: unknown) => {
     message.includes('만료된 refresh token') ||
     message.includes('재사용된 refresh token')
   );
+};
+
+const shouldSkipRefreshRetry = (url: unknown) => {
+  if (typeof url !== 'string') return false;
+  return NO_REFRESH_RETRY_PATHS.has(url);
 };
 
 // refresh 끝나면 대기 중이던 요청들 재실행
@@ -41,7 +59,7 @@ api.interceptors.response.use(
 
     // access token 만료 (401) 발생 시
     // 단, /me, /refresh는 제외 (무한루프 방지)
-    if (status === 401 && url !== '/api/me' && url !== '/api/refresh') {
+    if (status === 401 && !shouldSkipRefreshRetry(url)) {
       // 이미 refresh 진행 중이면 → 요청을 큐에 넣고 대기
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
