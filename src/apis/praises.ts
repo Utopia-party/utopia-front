@@ -76,3 +76,16 @@ export const getMyPraises = async (direction: PraiseDirection) => {
 
   return data;
 };
+
+export type DeletePraiseResponse = {
+  deleted: boolean;
+  praise_id: string;
+};
+
+export const deletePraise = async (praiseId: string) => {
+  const { data } = await api.delete<DeletePraiseResponse>(
+    `/api/praises/${praiseId}`,
+  );
+
+  return data;
+};
