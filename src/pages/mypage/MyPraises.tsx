@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Heart, Send, Inbox, RefreshCcw, MessageCircle } from 'lucide-react';
+import {
+  Heart,
+  Send,
+  Inbox,
+  RefreshCcw,
+  MessageCircle,
+  Trash2,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getMyPraises,
+  deletePraise,
   type MyPraiseItem,
   type PraiseDirection,
 } from '../../apis/praises';
@@ -77,9 +85,11 @@ function PraiseAvatar({
 function PraiseCard({
   praise,
   direction,
+  onDelete,
 }: {
   praise: MyPraiseItem;
   direction: PraiseDirection;
+  onDelete: (praiseId: string) => void;
 }) {
   const targetNickname =
     direction === 'received'
@@ -109,19 +119,33 @@ function PraiseCard({
         />
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-base font-extrabold text-slate-900">
-              {targetNickname}
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-base font-extrabold text-slate-900">
+                  {targetNickname}
+                </p>
 
-            <span className="rounded-full bg-pink-50 px-2.5 py-1 text-xs font-bold text-pink-600">
-              {relationLabel}
-            </span>
+                <span className="rounded-full bg-pink-50 px-2.5 py-1 text-xs font-bold text-pink-600">
+                  {relationLabel}
+                </span>
+              </div>
+
+              <p className="mt-1 text-xs text-slate-400">
+                {formatDateTime(praise.created_at)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onDelete(praise.id)}
+              className="shrink-0 rounded-full p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+              aria-label="칭찬 내역 삭제"
+              title="삭제"
+            >
+              <Trash2 size={17} />
+            </button>
           </div>
-
-          <p className="mt-1 text-xs text-slate-400">
-            {formatDateTime(praise.created_at)}
-          </p>
 
           <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -177,6 +201,7 @@ export default function MyPraises() {
   const [direction, setDirection] = useState<PraiseDirection>('received');
   const [items, setItems] = useState<MyPraiseItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingPraiseId, setDeletingPraiseId] = useState<string | null>(null);
 
   const title = useMemo(() => {
     return direction === 'received' ? '받은 칭찬' : '보낸 칭찬';
@@ -194,6 +219,31 @@ export default function MyPraises() {
       setItems([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeletePraise = async (praiseId: string) => {
+    if (deletingPraiseId) return;
+
+    const ok = window.confirm(
+      '이 칭찬 내역을 삭제할까요?\n삭제해도 신뢰도 반영 내역은 유지됩니다.',
+    );
+
+    if (!ok) return;
+
+    try {
+      setDeletingPraiseId(praiseId);
+
+      await deletePraise(praiseId);
+
+      setItems((prev) => prev.filter((item) => item.id !== praiseId));
+
+      toast.success('칭찬 내역을 삭제했어요.');
+    } catch (err) {
+      console.error('칭찬 내역 삭제 실패:', err);
+      toast.error('칭찬 내역을 삭제하지 못했습니다.');
+    } finally {
+      setDeletingPraiseId(null);
     }
   };
 
@@ -287,6 +337,7 @@ export default function MyPraises() {
                   key={praise.id}
                   praise={praise}
                   direction={direction}
+                  onDelete={handleDeletePraise}
                 />
               ))}
             </div>
