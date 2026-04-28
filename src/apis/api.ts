@@ -8,6 +8,18 @@ export const api = axios.create({
 let isRefreshing = false; // refresh 중복 호출 방지 플래그
 let failedQueue: any[] = []; // refresh 완료 후 재시도할 요청들
 
+const SESSION_EXPIRED_MESSAGE = '로그인이 만료되었습니다. 다시 로그인해주세요.';
+
+const isRefreshTokenErrorMessage = (message: unknown) => {
+  if (typeof message !== 'string') return false;
+  return (
+    message.includes('refresh token이 없습니다') ||
+    message.includes('유효하지 않은 refresh token') ||
+    message.includes('만료된 refresh token') ||
+    message.includes('재사용된 refresh token')
+  );
+};
+
 // refresh 끝나면 대기 중이던 요청들 재실행
 const processQueue = (error: any) => {
   failedQueue.forEach((prom) => {
@@ -52,6 +64,21 @@ api.interceptors.response.use(
         // 실패했던 원래 요청 재시도
         return api(originalRequest);
       } catch (refreshError) {
+        if (axios.isAxiosError(refreshError)) {
+          const detail = refreshError.response?.data?.detail;
+          const message = refreshError.response?.data?.message;
+
+          if (
+            isRefreshTokenErrorMessage(detail) ||
+            isRefreshTokenErrorMessage(message)
+          ) {
+            if (refreshError.response?.data) {
+              refreshError.response.data.detail = SESSION_EXPIRED_MESSAGE;
+              refreshError.response.data.message = SESSION_EXPIRED_MESSAGE;
+            }
+          }
+        }
+
         // refresh 실패 → 모든 요청 실패 처리 + 로그아웃 이벤트
         processQueue(refreshError);
 
