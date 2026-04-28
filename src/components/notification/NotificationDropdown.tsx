@@ -23,8 +23,10 @@ export default function NotificationDropdown({ open, onClose }: Props) {
     queryKey: notificationKeys.me,
     queryFn: fetchMyNotifications,
     enabled: open,
-    staleTime: Infinity,
+    staleTime: 0,
     gcTime: 1000 * 60 * 30,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const unreadCount = useMemo(

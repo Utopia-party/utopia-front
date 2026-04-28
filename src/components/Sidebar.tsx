@@ -7,6 +7,7 @@ import {
   UserRound,
   OctagonAlert,
 } from 'lucide-react';
+import logoImage from '../assets/logo.png';
 
 const mypageMenus = [
   { label: '프로필', to: '/mypage/profile' },
@@ -71,9 +72,11 @@ export default function Sidebar() {
             isSidebarOpen ? 'gap-3 px-1' : 'justify-center'
           }`}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-[20px] font-extrabold leading-none text-white">
-            P
-          </div>
+          <img
+            src={logoImage}
+            alt="Party-Up"
+            className="h-8 w-8 shrink-0 object-contain"
+          />
           {isSidebarOpen && (
             <span className="text-[20px] font-extrabold tracking-tight text-slate-900">
               Party-Up
