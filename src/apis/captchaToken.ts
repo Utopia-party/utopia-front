@@ -12,6 +12,7 @@ export const captchaTokenStorage = {
       token,
       expiresAt: Date.now() + CAPTCHA_PASS_TOKEN_TTL_MS,
     };
+
     sessionStorage.setItem(CAPTCHA_PASS_TOKEN_KEY, JSON.stringify(payload));
   },
 
