@@ -32,6 +32,7 @@ import MyParty from './pages/mypage/MyParty';
 import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 import MyTrustHistory from './pages/mypage/MyTrustHistory';
+import MyPraises from './pages/mypage/MyPraises';
 
 // 관리자 페이지
 import AdminShell from './pages/admin/AdminShell';
@@ -166,6 +167,10 @@ const router = createBrowserRouter([
           {
             path: 'payment',
             element: <MyPayment />,
+          },
+          {
+            path: 'praises',
+            element: <MyPraises />,
           },
         ],
       },
