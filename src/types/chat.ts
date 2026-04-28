@@ -17,6 +17,7 @@ export interface Member {
   trust_score?: number | null;
   joined_at?: string | null;
   profile_image?: string | null;
+  payment_status?: 'completed' | 'pending' | null;
   is_active: boolean;
 }
 
@@ -46,6 +47,9 @@ export interface ProfileDrawerUser {
   profile_image?: string | null;
   role?: string;
   status?: string;
+  trust_score?: number | null;
+  joined_at?: string | null;
+  payment_status?: 'completed' | 'pending' | null;
 }
 
 export interface ProfileDrawerState {
