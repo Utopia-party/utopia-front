@@ -826,11 +826,15 @@ export default function Chat() {
               <DetailRow
                 label="1인 부담"
                 value={formatCurrency(
-                  paymentPreview?.amount ?? partyInfo?.monthly_per_person,
+                  paymentPreview != null
+                    ? paymentPreview.amount
+                    : partyInfo?.monthly_per_person,
                 )}
                 emphasized
               />
-              {paymentPreview?.is_quick_match && (
+              {(paymentPreview?.is_quick_match ||
+                (paymentPreview == null &&
+                  (partyInfo?.quick_match_fee_rate ?? 0) > 0)) && (
                 <p className="text-[11px] text-indigo-500 text-right">
                   빠른매칭 수수료 포함 금액
                 </p>
