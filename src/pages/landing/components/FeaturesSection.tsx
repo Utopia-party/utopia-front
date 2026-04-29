@@ -27,7 +27,7 @@ export default function FeaturesSection() {
       id: 1,
       title: 'AI 기반 보안',
       description:
-        'GAN 기반 3D CAPTCHA, OCR, YOLO, MediaPipe를 활용한 3단계 인증 시스템으로 봇과 악의적 사용자를 차단합니다.',
+        'GAN 기반 CAPTCHA, OCR, YOLO, MediaPipe를 활용한 3단계 인증 시스템으로 봇과 악의적 사용자를 차단합니다.',
       icon: <FiShield className="text-2xl text-white" />,
       color: 'bg-purple-500',
     },

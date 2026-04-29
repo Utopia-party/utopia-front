@@ -52,11 +52,11 @@ export default function TeamSection() {
     {
       name: '김영훈',
       role: 'ML Engineer',
-      description: 'OCR, YOLO, MediaPipe 모델 학습 및 최적화 담당',
+      description: 'FastGAN, LSTM, CLIP 모델 학습 및 캡챠 파이프라인 구축 담당',
       image,
-      skills: ['YOLO', 'OpenCV', 'MediaPipe'],
+      skills: ['FastGAN', 'LSTM', 'CLIP'],
       github: 'https://github.com/zeroh00n',
-      email: 'ahxh3103@gmail.com',
+      email: 'ahxh7647@gmail.com',
     },
     {
       name: '정재웅',
