@@ -5,7 +5,7 @@ import App from './App';
 import AppShell from './AppShell';
 
 // 공개 페이지
-import Home from './pages/Home';
+import Home from './pages/Home/Home';
 import Landing from './pages/landing/Landing';
 import Login from './pages/auth/Login';
 import FindId from './pages/auth/FindId';
