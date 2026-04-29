@@ -12,6 +12,7 @@ import {
   getAdminErrorMessage,
   updateAdminUserStatus,
   updateAdminUserTrustScore,
+  updateAdminUserRecommender,
   type AdminUserRecord,
 } from '../../apis/admin';
 
@@ -22,32 +23,24 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 const FILTER_TABS = ['전체', '정상', '주의', '정지'];
+const DETAIL_TABS = ['요약', '수정', '이력'] as const;
+type DetailTab = (typeof DETAIL_TABS)[number];
 
-function TrustBar({ score }: { score: number }) {
-  const tone =
-    score >= 70
-      ? 'bg-blue-500'
-      : score >= 36.5
-        ? 'bg-emerald-500'
-        : score >= 35
-          ? 'bg-amber-500'
-          : 'bg-red-500';
+type RecommenderUserDetail = AdminUserDetail & {
+  referrerId?: string | null;
+  referrerName?: string | null;
+  referrerNickname?: string | null;
+  referrerCount?: number;
+};
 
-  return (
-    <div className="min-w-[120px]">
-      <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
-        <span>신뢰도</span>
-        <span className="font-semibold text-gray-700">{score.toFixed(1)}</span>
-      </div>
-      <div className="h-2 rounded-full bg-gray-100">
-        <div
-          className={`h-2 rounded-full ${tone}`}
-          style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }}
-        />
-      </div>
-    </div>
-  );
-}
+type OperationDraft = {
+  status: AdminUserRecord['status'];
+  statusReason: string;
+  trustScore: string;
+  trustReason: string;
+  referrerNickname: string;
+  recommenderReason: string;
+};
 
 function getTrustTone(score: number) {
   if (score >= 70) return 'bg-blue-500';
@@ -58,7 +51,6 @@ function getTrustTone(score: number) {
 
 function formatAdminDateTime(value?: string | null) {
   if (!value) return '-';
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
@@ -72,6 +64,33 @@ function formatAdminDateTime(value?: string | null) {
   });
 }
 
+function getRecommenderText(detail?: RecommenderUserDetail | null) {
+  if (!detail) return '-';
+  return (
+    detail.referrerName?.trim() ||
+    detail.referrerNickname?.trim() ||
+    detail.referrerId ||
+    '-'
+  );
+}
+
+function TrustBar({ score }: { score: number }) {
+  return (
+    <div className="min-w-[120px]">
+      <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+        <span>신뢰도</span>
+        <span className="font-semibold text-gray-700">{score.toFixed(1)}</span>
+      </div>
+      <div className="h-2 rounded-full bg-gray-100">
+        <div
+          className={`h-2 rounded-full ${getTrustTone(score)}`}
+          style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminUsers() {
   const currentUserId = useAuthStore((state) => state.user?.user_id);
   const [activeTab, setActiveTab] = useState('전체');
@@ -80,35 +99,54 @@ export default function AdminUsers() {
   const [dateTo, setDateTo] = useState('');
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [userDetails, setUserDetails] = useState<
-    Record<string, AdminUserDetail>
+    Record<string, RecommenderUserDetail>
   >({});
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState('');
-  const [statusEditorUserId, setStatusEditorUserId] = useState<string | null>(
-    null,
-  );
-  const [statusDraft, setStatusDraft] =
-    useState<AdminUserRecord['status']>('주의');
-  const [statusReason, setStatusReason] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [busyUserId, setBusyUserId] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [trustEditorUserId, setTrustEditorUserId] = useState<string | null>(
-    null,
-  );
-  const [trustScoreDraft, setTrustScoreDraft] = useState('36.5');
-  const [trustReason, setTrustReason] = useState('');
-  const [detailTab, setDetailTab] = useState<Record<string, 'info' | 'logs'>>(
-    {},
-  );
+  const [detailTab, setDetailTab] = useState<Record<string, DetailTab>>({});
+  const [draftMap, setDraftMap] = useState<Record<string, OperationDraft>>({});
   const [statusLogsMap, setStatusLogsMap] = useState<
     Record<string, AdminUserStatusLog[]>
   >({});
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [statusLogsLoading, setStatusLogsLoading] = useState<string | null>(
     null,
   );
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [detailError, setDetailError] = useState('');
+  const [page, setPage] = useState(1);
+
+  const buildUserParams = (status?: string) => ({
+    keyword: search || undefined,
+    status: status && status !== '전체' ? status : undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
+
+  const makeDraft = (
+    user: AdminUserRecord,
+    detail?: RecommenderUserDetail,
+  ): OperationDraft => ({
+    status: detail?.status ?? user.status,
+    statusReason: '',
+    trustScore: (detail?.trustScore ?? user.trustScore).toFixed(1),
+    trustReason: '',
+    referrerNickname: detail?.referrerNickname ?? '',
+    recommenderReason: '',
+  });
+
+  const reloadUsers = async (status = activeTab) => {
+    setLoading(true);
+    setError('');
+    try {
+      setUsers(await fetchAdminUsers(buildUserParams(status)));
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -124,43 +162,18 @@ export default function AdminUsers() {
         if (alive) setLoading(false);
       }
     };
+
     void loadUsers();
-    const timer = setInterval(() => { void loadUsers(); }, 60_000);
+    const timer = setInterval(() => void loadUsers(), 60_000);
     return () => {
       alive = false;
       clearInterval(timer);
     };
   }, []);
 
-  const buildUserParams = (status?: string) => ({
-    keyword: search || undefined,
-    status: status && status !== '전체' ? status : undefined,
-    date_from: dateFrom || undefined,
-    date_to: dateTo || undefined,
-  });
-
-  const reloadUsers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setUsers(await fetchAdminUsers(buildUserParams(activeTab)));
-    } catch (err) {
-      setError(getAdminErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSearch = async (status = activeTab) => {
-    setLoading(true);
-    setError('');
-    try {
-      setUsers(await fetchAdminUsers(buildUserParams(status)));
-    } catch (err) {
-      setError(getAdminErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
+    setPage(1);
+    await reloadUsers(status);
   };
 
   const handleReset = async () => {
@@ -168,6 +181,7 @@ export default function AdminUsers() {
     setDateFrom('');
     setDateTo('');
     setActiveTab('전체');
+    setPage(1);
     setLoading(true);
     setError('');
     try {
@@ -179,79 +193,91 @@ export default function AdminUsers() {
     }
   };
 
-  const handleViewDetail = async (userId: string) => {
-    if (expandedUserId === userId) {
+  const openDetail = async (user: AdminUserRecord, nextTab?: DetailTab) => {
+    if (expandedUserId === user.id && !nextTab) {
       setExpandedUserId(null);
       setDetailError('');
       return;
     }
-    setExpandedUserId(userId);
+
+    setExpandedUserId(user.id);
     setDetailError('');
-    if (userDetails[userId]) return;
+    setDetailTab((prev) => ({
+      ...prev,
+      [user.id]: nextTab ?? prev[user.id] ?? '요약',
+    }));
+    setDraftMap((prev) => ({
+      ...prev,
+      [user.id]: prev[user.id] ?? makeDraft(user, userDetails[user.id]),
+    }));
+
+    if (!userDetails[user.id]) {
+      try {
+        setDetailLoadingId(user.id);
+        const detail = (await fetchAdminUserDetail(
+          user.id,
+        )) as RecommenderUserDetail;
+        setUserDetails((prev) => ({ ...prev, [user.id]: detail }));
+        setDraftMap((prev) => ({
+          ...prev,
+          [user.id]: makeDraft(user, detail),
+        }));
+      } catch (err) {
+        setDetailError(getAdminErrorMessage(err));
+      } finally {
+        setDetailLoadingId(null);
+      }
+    }
+  };
+
+  const loadStatusLogs = async (userId: string) => {
+    if (statusLogsMap[userId]) return;
     try {
-      setDetailLoadingId(userId);
-      const detail = await fetchAdminUserDetail(userId);
-      setUserDetails((prev) => ({ ...prev, [userId]: detail }));
-    } catch (err) {
-      setDetailError(getAdminErrorMessage(err));
+      setStatusLogsLoading(userId);
+      const logs = await fetchAdminUserStatusLogs(userId);
+      setStatusLogsMap((prev) => ({ ...prev, [userId]: logs }));
     } finally {
-      setDetailLoadingId(null);
+      setStatusLogsLoading(null);
     }
   };
 
-  const openStatusEditor = async (
-    user: AdminUserRecord,
-    forcedStatus?: AdminUserRecord['status'],
-  ) => {
-    setExpandedUserId(user.id);
-    setDetailError('');
-    setStatusEditorUserId(user.id);
-    setStatusDraft(forcedStatus ?? user.status);
-    setStatusReason('');
-    if (!userDetails[user.id]) {
-      try {
-        setDetailLoadingId(user.id);
-        const detail = await fetchAdminUserDetail(user.id);
-        setUserDetails((prev) => ({ ...prev, [user.id]: detail }));
-      } catch (err) {
-        setDetailError(getAdminErrorMessage(err));
-      } finally {
-        setDetailLoadingId(null);
-      }
-    }
+  const changeDetailTab = async (userId: string, tab: DetailTab) => {
+    setDetailTab((prev) => ({ ...prev, [userId]: tab }));
+    if (tab === '이력') await loadStatusLogs(userId);
   };
 
-  const openTrustEditor = async (user: AdminUserRecord) => {
-    setExpandedUserId(user.id);
-    setDetailError('');
-    setTrustEditorUserId(user.id);
-    setTrustScoreDraft(user.trustScore.toFixed(1));
-    setTrustReason('');
-    if (!userDetails[user.id]) {
-      try {
-        setDetailLoadingId(user.id);
-        const detail = await fetchAdminUserDetail(user.id);
-        setUserDetails((prev) => ({ ...prev, [user.id]: detail }));
-        setTrustScoreDraft(detail.trustScore.toFixed(1));
-      } catch (err) {
-        setDetailError(getAdminErrorMessage(err));
-      } finally {
-        setDetailLoadingId(null);
-      }
-    }
+  const updateDraft = (userId: string, patch: Partial<OperationDraft>) => {
+    setDraftMap((prev) => ({
+      ...prev,
+      [userId]: { ...prev[userId], ...patch },
+    }));
   };
 
-  const submitStatusUpdate = async () => {
-    if (!statusEditorUserId) return;
+  const saveStatus = async (user: AdminUserRecord) => {
+    const draft = draftMap[user.id];
+    if (!draft) return;
+    if (currentUserId === user.id && draft.status === '정지') {
+      setDetailError('현재 로그인한 관리자 본인 계정은 정지할 수 없습니다.');
+      return;
+    }
+
     try {
-      setBusyUserId(statusEditorUserId);
-      await updateAdminUserStatus(statusEditorUserId, {
-        status: statusDraft,
-        reason: statusReason.trim() || undefined,
+      setBusyUserId(user.id);
+      await updateAdminUserStatus(user.id, {
+        status: draft.status,
+        reason: draft.statusReason.trim() || undefined,
+      });
+      const detail = (await fetchAdminUserDetail(
+        user.id,
+      )) as RecommenderUserDetail;
+      setUserDetails((prev) => ({ ...prev, [user.id]: detail }));
+      setDraftMap((prev) => ({ ...prev, [user.id]: makeDraft(user, detail) }));
+      setStatusLogsMap((prev) => {
+        const next = { ...prev };
+        delete next[user.id];
+        return next;
       });
       await reloadUsers();
-      setStatusEditorUserId(null);
-      setStatusReason('');
     } catch (err) {
       setDetailError(getAdminErrorMessage(err));
     } finally {
@@ -259,27 +285,24 @@ export default function AdminUsers() {
     }
   };
 
-  const submitTrustScoreUpdate = async () => {
-    if (!trustEditorUserId) return;
-    const parsed = Number(trustScoreDraft);
-    if (Number.isNaN(parsed)) {
-      setDetailError('신뢰도는 숫자로 입력해야 합니다.');
+  const saveTrustScore = async (user: AdminUserRecord) => {
+    const draft = draftMap[user.id];
+    if (!draft) return;
+    const parsed = Number(draft.trustScore);
+    if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
+      setDetailError('신뢰도는 0점 이상 100점 이하 숫자로 입력해야 합니다.');
       return;
     }
-    if (parsed < 0 || parsed > 100) {
-      setDetailError('신뢰도는 0점 이상 100점 이하로만 설정할 수 있습니다.');
-      return;
-    }
+
     try {
-      setBusyUserId(trustEditorUserId);
-      const nextDetail = await updateAdminUserTrustScore(trustEditorUserId, {
+      setBusyUserId(user.id);
+      const detail = (await updateAdminUserTrustScore(user.id, {
         trustScore: parsed,
-        reason: trustReason.trim() || undefined,
-      });
-      setUserDetails((prev) => ({ ...prev, [trustEditorUserId]: nextDetail }));
+        reason: draft.trustReason.trim() || undefined,
+      })) as RecommenderUserDetail;
+      setUserDetails((prev) => ({ ...prev, [user.id]: detail }));
+      setDraftMap((prev) => ({ ...prev, [user.id]: makeDraft(user, detail) }));
       await reloadUsers();
-      setTrustEditorUserId(null);
-      setTrustReason('');
     } catch (err) {
       setDetailError(getAdminErrorMessage(err));
     } finally {
@@ -287,19 +310,23 @@ export default function AdminUsers() {
     }
   };
 
-  const handleLoadStatusLogs = async (userId: string) => {
-    const current = detailTab[userId] ?? 'info';
-    const nextTab = current === 'info' ? 'logs' : 'info';
-    setDetailTab((prev) => ({ ...prev, [userId]: nextTab }));
-    if (nextTab === 'logs' && !statusLogsMap[userId]) {
-      try {
-        setStatusLogsLoading(userId);
-        const logs = await fetchAdminUserStatusLogs(userId);
-        setStatusLogsMap((prev) => ({ ...prev, [userId]: logs }));
-      } catch {
-      } finally {
-        setStatusLogsLoading(null);
-      }
+  const saveRecommender = async (user: AdminUserRecord) => {
+    const draft = draftMap[user.id];
+    if (!draft) return;
+
+    try {
+      setBusyUserId(user.id);
+      const detail = (await updateAdminUserRecommender(user.id, {
+        referrerNickname: draft.referrerNickname.trim() || null,
+        reason: draft.recommenderReason.trim() || undefined,
+      })) as RecommenderUserDetail;
+      setUserDetails((prev) => ({ ...prev, [user.id]: detail }));
+      setDraftMap((prev) => ({ ...prev, [user.id]: makeDraft(user, detail) }));
+      await reloadUsers();
+    } catch (err) {
+      setDetailError(getAdminErrorMessage(err));
+    } finally {
+      setBusyUserId(null);
     }
   };
 
@@ -325,23 +352,6 @@ export default function AdminUsers() {
     [users],
   );
 
-  const trustEditorDetail = trustEditorUserId
-    ? userDetails[trustEditorUserId]
-    : null;
-  const trustScoreNumber = Number(trustScoreDraft);
-  const trustScorePreview = Number.isNaN(trustScoreNumber)
-    ? 0
-    : Math.min(Math.max(trustScoreNumber, 0), 100);
-  const trustTone = getTrustTone(trustScorePreview);
-  const trustScoreError =
-    trustScoreDraft.trim() === ''
-      ? '신뢰도를 입력해주세요.'
-      : Number.isNaN(trustScoreNumber)
-        ? '신뢰도는 숫자로 입력해주세요.'
-        : trustScoreNumber < 0 || trustScoreNumber > 100
-          ? '0점 이상 100점 이하 범위 안에서 입력해주세요.'
-          : '';
-
   return (
     <>
       <AdminHeader
@@ -353,14 +363,8 @@ export default function AdminUsers() {
           <section>
             <h1 className="text-2xl font-bold text-gray-900">사용자관리</h1>
             <p className="mt-1 text-sm text-gray-500">
-              사용자 상태, 신고 누적 수, 신뢰도를 기준으로 빠르게 대응할 수
-              있도록 구성했습니다.
-            </p>
-            <p className="mt-2 text-sm text-gray-500">
-              기본 신뢰도는 36.5점이고 70.0점 이상은 우수 구간, 36.5점 이상은
-              정상 구간, 35.0점 이상은 경계 구간, 35.0점 미만은 위험 구간으로
-              관리합니다. 상세 패널에서는 최근 접속 정보와 상태 변경 이력,
-              신뢰도 변경 이력을 함께 확인할 수 있습니다.
+              목록 액션은 상세 하나로 줄이고, 상세 패널 안에서
+              상태·신뢰도·추천인을 수정하도록 정리했습니다.
             </p>
           </section>
 
@@ -384,7 +388,6 @@ export default function AdminUsers() {
             onTabChange={(tab) => {
               setActiveTab(tab);
               void handleSearch(tab);
-              setPage(1);
             }}
           />
 
@@ -448,7 +451,6 @@ export default function AdminUsers() {
               사용자 목록을 불러오는 중입니다.
             </div>
           )}
-
           {error && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
               {error}
@@ -470,10 +472,10 @@ export default function AdminUsers() {
                       상태
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                      신고 수
+                      신고
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                      참여 파티
+                      참여
                     </th>
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       신뢰도
@@ -481,7 +483,7 @@ export default function AdminUsers() {
                     <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                       최근 활동
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-4 py-3.5 text-right text-sm font-semibold text-gray-500">
                       관리
                     </th>
                   </tr>
@@ -489,10 +491,15 @@ export default function AdminUsers() {
                 <tbody>
                   {paginated.map((user) => {
                     const isExpanded = expandedUserId === user.id;
-                    const isEditingStatus = statusEditorUserId === user.id;
                     const detail = userDetails[user.id];
+                    const draft = draftMap[user.id] ?? makeDraft(user, detail);
                     const isDetailLoading = detailLoadingId === user.id;
                     const isCurrentAdmin = currentUserId === user.id;
+                    const trustScoreNumber = Number(draft.trustScore);
+                    const trustPreview = Number.isNaN(trustScoreNumber)
+                      ? 0
+                      : Math.min(Math.max(trustScoreNumber, 0), 100);
+                    const activeDetailTab = detailTab[user.id] ?? '요약';
                     const primaryLabel = user.name?.trim() || user.nickname;
                     const secondaryLabel =
                       user.name && user.name !== user.nickname
@@ -502,7 +509,7 @@ export default function AdminUsers() {
                     return (
                       <Fragment key={user.id}>
                         <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                          <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
+                          <td className="whitespace-nowrap px-4 py-3.5 text-sm text-gray-500">
                             {user.createdAt}
                           </td>
                           <td className="px-4 py-3.5">
@@ -534,42 +541,13 @@ export default function AdminUsers() {
                           <td className="px-4 py-3.5 text-sm text-gray-600">
                             {user.lastActive}
                           </td>
-                          <td className="px-4 py-3.5 text-sm">
-                            <div className="flex flex-wrap gap-1.5">
-                              <button
-                                className={`rounded-md border px-3 py-1 text-xs font-medium transition ${isExpanded ? 'border-indigo-300 bg-indigo-50 text-indigo-600' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
-                                onClick={() => void handleViewDetail(user.id)}
-                              >
-                                {isExpanded ? '닫기' : '상세'}
-                              </button>
-                              <button
-                                className="rounded-md border border-blue-300 px-3 py-1 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
-                                disabled={busyUserId === user.id}
-                                onClick={() => void openStatusEditor(user)}
-                              >
-                                {busyUserId === user.id
-                                  ? '처리 중...'
-                                  : '상태 변경'}
-                              </button>
-                              <button
-                                className="rounded-md border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-600 transition hover:bg-emerald-50"
-                                disabled={busyUserId === user.id}
-                                onClick={() => void openTrustEditor(user)}
-                              >
-                                신뢰도 변경
-                              </button>
-                              {!isCurrentAdmin && user.status !== '정지' && (
-                                <button
-                                  className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50"
-                                  disabled={busyUserId === user.id}
-                                  onClick={() =>
-                                    void openStatusEditor(user, '정지')
-                                  }
-                                >
-                                  강제 정지
-                                </button>
-                              )}
-                            </div>
+                          <td className="px-4 py-3.5 text-right text-sm">
+                            <button
+                              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition ${isExpanded ? 'border-indigo-300 bg-indigo-50 text-indigo-600' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                              onClick={() => void openDetail(user)}
+                            >
+                              {isExpanded ? '닫기' : '상세/수정'}
+                            </button>
                           </td>
                         </tr>
 
@@ -581,434 +559,463 @@ export default function AdminUsers() {
                                   사용자 상세 정보를 불러오는 중입니다.
                                 </div>
                               )}
-                              {!isDetailLoading && detailError && !detail && (
-                                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-5 text-sm text-red-600 shadow-sm">
+                              {!isDetailLoading && detailError && (
+                                <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 shadow-sm">
                                   {detailError}
                                 </div>
                               )}
                               {!isDetailLoading && detail && (
                                 <div className="space-y-4">
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() =>
-                                        setDetailTab((prev) => ({
-                                          ...prev,
-                                          [user.id]: 'info',
-                                        }))
-                                      }
-                                      className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${(detailTab[user.id] ?? 'info') === 'info' ? 'border-indigo-300 bg-indigo-50 text-indigo-600' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}
-                                    >
-                                      기본 정보
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        void handleLoadStatusLogs(user.id)
-                                      }
-                                      className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${(detailTab[user.id] ?? 'info') === 'logs' ? 'border-indigo-300 bg-indigo-50 text-indigo-600' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}
-                                    >
-                                      상태 변경 이력
-                                      {(statusLogsMap[user.id] ?? []).length >
-                                        0 && (
-                                        <span className="ml-1.5 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] text-indigo-600">
-                                          {statusLogsMap[user.id]?.length}
-                                        </span>
-                                      )}
-                                    </button>
+                                  <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex gap-2">
+                                      {DETAIL_TABS.map((tab) => (
+                                        <button
+                                          key={tab}
+                                          type="button"
+                                          onClick={() =>
+                                            void changeDetailTab(user.id, tab)
+                                          }
+                                          className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${activeDetailTab === tab ? 'border-indigo-300 bg-indigo-50 text-indigo-600' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                          {tab}
+                                        </button>
+                                      ))}
+                                    </div>
                                   </div>
 
-                                  {/* 기본 정보 탭 */}
-                                  {(detailTab[user.id] ?? 'info') ===
-                                    'info' && (
-                                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
-                                      <div className="space-y-4">
-                                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                            <div>
-                                              <h3 className="text-base font-semibold text-slate-900">
-                                                {detail.name?.trim() ||
-                                                  detail.nickname}
-                                              </h3>
-                                              <p className="mt-1 text-sm text-slate-500">
-                                                사용자 상세 정보와 운영 판단
-                                                지표를 한 번에 확인합니다.
-                                              </p>
-                                            </div>
-                                            <span
-                                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[detail.status as keyof typeof STATUS_STYLE] ?? STATUS_STYLE[user.status]}`}
+                                  {activeDetailTab === '요약' && (
+                                    <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <div className="flex items-start justify-between gap-4">
+                                          <div>
+                                            <h3 className="text-base font-semibold text-slate-900">
+                                              {detail.name?.trim() ||
+                                                detail.nickname}
+                                            </h3>
+                                            <p className="mt-1 text-sm text-slate-500">
+                                              운영 판단에 필요한 핵심 사용자
+                                              정보입니다.
+                                            </p>
+                                          </div>
+                                          <span
+                                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[detail.status] ?? STATUS_STYLE[user.status]}`}
+                                          >
+                                            {detail.status}
+                                          </span>
+                                        </div>
+                                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                          {[
+                                            ['사용자 ID', detail.id],
+                                            ['이메일', detail.email],
+                                            ['닉네임', detail.nickname],
+                                            ['이름', detail.name || '-'],
+                                            ['전화번호', detail.phone || '-'],
+                                            ['권한', detail.role],
+                                            [
+                                              '신뢰도',
+                                              detail.trustScore.toFixed(1),
+                                            ],
+                                            [
+                                              '추천인',
+                                              getRecommenderText(detail),
+                                            ],
+                                            [
+                                              '신고 수',
+                                              `${detail.reportCount}건`,
+                                            ],
+                                            [
+                                              '참여 파티',
+                                              `${detail.partyCount}개`,
+                                            ],
+                                            ['가입일', detail.createdAt || '-'],
+                                            [
+                                              '최근 활동',
+                                              detail.lastActive || '-',
+                                            ],
+                                          ].map(([label, value]) => (
+                                            <div
+                                              key={label}
+                                              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
                                             >
-                                              {detail.status}
-                                            </span>
-                                          </div>
-                                          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                            {[
-                                              ['사용자 ID', detail.id],
-                                              ['이메일', detail.email],
-                                              ['닉네임', detail.nickname],
-                                              ['이름', detail.name || '-'],
-                                              ['전화번호', detail.phone || '-'],
-                                              ['권한', detail.role],
-                                              [
-                                                '신뢰도',
-                                                `${detail.trustScore.toFixed(1)}`,
-                                              ],
-                                              [
-                                                '신고 수',
-                                                `${detail.reportCount}건`,
-                                              ],
-                                              [
-                                                '참여 파티',
-                                                `${detail.partyCount}개`,
-                                              ],
-                                              [
-                                                '가입일',
-                                                detail.createdAt || '-',
-                                              ],
-                                              [
-                                                '최근 활동',
-                                                detail.lastActive || '-',
-                                              ],
-                                              [
-                                                '정지 만료',
-                                                detail.bannedUntil || '-',
-                                              ],
-                                            ].map(([label, value]) => (
-                                              <div
-                                                key={label}
-                                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                              >
-                                                <div className="text-xs font-medium text-slate-400">
-                                                  {label}
-                                                </div>
-                                                <div className="mt-1 break-all text-sm font-semibold text-slate-800">
-                                                  {value}
-                                                </div>
+                                              <div className="text-xs font-medium text-slate-400">
+                                                {label}
                                               </div>
-                                            ))}
-                                          </div>
-                                        </div>
-
-                                        <div className="grid gap-4 lg:grid-cols-2">
-                                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                            <h4 className="text-sm font-semibold text-slate-900">
-                                              최근 접속 정보
-                                            </h4>
-                                            <div className="mt-4 space-y-3">
-                                              {[
-                                                [
-                                                  '최근 로그인 시각',
-                                                  detail.recentLoginAt || '-',
-                                                ],
-                                                [
-                                                  '최근 접속 IP',
-                                                  detail.recentLoginIp || '-',
-                                                ],
-                                                [
-                                                  '최근 브라우저',
-                                                  detail.recentLoginUserAgent ||
-                                                    '-',
-                                                ],
-                                              ].map(([label, value]) => (
-                                                <div
-                                                  key={label}
-                                                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                                >
-                                                  <div className="text-xs font-medium text-slate-400">
-                                                    {label}
-                                                  </div>
-                                                  <div className="mt-1 break-all text-sm text-slate-700">
-                                                    {value}
-                                                  </div>
-                                                </div>
-                                              ))}
+                                              <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                                {value}
+                                              </div>
                                             </div>
-                                          </div>
-
-                                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                            <h4 className="text-sm font-semibold text-slate-900">
-                                              최근 접속 이력
-                                            </h4>
-                                            <div className="mt-4 space-y-3">
-                                              {detail.accessLogs.length ===
-                                                0 && (
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
-                                                  접속 이력이 없습니다.
-                                                </div>
-                                              )}
-                                              {detail.accessLogs.map((log) => (
-                                                <div
-                                                  key={log.id}
-                                                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                                >
-                                                  <div className="flex items-center justify-between gap-3">
-                                                    <span className="text-sm font-semibold text-slate-800">
-                                                      {log.ipAddress ||
-                                                        'IP 없음'}
-                                                    </span>
-                                                    <span
-                                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${log.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}
-                                                    >
-                                                      {log.isActive
-                                                        ? '활성 세션'
-                                                        : '만료'}
-                                                    </span>
-                                                  </div>
-                                                  <div className="mt-1 text-xs text-slate-400">
-                                                    {log.createdAt}
-                                                  </div>
-                                                  <div className="mt-2 break-all text-xs text-slate-500">
-                                                    {log.userAgent ||
-                                                      '브라우저 정보 없음'}
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="grid gap-4 lg:grid-cols-2">
-                                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                            <h4 className="text-sm font-semibold text-slate-900">
-                                              신뢰도 변경 이력
-                                            </h4>
-                                            <div className="mt-4 space-y-3">
-                                              {detail.trustHistories.length ===
-                                                0 && (
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
-                                                  신뢰도 변경 이력이 없습니다.
-                                                </div>
-                                              )}
-                                              {detail.trustHistories.map(
-                                                (history) => (
-                                                  <div
-                                                    key={history.id}
-                                                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                                  >
-                                                    <div className="flex items-center justify-between gap-3">
-                                                      <p className="text-sm font-semibold text-slate-800">
-                                                        {history.title}
-                                                      </p>
-                                                      <span
-                                                        className={`text-xs font-semibold ${history.scoreChange >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
-                                                      >
-                                                        {history.scoreChange >=
-                                                        0
-                                                          ? '+'
-                                                          : ''}
-                                                        {history.scoreChange.toFixed(
-                                                          1,
-                                                        )}
-                                                      </span>
-                                                    </div>
-                                                    {history.detail && (
-                                                      <p className="mt-1 text-xs text-slate-500">
-                                                        {history.detail}
-                                                      </p>
-                                                    )}
-                                                    <p className="mt-2 text-xs text-slate-400">
-                                                      {history.changedBy} ·{' '}
-                                                      {formatAdminDateTime(
-                                                        history.createdAt,
-                                                      )}{' '}
-                                                      · 반영 후{' '}
-                                                      {history.trustScoreAfter.toFixed(
-                                                        1,
-                                                      )}
-                                                    </p>
-                                                  </div>
-                                                ),
-                                              )}
-                                            </div>
-                                          </div>
-
-                                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                            <h4 className="text-sm font-semibold text-slate-900">
-                                              제재 / 운영 이력
-                                            </h4>
-                                            <div className="mt-4 space-y-3">
-                                              {detail.moderationHistories
-                                                .length === 0 && (
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
-                                                  제재 이력이 없습니다.
-                                                </div>
-                                              )}
-                                              {detail.moderationHistories.map(
-                                                (history) => (
-                                                  <div
-                                                    key={history.id}
-                                                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                                  >
-                                                    <div className="flex items-center justify-between gap-3">
-                                                      <p className="text-sm font-semibold text-slate-800">
-                                                        {history.actionType}
-                                                      </p>
-                                                      <span className="text-xs text-slate-400">
-                                                        {history.createdAt}
-                                                      </span>
-                                                    </div>
-                                                    <p className="mt-1 text-xs text-slate-500">
-                                                      {history.reason ||
-                                                        '사유 없음'}
-                                                    </p>
-                                                    <p className="mt-2 text-xs text-slate-400">
-                                                      {history.createdBy}
-                                                      {history.durationMinutes !=
-                                                        null &&
-                                                        ` · ${history.durationMinutes}분`}
-                                                      {history.trustScoreChange !=
-                                                        null &&
-                                                        ` · 신뢰도 ${history.trustScoreChange > 0 ? '+' : ''}${history.trustScoreChange.toFixed(1)}`}
-                                                    </p>
-                                                  </div>
-                                                ),
-                                              )}
-                                            </div>
-                                          </div>
+                                          ))}
                                         </div>
                                       </div>
 
-                                      {isEditingStatus && (
-                                        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
-                                          <h3 className="text-base font-semibold text-slate-900">
-                                            상태 변경
-                                          </h3>
-                                          <p className="mt-1 text-sm text-slate-500">
-                                            팝업 대신 이 패널에서 상태와 사유를
-                                            바로 수정합니다.
-                                          </p>
-                                          <div className="mt-4 flex flex-wrap gap-2">
-                                            {(
-                                              ['정상', '주의', '정지'] as const
-                                            ).map((status) => (
-                                              <button
-                                                key={status}
-                                                type="button"
-                                                onClick={() =>
-                                                  setStatusDraft(status)
-                                                }
-                                                disabled={
-                                                  isCurrentAdmin &&
-                                                  status === '정지'
-                                                }
-                                                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${statusDraft === status ? STATUS_STYLE[status] : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'} ${isCurrentAdmin && status === '정지' ? 'cursor-not-allowed opacity-40' : ''}`}
-                                              >
-                                                {status}
-                                              </button>
-                                            ))}
-                                          </div>
-                                          {isCurrentAdmin && (
-                                            <p className="mt-3 text-xs text-slate-500">
-                                              현재 로그인한 관리자 본인 계정은
-                                              정지할 수 없습니다.
-                                            </p>
-                                          )}
-                                          <label className="mt-4 block">
-                                            <span className="text-sm font-medium text-slate-700">
-                                              변경 사유
-                                            </span>
-                                            <textarea
-                                              value={statusReason}
-                                              onChange={(event) =>
-                                                setStatusReason(
-                                                  event.target.value,
-                                                )
-                                              }
-                                              rows={4}
-                                              placeholder="상태 변경 사유를 입력하세요."
-                                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
-                                            />
-                                          </label>
-                                          <div className="mt-4 flex flex-wrap gap-2">
-                                            <button
-                                              type="button"
-                                              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                              disabled={busyUserId === user.id}
-                                              onClick={() =>
-                                                void submitStatusUpdate()
-                                              }
+                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <h4 className="text-sm font-semibold text-slate-900">
+                                          최근 접속 정보
+                                        </h4>
+                                        <div className="mt-4 space-y-3">
+                                          {[
+                                            [
+                                              '최근 로그인 시각',
+                                              detail.recentLoginAt || '-',
+                                            ],
+                                            [
+                                              '최근 접속 IP',
+                                              detail.recentLoginIp || '-',
+                                            ],
+                                            [
+                                              '최근 브라우저',
+                                              detail.recentLoginUserAgent ||
+                                                '-',
+                                            ],
+                                            [
+                                              '정지 만료',
+                                              detail.bannedUntil || '-',
+                                            ],
+                                          ].map(([label, value]) => (
+                                            <div
+                                              key={label}
+                                              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
                                             >
-                                              {busyUserId === user.id
-                                                ? '저장 중...'
-                                                : '저장'}
-                                            </button>
-                                            <button
-                                              type="button"
-                                              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                                              onClick={() => {
-                                                setStatusEditorUserId(null);
-                                                setStatusReason('');
-                                                setStatusDraft(user.status);
-                                              }}
-                                            >
-                                              취소
-                                            </button>
-                                          </div>
+                                              <div className="text-xs font-medium text-slate-400">
+                                                {label}
+                                              </div>
+                                              <div className="mt-1 break-all text-sm text-slate-700">
+                                                {value}
+                                              </div>
+                                            </div>
+                                          ))}
                                         </div>
-                                      )}
+                                      </div>
                                     </div>
                                   )}
 
-                                  {/* 상태 변경 이력 탭 */}
-                                  {(detailTab[user.id] ?? 'info') ===
-                                    'logs' && (
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                      <h3 className="text-base font-semibold text-slate-900">
-                                        상태 변경 이력
-                                      </h3>
-                                      <p className="mt-1 text-sm text-slate-500">
-                                        정상·주의·정지 상태가 변경된 전체
-                                        기록입니다.
-                                      </p>
-                                      {statusLogsLoading === user.id && (
-                                        <div className="mt-4 text-sm text-slate-400">
-                                          이력을 불러오는 중입니다...
+                                  {activeDetailTab === '수정' && (
+                                    <div className="grid gap-4 xl:grid-cols-3">
+                                      <div className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-900">
+                                          상태 변경
+                                        </h3>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                          정상·주의·정지 상태를 변경합니다.
+                                        </p>
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                          {(
+                                            ['정상', '주의', '정지'] as const
+                                          ).map((status) => (
+                                            <button
+                                              key={status}
+                                              type="button"
+                                              onClick={() =>
+                                                updateDraft(user.id, { status })
+                                              }
+                                              disabled={
+                                                isCurrentAdmin &&
+                                                status === '정지'
+                                              }
+                                              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${draft.status === status ? STATUS_STYLE[status] : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'} ${isCurrentAdmin && status === '정지' ? 'cursor-not-allowed opacity-40' : ''}`}
+                                            >
+                                              {status}
+                                            </button>
+                                          ))}
                                         </div>
-                                      )}
-                                      {statusLogsLoading !== user.id &&
-                                        (statusLogsMap[user.id] ?? [])
-                                          .length === 0 && (
-                                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
-                                            상태 변경 이력이 없습니다.
+                                        {isCurrentAdmin && (
+                                          <p className="mt-3 text-xs text-slate-500">
+                                            현재 로그인한 관리자 본인 계정은
+                                            정지할 수 없습니다.
+                                          </p>
+                                        )}
+                                        <textarea
+                                          value={draft.statusReason}
+                                          onChange={(event) =>
+                                            updateDraft(user.id, {
+                                              statusReason: event.target.value,
+                                            })
+                                          }
+                                          rows={4}
+                                          placeholder="상태 변경 사유"
+                                          className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          disabled={busyUserId === user.id}
+                                          onClick={() => void saveStatus(user)}
+                                          className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                                        >
+                                          {busyUserId === user.id
+                                            ? '저장 중...'
+                                            : '상태 저장'}
+                                        </button>
+                                      </div>
+
+                                      <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-900">
+                                          신뢰도 변경
+                                        </h3>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                          0~100점 범위에서 직접 보정합니다.
+                                        </p>
+                                        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                          <div className="flex justify-between text-xs text-slate-500">
+                                            <span>미리보기</span>
+                                            <span className="font-semibold text-slate-700">
+                                              {trustPreview.toFixed(1)}
+                                            </span>
+                                          </div>
+                                          <div className="mt-3 h-3 rounded-full bg-white">
+                                            <div
+                                              className={`h-3 rounded-full ${getTrustTone(trustPreview)}`}
+                                              style={{
+                                                width: `${trustPreview}%`,
+                                              }}
+                                            />
+                                          </div>
+                                        </div>
+                                        <input
+                                          type="range"
+                                          min="0"
+                                          max="100"
+                                          step="0.1"
+                                          value={trustPreview}
+                                          onChange={(event) =>
+                                            updateDraft(user.id, {
+                                              trustScore: event.target.value,
+                                            })
+                                          }
+                                          className="mt-4 w-full accent-emerald-500"
+                                        />
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max="100"
+                                          step="0.1"
+                                          value={draft.trustScore}
+                                          onChange={(event) =>
+                                            updateDraft(user.id, {
+                                              trustScore: event.target.value,
+                                            })
+                                          }
+                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400"
+                                        />
+                                        <textarea
+                                          value={draft.trustReason}
+                                          onChange={(event) =>
+                                            updateDraft(user.id, {
+                                              trustReason: event.target.value,
+                                            })
+                                          }
+                                          rows={3}
+                                          placeholder="신뢰도 변경 사유"
+                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          disabled={busyUserId === user.id}
+                                          onClick={() =>
+                                            void saveTrustScore(user)
+                                          }
+                                          className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                                        >
+                                          {busyUserId === user.id
+                                            ? '저장 중...'
+                                            : '신뢰도 저장'}
+                                        </button>
+                                      </div>
+
+                                      <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-900">
+                                          추천인 변경
+                                        </h3>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                          오입력된 추천인 닉네임을 수정하거나
+                                          비울 수 있습니다.
+                                        </p>
+                                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                          <div className="text-xs font-medium text-slate-400">
+                                            현재 추천인
+                                          </div>
+                                          <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                            {getRecommenderText(detail)}
+                                          </div>
+                                        </div>
+                                        <label className="mt-4 block">
+                                          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                            추천인 닉네임
+                                          </span>
+                                          <input
+                                            type="text"
+                                            value={draft.referrerNickname}
+                                            onChange={(event) =>
+                                              updateDraft(user.id, {
+                                                referrerNickname:
+                                                  event.target.value,
+                                              })
+                                            }
+                                            placeholder="비우면 추천인 해제"
+                                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+                                          />
+                                        </label>
+                                        <textarea
+                                          value={draft.recommenderReason}
+                                          onChange={(event) =>
+                                            updateDraft(user.id, {
+                                              recommenderReason:
+                                                event.target.value,
+                                            })
+                                          }
+                                          rows={4}
+                                          placeholder="추천인 변경 사유"
+                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          disabled={busyUserId === user.id}
+                                          onClick={() =>
+                                            void saveRecommender(user)
+                                          }
+                                          className="mt-3 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                                        >
+                                          {busyUserId === user.id
+                                            ? '저장 중...'
+                                            : '추천인 저장'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {activeDetailTab === '이력' && (
+                                    <div className="grid gap-4 xl:grid-cols-3">
+                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-900">
+                                          상태 변경 이력
+                                        </h3>
+                                        {statusLogsLoading === user.id && (
+                                          <div className="mt-4 text-sm text-slate-400">
+                                            이력을 불러오는 중입니다...
                                           </div>
                                         )}
-                                      {statusLogsLoading !== user.id &&
-                                        (statusLogsMap[user.id] ?? []).length >
-                                          0 && (
-                                          <div className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                            {(statusLogsMap[user.id] ?? []).map(
-                                              (log) => (
-                                                <div
-                                                  key={log.id}
-                                                  className="flex flex-wrap items-start gap-3 px-4 py-3"
-                                                >
+                                        {statusLogsLoading !== user.id &&
+                                          (statusLogsMap[user.id] ?? [])
+                                            .length === 0 && (
+                                            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+                                              상태 변경 이력이 없습니다.
+                                            </div>
+                                          )}
+                                        <div className="mt-4 space-y-2">
+                                          {(statusLogsMap[user.id] ?? []).map(
+                                            (log) => (
+                                              <div
+                                                key={log.id}
+                                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                              >
+                                                <div className="flex items-center gap-2">
                                                   <span
-                                                    className={`mt-0.5 inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[log.toStatus] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                                                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[log.toStatus] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}
                                                   >
                                                     {log.toStatus}
                                                   </span>
-                                                  <span
-                                                    className={`mt-0.5 inline-flex shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${log.trigger === 'manual' ? 'bg-blue-50 text-blue-600 border-blue-100' : log.trigger === 'report' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
-                                                  >
-                                                    {log.trigger === 'manual'
-                                                      ? '수동'
-                                                      : log.trigger === 'report'
-                                                        ? '신고'
-                                                        : '자동'}
+                                                  <span className="text-xs text-slate-400">
+                                                    {log.changedBy} ·{' '}
+                                                    {log.createdAt}
                                                   </span>
-                                                  <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-slate-700">
-                                                      {log.reason ??
-                                                        '사유 없음'}
-                                                    </p>
-                                                    <p className="mt-0.5 text-xs text-slate-400">
-                                                      {log.changedBy} ·{' '}
-                                                      {log.createdAt}
-                                                    </p>
-                                                  </div>
                                                 </div>
-                                              ),
-                                            )}
+                                                <p className="mt-2 text-sm text-slate-600">
+                                                  {log.reason ?? '사유 없음'}
+                                                </p>
+                                              </div>
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-900">
+                                          신뢰도 변경 이력
+                                        </h3>
+                                        {detail.trustHistories.length === 0 && (
+                                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+                                            신뢰도 변경 이력이 없습니다.
                                           </div>
                                         )}
+                                        <div className="mt-4 space-y-2">
+                                          {detail.trustHistories.map(
+                                            (history) => (
+                                              <div
+                                                key={history.id}
+                                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                              >
+                                                <div className="flex items-center justify-between gap-3">
+                                                  <p className="truncate text-sm font-semibold text-slate-800">
+                                                    {history.title}
+                                                  </p>
+                                                  <span
+                                                    className={`text-xs font-semibold ${history.scoreChange >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                                                  >
+                                                    {history.scoreChange >= 0
+                                                      ? '+'
+                                                      : ''}
+                                                    {history.scoreChange.toFixed(
+                                                      1,
+                                                    )}
+                                                  </span>
+                                                </div>
+                                                {history.detail && (
+                                                  <p className="mt-1 text-xs text-slate-500">
+                                                    {history.detail}
+                                                  </p>
+                                                )}
+                                                <p className="mt-2 text-xs text-slate-400">
+                                                  {history.changedBy} ·{' '}
+                                                  {formatAdminDateTime(
+                                                    history.createdAt,
+                                                  )}{' '}
+                                                  · 반영 후{' '}
+                                                  {history.trustScoreAfter.toFixed(
+                                                    1,
+                                                  )}
+                                                </p>
+                                              </div>
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-900">
+                                          제재 / 운영 이력
+                                        </h3>
+                                        {detail.moderationHistories.length ===
+                                          0 && (
+                                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+                                            제재 이력이 없습니다.
+                                          </div>
+                                        )}
+                                        <div className="mt-4 space-y-2">
+                                          {detail.moderationHistories.map(
+                                            (history) => (
+                                              <div
+                                                key={history.id}
+                                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                              >
+                                                <div className="flex items-center justify-between gap-3">
+                                                  <p className="text-sm font-semibold text-slate-800">
+                                                    {history.actionType}
+                                                  </p>
+                                                  <span className="text-xs text-slate-400">
+                                                    {history.createdAt}
+                                                  </span>
+                                                </div>
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                  {history.reason ||
+                                                    '사유 없음'}
+                                                </p>
+                                                <p className="mt-2 text-xs text-slate-400">
+                                                  {history.createdBy}
+                                                </p>
+                                              </div>
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -1019,6 +1026,7 @@ export default function AdminUsers() {
                       </Fragment>
                     );
                   })}
+
                   {paginated.length === 0 && (
                     <tr>
                       <td
@@ -1036,204 +1044,15 @@ export default function AdminUsers() {
               total={filtered.length}
               page={page}
               pageSize={20}
-              onChange={(p) => {
-                setPage(p);
-              }}
+              onChange={setPage}
             />
             <div className="px-4 py-3 text-xs text-gray-400">
-              신고 누적이 높거나 신뢰도가 낮은 계정은 상태 변경 전에 상세 이력을
-              먼저 확인할 수 있도록 버튼 구성을 분리했습니다.
+              목록에서는 공간을 줄이고, 실제 수정 작업은 상세 패널 안에서
+              처리합니다.
             </div>
           </section>
         </div>
       </div>
-
-      {trustEditorUserId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <button
-            type="button"
-            aria-label="신뢰도 변경 닫기"
-            className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm transition-opacity duration-200"
-            onClick={() => {
-              setTrustEditorUserId(null);
-              setTrustReason('');
-              if (trustEditorDetail) {
-                setTrustScoreDraft(trustEditorDetail.trustScore.toFixed(1));
-              }
-            }}
-          />
-          <div className="relative z-10 w-[440px] max-w-[calc(100vw-32px)] rounded-[28px] border border-white/60 bg-white p-6 shadow-[0_30px_100px_rgba(15,23,42,0.24)] transition-all duration-200">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">
-                  신뢰도 변경
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {trustEditorDetail?.name?.trim() ||
-                    trustEditorDetail?.nickname ||
-                    '선택한 사용자'}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="rounded-full border border-slate-200 px-2.5 py-1 text-xs text-slate-500 transition hover:bg-slate-50"
-                onClick={() => {
-                  setTrustEditorUserId(null);
-                  setTrustReason('');
-                  if (trustEditorDetail) {
-                    setTrustScoreDraft(trustEditorDetail.trustScore.toFixed(1));
-                  }
-                }}
-              >
-                닫기
-              </button>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>실시간 미리보기</span>
-                <span className="font-semibold text-slate-700">
-                  {trustScorePreview.toFixed(1)}
-                </span>
-              </div>
-              <div className="mt-3 h-3 rounded-full bg-white">
-                <div
-                  className={`h-3 rounded-full ${trustTone} transition-all duration-200`}
-                  style={{ width: `${trustScorePreview}%` }}
-                />
-              </div>
-            </div>
-
-            <label className="mt-5 block">
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Slider
-              </span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="0.1"
-                value={trustScorePreview}
-                onChange={(event) => setTrustScoreDraft(event.target.value)}
-                className="mt-3 w-full accent-emerald-500"
-              />
-            </label>
-
-            <label className="mt-4 block">
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Score
-              </span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={trustScoreDraft}
-                onChange={(event) => setTrustScoreDraft(event.target.value)}
-                className={`mt-2 w-full rounded-xl bg-white px-4 py-3 text-sm text-slate-700 outline-none transition ${trustScoreError ? 'border border-rose-300 focus:border-rose-400' : 'border border-slate-200 focus:border-emerald-400'}`}
-              />
-              {trustScoreError && (
-                <p className="mt-2 text-xs font-medium text-rose-500">
-                  {trustScoreError}
-                </p>
-              )}
-            </label>
-
-            <label className="mt-4 block">
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Reason
-              </span>
-              <textarea
-                value={trustReason}
-                onChange={(event) => setTrustReason(event.target.value)}
-                rows={3}
-                placeholder="신뢰도 변경 사유를 입력하세요."
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400"
-              />
-            </label>
-
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={
-                  busyUserId === trustEditorUserId || Boolean(trustScoreError)
-                }
-                onClick={() => void submitTrustScoreUpdate()}
-              >
-                {busyUserId === trustEditorUserId ? '저장 중...' : '적용'}
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                onClick={() => {
-                  setTrustEditorUserId(null);
-                  setTrustReason('');
-                  if (trustEditorDetail) {
-                    setTrustScoreDraft(trustEditorDetail.trustScore.toFixed(1));
-                  }
-                }}
-              >
-                취소
-              </button>
-            </div>
-
-            {/* 신뢰도 변경 이력 */}
-            <div className="mt-6 border-t border-slate-100 pt-5">
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                변경 이력
-              </span>
-              <div className="mt-3 max-h-52 overflow-y-auto space-y-2 pr-1">
-                {(trustEditorDetail?.trustHistories ?? []).length === 0 ? (
-                  <p className="py-4 text-center text-xs text-slate-400">
-                    변경 이력이 없습니다.
-                  </p>
-                ) : (
-                  [...(trustEditorDetail?.trustHistories ?? [])]
-                    .sort(
-                      (a, b) =>
-                        new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime(),
-                    )
-                    .map((h) => (
-                      <div
-                        key={h.id}
-                        className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium text-slate-700 truncate">
-                            {h.title}
-                          </span>
-                          <span
-                            className={`shrink-0 text-sm font-bold ${
-                              h.scoreChange > 0
-                                ? 'text-emerald-600'
-                                : h.scoreChange < 0
-                                  ? 'text-rose-500'
-                                  : 'text-slate-400'
-                            }`}
-                          >
-                            {h.scoreChange > 0 ? '+' : ''}
-                            {h.scoreChange.toFixed(1)}
-                          </span>
-                        </div>
-                        {h.detail && (
-                          <p className="mt-1 text-xs text-slate-500 line-clamp-2">
-                            {h.detail}
-                          </p>
-                        )}
-                        <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
-                          <span>→ {h.trustScoreAfter.toFixed(1)}</span>
-                          <span>{formatAdminDateTime(h.createdAt)}</span>
-                        </div>
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

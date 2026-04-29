@@ -8,7 +8,7 @@ import type {
   MainTab,
   QuickMatchStatus,
   TuningPolicy,
-} from '../../types/admin/admin-quick-match';
+} from '../../types/admin/adminQuickMatch.ts';
 
 const MAIN_TABS: MainTab[] = ['요청 관리', '튜닝 설정'];
 

@@ -5,7 +5,7 @@ import type {
   AdminQuickMatchPolicyResponse,
   QuickMatchRequestRow,
   UpdateQuickMatchPolicyRequest,
-} from '../../types/admin/admin-quick-match';
+} from '../../types/admin/adminQuickMatch';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
