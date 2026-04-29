@@ -1,78 +1,18 @@
 import { api } from './api';
+
 import type {
   MyPaymentItem,
   GetMyPaymentsResponse,
+  GetMyProfileResponse,
   UpdateMyProfilePayload,
   UpdateMyProfileResponse,
+  GetMyTrustHistoryResponse,
+  DeleteMyAccountPayload,
+  DeleteMyAccountResponse,
+  GetMyReferrersResponse,
+  UpdateMyReferrersPayload,
+  UpdateMyReferrersResponse,
 } from '../types/user';
-
-export interface TrustHistoryApiItem {
-  id: number | string;
-  title: string;
-  detail: string;
-  score_change: number;
-  trust_score_after?: number | null;
-  created_at: string;
-}
-
-export interface GetMyTrustHistoryResponse {
-  items: TrustHistoryApiItem[];
-}
-
-export interface RecentActivityItem {
-  id: string;
-  action: string;
-  description?: string | null;
-  ip_address?: string | null;
-  user_agent?: string | null;
-  metadata?: Record<string, unknown>;
-  target_id?: string | null;
-  created_at?: string | null;
-}
-
-export interface ReferrerItem {
-  id: string;
-  nickname: string;
-}
-
-export interface GetMyReferrersResponse {
-  referrers: ReferrerItem[];
-  referrer_count: number;
-}
-
-export interface UpdateMyReferrersPayload {
-  referrers: string[];
-}
-
-export interface UpdateMyReferrersResponse {
-  message: string;
-  referrers: ReferrerItem[];
-}
-
-export interface GetMyProfileResponse {
-  user_id: string;
-  email: string;
-  name?: string | null;
-  nickname: string;
-  phone?: string | null;
-  provider: string;
-  role: string;
-  trust_score: number;
-  profile_image?: string | null;
-  created_at?: string | null;
-
-  total_party_participations: number;
-  active_party_count: number;
-
-  // 나를 추천인으로 등록한 사용자 수
-  recommendation_count: number;
-
-  // 내가 등록한 추천인 목록/수
-  referrers: ReferrerItem[];
-  referrer_count: number;
-
-  recent_activities: RecentActivityItem[];
-}
 
 export async function getMyProfile(): Promise<GetMyProfileResponse> {
   const { data } = await api.get<GetMyProfileResponse>('/api/users/me/profile');
@@ -121,14 +61,6 @@ export async function fetchMyPayments(): Promise<MyPaymentItem[]> {
   }
 
   return data.items ?? [];
-}
-
-export interface DeleteMyAccountPayload {
-  password?: string;
-}
-
-export interface DeleteMyAccountResponse {
-  message: string;
 }
 
 export async function deleteMyAccount(

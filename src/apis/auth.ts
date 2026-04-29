@@ -20,6 +20,7 @@ import type {
   SocialSignupResponse,
 } from '../types/auth';
 
+// 회원가입
 export const checkEmail = async (
   email: string,
 ): Promise<CheckExistsResponse> => {
@@ -123,6 +124,7 @@ export const login = async (
   return response.data;
 };
 
+// 소셜 로그인
 export const socialLogin = async (
   payload: SocialLoginPayload,
 ): Promise<SocialLoginResponse> => {

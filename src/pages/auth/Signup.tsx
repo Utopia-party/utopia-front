@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import { Eye, EyeOff, Plus, X } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
 import { useAuthStore } from '../../stores/authStore';
@@ -10,7 +10,6 @@ import {
   signup,
 } from '../../apis/auth';
 
-const MAX_REFERRERS = 5;
 const DEFAULT_EMAIL_TIMER_SECONDS = 180;
 
 export default function Signup() {
@@ -27,7 +26,7 @@ export default function Signup() {
     phone: '',
   });
 
-  const [referrers, setReferrers] = useState<string[]>(['']);
+  const [referrer, setReferrer] = useState('');
 
   const [isEmailRequesting, setIsEmailRequesting] = useState(false);
   const [isEmailCodeSent, setIsEmailCodeSent] = useState(false);
@@ -147,28 +146,6 @@ export default function Signup() {
         setNicknameError('');
       }
     }
-  };
-
-  const handleReferrerChange = (index: number, value: string) => {
-    setReferrers((prev) =>
-      prev.map((item, itemIndex) => (itemIndex === index ? value : item)),
-    );
-  };
-
-  const handleAddReferrer = () => {
-    if (referrers.length >= MAX_REFERRERS) {
-      alert('추천인은 최대 5명까지 입력할 수 있습니다.');
-      return;
-    }
-
-    setReferrers((prev) => [...prev, '']);
-  };
-
-  const handleRemoveReferrer = (index: number) => {
-    setReferrers((prev) => {
-      if (prev.length === 1) return [''];
-      return prev.filter((_, itemIndex) => itemIndex !== index);
-    });
   };
 
   useEffect(() => {
@@ -305,9 +282,7 @@ export default function Signup() {
       return;
     }
 
-    const uniqueReferrers = Array.from(
-      new Set(referrers.map((item) => item.trim()).filter(Boolean)),
-    );
+    const trimmedReferrer = referrer.trim();
 
     try {
       await signup(
@@ -317,7 +292,7 @@ export default function Signup() {
           name: form.name,
           nickname: form.nickname,
           phone: form.phone,
-          referrers: uniqueReferrers,
+          referrers: trimmedReferrer ? [trimmedReferrer] : [],
         },
         captchaToken,
       );
@@ -534,59 +509,20 @@ export default function Signup() {
         </div>
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="block text-sm font-medium text-gray-600">
-              추천인 입력 (선택)
-            </label>
+          <label className="mb-1 block text-sm font-medium text-gray-600">
+            추천인 입력 (선택)
+          </label>
 
-            <span className="text-xs text-gray-400">
-              최대 {MAX_REFERRERS}명
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {referrers.map((referrer, index) => {
-              const isLast = index === referrers.length - 1;
-              const canAdd = isLast && referrers.length < MAX_REFERRERS;
-
-              return (
-                <div key={index} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={referrer}
-                    placeholder="추천인 닉네임"
-                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-                    onChange={(e) =>
-                      handleReferrerChange(index, e.target.value)
-                    }
-                  />
-
-                  {canAdd && (
-                    <button
-                      type="button"
-                      onClick={handleAddReferrer}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
-                    >
-                      <Plus size={20} />
-                    </button>
-                  )}
-
-                  {referrers.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveReferrer(index)}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50"
-                    >
-                      <X size={18} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <input
+            type="text"
+            value={referrer}
+            placeholder="추천인 닉네임"
+            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+            onChange={(e) => setReferrer(e.target.value)}
+          />
 
           <p className="mt-1 text-xs text-gray-400">
-            추천인은 최대 5명까지 입력할 수 있습니다.
+            추천인은 한 명만 입력할 수 있습니다.
           </p>
         </div>
 

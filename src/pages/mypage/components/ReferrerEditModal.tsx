@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Plus, X } from 'lucide-react';
 import { updateMyReferrers } from '../../../apis/user';
 
@@ -17,39 +17,49 @@ export default function ReferrerEditModal({
   initialReferrers,
   onSaved,
 }: ReferrerEditModalProps) {
-  const [referrers, setReferrers] = useState<string[]>(['']);
+  const [newReferrers, setNewReferrers] = useState<string[]>(['']);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const lockedReferrers = useMemo(
+    () =>
+      Array.from(
+        new Set(initialReferrers.map((item) => item.trim()).filter(Boolean)),
+      ).slice(0, MAX_REFERRERS),
+    [initialReferrers],
+  );
+
+  const remainingCount = MAX_REFERRERS - lockedReferrers.length;
 
   useEffect(() => {
     if (!open) return;
 
-    const values = initialReferrers.length > 0 ? initialReferrers : [''];
-    setReferrers(values.slice(0, MAX_REFERRERS));
+    setNewReferrers(remainingCount > 0 ? [''] : []);
     setError('');
     setSaving(false);
-  }, [open, initialReferrers]);
+  }, [open, remainingCount]);
 
   if (!open) return null;
 
   const handleChange = (index: number, value: string) => {
-    setReferrers((prev) =>
+    setNewReferrers((prev) =>
       prev.map((item, itemIndex) => (itemIndex === index ? value : item)),
     );
     setError('');
   };
 
   const handleAdd = () => {
-    if (referrers.length >= MAX_REFERRERS) {
-      setError('추천인은 최대 5명까지 등록할 수 있습니다.');
+    if (newReferrers.length >= remainingCount) {
+      setError(`추천인은 최대 ${MAX_REFERRERS}명까지 등록할 수 있습니다.`);
       return;
     }
 
-    setReferrers((prev) => [...prev, '']);
+    setNewReferrers((prev) => [...prev, '']);
+    setError('');
   };
 
   const handleRemove = (index: number) => {
-    setReferrers((prev) => {
+    setNewReferrers((prev) => {
       if (prev.length === 1) return [''];
       return prev.filter((_, itemIndex) => itemIndex !== index);
     });
@@ -59,16 +69,22 @@ export default function ReferrerEditModal({
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const values = referrers.map((item) => item.trim()).filter(Boolean);
-    const uniqueValues = Array.from(new Set(values));
+    const addedValues = newReferrers.map((item) => item.trim()).filter(Boolean);
+    const allValues = [...lockedReferrers, ...addedValues];
+    const uniqueValues = Array.from(new Set(allValues));
 
-    if (values.length !== uniqueValues.length) {
-      setError('중복된 추천인이 있습니다.');
+    if (allValues.length !== uniqueValues.length) {
+      setError('이미 등록된 추천인이거나 중복 입력된 추천인입니다.');
       return;
     }
 
     if (uniqueValues.length > MAX_REFERRERS) {
-      setError('추천인은 최대 5명까지 등록할 수 있습니다.');
+      setError(`추천인은 최대 ${MAX_REFERRERS}명까지 등록할 수 있습니다.`);
+      return;
+    }
+
+    if (addedValues.length === 0) {
+      setError('추가할 추천인을 입력해주세요.');
       return;
     }
 
@@ -80,13 +96,13 @@ export default function ReferrerEditModal({
         referrers: uniqueValues,
       });
 
-      alert('추천인 정보가 변경되었습니다.');
+      alert('추천인이 추가되었습니다.');
       onSaved();
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { detail?: string } } };
       setError(
         axiosError.response?.data?.detail ||
-          '추천인 정보 변경 중 오류가 발생했습니다.',
+          '추천인 추가 중 오류가 발생했습니다.',
       );
     } finally {
       setSaving(false);
@@ -99,10 +115,11 @@ export default function ReferrerEditModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-extrabold text-slate-900">
-              추천인 변경
+              추천인 추가
             </h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              추천인은 최대 5명까지 등록할 수 있습니다.
+              기존 추천인은 수정할 수 없고, 최대 {MAX_REFERRERS}명까지 추가할 수
+              있습니다.
             </p>
           </div>
 
@@ -116,46 +133,96 @@ export default function ReferrerEditModal({
           </button>
         </div>
 
-        <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            {referrers.map((referrer, index) => {
-              const isLast = index === referrers.length - 1;
-              const canAdd = isLast && referrers.length < MAX_REFERRERS;
+        <form className="mt-5 space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-extrabold text-slate-800">
+                기존 추천인
+              </p>
+              <p className="text-xs font-bold text-slate-400">
+                {lockedReferrers.length}/{MAX_REFERRERS}명
+              </p>
+            </div>
 
-              return (
-                <div key={index} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={referrer}
-                    placeholder="추천인 닉네임"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-primary"
-                    onChange={(e) => handleChange(index, e.target.value)}
-                  />
+            {lockedReferrers.length > 0 ? (
+              <div className="space-y-2">
+                {lockedReferrers.map((referrer) => (
+                  <div
+                    key={referrer}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                  >
+                    <span className="text-sm font-bold text-slate-700">
+                      {referrer}
+                    </span>
+                    <span className="rounded-full bg-slate-200 px-2 py-1 text-xs font-bold text-slate-500">
+                      수정 불가
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-400">
+                아직 등록한 추천인이 없습니다.
+              </div>
+            )}
+          </div>
 
-                  {canAdd ? (
-                    <button
-                      type="button"
-                      onClick={handleAdd}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50"
-                      aria-label="추천인 추가"
-                    >
-                      <Plus size={20} />
-                    </button>
-                  ) : null}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-extrabold text-slate-800">
+                새 추천인 추가
+              </p>
+              <p className="text-xs font-bold text-primary">
+                추가 가능 {remainingCount}명
+              </p>
+            </div>
 
-                  {referrers.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(index)}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-500 hover:bg-slate-50"
-                      aria-label="추천인 삭제"
-                    >
-                      <X size={18} />
-                    </button>
-                  ) : null}
-                </div>
-              );
-            })}
+            {remainingCount <= 0 ? (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm font-semibold text-primary">
+                이미 추천인을 최대 {MAX_REFERRERS}명까지 등록했습니다.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {newReferrers.map((referrer, index) => {
+                  const isLast = index === newReferrers.length - 1;
+                  const canAdd = isLast && newReferrers.length < remainingCount;
+
+                  return (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={referrer}
+                        placeholder="추가할 추천인 닉네임"
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-primary"
+                        onChange={(e) => handleChange(index, e.target.value)}
+                      />
+
+                      {canAdd ? (
+                        <button
+                          type="button"
+                          onClick={handleAdd}
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50"
+                          aria-label="추천인 입력칸 추가"
+                        >
+                          <Plus size={20} />
+                        </button>
+                      ) : null}
+
+                      {newReferrers.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(index)}
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-500 hover:bg-slate-50"
+                          aria-label="추천인 입력칸 삭제"
+                        >
+                          <X size={18} />
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {error ? (
@@ -176,10 +243,10 @@ export default function ReferrerEditModal({
 
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || remainingCount <= 0}
               className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:bg-slate-300"
             >
-              {saving ? '저장 중...' : '변경하기'}
+              {saving ? '저장 중...' : '추가하기'}
             </button>
           </div>
         </form>
