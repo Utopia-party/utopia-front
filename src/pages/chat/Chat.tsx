@@ -482,6 +482,14 @@ export default function Chat() {
           setPraiseTarget(null);
           return;
         }
+
+        if (status === 403) {
+          toast.error('같은 파티의 활성 멤버에게만 칭찬할 수 있습니다.');
+          setShowPraiseModal(false);
+          setPraiseTarget(null);
+          return;
+        }
+
         toast.error('칭찬을 보내지 못했습니다. 잠시 후 다시 시도해주세요.');
       }
     },
