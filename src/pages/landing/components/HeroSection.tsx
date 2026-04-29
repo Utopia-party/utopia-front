@@ -34,7 +34,7 @@ export default function HeroSection() {
             <p className="hero-desc text-lg text-gray-600 leading-relaxed mb-6">
               OTT, 음악, 클라우드 구독 서비스의 안전한 파티 매칭을 위해{' '}
               <strong className="text-gray-900">
-                GAN 기반 3D CAPTCHA, OCR, YOLO, MediaPipe
+                GAN 기반 CAPTCHA, OCR, YOLO, MediaPipe
               </strong>
               를 활용한 3단계 AI 보안 시스템을 설계했습니다.
             </p>

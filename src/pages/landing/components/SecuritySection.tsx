@@ -29,9 +29,9 @@ const SECURITY_CARDS: SecurityCardProps[] = [
     description:
       '비간섭적 인증으로 사람과 봇을 구분하고 스크립트 기반 자동화를 탐지합니다.',
     bullets: [
-      'TLS Fingerprinting 검증',
-      'HTTP Header 분석',
-      '마우스 행동 패턴 분석',
+      'HTTP Header · 브라우저 환경 분석',
+      '마우스 궤적 패턴 분석',
+      'LSTM 시계열 행동 검증',
     ],
     icon: <FiCheckCircle size={24} />,
     iconColorClass: 'text-green-500',
@@ -39,13 +39,13 @@ const SECURITY_CARDS: SecurityCardProps[] = [
   },
   {
     step: '1단계',
-    title: 'GAN 기반 3D CAPTCHA',
+    title: 'GAN 기반 CAPTCHA',
     description:
       '회원가입 자동화 및 봇을 차단하고 대량 계정 생성을 방지합니다.',
     bullets: [
-      'AI 생성 이미지/3D 객체',
-      '요청마다 동적 생성',
-      '단순 OCR 우회 불가',
+      'GAN 생성 이모지 + CLIP 품질 필터링',
+      '카테고리 기반 이미지 선택 챌린지',
+      '요청마다 랜덤 세트 구성',
     ],
     icon: <FiShield size={24} />,
     iconColorClass: 'text-blue-500',
