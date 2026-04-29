@@ -20,105 +20,71 @@ import type {
 
 function formatRelativeTime(dateString: string | null) {
   if (!dateString) return '';
-
   const now = new Date();
   const target = new Date(dateString);
-
   if (Number.isNaN(target.getTime())) return '';
-
   const diffMs = now.getTime() - target.getTime();
-
   if (diffMs < 60 * 1000) return '방금 전';
-
   const minutes = Math.floor(diffMs / (1000 * 60));
   if (minutes < 60) return `${minutes}분 전`;
-
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   if (hours < 24) return `${hours}시간 전`;
-
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   if (days < 7) return `${days}일 전`;
-
   return target.toLocaleDateString('ko-KR');
 }
 
 function getNotificationBadge(item: NotificationItem) {
   const refType = item.reference_type?.toLowerCase();
   const type = item.type?.toLowerCase();
-
-  if (refType === 'report' || type === 'report') {
+  if (refType === 'report' || type === 'report')
     return {
       label: '신고',
       className: 'border-rose-200 bg-rose-50 text-rose-700',
     };
-  }
-
   if (
     refType === 'settlement' ||
     refType === 'payment' ||
     type === 'settlement' ||
     type === 'payment'
-  ) {
+  )
     return {
       label: '결제',
       className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     };
-  }
-
-  if (refType === 'party' || type?.includes('party')) {
+  if (refType === 'party' || type?.includes('party'))
     return {
       label: '파티',
       className: 'border-blue-200 bg-blue-50 text-blue-700',
     };
-  }
-
-  if (refType === 'user_praise' || type === 'praise') {
+  if (refType === 'user_praise' || type === 'praise')
     return {
       label: '칭찬',
-      className: 'border-yellow-200 bg-yellow-50 text-yellow-700', // 따뜻한 노란색/주황색 테마
+      className: 'border-yellow-200 bg-yellow-50 text-yellow-700',
     };
-  }
-
   return {
     label: '알림',
     className: 'border-slate-200 bg-slate-50 text-slate-700',
   };
 }
 
-// 알림 클릭 시 이동 페이지
 function getNotificationTargetPath(item: NotificationItem) {
   const refType = item.reference_type?.toLowerCase();
   const type = item.type?.toLowerCase();
-
-  // 신고
-  if (refType === 'report' || type === 'report') {
-    return '/mypage/report';
-  }
-
-  // 정산, 결제
+  if (refType === 'report' || type === 'report') return '/mypage/report';
   if (
     refType === 'settlement' ||
     refType === 'payment' ||
     type === 'settlement' ||
     type === 'payment'
-  ) {
+  )
     return '/mypage/payment';
-  }
-
-  // 파티
-  if (refType === 'party' || type?.includes('party')) {
-    return '/mypage/party';
-  }
-
-  if (refType === 'user_praise' || type === 'praise') {
-    return '/mypage/praises';
-  }
-
+  if (refType === 'party' || type?.includes('party')) return '/mypage/party';
+  if (refType === 'user_praise' || type === 'praise') return '/mypage/praises';
   return null;
 }
 
 function getNotificationReadId(item: NotificationItem) {
-  // 읽음 처리 API는 reference_id(파티/신고 ID)가 아니라 notifications 테이블의 PK인 id를 사용해야 함
   return String(item.id);
 }
 
@@ -132,14 +98,29 @@ function formatTrustScore(score?: number | null) {
   return `${score}점`;
 }
 
+// 📌 추가: 남은 시간을 분:초 포맷으로 변환하는 함수
+function formatSessionTime(seconds: number) {
+  const m = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
 export default function Header() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isLoggedIn, loading, logout, user } = useAuthStore();
+
+  // 📌 추가: authStore에서 sessionExpiresAt과 extendSession 가져오기
+  const { isLoggedIn, loading, logout, user, sessionExpiresAt, extendSession } =
+    useAuthStore();
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
+
+  // 📌 추가: 세션 타이머 상태
+  const [sessionTimeLeft, setSessionTimeLeft] = useState<number>(0);
 
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -172,20 +153,16 @@ export default function Header() {
     () => notifications.filter((item) => !item.is_read).length,
     [notifications],
   );
-
   const profileInitial = useMemo(
     () => getProfileInitial(user?.nickname),
     [user?.nickname],
   );
-
   const trustScore = useMemo(
     () => formatTrustScore(user?.trust_score ?? null),
     [user?.trust_score],
   );
-
   const showProfileImage = Boolean(user?.profile_image) && !profileImageError;
 
-  // 개별 읽음 처리
   const markOneAsReadMutation = useMutation({
     mutationFn: (notificationId: string) =>
       markNotificationAsRead(notificationId),
@@ -194,19 +171,16 @@ export default function Header() {
         notificationKeys.me,
         (prev = []) => {
           const next = markNotificationReadInList(prev, notificationId);
-
           queryClient.setQueryData(
             notificationKeys.unreadCount,
             countUnreadNotifications(next),
           );
-
           return next;
         },
       );
     },
   });
 
-  // 전체 읽음 처리
   const markAllAsReadMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
     onSuccess: () => {
@@ -214,36 +188,52 @@ export default function Header() {
         notificationKeys.me,
         (prev = []) => {
           const next = markAllNotificationsReadInList(prev);
-
           queryClient.setQueryData(notificationKeys.unreadCount, 0);
-
           return next;
         },
       );
     },
   });
 
+  // 📌 추가: 세션 타이머 카운트다운 로직
+  useEffect(() => {
+    if (!isLoggedIn || !sessionExpiresAt) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.max(
+        0,
+        Math.floor((sessionExpiresAt - now) / 1000),
+      );
+      setSessionTimeLeft(remaining);
+
+      if (remaining === 0) {
+        clearInterval(interval);
+        handleLogout();
+        alert('세션이 만료되어 자동으로 로그아웃 되었습니다.');
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, sessionExpiresAt]);
+
   useEffect(() => {
     if (!isLoggedIn) return;
-
     const unsubscribe = subscribeNotificationSocket(
       (socketMessage: NotificationSocketMessage) => {
         queryClient.setQueryData<NotificationItem[]>(
           notificationKeys.me,
           (prev = []) => {
             const next = applyNotificationSocketMessage(prev, socketMessage);
-
             queryClient.setQueryData(
               notificationKeys.unreadCount,
               socketMessage.unread_count ?? countUnreadNotifications(next),
             );
-
             return next;
           },
         );
       },
     );
-
     return unsubscribe;
   }, [isLoggedIn, queryClient]);
 
@@ -254,29 +244,19 @@ export default function Header() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(target)
-      ) {
+      if (notificationRef.current && !notificationRef.current.contains(target))
         setIsNotificationOpen(false);
-      }
-
-      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target))
         setIsProfileMenuOpen(false);
-      }
     };
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsNotificationOpen(false);
         setIsProfileMenuOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
@@ -285,7 +265,6 @@ export default function Header() {
 
   if (loading) return null;
 
-  // 아래 핸들러들은 여기 있어도 괜찮음
   const handleLogout = async () => {
     try {
       await logout();
@@ -299,7 +278,6 @@ export default function Header() {
 
   const handleNotificationClick = async (item: NotificationItem) => {
     const targetPath = getNotificationTargetPath(item);
-
     try {
       if (!item.is_read) {
         await markOneAsReadMutation.mutateAsync(getNotificationReadId(item));
@@ -307,12 +285,8 @@ export default function Header() {
     } catch (error) {
       console.error('개별 알림 읽음 처리 실패', error);
     }
-
     setIsNotificationOpen(false);
-
-    if (targetPath) {
-      navigate(targetPath);
-    }
+    if (targetPath) navigate(targetPath);
   };
 
   const handleReadAllNotifications = async () => {
@@ -320,6 +294,18 @@ export default function Header() {
       await markAllAsReadMutation.mutateAsync();
     } catch (error) {
       console.error('전체 알림 읽음 처리 실패', error);
+    }
+  };
+
+  // 📌 추가: 세션 연장 버튼 핸들러
+  const handleExtendSession = async () => {
+    try {
+      if (extendSession) {
+        await extendSession();
+      }
+    } catch (error) {
+      console.error('세션 연장 실패', error);
+      alert('세션 연장에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -336,10 +322,28 @@ export default function Header() {
         )}
       </div>
 
-      {/* 오른쪽: 알림, 유저 */}
       <div className="ml-auto flex items-center gap-3">
         {isLoggedIn ? (
           <>
+            {/* 📌 추가: 세션 연장 UI (알림 아이콘 왼쪽에 표시) */}
+            {sessionExpiresAt && (
+              <div className="mr-2 flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm transition-colors">
+                <span
+                  className={`font-mono font-medium ${sessionTimeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-blue-600'}`}
+                >
+                  {formatSessionTime(sessionTimeLeft)}
+                </span>
+                <div className="h-3 w-px bg-blue-200"></div>
+                <button
+                  type="button"
+                  onClick={handleExtendSession}
+                  className="text-xs font-bold text-blue-700 hover:underline"
+                >
+                  연장
+                </button>
+              </div>
+            )}
+
             <div ref={notificationRef} className="relative">
               <button
                 type="button"
