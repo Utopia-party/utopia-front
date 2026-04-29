@@ -44,6 +44,7 @@ export type NotificationSocketEventType =
   | 'notification_deleted'
   | 'notifications_read_all'
   | 'unread_count_updated'
+  | 'ip_banned'
   | 'pong'
   | string;
 
