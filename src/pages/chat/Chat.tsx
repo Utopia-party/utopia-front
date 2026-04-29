@@ -847,6 +847,11 @@ export default function Chat() {
                   빠른매칭 수수료 포함
                 </p>
               )}
+              {partyInfo?.is_leader && (partyInfo?.leader_discount_rate ?? 0) > 0 && (
+                <p className="text-[11px] text-blue-500 text-right">
+                  방장 할인 적용
+                </p>
+              )}
               {partyInfo?.has_referrer_discount && (
                 <p className="text-[11px] text-green-500 text-right">
                   추천인 할인 적용

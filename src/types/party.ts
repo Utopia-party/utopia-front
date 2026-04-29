@@ -28,11 +28,12 @@ export interface Party {
   member_count: number;
   is_joined: boolean;
   my_member_status: MyMemberStatus;
-  // 추가 필드
-  start_date: string | null; // 파티 생성일 (ISO date)
-  end_date: string | null; // 파티 종료일 (ISO date)
-  min_trust_score: number | null; // 최소 신뢰도
-  created_at: string | null; // 파티 생성일시
+  start_date: string | null; 
+  end_date: string | null; 
+  min_trust_score: number | null; 
+  created_at: string | null; 
+  leader_discount_rate: number | null;
+  has_referrer_discount: boolean;
 }
 
 export interface PartyListResponse {
@@ -46,7 +47,6 @@ export interface Category {
   name: string;
 }
 
-// ---- v2: 내 파티 / 멤버 관리 ----
 
 export interface MyParty extends Party {
   is_owner: boolean;
