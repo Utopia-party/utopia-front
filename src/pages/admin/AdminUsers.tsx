@@ -125,8 +125,10 @@ export default function AdminUsers() {
       }
     };
     void loadUsers();
+    const timer = setInterval(() => { void loadUsers(); }, 60_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, []);
 

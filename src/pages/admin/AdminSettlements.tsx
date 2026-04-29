@@ -52,6 +52,8 @@ export default function AdminSettlements() {
 
   useEffect(() => {
     void loadSettlements();
+    const timer = setInterval(() => { void loadSettlements(); }, 30_000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleSearch = () => {

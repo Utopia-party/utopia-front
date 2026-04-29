@@ -98,6 +98,8 @@ export default function AdminPayments() {
 
   useEffect(() => {
     void load({ page: 1 });
+    const timer = setInterval(() => { void load({ page: 1 }); }, 60_000);
+    return () => clearInterval(timer);
   }, [load]);
 
   const handleSearch = () => {
