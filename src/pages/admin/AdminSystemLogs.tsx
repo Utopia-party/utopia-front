@@ -54,6 +54,15 @@ const ADMIN_ROUTE_DESCRIPTIONS: Array<{
     pattern: /^\/api\/admin\/quick-match\/policy$/,
     label: '빠른 매칭 정책 조회',
   },
+  { pattern: /^\/api\/admin\/reports$/, label: '신고 목록 조회' },
+  {
+    pattern: /^\/api\/admin\/reports\/[^/]+\/status$/,
+    label: '신고 처리 상태 변경',
+  },
+  {
+    pattern: /^\/api\/admin\/reports\/evidences\/[^/]+\/file$/,
+    label: '신고 증빙 파일 조회',
+  },
   { pattern: /^\/api\/admin\/logs$/, label: '시스템 로그 조회' },
   { pattern: /^\/api\/admin\/roles$/, label: '관리자 권한 목록 조회' },
   {
@@ -93,7 +102,11 @@ function getAdminActionDescription(message: string) {
     pattern.test(path),
   );
   if (!route) {
-    return `${method} 요청 처리`;
+    if (method === 'GET') {
+      return '관리자 API 조회';
+    }
+
+    return '관리자 API 작업 요청';
   }
 
   if (method === 'GET') {
