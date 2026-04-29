@@ -250,8 +250,13 @@ const closeNotificationSocket = () => {
 
 const ensureNotificationSocketConnection = async () => {
   if (typeof window === 'undefined') return;
-  if (notificationSocket?.readyState === WebSocket.OPEN) return;
-  if (notificationSocket?.readyState === WebSocket.CONNECTING) return;
+  if (notificationSocket && notificationSocket.readyState === WebSocket.OPEN)
+    return;
+  if (
+    notificationSocket &&
+    notificationSocket.readyState === WebSocket.CONNECTING
+  )
+    return;
   if (socketListeners.size === 0) return;
   if (isConnecting) return;
 

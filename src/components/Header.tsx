@@ -72,6 +72,13 @@ function getNotificationBadge(item: NotificationItem) {
     };
   }
 
+  if (refType === 'user_praise' || type === 'praise') {
+    return {
+      label: '칭찬',
+      className: 'border-yellow-200 bg-yellow-50 text-yellow-700', // 따뜻한 노란색/주황색 테마
+    };
+  }
+
   return {
     label: '알림',
     className: 'border-slate-200 bg-slate-50 text-slate-700',
@@ -101,6 +108,10 @@ function getNotificationTargetPath(item: NotificationItem) {
   // 파티
   if (refType === 'party' || type?.includes('party')) {
     return '/mypage/party';
+  }
+
+  if (refType === 'user_praise' || type === 'praise') {
+    return '/mypage/praises';
   }
 
   return null;
