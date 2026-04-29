@@ -383,6 +383,8 @@ export default function MyParty() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['my-parties'],
     queryFn: getMyParties,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 
   const [modal, setModal] = useState<
@@ -578,6 +580,15 @@ export default function MyParty() {
                     ? serviceTotalPrice - party.monthly_price
                     : null;
 
+                const originalPerPerson =
+                  party.original_price != null && (party.max_members ?? 0) > 0
+                    ? Math.round(party.original_price / party.max_members!)
+                    : null;
+                const savingAmount =
+                  originalPerPerson != null && perPersonPrice != null && originalPerPerson > perPersonPrice
+                    ? originalPerPerson - perPersonPrice
+                    : null;
+
                 return (
                   <article
                     key={party.id}
@@ -608,9 +619,14 @@ export default function MyParty() {
                         </p>
                         {preview?.is_quick_match ? (
                           <p className="mt-1 text-[12px] font-bold text-indigo-500">
-                            빠른매칭 수수료 포함 금액
+                            빠른매칭 수수료 포함
                           </p>
                         ) : null}
+                        {savingAmount != null && (
+                          <p className="mt-1 text-[12px] font-bold text-emerald-600">
+                            월 {savingAmount.toLocaleString()}원 절약
+                          </p>
+                        )}
                       </div>
 
                       {isOwner && refundAmount != null && (
