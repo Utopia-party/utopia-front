@@ -13,6 +13,109 @@ const TYPE_COLOR: Record<string, string> = {
   SYSTEM: 'text-gray-500',
 };
 
+const ADMIN_ROUTE_DESCRIPTIONS: Array<{
+  pattern: RegExp;
+  label: string;
+}> = [
+  { pattern: /^\/api\/admin\/services$/, label: '서비스 목록 조회' },
+  {
+    pattern: /^\/api\/admin\/services\/[^/]+$/,
+    label: '서비스 운영 설정 수정',
+  },
+  { pattern: /^\/api\/admin\/users$/, label: '회원 목록 조회' },
+  { pattern: /^\/api\/admin\/users\/[^/]+$/, label: '회원 상세 조회' },
+  { pattern: /^\/api\/admin\/users\/[^/]+\/status$/, label: '회원 상태 변경' },
+  {
+    pattern: /^\/api\/admin\/users\/[^/]+\/trust-score$/,
+    label: '회원 신뢰도 점수 조정',
+  },
+  { pattern: /^\/api\/admin\/parties$/, label: '파티 목록 조회' },
+  {
+    pattern: /^\/api\/admin\/parties\/[^/]+\/force-end$/,
+    label: '파티 강제 종료',
+  },
+  {
+    pattern: /^\/api\/admin\/parties\/[^/]+\/members$/,
+    label: '파티 멤버 목록 조회',
+  },
+  {
+    pattern: /^\/api\/admin\/parties\/[^/]+\/members\/[^/]+\/kick$/,
+    label: '파티 멤버 강퇴',
+  },
+  {
+    pattern: /^\/api\/admin\/parties\/[^/]+\/members\/[^/]+\/role$/,
+    label: '파티 멤버 권한 변경',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/requests$/,
+    label: '빠른 매칭 요청 목록 조회',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/policy$/,
+    label: '빠른 매칭 정책 조회',
+  },
+  { pattern: /^\/api\/admin\/reports$/, label: '신고 목록 조회' },
+  {
+    pattern: /^\/api\/admin\/reports\/[^/]+\/status$/,
+    label: '신고 처리 상태 변경',
+  },
+  {
+    pattern: /^\/api\/admin\/reports\/evidences\/[^/]+\/file$/,
+    label: '신고 증빙 파일 조회',
+  },
+  { pattern: /^\/api\/admin\/logs$/, label: '시스템 로그 조회' },
+  { pattern: /^\/api\/admin\/roles$/, label: '관리자 권한 목록 조회' },
+  {
+    pattern: /^\/api\/admin\/roles\/[^/]+$/,
+    label: '관리자 권한 설정 변경',
+  },
+  { pattern: /^\/api\/admin\/receipts$/, label: '영수증 목록 조회' },
+  {
+    pattern: /^\/api\/admin\/receipts\/[^/]+$/,
+    label: '영수증 상태 변경',
+  },
+  { pattern: /^\/api\/admin\/settlements$/, label: '정산 목록 조회' },
+  {
+    pattern: /^\/api\/admin\/settlements\/[^/]+$/,
+    label: '정산 상태 변경',
+  },
+  {
+    pattern: /^\/api\/admin\/moderation\/chat-logs$/,
+    label: '채팅 제재 로그 조회',
+  },
+  {
+    pattern: /^\/api\/admin\/moderation\/chat-logs\/[^/]+\/status$/,
+    label: '채팅 제재 상태 변경',
+  },
+];
+
+function getAdminActionDescription(message: string) {
+  const matched = message.match(
+    /^(GET|POST|PATCH|PUT|DELETE)\s+([^\s]+)\s+->\s+\d{3}$/,
+  );
+  if (!matched) {
+    return null;
+  }
+
+  const [, method, path] = matched;
+  const route = ADMIN_ROUTE_DESCRIPTIONS.find(({ pattern }) =>
+    pattern.test(path),
+  );
+  if (!route) {
+    if (method === 'GET') {
+      return '관리자 API 조회';
+    }
+
+    return '관리자 API 작업 요청';
+  }
+
+  if (method === 'GET') {
+    return route.label;
+  }
+
+  return `${route.label} 요청`;
+}
+
 export default function AdminSystemLogs() {
   const [search, setSearch] = useState('');
   const [logType, setLogType] = useState('전체');
@@ -20,7 +123,7 @@ export default function AdminSystemLogs() {
   const [dateTo, setDateTo] = useState('');
   const [logs, setLogs] = useState<SystemLogRecord[]>([]);
   const [page, setPage] = useState(1);
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadLogs = async (params?: {
@@ -64,11 +167,17 @@ export default function AdminSystemLogs() {
   const filtered = useMemo(() => logs, [logs]);
 
   const handleExport = () => {
-    const header = ['timestamp', 'type', 'message', 'actor'];
+    const header = ['timestamp', 'type', 'message', 'description', 'actor'];
     const csvRows = [
       header.join(','),
       ...filtered.map((log) =>
-        [log.timestamp, log.type, log.message, log.actor]
+        [
+          log.timestamp,
+          log.type,
+          log.message,
+          getAdminActionDescription(log.message) ?? '',
+          log.actor,
+        ]
           .map((value) => `"${String(value).replaceAll('"', '""')}"`)
           .join(','),
       ),
@@ -204,18 +313,27 @@ export default function AdminSystemLogs() {
                   key={log.id}
                   className="border-b border-gray-100 hover:bg-gray-50 transition"
                 >
-                  <td className="px-4 py-3.5 text-sm whitespace-nowrap">
+                  <td className="px-4 py-3.5 text-sm whitespace-nowrap align-top">
                     {log.timestamp}
                   </td>
-                  <td className="px-4 py-3.5 text-sm">
+                  <td className="px-4 py-3.5 text-sm align-top">
                     <span
                       className={`font-semibold ${TYPE_COLOR[log.type] ?? 'text-gray-500'}`}
                     >
                       {log.type}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 text-sm">{log.message}</td>
-                  <td className="px-4 py-3.5 text-sm">{log.actor}</td>
+                  <td className="px-4 py-3.5 text-sm align-top">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-800">{log.message}</div>
+                      {getAdminActionDescription(log.message) && (
+                        <div className="text-xs text-gray-500">
+                          {getAdminActionDescription(log.message)}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 text-sm align-top">{log.actor}</td>
                 </tr>
               ))}
               {paginatedLogs.length === 0 && (
@@ -227,7 +345,14 @@ export default function AdminSystemLogs() {
               )}
             </tbody>
           </table>
-          <Pagination total={filtered.length} page={page} pageSize={20} onChange={(p) => { setPage(p); }} />
+          <Pagination
+            total={filtered.length}
+            page={page}
+            pageSize={20}
+            onChange={(p) => {
+              setPage(p);
+            }}
+          />
           <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
             현재 검색 결과를 CSV로 바로 내려받을 수 있습니다.
           </div>
