@@ -26,6 +26,7 @@ export interface Party {
   logo_image_key: string | null;
   logo_image_url: string | null;
   member_count: number;
+  pending_count?: number;
   is_joined: boolean;
   my_member_status: MyMemberStatus;
   // 추가 필드

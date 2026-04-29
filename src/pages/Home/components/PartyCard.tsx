@@ -21,10 +21,12 @@ export default function PartyCard({
   const isJoined = party.is_joined;
   const myStatus: string | null = party.my_member_status ?? null;
   const categoryName = party.category_name || '기타';
-  const spotsLeft = Math.max(
-    (party.max_members ?? 0) - (party.member_count ?? 0),
-    0,
-  );
+
+  // 인원 수 및 퍼센트 계산
+  const maxMembers = party.max_members ?? 0;
+  const memberCount = party.member_count ?? 0;
+  const pendingCount = party.pending_count ?? 0;
+  const spotsLeft = Math.max(maxMembers - memberCount, 0);
 
   const savingPct =
     party.original_price && party.original_price > (party.monthly_price ?? 0)
@@ -33,12 +35,22 @@ export default function PartyCard({
         )
       : null;
 
+  // 활성 인원 바 비율 (최대 100%)
+  const activePct =
+    maxMembers > 0 ? Math.min(100, (memberCount / maxMembers) * 100) : 0;
+  // 대기 인원 바 비율 (활성 바를 제외한 나머지 공간에서만 렌더링되도록 방어 로직)
+  const pendingPct =
+    maxMembers > 0
+      ? Math.min(100 - activePct, (pendingCount / maxMembers) * 100)
+      : 0;
+
   return (
     <div className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl">
       <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-indigo-500 via-sky-500 to-cyan-400" />
 
       <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+        {/* 기존 로고 및 뱃지 영역 (생략 없이 동일하게 유지) */}
+        <div className="flex min-w-0 items-center gap-3">
           <ServiceLogo
             logoUrl={party.logo_image_url}
             serviceName={party.service_name}
@@ -63,6 +75,7 @@ export default function PartyCard({
           </div>
         </div>
 
+        {/* 기존 가격 영역 */}
         {party.monthly_price != null && party.monthly_price > 0 ? (
           <div className="shrink-0 rounded-2xl bg-indigo-50 px-3 py-2 text-right ring-1 ring-indigo-100">
             {savingPct !== null ? (
@@ -86,25 +99,43 @@ export default function PartyCard({
         ) : null}
       </div>
 
-      <h3 className="min-h-13 text-base font-bold leading-snug text-slate-900 line-clamp-2">
+      <h3 className="line-clamp-2 min-h-13 text-base font-bold leading-snug text-slate-900">
         {party.title}
       </h3>
 
+      {/* 인원 현황 영역 (업데이트 됨!) */}
       <div className="mt-4 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium text-slate-500">현재 인원</span>
-          <span className="font-extrabold text-slate-900">
-            {party.member_count}/{party.max_members ?? '?'}명
-          </span>
+          <div className="text-right">
+            <span className="font-extrabold text-slate-900">
+              {memberCount}/{party.max_members ?? '?'}명
+            </span>
+            {/* 대기 인원이 1명 이상일 때만 표시 */}
+            {pendingCount > 0 && (
+              <span className="ml-1.5 text-xs font-bold text-amber-500">
+                (대기 {pendingCount}명)
+              </span>
+            )}
+          </div>
         </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+
+        {/* 프로그레스 바 영역 */}
+        <div className="mt-2 flex h-2 w-full overflow-hidden rounded-full bg-slate-200">
+          {/* 확정 인원 바 */}
           <div
-            className="h-full rounded-full bg-slate-900 transition-all"
-            style={{
-              width: `${Math.min(100, party.max_members ? (party.member_count / party.max_members) * 100 : 0)}%`,
-            }}
+            className="h-full bg-slate-900 transition-all"
+            style={{ width: `${activePct}%` }}
           />
+          {/* 대기 인원 바 (확정 인원 뒤에 이어짐) */}
+          {pendingPct > 0 && (
+            <div
+              className="h-full bg-amber-400 transition-all"
+              style={{ width: `${pendingPct}%` }}
+            />
+          )}
         </div>
+
         <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
           <span>호스트 {party.host_nickname || '익명'}</span>
           <span>
@@ -115,6 +146,7 @@ export default function PartyCard({
         </div>
       </div>
 
+      {/* 하단 버튼 영역 (생략 없이 동일하게 유지) */}
       <div className="mt-4 flex gap-2">
         <button
           onClick={() => onDetail(party)}
