@@ -410,14 +410,14 @@ export default function AdminRoles() {
               <div className="mt-5 space-y-4">
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-medium text-slate-700">
-                    사용자 ID
+                    사용자 식별자
                   </span>
                   <input
                     type="text"
                     value={draftUserId}
                     onChange={(event) => setDraftUserId(event.target.value)}
                     disabled={editorMode === 'update'}
-                    placeholder="권한을 부여할 사용자 ID(UUID)"
+                    placeholder="사용자 UUID, 닉네임, 또는 이메일"
                     className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
                   />
                 </label>

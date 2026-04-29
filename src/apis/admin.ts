@@ -192,6 +192,7 @@ export type AdminPartyRecord = {
   service: string;
   category: string;
   leaderId: string;
+  leaderNickname: string;
   memberCount: number;
   status: '운영중' | '모집중' | '위험' | '종료됨';
   reportCount: number;
