@@ -24,7 +24,6 @@ import {
   CATEGORY_COLOR,
   PARTY_STATUS_LABEL,
   formatCurrency,
-  formatRate,
 } from './ChatConstants';
 import PraiseModal from './components/PraiseModal';
 import { createPraise, getPraiseAvailability } from '../../apis/praises';
