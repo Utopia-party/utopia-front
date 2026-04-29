@@ -228,6 +228,7 @@ export type SystemLogRecord = {
   type: string;
   message: string;
   actor: string;
+  actorType: string;
 };
 
 export async function fetchAdminDashboard(params?: {
@@ -403,6 +404,7 @@ export async function updateAdminSettlementStatus(
 export async function fetchAdminLogs(params?: {
   keyword?: string;
   type?: string;
+  actor_type?: string;
   date_from?: string;
   date_to?: string;
 }): Promise<SystemLogRecord[]> {
