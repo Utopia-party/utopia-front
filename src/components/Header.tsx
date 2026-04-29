@@ -140,6 +140,7 @@ export default function Header() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
+  const [ipBannedModal, setIpBannedModal] = useState(false);
 
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -228,6 +229,12 @@ export default function Header() {
 
     const unsubscribe = subscribeNotificationSocket(
       (socketMessage: NotificationSocketMessage) => {
+        if (socketMessage.type === 'ip_banned') {
+          void logout().then(() => {
+            setIpBannedModal(true);
+          });
+          return;
+        }
         queryClient.setQueryData<NotificationItem[]>(
           notificationKeys.me,
           (prev = []) => {
@@ -324,6 +331,7 @@ export default function Header() {
   };
 
   return (
+    <>
     <header className="flex h-16 items-center border-b border-gray-200 bg-card px-6">
       <div className="min-w-[120px]">
         {isLoggedIn && user?.role?.toLowerCase() === 'admin' && (
@@ -608,5 +616,25 @@ export default function Header() {
         )}
       </div>
     </header>
+
+    {ipBannedModal && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl text-center">
+          <div className="mb-4 text-4xl">🚫</div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900">접속 차단됨</h2>
+          <p className="mb-6 text-sm text-gray-600 leading-relaxed">
+            같은 IP 사용자의 규정 위반으로 인해<br />
+            해당 IP의 접속이 차단되었습니다.
+          </p>
+          <button
+            onClick={() => { setIpBannedModal(false); navigate('/'); }}
+            className="w-full rounded-lg bg-rose-500 py-2.5 text-sm font-semibold text-white hover:bg-rose-600 transition"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
