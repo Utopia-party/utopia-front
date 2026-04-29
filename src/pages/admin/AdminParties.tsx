@@ -75,8 +75,10 @@ export default function AdminParties() {
     };
 
     void loadParties();
+    const timer = setInterval(() => { void loadParties(); }, 30_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, []);
 

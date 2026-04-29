@@ -34,7 +34,7 @@ function App() {
               },
             }}
           />
-          <div className="mx-auto w-full max-w-350">
+          <div className="mx-auto w-full">
             <Outlet />
           </div>
         </main>

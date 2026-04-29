@@ -24,7 +24,6 @@ import {
   CATEGORY_COLOR,
   PARTY_STATUS_LABEL,
   formatCurrency,
-  formatRate,
 } from './ChatConstants';
 import PraiseModal from './components/PraiseModal';
 import { createPraise, getPraiseAvailability } from '../../apis/praises';
@@ -227,6 +226,11 @@ export default function Chat() {
             return;
           }
 
+          if (msg.type === 'party_updated') {
+            void loadPartyInfo();
+            return;
+          }
+
           setMessages((prev) => [...prev, msg as Message]);
         } catch (err) {
           console.error('메시지 파싱 에러:', err);
@@ -245,7 +249,7 @@ export default function Chat() {
         wsRef.current = null;
       }
     };
-  }, [partyId, logout, navigate]);
+  }, [partyId, logout, navigate, loadPartyInfo]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -828,10 +832,6 @@ export default function Chat() {
                 value={formatCurrency(partyInfo?.monthly_price)}
               />
               <DetailRow
-                label="추천 할인"
-                value={formatRate(partyInfo?.referral_discount_rate)}
-              />
-              <DetailRow
                 label="1인 부담"
                 value={formatCurrency(
                   paymentPreview != null
@@ -844,9 +844,30 @@ export default function Chat() {
                 (paymentPreview == null &&
                   (partyInfo?.quick_match_fee_rate ?? 0) > 0)) && (
                 <p className="text-[11px] text-indigo-500 text-right">
-                  빠른매칭 수수료 포함 금액
+                  빠른매칭 수수료 포함
                 </p>
               )}
+              {partyInfo?.has_referrer_discount && (
+                <p className="text-[11px] text-green-500 text-right">
+                  추천인 할인 적용
+                </p>
+              )}
+              {(() => {
+                const perPerson = paymentPreview != null ? paymentPreview.amount : partyInfo?.monthly_per_person;
+                const originalPerPerson =
+                  partyInfo?.monthly_price != null && (partyInfo?.max_members ?? 0) > 0
+                    ? Math.round(partyInfo.monthly_price / partyInfo.max_members!)
+                    : null;
+                const saving =
+                  originalPerPerson != null && perPerson != null && originalPerPerson > perPerson
+                    ? originalPerPerson - perPerson
+                    : null;
+                return saving != null ? (
+                  <p className="text-[11px] text-emerald-500 text-right font-semibold">
+                    월 {saving.toLocaleString()}원 절약
+                  </p>
+                ) : null;
+              })()}
               <DetailRow
                 label="인원"
                 value={`${partyInfo?.member_count ?? '-'} / ${
