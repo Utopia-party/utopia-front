@@ -69,14 +69,18 @@ export type AdminRoleRecord = {
   id: string;
   userId: string;
   adminId: string;
+  canViewDashboard: boolean;
   canManageUsers: boolean;
+  canManageServices: boolean;
   canManageParties: boolean;
+  canManageQuickMatch: boolean;
   canManageReports: boolean;
   canManageChatModeration: boolean;
   canManageCaptcha: boolean;
   canApproveSettlements: boolean;
   canManagePayments: boolean;
   canViewLogs: boolean;
+  canViewCloudMonitoring: boolean;
   canManageAdmins: boolean;
   canManageHandOcr: boolean;
   lastUpdated: string;
@@ -188,6 +192,7 @@ export type AdminPartyRecord = {
   service: string;
   category: string;
   leaderId: string;
+  leaderNickname: string;
   memberCount: number;
   status: '운영중' | '모집중' | '위험' | '종료됨';
   reportCount: number;

@@ -18,16 +18,34 @@ const PERMISSION_OPTIONS: Array<{
   tone: string;
 }> = [
   {
+    key: 'canViewDashboard',
+    label: '통계 대시보드',
+    description: '관리자 통계 대시보드와 요약 지표 조회',
+    tone: 'bg-sky-50 text-sky-600 border-sky-100',
+  },
+  {
     key: 'canManageUsers',
     label: '사용자 관리',
     description: '계정 조회, 상태 변경, 사용자 운영 관리',
     tone: 'bg-blue-50 text-blue-600 border-blue-100',
   },
   {
+    key: 'canManageServices',
+    label: '구독 서비스',
+    description: '구독 서비스 목록, 요금, 할인 정책 관리',
+    tone: 'bg-violet-50 text-violet-600 border-violet-100',
+  },
+  {
     key: 'canManageParties',
     label: '파티 관리',
     description: '파티 조회, 강제 종료, 운영 상태 관리',
     tone: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  },
+  {
+    key: 'canManageQuickMatch',
+    label: '빠른매칭 관리',
+    description: '빠른매칭 요청, 후보, 정책과 상태 관리',
+    tone: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-100',
   },
   {
     key: 'canManageReports',
@@ -67,9 +85,15 @@ const PERMISSION_OPTIONS: Array<{
   },
   {
     key: 'canViewLogs',
-    label: '로그 조회',
+    label: '시스템 로그',
     description: '시스템 로그와 관리자 작업 이력 조회',
     tone: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+  {
+    key: 'canViewCloudMonitoring',
+    label: '클라우드 모니터링',
+    description: '클라우드 자원 지표와 운영 상태 모니터링',
+    tone: 'bg-teal-50 text-teal-600 border-teal-100',
   },
   {
     key: 'canManageAdmins',
@@ -81,40 +105,52 @@ const PERMISSION_OPTIONS: Array<{
 
 const FILTER_TABS = [
   '전체',
+  '통계 대시보드',
   '관리자 권한',
   '사용자 관리',
+  '구독 서비스',
   '파티 관리',
+  '빠른매칭 관리',
   '신고 관리',
   '채팅 모더레이션 관리',
   '캡챠 관리',
   'HandOCR CAPTCHA',
   '정산 승인',
-  '수익내역 관리',
-  '로그 조회',
+  '매출 내역',
+  '시스템 로그',
+  '클라우드 모니터링',
 ];
 
 const FILTER_KEY_MAP: Record<string, PermissionKey> = {
+  '통계 대시보드': 'canViewDashboard',
   '관리자 권한': 'canManageAdmins',
   '사용자 관리': 'canManageUsers',
+  '구독 서비스': 'canManageServices',
   '파티 관리': 'canManageParties',
+  '빠른매칭 관리': 'canManageQuickMatch',
   '신고 관리': 'canManageReports',
   '채팅 모더레이션 관리': 'canManageChatModeration',
   '캡챠 관리': 'canManageCaptcha',
   'HandOCR CAPTCHA': 'canManageHandOcr',
   '정산 승인': 'canApproveSettlements',
-  '수익내역 관리': 'canManagePayments',
-  '로그 조회': 'canViewLogs',
+  '매출 내역': 'canManagePayments',
+  '시스템 로그': 'canViewLogs',
+  '클라우드 모니터링': 'canViewCloudMonitoring',
 };
 
 const DEFAULT_ADMIN_PERMISSIONS: AdminRoleUpdatePayload = {
+  canViewDashboard: true,
   canManageUsers: true,
+  canManageServices: true,
   canManageParties: true,
+  canManageQuickMatch: true,
   canManageReports: true,
   canManageChatModeration: true,
   canManageCaptcha: true,
   canApproveSettlements: true,
   canManagePayments: true,
   canViewLogs: true,
+  canViewCloudMonitoring: true,
   canManageHandOcr: true,
   canManageAdmins: false,
 };
@@ -126,14 +162,18 @@ const clonePermissions = (
 const permissionsFromRole = (
   role: AdminRoleRecord,
 ): AdminRoleUpdatePayload => ({
+  canViewDashboard: role.canViewDashboard,
   canManageUsers: role.canManageUsers,
+  canManageServices: role.canManageServices,
   canManageParties: role.canManageParties,
+  canManageQuickMatch: role.canManageQuickMatch,
   canManageReports: role.canManageReports,
   canManageChatModeration: role.canManageChatModeration,
   canManageCaptcha: role.canManageCaptcha,
   canApproveSettlements: role.canApproveSettlements,
   canManagePayments: role.canManagePayments,
   canViewLogs: role.canViewLogs,
+  canViewCloudMonitoring: role.canViewCloudMonitoring,
   canManageHandOcr: role.canManageHandOcr,
   canManageAdmins: role.canManageAdmins,
 });
@@ -370,14 +410,14 @@ export default function AdminRoles() {
               <div className="mt-5 space-y-4">
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-medium text-slate-700">
-                    사용자 ID
+                    사용자 식별자
                   </span>
                   <input
                     type="text"
                     value={draftUserId}
                     onChange={(event) => setDraftUserId(event.target.value)}
                     disabled={editorMode === 'update'}
-                    placeholder="권한을 부여할 사용자 ID(UUID)"
+                    placeholder="사용자 UUID, 닉네임, 또는 이메일"
                     className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
                   />
                 </label>

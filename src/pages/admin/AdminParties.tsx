@@ -439,7 +439,7 @@ export default function AdminParties() {
                             </div>
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
-                            {party.leaderId}
+                            {party.leaderNickname}
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-600">
                             {party.memberCount}명
@@ -527,7 +527,7 @@ export default function AdminParties() {
                                       ['생성 시각', party.createdAt],
                                       ['파티명', party.title],
                                       ['서비스', party.service],
-                                      ['리더', party.leaderId],
+                                      ['리더', party.leaderNickname],
                                       ['멤버 수', `${party.memberCount}명`],
                                       ['신고 수', `${party.reportCount}건`],
                                       [

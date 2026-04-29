@@ -51,7 +51,7 @@ export default function AdminShell() {
     const path = location.pathname;
 
     if (path === '/admin') {
-      return true;
+      return permissions?.canViewDashboard ?? false;
     }
     if (path.startsWith('/admin/roles')) {
       return permissions?.canManageAdmins ?? false;
@@ -60,13 +60,13 @@ export default function AdminShell() {
       return permissions?.canManageUsers ?? false;
     }
     if (path.startsWith('/admin/services')) {
-      return permissions?.canManageParties ?? false;
+      return permissions?.canManageServices ?? false;
     }
     if (path.startsWith('/admin/parties')) {
       return permissions?.canManageParties ?? false;
     }
     if (path.startsWith('/admin/quick-match')) {
-      return permissions?.canManageParties ?? false;
+      return permissions?.canManageQuickMatch ?? false;
     }
     if (path.startsWith('/admin/reports')) {
       return permissions?.canManageReports ?? false;
@@ -87,7 +87,7 @@ export default function AdminShell() {
       return permissions?.canManageCaptcha ?? false;
     }
     if (path.startsWith('/admin/cloud-monitor')) {
-      return permissions?.canViewLogs ?? false;
+      return permissions?.canViewCloudMonitoring ?? false;
     }
     if (path.startsWith('/admin/handocr')) {
       return Boolean(
