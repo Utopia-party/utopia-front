@@ -15,7 +15,6 @@ import type {
 } from '../../types/user';
 
 const RECENT_ACTIVITY_PREVIEW_COUNT = 5;
-const MAX_REFERRERS = 5;
 
 function getProfileInitial(nickname?: string | null) {
   if (!nickname) return 'PU';
@@ -102,7 +101,10 @@ function getActivityScore(activity: RecentActivityItem) {
 }
 
 function getMyReferrers(profile: GetMyProfileResponse | null): string[] {
-  return profile?.referrers?.map((item) => item.nickname).filter(Boolean) ?? [];
+  const referrers =
+    profile?.referrers?.map((item) => item.nickname).filter(Boolean) ?? [];
+
+  return referrers;
 }
 
 function ProfileDashboard() {
@@ -319,7 +321,7 @@ function ProfileDashboard() {
                     <button
                       type="button"
                       onClick={() => setIsReferrerEditOpen(true)}
-                      disabled={myReferrers.length >= MAX_REFERRERS}
+                      // disabled={myReferrers.length >= MAX_REFERRERS}
                       className="shrink-0 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                     >
                       추천인 추가
@@ -327,7 +329,7 @@ function ProfileDashboard() {
                   </div>
 
                   <p className="mt-1 text-xs font-medium text-slate-500">
-                    기존 추천인은 조회만 가능하며, 최대 5명까지 추가할 수
+                    기존 추천인은 최신순으로 조회되며, 한 번에 한 명만 추가할 수
                     있습니다.
                   </p>
                 </div>
@@ -455,7 +457,6 @@ function ProfileDashboard() {
         onClose={() => setIsReferrerEditOpen(false)}
         initialReferrers={myReferrers}
         onSaved={() => {
-          setIsReferrerEditOpen(false);
           void fetchProfile();
         }}
       />
