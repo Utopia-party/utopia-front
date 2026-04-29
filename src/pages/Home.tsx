@@ -1,22 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  BookOpen,
-  Briefcase,
-  Grid2x2,
-  Headphones,
-  Tv,
-  type LucideIcon,
-} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+
 import type { Party } from '../types/party';
 import {
   fetchParties,
   fetchParty,
   fetchCategories,
-  applyParty,
   partyKeys,
   categoryKeys,
+  fetchTrendingKeywords,
+  recordSearchKeyword,
+  searchKeys,
 } from '../libs/partyapi';
 import PartyDetailModal from '../components/party/PartyDetail';
 import QuickMatchForm from '../components/quickMatch/QuickMatchForm';
@@ -29,10 +24,16 @@ import {
   useQuickMatchSelect,
   useQuickMatchJoin,
 } from '../hooks/useQuickMatch';
-import { usePageTitle } from '../hooks/usePageTitle';
 import { useAuthStore } from '../stores/authStore';
 import { getPaymentPreview } from '../apis/quickMatchApi';
 import type { PaymentPreviewResponse } from '../types/quickMatch';
+import CategorySidebar from './Home/components/CategorySidebar';
+import SearchBar from './Home/components/SearchBar';
+import KeywordChips from './Home/components/KeywordChips';
+import SectionTitle from './Home/components/SectionTitle';
+import PartyCard from './Home/components/PartyCard';
+import ApplyModal from './Home/components/ApplyModal';
+import type { ApiError } from '../types/error';
 
 type PartyWithDetails = Party & {
   description?: string;
@@ -44,566 +45,38 @@ type JoinResult = {
   party_title?: string;
   title?: string;
   service_name?: string;
-  monthly_price?: number;
-  original_price?: number;
+  monthly_price?: number | null;
+  original_price?: number | null;
   member_count?: number;
-  max_members?: number;
+  max_members?: number | null;
   host_nickname?: string;
-  host_trust_score?: number;
+  host_trust_score?: number | null;
   category_name?: string;
   description?: string;
   status?: string;
   id?: number | string;
-  [key: string]: any;
+  [key: string]: unknown;
+};
+
+type PartyDetailResponse = {
+  id?: number | string;
+  title?: string;
+  service_name?: string;
+  category_name?: string;
+  member_count?: number;
+  max_members?: number | null;
+  monthly_price?: number | null;
+  original_price?: number | null;
+  host_nickname?: string;
+  host_trust_score?: number | null;
+  description?: string;
+  status?: string;
 };
 
 type MatchStep = 'idle' | 'requesting' | 'finding' | 'selecting' | 'joining';
 
-const STATUS_LABEL: Record<string, string> = {
-  recruiting: '모집중',
-  full: '마감',
-  completed: '완료',
-  canceled: '취소',
-};
-
-const CATEGORY_COLOR: Record<string, string> = {
-  OTT: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/80',
-  '교육/도서': 'bg-violet-50 text-violet-700 ring-1 ring-violet-200/80',
-  '음악/멤버십': 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
-  '생산성/기타': 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/80',
-  기타: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80',
-};
-
-const CATEGORY_ICON: Record<string, LucideIcon> = {
-  OTT: Tv,
-  '교육/도서': BookOpen,
-  '음악/멤버십': Headphones,
-  '생산성/기타': Briefcase,
-  기타: Briefcase,
-};
-
-const CATEGORY_ICON_TONE: Record<string, string> = {
-  OTT: 'bg-sky-50 text-sky-600 ring-sky-100',
-  '교육/도서': 'bg-violet-50 text-violet-600 ring-violet-100',
-  '음악/멤버십': 'bg-emerald-50 text-emerald-600 ring-emerald-100',
-  '생산성/기타': 'bg-amber-50 text-amber-600 ring-amber-100',
-  기타: 'bg-slate-100 text-slate-600 ring-slate-200',
-};
-
-const QUICK_KEYWORDS = [
-  'Netflix',
-  'YouTube Premium',
-  '쿠팡',
-  '디즈니+',
-  'Spotify',
-];
-
 const COOLDOWN_SECONDS = 600;
 const STORAGE_KEY = 'party_refresh_until';
-
-function SearchBar({ onSearch }: { onSearch: (q: string) => void }) {
-  const [value, setValue] = useState('');
-  const handleSearch = () => onSearch(value.trim());
-
-  usePageTitle('');
-
-  return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/95 px-5 py-3 shadow-2xl backdrop-blur-md transition focus-within:-translate-y-0.5 focus-within:shadow-white/10">
-        <svg
-          className="h-5 w-5 shrink-0 text-slate-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-        <input
-          className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-          placeholder="파티 검색 (예: Netflix, 쿠팡, Spotify, 밀리의서재...)"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        {value ? (
-          <button
-            className="rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-            onClick={() => {
-              setValue('');
-              onSearch('');
-            }}
-          >
-            ✕
-          </button>
-        ) : null}
-        <button
-          onClick={handleSearch}
-          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          검색
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function KeywordChips({ onPick }: { onPick: (keyword: string) => void }) {
-  return (
-    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-      <span className="text-xs font-medium text-white/70">인기 검색</span>
-      {QUICK_KEYWORDS.map((keyword) => (
-        <button
-          key={keyword}
-          onClick={() => onPick(keyword)}
-          className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
-        >
-          {keyword}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SectionTitle({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <div>
-      <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
-        {title}
-      </h2>
-      {subtitle ? (
-        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function CategoryIconBadge({
-  name,
-  iconSize = 16,
-  className = '',
-  active = false,
-}: {
-  name: string | null;
-  iconSize?: number;
-  className?: string;
-  active?: boolean;
-}) {
-  const Icon = name ? CATEGORY_ICON[name] || Briefcase : Grid2x2;
-  const toneClass = active
-    ? 'bg-white/14 text-white ring-white/15'
-    : name
-      ? CATEGORY_ICON_TONE[name] || CATEGORY_ICON_TONE['기타']
-      : 'bg-slate-100 text-slate-700 ring-slate-200';
-
-  return (
-    <span
-      className={`flex items-center justify-center rounded-xl ring-1 ${toneClass} ${className}`}
-    >
-      <Icon size={iconSize} strokeWidth={2.1} />
-    </span>
-  );
-}
-
-function ServiceLogo({
-  logoUrl,
-  serviceName,
-  fallbackName,
-}: {
-  logoUrl: string | null;
-  serviceName: string | null;
-  fallbackName: string | null;
-}) {
-  const [imgError, setImgError] = useState(false);
-
-  if (logoUrl && !imgError) {
-    return (
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
-        <img
-          src={logoUrl}
-          alt={serviceName ?? '서비스 로고'}
-          className="h-full w-full object-contain p-1.5"
-          onError={() => setImgError(true)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <CategoryIconBadge
-      name={fallbackName}
-      iconSize={18}
-      className="h-12 w-12 shrink-0 rounded-2xl"
-    />
-  );
-}
-
-function PartyCard({
-  party,
-  onDetail,
-  onApply,
-}: {
-  party: Party;
-  onDetail: (p: Party) => void;
-  onApply: (p: Party) => void;
-}) {
-  const navigate = useNavigate();
-  const isClosed = party.status !== 'recruiting';
-  const isJoined = (party as any).is_joined;
-  const myStatus: string | null = (party as any).my_member_status ?? null;
-  const categoryName = party.category_name || '기타';
-  const spotsLeft = Math.max(
-    (party.max_members ?? 0) - (party.member_count ?? 0),
-    0,
-  );
-
-  const savingPct =
-    party.original_price && party.original_price > (party.monthly_price ?? 0)
-      ? Math.round(
-          (1 - (party.monthly_price ?? 0) / party.original_price) * 100,
-        )
-      : null;
-
-  return (
-    <div className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl">
-      <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-indigo-500 via-sky-500 to-cyan-400" />
-
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <ServiceLogo
-            logoUrl={party.logo_image_url}
-            serviceName={party.service_name}
-            fallbackName={categoryName}
-          />
-          <div className="min-w-0">
-            <div className="mb-1 flex flex-wrap gap-1.5">
-              <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${party.status === 'recruiting' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200/80'}`}
-              >
-                {STATUS_LABEL[party.status ?? ''] || '모집중'}
-              </span>
-              <span
-                className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ${CATEGORY_COLOR[categoryName] ?? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200/80'}`}
-              >
-                {categoryName}
-              </span>
-            </div>
-            <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-400">
-              {party.service_name}
-            </p>
-          </div>
-        </div>
-
-        {party.monthly_price != null && party.monthly_price > 0 ? (
-          <div className="shrink-0 rounded-2xl bg-indigo-50 px-3 py-2 text-right ring-1 ring-indigo-100">
-            {savingPct !== null ? (
-              <div className="mb-1 flex items-center justify-end gap-1.5">
-                <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {savingPct}% 절약
-                </span>
-                <span className="text-[11px] text-slate-400 line-through">
-                  {party.original_price!.toLocaleString()}원
-                </span>
-              </div>
-            ) : (
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500">
-                월 이용료
-              </p>
-            )}
-            <p className="text-sm font-extrabold text-indigo-700">
-              {party.monthly_price.toLocaleString()}원
-            </p>
-          </div>
-        ) : null}
-      </div>
-
-      <h3 className="min-h-13 text-base font-bold leading-snug text-slate-900 line-clamp-2">
-        {party.title}
-      </h3>
-
-      <div className="mt-4 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-slate-500">현재 인원</span>
-          <span className="font-extrabold text-slate-900">
-            {party.member_count}/{party.max_members ?? '?'}명
-          </span>
-        </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-          <div
-            className="h-full rounded-full bg-slate-900 transition-all"
-            style={{
-              width: `${Math.min(100, party.max_members ? (party.member_count / party.max_members) * 100 : 0)}%`,
-            }}
-          />
-        </div>
-        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-          <span>호스트 {party.host_nickname || '익명'}</span>
-          <span>
-            {party.status === 'recruiting'
-              ? `남은 자리 ${spotsLeft}개`
-              : '모집 종료'}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          onClick={() => onDetail(party)}
-          className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-        >
-          조건 확인
-        </button>
-        {isJoined ? (
-          <button
-            onClick={() => navigate(`/party/${party.id}/chat`)}
-            className="flex-1 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-indigo-500"
-          >
-            채팅방 입장
-          </button>
-        ) : myStatus === 'pending' ? (
-          <button
-            disabled
-            className="flex-1 cursor-not-allowed rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-700"
-          >
-            승인 대기중
-          </button>
-        ) : myStatus === 'kicked' ? (
-          <button
-            disabled
-            className="flex-1 cursor-not-allowed rounded-2xl bg-rose-100 px-4 py-3 text-sm font-bold text-rose-700"
-          >
-            참여 불가 (강퇴)
-          </button>
-        ) : (
-          <button
-            disabled={isClosed}
-            onClick={() => onApply(party)}
-            className={`flex-1 rounded-2xl px-4 py-3 text-sm font-bold transition ${isClosed ? 'cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
-          >
-            {isClosed
-              ? STATUS_LABEL[party.status ?? ''] || '마감'
-              : myStatus === 'rejected'
-                ? '재신청'
-                : '참여 신청'}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ApplyModal({ party, onClose }: { party: Party; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [done, setDone] = useState(false);
-
-  const mutation = useMutation({
-    mutationFn: () => applyParty(party.id),
-    onSuccess: () => {
-      setDone(true);
-      queryClient.invalidateQueries({ queryKey: partyKeys.all });
-    },
-    onError: (e: any) => {
-      const detail = e?.response?.data?.detail ?? e?.message;
-      alert(detail || '참여 신청 중 오류가 발생했습니다.');
-    },
-  });
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-3xl border border-white/30 bg-white p-7 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {done ? (
-          <div className="py-4 text-center">
-            <div className="mb-4 text-5xl">📨</div>
-            <h3 className="text-xl font-black text-slate-900">신청 완료!</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              참여 신청이 접수되었습니다.
-              <br />
-              파티 리더의 승인을 기다려주세요.
-            </p>
-            <button
-              onClick={onClose}
-              className="mt-6 w-full rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
-            >
-              확인
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="mb-5">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-500">
-                Join party
-              </p>
-              <h3 className="mt-2 text-xl font-black text-slate-900">
-                파티 참여 신청
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                아래 내용을 확인한 뒤 참여를 진행해주세요.
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-              <p className="text-sm font-bold text-slate-900">
-                [{party.service_name}] {party.title}
-              </p>
-              <div className="mt-3 space-y-1.5 text-xs text-slate-500">
-                <p>
-                  👥 현재 {party.member_count}/{party.max_members ?? '?'}명 참여
-                  중
-                </p>
-                <p>👤 호스트: {party.host_nickname || '익명'}</p>
-                {party.monthly_price != null && party.monthly_price > 0 ? (
-                  <p>💰 월 {party.monthly_price.toLocaleString()}원</p>
-                ) : null}
-              </div>
-            </div>
-            <div className="mt-6 flex gap-2">
-              <button
-                onClick={onClose}
-                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => mutation.mutate()}
-                disabled={mutation.isPending}
-                className="flex-1 rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-50"
-              >
-                {mutation.isPending ? '처리 중...' : '신청하기'}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CategorySidebar({
-  categories,
-  category,
-  setCategory,
-  onCreate,
-  onQuickMatch,
-}: {
-  categories: any[];
-  category: string | null;
-  setCategory: (value: string | null) => void;
-  onCreate: () => void;
-  onQuickMatch: () => void;
-}) {
-  return (
-    <aside className="w-full shrink-0 md:w-64">
-      <div className="sticky top-4 space-y-4">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-4 py-4">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-              Browse
-            </p>
-            <h3 className="mt-2 text-lg font-extrabold text-slate-900">
-              카테고리
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              원하는 서비스 유형만 빠르게 골라보세요.
-            </p>
-          </div>
-          <nav className="flex flex-col gap-1 p-3">
-            <button
-              onClick={() => setCategory(null)}
-              className={`rounded-2xl px-3 py-3 text-left text-sm transition ${category === null ? 'bg-slate-900 font-bold text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
-            >
-              <span className="flex items-center gap-2">
-                <CategoryIconBadge
-                  name={null}
-                  iconSize={15}
-                  active={category === null}
-                  className="h-8 w-8 shrink-0"
-                />
-                <span>전체 파티</span>
-              </span>
-            </button>
-            {categories.map((cat: any) => {
-              const name = cat.name;
-              const isActive = category === name;
-              return (
-                <button
-                  key={name}
-                  onClick={() => setCategory(name)}
-                  className={`flex items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${isActive ? 'bg-indigo-50 font-bold text-indigo-700 ring-1 ring-indigo-100' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <span className="flex items-center gap-2">
-                    <CategoryIconBadge
-                      name={name}
-                      iconSize={15}
-                      active={false}
-                      className="h-8 w-8 shrink-0"
-                    />
-                    <span>{name}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <button
-          onClick={onCreate}
-          className="w-full rounded-3xl bg-slate-900 px-4 py-4 text-left text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-800"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">
-                Create
-              </p>
-              <p className="mt-1 text-base font-extrabold">+ 파티 생성하기 </p>
-              <p className="mt-1 text-sm text-white/70">
-                직접 모집글을 올리고 멤버를 모아보세요.
-              </p>
-            </div>
-            <span className="text-2xl">🍿</span>
-          </div>
-        </button>
-
-        <button
-          onClick={onQuickMatch}
-          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-                Quick match
-              </p>
-              <p className="mt-1 text-base font-extrabold text-slate-900">
-                빠른 매칭
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                조건만 입력하면 맞는 파티를 더 빠르게 찾아드려요.
-              </p>
-              <p className="mt-1 text-xs text-amber-600">
-                * 빠른 매칭 이용 시 수수료가 부과됩니다.
-              </p>
-            </div>
-            <span className="text-2xl">⚡️</span>
-          </div>
-        </button>
-      </div>
-    </aside>
-  );
-}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -644,6 +117,25 @@ export default function Home() {
     return remaining > 0 ? remaining : 0;
   });
 
+  const { data: trendingKeywords = [], isLoading: isTrendingLoading } =
+    useQuery({
+      queryKey: searchKeys.trending,
+      queryFn: fetchTrendingKeywords,
+      refetchInterval: 30000, // 30초마다 자동으로 새로고침 (실시간 효과)
+      staleTime: 20000,
+    });
+
+  const handleSearchAction = (keyword: string) => {
+    setSearch(keyword); // UI 업데이트 및 검색 쿼리 실행
+
+    if (keyword.trim()) {
+      // 검색어를 백엔드(Redis)로 전송 (사용자 경험을 위해 비동기로 던져놓기만 함)
+      recordSearchKeyword(keyword.trim()).catch((err) => {
+        console.warn('검색어 기록 실패:', err);
+      });
+    }
+  };
+
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setInterval(() => {
@@ -668,7 +160,9 @@ export default function Home() {
       const next = { ...prev, [cacheKey]: (prev[cacheKey] ?? 0) + 1 };
       try {
         sessionStorage.setItem('party_refresh_keys', JSON.stringify(next));
-      } catch {}
+      } catch (error) {
+        console.warn('party_refresh_keys 저장 실패:', error);
+      }
       return next;
     });
     const until = Date.now() + COOLDOWN_SECONDS * 1000;
@@ -742,7 +236,7 @@ export default function Home() {
         ...matchResult,
         id: found.id,
         title:
-          (matchResult as any).title ??
+          matchResult.title ??
           matchResult.party_title ??
           found.title ??
           '매칭된 파티',
@@ -764,8 +258,7 @@ export default function Home() {
     return {
       ...matchResult,
       id: targetPartyId,
-      title:
-        (matchResult as any).title ?? matchResult.party_title ?? '매칭된 파티',
+      title: matchResult.title ?? matchResult.party_title ?? '매칭된 파티',
       service_name: matchResult.service_name ?? '',
       category_name: matchResult.category_name ?? '기타',
       member_count: matchResult.member_count ?? 0,
@@ -775,7 +268,7 @@ export default function Home() {
       host_nickname: matchResult.host_nickname ?? '익명',
       description: matchResult.description ?? '',
       status: matchResult.status ?? 'recruiting',
-    } as any;
+    } as JoinResult;
   }, [matchResult, parties]);
 
   const currentStepTitle = useMemo(() => {
@@ -793,10 +286,11 @@ export default function Home() {
     }
   }, [matchStep]);
 
-  const normalizeQuickMatchErrorCode = (error: any): string => {
-    const rawCode = error?.response?.data?.code;
-    const detail = error?.response?.data?.detail;
-    const message = error?.response?.data?.message || error?.message;
+  const normalizeQuickMatchErrorCode = (error: unknown): string => {
+    const apiError = error as ApiError;
+    const rawCode = apiError.response?.data?.code;
+    const detail = apiError.response?.data?.detail;
+    const message = apiError.response?.data?.message || apiError.message;
 
     const raw = String(rawCode || detail || message || '').trim();
 
@@ -878,10 +372,12 @@ export default function Home() {
         setMatchPaymentPreview(null);
       }
 
-      let detailedParty: any = null;
+      let detailedParty: PartyDetailResponse | null = null;
 
       try {
-        detailedParty = await fetchParty(String(matchedPartyId));
+        detailedParty = (await fetchParty(
+          String(matchedPartyId),
+        )) as PartyDetailResponse;
       } catch (detailError) {
         console.warn('파티 상세 조회 실패:', detailError);
       }
@@ -889,7 +385,11 @@ export default function Home() {
       setMatchResult({
         ...joinResponse,
         ...(detailedParty ?? {}),
-        party_id: joinResponse?.party_id ?? detailedParty?.id,
+        party_id: (() => {
+          const v = joinResponse?.party_id ?? detailedParty?.id;
+          const n = Number(v as unknown);
+          return Number.isNaN(n) ? undefined : n;
+        })(),
         party_title:
           joinResponse?.party_title ?? detailedParty?.title ?? '매칭된 파티',
         title:
@@ -916,15 +416,16 @@ export default function Home() {
           detailedParty?.description ?? joinResponse?.description ?? '',
         status: detailedParty?.status ?? joinResponse?.status ?? 'recruiting',
       });
-    } catch (error: any) {
-      console.error('빠른 매칭 실패:', error?.response?.data || error);
+    } catch (error: unknown) {
+      console.error('빠른 매칭 실패:', error);
 
       const errorCode = normalizeQuickMatchErrorCode(error);
 
+      const apiError = error as ApiError;
       const errorMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.detail ||
-        error?.message ||
+        apiError.response?.data?.message ||
+        apiError.response?.data?.detail ||
+        apiError.message ||
         '빠른 매칭 요청 중 오류가 발생했습니다.';
 
       setMatchErrorCode(errorCode);
@@ -956,8 +457,12 @@ export default function Home() {
           </p>
 
           <div className="relative mt-6">
-            <SearchBar onSearch={setSearch} />
-            <KeywordChips onPick={setSearch} />
+            <SearchBar onSearch={handleSearchAction} />
+            <KeywordChips
+              keywords={trendingKeywords}
+              isLoading={isTrendingLoading}
+              onPick={handleSearchAction}
+            />
           </div>
         </div>
       </section>
