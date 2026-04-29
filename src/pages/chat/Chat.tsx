@@ -694,7 +694,7 @@ export default function Chat() {
 
       <div className="bg-card border-b border-border px-6 py-3 flex items-center gap-3 shrink-0">
         <button
-          onClick={() => navigate('/home')}
+          onClick={() => navigate(-1)}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← 파티 목록
