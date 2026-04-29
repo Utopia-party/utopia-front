@@ -310,6 +310,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     void loadDashboard();
+    const timer = setInterval(() => { void loadDashboard(); }, 30_000);
+    return () => clearInterval(timer);
   }, []);
 
   const loadBreakdownDashboard = async (
@@ -337,6 +339,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     void loadBreakdownDashboard();
+    const timer = setInterval(() => { void loadBreakdownDashboard(); }, 30_000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleAnalyzeDashboard = async () => {
