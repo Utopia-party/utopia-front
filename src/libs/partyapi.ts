@@ -12,6 +12,10 @@ export const categoryKeys = {
   all: ['categories'] as const,
 };
 
+export const searchKeys = {
+  trending: ['trendingKeywords'] as const,
+};
+
 // ── sessionStorage 캐시 (random 파티 목록 전용) ──────────────────
 const SESSION_CACHE_PREFIX = 'partylist:';
 
@@ -76,4 +80,14 @@ export const applyParty = async (
 ): Promise<{ message: string }> => {
   const { data } = await api.post(`/api/parties/${partyId}/join`);
   return data;
+};
+
+export const fetchTrendingKeywords = async (): Promise<string[]> => {
+  const { data } = await api.get('/api/search/trending');
+  return data.keywords || data;
+};
+
+export const recordSearchKeyword = async (keyword: string): Promise<void> => {
+  if (!keyword) return;
+  await api.post('/api/search/record', { keyword });
 };
