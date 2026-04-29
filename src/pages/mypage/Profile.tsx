@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import { useAuthStore } from '../../stores/authStore';
-import ProfileEditModal from './components/ProfileEditModal';
+
+import { getMyProfile } from '../../apis/user';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { useAuthStore } from '../../stores/authStore';
+
+import ProfileEditModal from './components/ProfileEditModal';
+import ReferrerEditModal from './components/ReferrerEditModal';
 import WithdrawModal from './components/WithdrawModal';
-import {
-  getMyProfile,
-  type GetMyProfileResponse,
-  type RecentActivityItem,
-} from '../../apis/user';
+
+import type {
+  GetMyProfileResponse,
+  RecentActivityItem,
+} from '../../types/user';
 
 const RECENT_ACTIVITY_PREVIEW_COUNT = 5;
 
@@ -61,6 +65,7 @@ function formatDate(value?: string | null) {
 
 function formatActionLabel(action?: string | null) {
   if (!action) return '활동';
+
   return action
     .split('_')
     .filter(Boolean)
@@ -95,11 +100,19 @@ function getActivityScore(activity: RecentActivityItem) {
   };
 }
 
+function getMyReferrers(profile: GetMyProfileResponse | null): string[] {
+  const referrers =
+    profile?.referrers?.map((item) => item.nickname).filter(Boolean) ?? [];
+
+  return referrers;
+}
+
 function ProfileDashboard() {
   const navigate = useNavigate();
   const { user, isLoggedIn, loading } = useAuthStore();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isReferrerEditOpen, setIsReferrerEditOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [profile, setProfile] = useState<GetMyProfileResponse | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -112,6 +125,7 @@ function ProfileDashboard() {
     try {
       setProfileLoading(true);
       setProfileError(null);
+
       const data = await getMyProfile();
       setProfile(data);
     } catch (error) {
@@ -127,24 +141,31 @@ function ProfileDashboard() {
   }, [fetchProfile]);
 
   useEffect(() => {
-    if (!isEditOpen && isLoggedIn) {
+    if (!isEditOpen && !isReferrerEditOpen && isLoggedIn) {
       void fetchProfile();
     }
-  }, [isEditOpen, isLoggedIn, fetchProfile]);
+  }, [isEditOpen, isReferrerEditOpen, isLoggedIn, fetchProfile]);
 
   const nickname = profile?.nickname ?? user?.nickname ?? '';
   const rawPhone = profile?.phone ?? user?.phone ?? '';
   const phone = formatPhoneNumber(rawPhone);
+
   const trustScore = formatTrustScore(
     profile?.trust_score ?? user?.trust_score ?? null,
   );
+
   const profileImageUrl = profile?.profile_image ?? user?.profile_image ?? null;
   const totalPartyParticipations = profile?.total_party_participations ?? 0;
   const activePartyCount = profile?.active_party_count ?? 0;
   const recommendedCount = profile?.recommendation_count ?? 0;
+
+  const myReferrers = getMyReferrers(profile);
+  const recommendedByMeCount = profile?.referrer_count ?? myReferrers.length;
+
   const recentActivities = profile?.recent_activities ?? [];
 
   const profileInitial = useMemo(() => getProfileInitial(nickname), [nickname]);
+
   const visibleActivities = recentActivities.slice(
     0,
     RECENT_ACTIVITY_PREVIEW_COUNT,
@@ -178,9 +199,11 @@ function ProfileDashboard() {
             <h1 className="text-xl font-extrabold text-slate-900">
               로그인이 필요합니다.
             </h1>
+
             <p className="mt-2 text-sm font-medium text-slate-500">
               마이페이지는 로그인 후 이용할 수 있습니다.
             </p>
+
             <button
               type="button"
               onClick={() => navigate('/login')}
@@ -202,6 +225,7 @@ function ProfileDashboard() {
             <h1 className="text-[24px] font-extrabold tracking-tight text-slate-900">
               마이페이지 - 프로필
             </h1>
+
             <p className="mt-1 text-sm font-medium text-slate-500">
               회원 정보 / 최근 활동 내역
             </p>
@@ -259,33 +283,69 @@ function ProfileDashboard() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsEditOpen(true)}
-                  className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-primary transition hover:bg-blue-100"
-                >
-                  프로필 수정
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsWithdrawOpen(true)}
-                  className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-500 transition hover:bg-rose-100"
-                >
-                  회원탈퇴
-                </button>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditOpen(true)}
+                    className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-primary transition hover:bg-blue-100"
+                  >
+                    프로필 수정
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsWithdrawOpen(true)}
+                    className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-500 transition hover:bg-rose-100"
+                  >
+                    회원탈퇴
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold text-primary">
+                        추천한 수
+                      </p>
+
+                      <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
+                        {recommendedByMeCount}
+                        <span className="ml-1 text-base font-bold text-slate-500">
+                          명
+                        </span>
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsReferrerEditOpen(true)}
+                      // disabled={myReferrers.length >= MAX_REFERRERS}
+                      className="shrink-0 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                    >
+                      추천인 추가
+                    </button>
+                  </div>
+
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    기존 추천인은 최신순으로 조회되며, 한 번에 한 명만 추가할 수
+                    있습니다.
+                  </p>
+                </div>
+
                 <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-4">
                   <p className="text-xs font-semibold text-slate-400">
                     추천받은 수
                   </p>
+
                   <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
                     {recommendedCount}
                     <span className="ml-1 text-base font-bold text-slate-500">
                       회
                     </span>
                   </p>
+
                   <p className="mt-1 text-xs font-medium text-slate-500">
                     다른 사용자에게 받은 추천 횟수
                   </p>
@@ -295,12 +355,14 @@ function ProfileDashboard() {
                   <p className="text-xs font-semibold text-slate-400">
                     누적 파티 참여
                   </p>
+
                   <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
                     {totalPartyParticipations}
                     <span className="ml-1 text-base font-bold text-slate-500">
                       회
                     </span>
                   </p>
+
                   <p className="mt-1 text-xs font-medium text-slate-500">
                     지금까지 참여한 전체 파티 기록
                   </p>
@@ -310,12 +372,14 @@ function ProfileDashboard() {
                   <p className="text-xs font-semibold text-slate-400">
                     참여 중인 파티
                   </p>
+
                   <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
                     {activePartyCount}
                     <span className="ml-1 text-base font-bold text-slate-500">
                       개
                     </span>
                   </p>
+
                   <p className="mt-1 text-xs font-medium text-slate-500">
                     현재 진행 중인 파티 수
                   </p>
@@ -329,6 +393,7 @@ function ProfileDashboard() {
               <h3 className="text-lg font-extrabold text-slate-900">
                 최근 활동 내역
               </h3>
+
               <p className="mt-1 text-sm font-medium text-slate-500">
                 최근 계정 활동과 신뢰도 반영 내역입니다.
               </p>
@@ -352,6 +417,7 @@ function ProfileDashboard() {
                         <p className="text-sm font-extrabold text-slate-900">
                           {formatActionLabel(activity.action)}
                         </p>
+
                         <p className="mt-1 text-sm font-semibold text-slate-500">
                           {formatDate(activity.created_at)}
                           {activity.description
@@ -372,10 +438,6 @@ function ProfileDashboard() {
                 })
               )}
             </div>
-
-            {recentActivities.length > RECENT_ACTIVITY_PREVIEW_COUNT ? (
-              <div className="mt-4 flex justify-center"></div>
-            ) : null}
           </section>
         </div>
       </div>
@@ -389,6 +451,16 @@ function ProfileDashboard() {
           profileImage: profileImageUrl,
         }}
       />
+
+      <ReferrerEditModal
+        open={isReferrerEditOpen}
+        onClose={() => setIsReferrerEditOpen(false)}
+        initialReferrers={myReferrers}
+        onSaved={() => {
+          void fetchProfile();
+        }}
+      />
+
       <WithdrawModal
         open={isWithdrawOpen}
         onClose={() => setIsWithdrawOpen(false)}
@@ -399,6 +471,7 @@ function ProfileDashboard() {
 
 export default function Profile() {
   const location = useLocation();
+
   const isProfilePage =
     location.pathname === '/mypage' || location.pathname === '/mypage/profile';
 

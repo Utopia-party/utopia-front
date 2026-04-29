@@ -10,8 +10,49 @@ import {
 const TYPE_COLOR: Record<string, string> = {
   ERROR: 'text-red-500',
   ADMIN_ACTION: 'text-blue-500',
+  USER_ACTION: 'text-emerald-600',
   SYSTEM: 'text-gray-500',
+  INFO: 'text-slate-500',
+  WARN: 'text-amber-600',
 };
+
+function getNormalizedActorType(log: SystemLogRecord) {
+  if (
+    log.actorType === 'admin' ||
+    log.actorType === 'user' ||
+    log.actorType === 'system'
+  ) {
+    return log.actorType;
+  }
+
+  if (log.type === 'USER_ACTION') {
+    return 'user';
+  }
+
+  if (log.type === 'ADMIN_ACTION') {
+    if (/^(GET|POST|PATCH|PUT|DELETE)\s+\/api\/admin/.test(log.message)) {
+      return 'admin';
+    }
+
+    if (/(관리자|admin)/i.test(log.actor)) {
+      return 'admin';
+    }
+
+    return 'user';
+  }
+
+  return 'system';
+}
+
+function getNormalizedLogType(log: SystemLogRecord) {
+  const actorType = getNormalizedActorType(log);
+
+  if (log.type === 'ADMIN_ACTION' || log.type === 'USER_ACTION') {
+    return actorType === 'user' ? 'USER_ACTION' : 'ADMIN_ACTION';
+  }
+
+  return log.type;
+}
 
 const ADMIN_ROUTE_DESCRIPTIONS: Array<{
   pattern: RegExp;
@@ -119,6 +160,7 @@ function getAdminActionDescription(message: string) {
 export default function AdminSystemLogs() {
   const [search, setSearch] = useState('');
   const [logType, setLogType] = useState('전체');
+  const [actorType, setActorType] = useState('전체');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [logs, setLogs] = useState<SystemLogRecord[]>([]);
@@ -129,6 +171,7 @@ export default function AdminSystemLogs() {
   const loadLogs = async (params?: {
     keyword?: string;
     type?: string;
+    actor_type?: string;
     date_from?: string;
     date_to?: string;
   }) => {
@@ -150,7 +193,6 @@ export default function AdminSystemLogs() {
   const handleSearch = () => {
     void loadLogs({
       keyword: search || undefined,
-      type: logType !== '전체' ? logType : undefined,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
     });
@@ -159,21 +201,47 @@ export default function AdminSystemLogs() {
   const handleReset = () => {
     setSearch('');
     setLogType('전체');
+    setActorType('전체');
     setDateFrom('');
     setDateTo('');
     void loadLogs();
   };
 
-  const filtered = useMemo(() => logs, [logs]);
+  const filtered = useMemo(
+    () =>
+      logs.filter((log) => {
+        const normalizedActorType = getNormalizedActorType(log);
+        const normalizedLogType = getNormalizedLogType(log);
+
+        if (logType !== '전체' && normalizedLogType !== logType) {
+          return false;
+        }
+
+        if (actorType !== '전체' && normalizedActorType !== actorType) {
+          return false;
+        }
+
+        return true;
+      }),
+    [actorType, logType, logs],
+  );
 
   const handleExport = () => {
-    const header = ['timestamp', 'type', 'message', 'description', 'actor'];
+    const header = [
+      'timestamp',
+      'type',
+      'actor_type',
+      'message',
+      'description',
+      'actor',
+    ];
     const csvRows = [
       header.join(','),
       ...filtered.map((log) =>
         [
           log.timestamp,
           log.type,
+          getNormalizedActorType(log),
           log.message,
           getAdminActionDescription(log.message) ?? '',
           log.actor,
@@ -194,12 +262,12 @@ export default function AdminSystemLogs() {
     URL.revokeObjectURL(url);
   };
 
-  const paginatedLogs = logs.slice((page - 1) * 20, page * 20);
+  const paginatedLogs = filtered.slice((page - 1) * 20, page * 20);
 
   return (
     <>
       <AdminHeader
-        placeholder="로그 검색 (키워드/관리자/유저)..."
+        placeholder="사용자 이름 검색"
         onSearch={setSearch}
         rightContent={
           <button
@@ -219,13 +287,13 @@ export default function AdminSystemLogs() {
         <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-gray-500">
-              키워드 (메시지 / 주체)
+              사용자 이름
             </span>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="로그 내용 검색"
+              placeholder="닉네임 또는 이름 검색"
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 w-52"
             />
           </label>
@@ -247,9 +315,22 @@ export default function AdminSystemLogs() {
             >
               <option value="전체">전체</option>
               <option value="ADMIN_ACTION">관리자 활동</option>
+              <option value="USER_ACTION">사용자 활동</option>
               <option value="ERROR">에러</option>
               <option value="INFO">정보</option>
               <option value="WARN">경고</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500">주체</span>
+            <select
+              value={actorType}
+              onChange={(e) => setActorType(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            >
+              <option value="전체">전체</option>
+              <option value="user">사용자</option>
+              <option value="admin">관리자</option>
             </select>
           </label>
           <label className="flex flex-col gap-1">
@@ -318,19 +399,26 @@ export default function AdminSystemLogs() {
                   </td>
                   <td className="px-4 py-3.5 text-sm align-top">
                     <span
-                      className={`font-semibold ${TYPE_COLOR[log.type] ?? 'text-gray-500'}`}
+                      className={`font-semibold ${TYPE_COLOR[getNormalizedLogType(log)] ?? 'text-gray-500'}`}
                     >
-                      {log.type}
+                      {getNormalizedLogType(log)}
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-sm align-top">
                     <div className="space-y-1">
                       <div className="text-sm text-gray-800">{log.message}</div>
-                      {getAdminActionDescription(log.message) && (
-                        <div className="text-xs text-gray-500">
-                          {getAdminActionDescription(log.message)}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>
+                          {getNormalizedActorType(log) === 'admin'
+                            ? '관리자'
+                            : getNormalizedActorType(log) === 'user'
+                              ? '사용자'
+                              : '시스템'}
+                        </span>
+                        {getAdminActionDescription(log.message) && (
+                          <span>{getAdminActionDescription(log.message)}</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3.5 text-sm align-top">{log.actor}</td>
