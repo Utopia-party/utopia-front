@@ -47,6 +47,7 @@ type JoinResult = {
   service_name?: string;
   monthly_price?: number | null;
   original_price?: number | null;
+  service_total_price?: number | null;
   member_count?: number;
   max_members?: number | null;
   host_nickname?: string;
@@ -67,6 +68,7 @@ type PartyDetailResponse = {
   max_members?: number | null;
   monthly_price?: number | null;
   original_price?: number | null;
+  service_total_price?: number | null;
   host_nickname?: string;
   host_trust_score?: number | null;
   description?: string;
@@ -406,6 +408,8 @@ export default function Home() {
           detailedParty?.monthly_price ?? joinResponse?.monthly_price ?? null,
         original_price:
           detailedParty?.original_price ?? joinResponse?.original_price ?? null,
+        service_total_price:
+          detailedParty?.service_total_price ?? joinResponse?.service_total_price ?? null,
         host_nickname:
           detailedParty?.host_nickname ?? joinResponse?.host_nickname ?? '익명',
         host_trust_score:
