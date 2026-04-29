@@ -601,7 +601,12 @@ export default function MyParty() {
                       <StatusBadge label={statusLabel} isOwner={isOwner} />
                     </div>
 
-                    <h2 className="mt-5 text-[22px] font-extrabold leading-tight text-slate-900">
+                    {party.service_name && (
+                      <p className="mt-4 text-[13px] font-semibold text-slate-400">
+                        {party.service_name}
+                      </p>
+                    )}
+                    <h2 className="mt-1 text-[22px] font-extrabold leading-tight text-slate-900">
                       {party.title}
                     </h2>
 
