@@ -16,6 +16,38 @@ const TYPE_COLOR: Record<string, string> = {
   WARN: 'text-amber-600',
 };
 
+function getDisplayLogKind(log: SystemLogRecord) {
+  if (log.source === 'activity_log') {
+    return '액티비티 로그';
+  }
+
+  if (log.source === 'system_log') {
+    return '시스템 로그';
+  }
+
+  if (log.source === 'moderation_action') {
+    return '모더레이션 액션';
+  }
+
+  if (log.type === 'ERROR' || log.type === 'WARN' || log.type === 'INFO') {
+    return '시스템 로그';
+  }
+
+  if (/^(GET|POST|PATCH|PUT|DELETE)\s+\/api\/admin/.test(log.message)) {
+    return '액티비티 로그';
+  }
+
+  if (/: /.test(log.message) && getNormalizedActorType(log) === 'admin') {
+    return '모더레이션 액션';
+  }
+
+  if (log.type === 'ADMIN_ACTION' || log.type === 'USER_ACTION') {
+    return '액티비티 로그';
+  }
+
+  return '시스템 로그';
+}
+
 function getNormalizedActorType(log: SystemLogRecord) {
   if (
     log.actorType === 'admin' ||
@@ -229,22 +261,22 @@ export default function AdminSystemLogs() {
   const handleExport = () => {
     const header = [
       'timestamp',
-      'type',
+      'name',
+      'ip_address',
       'actor_type',
       'message',
       'description',
-      'actor',
     ];
     const csvRows = [
       header.join(','),
       ...filtered.map((log) =>
         [
           log.timestamp,
-          log.type,
+          log.actor,
+          log.ipAddress ?? '',
           getNormalizedActorType(log),
           log.message,
           getAdminActionDescription(log.message) ?? '',
-          log.actor,
         ]
           .map((value) => `"${String(value).replaceAll('"', '""')}"`)
           .join(','),
@@ -378,7 +410,7 @@ export default function AdminSystemLogs() {
                   시간
                 </th>
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  유형
+                  이름 / IP
                 </th>
                 <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
                   내용
@@ -398,22 +430,23 @@ export default function AdminSystemLogs() {
                     {log.timestamp}
                   </td>
                   <td className="px-4 py-3.5 text-sm align-top">
-                    <span
-                      className={`font-semibold ${TYPE_COLOR[getNormalizedLogType(log)] ?? 'text-gray-500'}`}
-                    >
-                      {getNormalizedLogType(log)}
-                    </span>
+                    <div className="space-y-1">
+                      <div className="font-medium text-gray-800">
+                        {log.actor}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {log.ipAddress || '-'}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3.5 text-sm align-top">
                     <div className="space-y-1">
                       <div className="text-sm text-gray-800">{log.message}</div>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>
-                          {getNormalizedActorType(log) === 'admin'
-                            ? '관리자'
-                            : getNormalizedActorType(log) === 'user'
-                              ? '사용자'
-                              : '시스템'}
+                        <span
+                          className={`font-semibold ${TYPE_COLOR[getNormalizedLogType(log)] ?? 'text-gray-500'}`}
+                        >
+                          {getDisplayLogKind(log)}
                         </span>
                         {getAdminActionDescription(log.message) && (
                           <span>{getAdminActionDescription(log.message)}</span>
@@ -421,7 +454,13 @@ export default function AdminSystemLogs() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-sm align-top">{log.actor}</td>
+                  <td className="px-4 py-3.5 text-sm align-top">
+                    {getNormalizedActorType(log) === 'admin'
+                      ? '관리자'
+                      : getNormalizedActorType(log) === 'user'
+                        ? '사용자'
+                        : '시스템'}
+                  </td>
                 </tr>
               ))}
               {paginatedLogs.length === 0 && (
