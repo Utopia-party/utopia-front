@@ -168,10 +168,7 @@ export function PaymentModal({
         <span>총 할인</span>
         <span className="font-bold">
           -{Math.round(discountRate * 100)}% (
-          {Math.max(
-            base - Math.round(base * (1 - discountRate)),
-            0,
-          ).toLocaleString()}
+          {Math.max(base - payAmount, 0).toLocaleString()}
           원 절약)
         </span>
       </div>
