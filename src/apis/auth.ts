@@ -18,6 +18,7 @@ import type {
   SocialLoginResponse,
   SocialSignupPayload,
   SocialSignupResponse,
+  ExtendSessionResponse,
 } from '../types/auth';
 
 // 회원가입
@@ -152,5 +153,11 @@ export const getMe = async (): Promise<MeResponse> => {
 
 export const logout = async (): Promise<{ message: string }> => {
   const response = await api.post<{ message: string }>('/api/logout');
+  return response.data;
+};
+
+export const extendUserSession = async (): Promise<ExtendSessionResponse> => {
+  // 백엔드의 @router.post("/refresh") 경로에 맞춤
+  const response = await api.post<ExtendSessionResponse>('/api/refresh');
   return response.data;
 };
