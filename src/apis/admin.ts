@@ -795,6 +795,169 @@ export async function fetchCaptchaSessions(
   return res.data;
 }
 
+// ── 캡챠 세션 이미지 미리보기 ──
+
+export type CaptchaImageItem = {
+  id: string;
+  category: string;
+  url: string;
+};
+
+export type SessionImagesResponse = {
+  session_id: string;
+  captcha_set_id?: string;
+  emojis: CaptchaImageItem[];
+  photos: CaptchaImageItem[];
+  answer_indices: number[];
+  message?: string;
+};
+
+export async function fetchSessionImages(
+  sessionId: string,
+): Promise<SessionImagesResponse> {
+  const res = await api.get(`/api/admin/captcha/sessions/${sessionId}/images`);
+  return res.data;
+}
+
+// ── 캡챠 이미지 관리 ──
+
+export type CaptchaImageDetail = {
+  id: string;
+  category: string;
+  image_key: string;
+  url: string;
+  created_at: string | null;
+};
+
+export type CategoryCount = {
+  category: string;
+  count: number;
+};
+
+export type CaptchaImagesResponse = {
+  image_type: string;
+  categories: CategoryCount[];
+  images: CaptchaImageDetail[];
+  total: number;
+  page: number;
+  size: number;
+  total_pages: number;
+};
+
+export type CaptchaSetInfo = {
+  id: string;
+  emoji_count: number;
+  photo_count: number;
+  answer_indices: number[];
+  use_count: number;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string | null;
+};
+
+export type ImageSetsResponse = {
+  image_id: string;
+  image_type: string;
+  sets: CaptchaSetInfo[];
+  total: number;
+};
+
+export async function fetchCaptchaImages(
+  imageType: 'emoji' | 'photo',
+  category?: string,
+  page: number = 1,
+  size: number = 50,
+): Promise<CaptchaImagesResponse> {
+  const res = await api.get('/api/admin/captcha/images', {
+    params: {
+      image_type: imageType,
+      ...(category ? { category } : {}),
+      page,
+      size,
+    },
+  });
+  return res.data;
+}
+
+export async function fetchImageSets(
+  imageId: string,
+  imageType: 'emoji' | 'photo',
+): Promise<ImageSetsResponse> {
+  const res = await api.get(`/api/admin/captcha/images/${imageId}/sets`, {
+    params: { image_type: imageType },
+  });
+  return res.data;
+}
+
+export async function deactivateCaptchaSet(
+  setId: string,
+): Promise<{ set_id: string; is_active: boolean; message: string }> {
+  const res = await api.put(`/api/admin/captcha/sets/${setId}/deactivate`);
+  return res.data;
+}
+
+export async function deactivateImage(
+  imageId: string,
+  imageType: 'emoji' | 'photo',
+): Promise<{
+  image_id: string;
+  image_type: string;
+  category: string;
+  deactivated_sets_count: number;
+  message: string;
+}> {
+  const res = await api.put(
+    `/api/admin/captcha/images/${imageId}/deactivate`,
+    null,
+    {
+      params: { image_type: imageType },
+    },
+  );
+  return res.data;
+}
+
+// ── 이미지 일괄 비활성화 ──
+
+export async function batchDeactivateImages(
+  imageIds: string[],
+  imageType: 'emoji' | 'photo',
+): Promise<{
+  deactivated_images: number;
+  deactivated_sets: number;
+  message: string;
+}> {
+  const res = await api.put('/api/admin/captcha/images/batch-deactivate', {
+    image_ids: imageIds,
+    image_type: imageType,
+  });
+  return res.data;
+}
+
+// ── 이모지 자동 생성 ──
+
+export async function generateCaptchaImages(params: {
+  num_per_category: number;
+  num_sets: number;
+  categories?: string;
+}): Promise<{
+  status: string;
+  message: string;
+  num_per_category?: number;
+  num_sets?: number;
+  categories?: string;
+}> {
+  const res = await api.post('/api/admin/captcha/generate', params);
+  return res.data;
+}
+
+export async function getGenerateStatus(): Promise<{
+  progress: string;
+  last_result: string | null;
+}> {
+  const res = await api.get('/api/admin/captcha/generate/status');
+  return res.data;
+}
+
 export type ModerationTrendPoint = {
   date: string;
   blocked: number;

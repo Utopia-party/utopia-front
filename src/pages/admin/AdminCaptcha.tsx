@@ -11,6 +11,13 @@ import {
   forceChallenge,
   fetchCaptchaStats,
   fetchCaptchaSessions,
+  fetchCaptchaImages,
+  fetchImageSets,
+  deactivateCaptchaSet,
+  deactivateImage,
+  batchDeactivateImages,
+  generateCaptchaImages,
+  getGenerateStatus,
   type ShadowModeResponse,
   type BlockedIpEntry,
   type CaptchaConfigResponse,
@@ -18,6 +25,9 @@ import {
   type CaptchaSessionsResponse,
   type CaptchaSessionEntry,
   type CaptchaPeriod,
+  type CaptchaImagesResponse,
+  type CaptchaImageDetail,
+  type CaptchaSetInfo,
 } from '../../apis/admin';
 
 function formatTtl(seconds: number): string {
@@ -191,6 +201,197 @@ export default function AdminCaptcha() {
     [statsPeriod],
   );
 
+  // ── 이미지 관리 ──
+  const [imgTab, setImgTab] = useState<'emoji' | 'photo'>('emoji');
+  const [imgCategory, setImgCategory] = useState<string>('');
+  const [imgData, setImgData] = useState<CaptchaImagesResponse | null>(null);
+  const [imgLoading, setImgLoading] = useState(false);
+  const [imgPage, setImgPage] = useState(1);
+  const [selectedImage, setSelectedImage] = useState<CaptchaImageDetail | null>(
+    null,
+  );
+  const [imageSets, setImageSets] = useState<CaptchaSetInfo[]>([]);
+  const [setsLoading, setSetsLoading] = useState(false);
+  const [deactivatingSetId, setDeactivatingSetId] = useState<string | null>(
+    null,
+  );
+
+  // 다중 선택
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [batchDeactivating, setBatchDeactivating] = useState(false);
+
+  // 이모지 생성
+  const [genCount, setGenCount] = useState(30);
+  const [genSets, setGenSets] = useState(50);
+  const [generating, setGenerating] = useState(false);
+  const [genProgress, setGenProgress] = useState<string>('idle');
+
+  const loadImages = useCallback(
+    async (
+      type: 'emoji' | 'photo' = imgTab,
+      cat?: string,
+      page: number = 1,
+    ) => {
+      setImgLoading(true);
+      try {
+        const data = await fetchCaptchaImages(type, cat || undefined, page, 50);
+        setImgData(data);
+      } catch {
+        // ignore
+      } finally {
+        setImgLoading(false);
+      }
+    },
+    [imgTab],
+  );
+
+  const handleImageClick = useCallback(
+    async (image: CaptchaImageDetail) => {
+      if (selectedImage?.id === image.id) {
+        setSelectedImage(null);
+        setImageSets([]);
+        return;
+      }
+      setSelectedImage(image);
+      setSetsLoading(true);
+      try {
+        const data = await fetchImageSets(image.id, imgTab);
+        setImageSets(data.sets);
+      } catch {
+        setImageSets([]);
+      } finally {
+        setSetsLoading(false);
+      }
+    },
+    [selectedImage, imgTab],
+  );
+
+  const handleDeactivateImage = useCallback(
+    async (image: CaptchaImageDetail) => {
+      if (
+        !confirm(
+          `이 ${imgTab === 'emoji' ? '이모지' : '실사'} 이미지를 비활성화하시겠습니까?\n연관 세트도 함께 정지됩니다.`,
+        )
+      )
+        return;
+      try {
+        const result = await deactivateImage(image.id, imgTab);
+        alert(result.message);
+        // 목록 새로고침
+        setSelectedImage(null);
+        setImageSets([]);
+        void loadImages(imgTab, imgCategory, imgPage);
+      } catch {
+        alert('이미지 비활성화에 실패했습니다.');
+      }
+    },
+    [imgTab, imgCategory, imgPage, loadImages],
+  );
+
+  const handleDeactivateSet = useCallback(async (setId: string) => {
+    if (!confirm('이 캡챠 세트를 정지하시겠습니까?')) return;
+    setDeactivatingSetId(setId);
+    try {
+      await deactivateCaptchaSet(setId);
+      setImageSets((prev) =>
+        prev.map((s) => (s.id === setId ? { ...s, is_active: false } : s)),
+      );
+    } catch {
+      alert('세트 정지에 실패했습니다.');
+    } finally {
+      setDeactivatingSetId(null);
+    }
+  }, []);
+
+  const toggleCheck = useCallback((id: string) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleCheckAll = useCallback(() => {
+    if (!imgData?.images) return;
+    const allIds = imgData.images.map((img) => img.id);
+    setCheckedIds((prev) => {
+      if (prev.size === allIds.length) return new Set();
+      return new Set(allIds);
+    });
+  }, [imgData]);
+
+  const handleBatchDeactivate = useCallback(async () => {
+    const ids = Array.from(checkedIds);
+    if (ids.length === 0) return;
+    if (
+      !confirm(
+        `선택한 ${ids.length}장의 이미지를 비활성화하시겠습니까?\n관련 세트도 함께 정지됩니다.`,
+      )
+    )
+      return;
+    setBatchDeactivating(true);
+    try {
+      const result = await batchDeactivateImages(ids, imgTab);
+      alert(result.message);
+      setCheckedIds(new Set());
+      setSelectedImage(null);
+      setImageSets([]);
+      void loadImages(imgTab, imgCategory, imgPage);
+    } catch {
+      alert('일괄 비활성화에 실패했습니다.');
+    } finally {
+      setBatchDeactivating(false);
+    }
+  }, [checkedIds, imgTab, imgCategory, imgPage, loadImages]);
+
+  const handleGenerate = useCallback(async () => {
+    if (
+      !confirm(
+        `카테고리당 ${genCount}장 생성 + ${genSets}개 세트를 만듭니다.\n진행하시겠습니까?`,
+      )
+    )
+      return;
+    setGenerating(true);
+    setGenProgress('starting');
+    try {
+      const result = await generateCaptchaImages({
+        num_per_category: genCount,
+        num_sets: genSets,
+      });
+      if (result.status === 'already_running') {
+        alert(result.message);
+        setGenerating(false);
+        return;
+      }
+      // 진행 상태 폴링
+      const poll = setInterval(async () => {
+        try {
+          const status = await getGenerateStatus();
+          setGenProgress(status.progress);
+          if (
+            status.progress === 'done' ||
+            status.progress.startsWith('error')
+          ) {
+            clearInterval(poll);
+            setGenerating(false);
+            if (status.progress === 'done') {
+              alert('이모지 생성 + 세트 생성 완료!');
+              void loadImages(imgTab, imgCategory, 1);
+            } else {
+              alert(`생성 실패: ${status.progress}`);
+            }
+          }
+        } catch {
+          // ignore polling errors
+        }
+      }, 3000);
+    } catch {
+      alert('생성 요청에 실패했습니다.');
+      setGenerating(false);
+    }
+  }, [genCount, genSets, imgTab, imgCategory, loadImages]);
+
   // ── 캡챠 세션 로그 ──
   const [sessionsData, setSessionsData] =
     useState<CaptchaSessionsResponse | null>(null);
@@ -220,6 +421,12 @@ export default function AdminCaptcha() {
     loadStats();
     loadSessions();
   }, [loadShadowMode, loadBlockedIps, loadConfig, loadStats, loadSessions]);
+
+  // 이미지 관리 초기 로드 (1회)
+  useEffect(() => {
+    loadImages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -962,6 +1169,363 @@ export default function AdminCaptcha() {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* ── 이미지 관리 ── */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600 text-sm font-bold">
+                  🖼
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    이미지 관리
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    이모지 · 실사 이미지 조회 및 세트 관리
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 이모지 자동 생성 */}
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <h4 className="text-xs font-semibold text-emerald-800 mb-3">
+                이모지 생성 + 세트 생성
+              </h4>
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="block text-[10px] text-slate-500 mb-1">
+                    카테고리당 생성 수
+                  </label>
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    step={10}
+                    value={genCount}
+                    onChange={(e) => setGenCount(Number(e.target.value))}
+                    className="w-32"
+                  />
+                  <span className="ml-2 text-xs font-medium text-emerald-700">
+                    {genCount}장
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-500 mb-1">
+                    세트 수
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={genSets}
+                    onChange={(e) => setGenSets(Number(e.target.value))}
+                    className="w-20 rounded-md border border-slate-200 px-2 py-1 text-xs"
+                  />
+                </div>
+                <button
+                  onClick={() => void handleGenerate()}
+                  disabled={generating}
+                  className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition disabled:opacity-50"
+                >
+                  {generating ? `생성 중 (${genProgress})...` : '생성 시작'}
+                </button>
+              </div>
+            </div>
+
+            {/* 탭: 이모지 / 실사 */}
+            <div className="flex gap-1 mb-4 p-1 bg-slate-100 rounded-lg w-fit">
+              {(['emoji', 'photo'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setImgTab(tab);
+                    setImgCategory('');
+                    setImgPage(1);
+                    setSelectedImage(null);
+                    setImageSets([]);
+                    setCheckedIds(new Set());
+                    void loadImages(tab, '', 1);
+                  }}
+                  className={`px-4 py-1.5 text-xs font-medium rounded-md transition ${
+                    imgTab === tab
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {tab === 'emoji' ? '이모지' : '실사 사진'}
+                </button>
+              ))}
+            </div>
+
+            {/* 카테고리 필터 */}
+            {imgData && imgData.categories.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                <button
+                  onClick={() => {
+                    setImgCategory('');
+                    setImgPage(1);
+                    setSelectedImage(null);
+                    setImageSets([]);
+                    setCheckedIds(new Set());
+                    void loadImages(imgTab, '', 1);
+                  }}
+                  className={`px-3 py-1 text-xs rounded-full transition ${
+                    !imgCategory
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  전체 ({imgData.total})
+                </button>
+                {imgData.categories.map((cat) => (
+                  <button
+                    key={cat.category}
+                    onClick={() => {
+                      setImgCategory(cat.category);
+                      setImgPage(1);
+                      setSelectedImage(null);
+                      setImageSets([]);
+                      setCheckedIds(new Set());
+                      void loadImages(imgTab, cat.category, 1);
+                    }}
+                    className={`px-3 py-1 text-xs rounded-full transition ${
+                      imgCategory === cat.category
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {cat.category} ({cat.count})
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* 이미지 그리드 */}
+            {imgLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+                <span className="ml-2 text-sm text-slate-500">로딩 중...</span>
+              </div>
+            ) : !imgData || imgData.images.length === 0 ? (
+              <div className="rounded-xl border border-slate-100 bg-slate-50 px-5 py-8 text-center">
+                <p className="text-sm text-slate-400">이미지가 없습니다.</p>
+              </div>
+            ) : (
+              <>
+                {/* 선택 액션 바 */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={toggleCheckAll}
+                    className="rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                  >
+                    {checkedIds.size === imgData.images.length
+                      ? '전체 해제'
+                      : '전체 선택'}
+                  </button>
+                  {checkedIds.size > 0 && (
+                    <button
+                      onClick={() => void handleBatchDeactivate()}
+                      disabled={batchDeactivating}
+                      className="rounded-md bg-rose-500 px-3 py-1 text-xs font-medium text-white hover:bg-rose-600 transition disabled:opacity-50"
+                    >
+                      {batchDeactivating
+                        ? '처리 중...'
+                        : `선택 비활성화 (${checkedIds.size}장)`}
+                    </button>
+                  )}
+                  <span className="text-xs text-slate-400">
+                    클릭: 세트 조회 · 체크박스: 다중 선택
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 mb-4">
+                  {imgData.images.map((img) => (
+                    <div
+                      key={img.id}
+                      className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition hover:scale-105 ${
+                        selectedImage?.id === img.id
+                          ? 'border-violet-500 ring-2 ring-violet-200'
+                          : checkedIds.has(img.id)
+                            ? 'border-rose-400 ring-2 ring-rose-200'
+                            : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checkedIds.has(img.id)}
+                        onChange={() => toggleCheck(img.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-1 left-1 z-10 w-4 h-4 accent-rose-500 cursor-pointer"
+                      />
+                      <img
+                        src={img.url}
+                        alt={img.category}
+                        className="w-full aspect-square object-cover"
+                        loading="lazy"
+                        onClick={() => void handleImageClick(img)}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* 이미지 페이지네이션 */}
+                {imgData.total_pages > 1 && (
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs text-slate-400">
+                      {imgData.total}개 중{' '}
+                      {(imgData.page - 1) * imgData.size + 1}~
+                      {Math.min(imgData.page * imgData.size, imgData.total)}개
+                    </p>
+                    <div className="flex gap-1">
+                      <button
+                        disabled={imgPage <= 1}
+                        onClick={() => {
+                          const p = imgPage - 1;
+                          setImgPage(p);
+                          void loadImages(imgTab, imgCategory, p);
+                        }}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                      >
+                        이전
+                      </button>
+                      <span className="px-3 py-1 text-xs text-slate-500">
+                        {imgData.page} / {imgData.total_pages}
+                      </span>
+                      <button
+                        disabled={imgPage >= imgData.total_pages}
+                        onClick={() => {
+                          const p = imgPage + 1;
+                          setImgPage(p);
+                          void loadImages(imgTab, imgCategory, p);
+                        }}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 선택된 이미지 → 세트 목록 */}
+            {selectedImage && (
+              <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-16 h-16 rounded-lg border-2 border-violet-400 overflow-hidden">
+                    <img
+                      src={selectedImage.url}
+                      alt={selectedImage.category}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {selectedImage.category}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {selectedImage.id.slice(0, 8)}... ·{' '}
+                      {imgTab === 'emoji' ? '이모지' : '실사'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void handleDeactivateImage(selectedImage)}
+                    className="rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 transition"
+                  >
+                    이미지 비활성화
+                  </button>
+                </div>
+
+                <h4 className="text-xs font-semibold text-slate-700 mb-2">
+                  사용 중인 캡챠 세트
+                </h4>
+
+                {setsLoading ? (
+                  <div className="flex items-center py-3">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+                    <span className="ml-2 text-xs text-slate-500">
+                      세트 조회 중...
+                    </span>
+                  </div>
+                ) : imageSets.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-2">
+                    이 이미지를 사용하는 세트가 없습니다.
+                  </p>
+                ) : (
+                  <div className="overflow-hidden rounded-lg border border-violet-200">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-violet-100">
+                          <th className="px-3 py-2 text-left text-slate-600">
+                            세트 ID
+                          </th>
+                          <th className="px-3 py-2 text-center text-slate-600">
+                            이모지
+                          </th>
+                          <th className="px-3 py-2 text-center text-slate-600">
+                            실사
+                          </th>
+                          <th className="px-3 py-2 text-center text-slate-600">
+                            사용횟수
+                          </th>
+                          <th className="px-3 py-2 text-center text-slate-600">
+                            상태
+                          </th>
+                          <th className="px-3 py-2 text-center text-slate-600">
+                            관리
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {imageSets.map((s) => (
+                          <tr key={s.id} className="border-t border-violet-100">
+                            <td className="px-3 py-2 font-mono text-slate-700">
+                              {s.id.slice(0, 8)}...
+                            </td>
+                            <td className="px-3 py-2 text-center text-slate-600">
+                              {s.emoji_count}
+                            </td>
+                            <td className="px-3 py-2 text-center text-slate-600">
+                              {s.photo_count}
+                            </td>
+                            <td className="px-3 py-2 text-center text-slate-600">
+                              {s.use_count}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                  s.is_active
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-slate-200 text-slate-500'
+                                }`}
+                              >
+                                {s.is_active ? '활성' : '정지'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {s.is_active && (
+                                <button
+                                  onClick={() => void handleDeactivateSet(s.id)}
+                                  disabled={deactivatingSetId === s.id}
+                                  className="rounded-md bg-rose-100 px-2.5 py-1 text-[10px] font-medium text-rose-700 hover:bg-rose-200 transition disabled:opacity-50"
+                                >
+                                  {deactivatingSetId === s.id
+                                    ? '처리중...'
+                                    : '정지'}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           {/* ── 캡챠 세션 로그 ── */}
