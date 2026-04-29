@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 
-import type { Party } from '../types/party';
+import type { Party } from '../../types/party';
 import {
   fetchParties,
   fetchParty,
@@ -12,28 +12,28 @@ import {
   fetchTrendingKeywords,
   recordSearchKeyword,
   searchKeys,
-} from '../libs/partyapi';
-import PartyDetailModal from '../components/party/PartyDetail';
-import QuickMatchForm from '../components/quickMatch/QuickMatchForm';
-import MatchingLoadingModal from '../components/quickMatch/MatchingLoadingModal';
-import MatchingErrorModal from '../components/quickMatch/MatchingErrorModal';
-import MatchingSuccessModal from '../components/quickMatch/MatchingSuccessModal';
+} from '../../libs/partyapi';
+import PartyDetailModal from '../../components/party/PartyDetail';
+import QuickMatchForm from '../../components/quickMatch/QuickMatchForm';
+import MatchingLoadingModal from '../../components/quickMatch/MatchingLoadingModal';
+import MatchingErrorModal from '../../components/quickMatch/MatchingErrorModal';
+import MatchingSuccessModal from '../../components/quickMatch/MatchingSuccessModal';
 import {
   useQuickMatchRequest,
   useQuickMatchCandidates,
   useQuickMatchSelect,
   useQuickMatchJoin,
-} from '../hooks/useQuickMatch';
-import { useAuthStore } from '../stores/authStore';
-import { getPaymentPreview } from '../apis/quickMatchApi';
-import type { PaymentPreviewResponse } from '../types/quickMatch';
-import CategorySidebar from './Home/components/CategorySidebar';
-import SearchBar from './Home/components/SearchBar';
-import KeywordChips from './Home/components/KeywordChips';
-import SectionTitle from './Home/components/SectionTitle';
-import PartyCard from './Home/components/PartyCard';
-import ApplyModal from './Home/components/ApplyModal';
-import type { ApiError } from '../types/error';
+} from '../../hooks/useQuickMatch';
+import { useAuthStore } from '../../stores/authStore';
+import { getPaymentPreview } from '../../apis/quickMatchApi';
+import type { PaymentPreviewResponse } from '../../types/quickMatch';
+import CategorySidebar from './components/CategorySidebar';
+import SearchBar from './components/SearchBar';
+import KeywordChips from './components/KeywordChips';
+import SectionTitle from './components/SectionTitle';
+import PartyCard from './components/PartyCard';
+import ApplyModal from './components/ApplyModal';
+import type { ApiError } from '../../types/error';
 
 type PartyWithDetails = Party & {
   description?: string;
