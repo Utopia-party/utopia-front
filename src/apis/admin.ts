@@ -69,14 +69,18 @@ export type AdminRoleRecord = {
   id: string;
   userId: string;
   adminId: string;
+  canViewDashboard: boolean;
   canManageUsers: boolean;
+  canManageServices: boolean;
   canManageParties: boolean;
+  canManageQuickMatch: boolean;
   canManageReports: boolean;
   canManageChatModeration: boolean;
   canManageCaptcha: boolean;
   canApproveSettlements: boolean;
   canManagePayments: boolean;
   canViewLogs: boolean;
+  canViewCloudMonitoring: boolean;
   canManageAdmins: boolean;
   canManageHandOcr: boolean;
   lastUpdated: string;
