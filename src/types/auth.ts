@@ -158,3 +158,7 @@ export interface MeResponse {
   is_logged_in: boolean;
   user: AuthUser | null;
 }
+
+export interface ExtendSessionResponse {
+  message: string;
+}
