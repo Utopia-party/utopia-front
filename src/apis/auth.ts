@@ -83,7 +83,6 @@ export const signup = async (
   return response.data;
 };
 
-// 이메일 찾기
 export const findId = async (
   payload: FindIdPayload,
 ): Promise<FindIdResponse> => {
@@ -94,7 +93,6 @@ export const findId = async (
   return response.data;
 };
 
-// 비밀번호 찾기
 export const findPassword = async (
   payload: FindPasswordPayload,
 ): Promise<FindPasswordResponse> => {
@@ -115,7 +113,6 @@ export const resetPassword = async (
   return response.data;
 };
 
-// 일반로그인
 export const login = async (
   payload: LoginPayload,
   captchaToken: string,
@@ -148,13 +145,11 @@ export const socialSignup = async (
   return response.data;
 };
 
-// 로그인 회원 관리
 export const getMe = async (): Promise<MeResponse> => {
   const response = await api.get<MeResponse>('/api/me');
   return response.data;
 };
 
-// 로그아웃
 export const logout = async (): Promise<{ message: string }> => {
   const response = await api.post<{ message: string }>('/api/logout');
   return response.data;

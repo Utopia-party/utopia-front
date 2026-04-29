@@ -1,61 +1,24 @@
 import { api } from './api';
+
 import type {
   MyPaymentItem,
   GetMyPaymentsResponse,
+  GetMyProfileResponse,
   UpdateMyProfilePayload,
   UpdateMyProfileResponse,
+  GetMyTrustHistoryResponse,
+  DeleteMyAccountPayload,
+  DeleteMyAccountResponse,
+  GetMyReferrersResponse,
+  UpdateMyReferrersPayload,
+  UpdateMyReferrersResponse,
 } from '../types/user';
 
-// 마이페이지 - 프로필
-// 최근활동 내역
-export interface TrustHistoryApiItem {
-  id: number | string;
-  title: string;
-  detail: string;
-  score_change: number;
-  trust_score_after?: number | null;
-  created_at: string;
-}
-
-export interface GetMyTrustHistoryResponse {
-  items: TrustHistoryApiItem[];
-}
-
-export interface RecentActivityItem {
-  id: string;
-  action: string;
-  description?: string | null;
-  ip_address?: string | null;
-  user_agent?: string | null;
-  metadata?: Record<string, unknown>;
-  target_id?: string | null;
-  created_at: string;
-}
-
-export interface GetMyProfileResponse {
-  user_id: string;
-  email: string;
-  name?: string | null;
-  nickname: string;
-  phone?: string | null;
-  provider: string;
-  role: string;
-  trust_score: number;
-  profile_image?: string | null;
-  created_at?: string;
-  total_party_participations: number;
-  active_party_count: number;
-  recommendation_count: number;
-  recent_activities: RecentActivityItem[];
-}
-
-// 내 프로필 조회
 export async function getMyProfile(): Promise<GetMyProfileResponse> {
   const { data } = await api.get<GetMyProfileResponse>('/api/users/me/profile');
   return data;
 }
 
-// 마이페이지 프로필 이미지/닉네임/휴대전화 수정
 export async function updateMyProfile(
   payload: UpdateMyProfilePayload,
 ): Promise<UpdateMyProfileResponse> {
@@ -80,7 +43,6 @@ export async function updateMyProfile(
   return data;
 }
 
-// 마이페이지 - 신뢰도 변화
 export async function getMyTrustHistory(): Promise<GetMyTrustHistoryResponse> {
   const { data } = await api.get<GetMyTrustHistoryResponse>(
     '/api/users/me/trust-history',
@@ -89,9 +51,6 @@ export async function getMyTrustHistory(): Promise<GetMyTrustHistoryResponse> {
   return data;
 }
 
-// ==============================
-// 결제 내역 조회
-// ==============================
 export async function fetchMyPayments(): Promise<MyPaymentItem[]> {
   const { data } = await api.get<MyPaymentItem[] | GetMyPaymentsResponse>(
     '/api/mypage/payments',
@@ -104,23 +63,31 @@ export async function fetchMyPayments(): Promise<MyPaymentItem[]> {
   return data.items ?? [];
 }
 
-// ==============================
-// 회원탈퇴
-// ==============================
-export interface DeleteMyAccountPayload {
-  password?: string;
-}
-
-export interface DeleteMyAccountResponse {
-  message: string;
-}
-
 export async function deleteMyAccount(
   payload?: DeleteMyAccountPayload,
 ): Promise<DeleteMyAccountResponse> {
   const { data } = await api.delete<DeleteMyAccountResponse>('/api/users/me', {
     data: payload ?? {},
   });
+
+  return data;
+}
+
+export async function getMyReferrers(): Promise<GetMyReferrersResponse> {
+  const { data } = await api.get<GetMyReferrersResponse>(
+    '/api/users/me/referrers',
+  );
+
+  return data;
+}
+
+export async function updateMyReferrers(
+  payload: UpdateMyReferrersPayload,
+): Promise<UpdateMyReferrersResponse> {
+  const { data } = await api.patch<UpdateMyReferrersResponse>(
+    '/api/users/me/referrers',
+    payload,
+  );
 
   return data;
 }
