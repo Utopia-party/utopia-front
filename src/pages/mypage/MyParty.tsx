@@ -622,6 +622,16 @@ export default function MyParty() {
                             빠른매칭 수수료 포함
                           </p>
                         ) : null}
+                        {isOwner && (party.leader_discount_rate ?? 0) > 0 && (
+                          <p className="mt-1 text-[12px] font-bold text-blue-500">
+                            방장 할인 적용
+                          </p>
+                        )}
+                        {party.has_referrer_discount && (
+                          <p className="mt-1 text-[12px] font-bold text-green-500">
+                            추천인 할인 적용
+                          </p>
+                        )}
                         {savingAmount != null && (
                           <p className="mt-1 text-[12px] font-bold text-emerald-600">
                             월 {savingAmount.toLocaleString()}원 절약
