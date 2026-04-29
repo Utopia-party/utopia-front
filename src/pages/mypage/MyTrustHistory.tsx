@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import { getMyTrustHistory, type TrustHistoryApiItem } from '../../apis/user';
+import { getMyTrustHistory } from '../../apis/user';
+import type { TrustHistoryApiItem } from '../../types/user';
 
 type TrustHistoryItem = {
   id: number | string;

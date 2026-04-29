@@ -53,7 +53,7 @@ export default function Signup() {
     /^[A-Za-z0-9가-힣]{2,10}$/.test(nickname);
 
   const validatePassword = (password: string) =>
-    /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/.test(
+    /(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{}:;,.?~\\/-]).{8,}$/.test(
       password,
     );
 
