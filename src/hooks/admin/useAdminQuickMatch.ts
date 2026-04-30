@@ -7,6 +7,7 @@ import {
   regenerateUserQuickMatchEmbedding,
   retryAdminQuickMatchRequest,
   runQuickMatchEmbeddingBackfill,
+  runUserQuickMatchEmbeddingBackfill,
   updateAdminQuickMatchPolicy,
 } from '../../apis/admin/adminQuickMatch';
 import type {
@@ -146,6 +147,11 @@ export function useAdminQuickMatch() {
     await fetchRequests();
   }, [fetchRequests]);
 
+  const runUserEmbeddingBackfill = useCallback(async () => {
+    await runUserQuickMatchEmbeddingBackfill();
+    await fetchRequests();
+  }, [fetchRequests]);
+
   return {
     rows,
     summary,
@@ -167,6 +173,7 @@ export function useAdminQuickMatch() {
     regenerateUserEmbedding,
     regeneratePartyEmbedding,
     runEmbeddingBackfill,
+    runUserEmbeddingBackfill,
     refetch: fetchRequests,
   };
 }

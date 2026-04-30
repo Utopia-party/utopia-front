@@ -157,7 +157,8 @@ export default function AdminQuickMatch() {
   const [policyDraft, setPolicyDraft] = useState<TuningPolicy | null>(null);
   const [policyDirty, setPolicyDirty] = useState(false);
   const [policySaved, setPolicySaved] = useState(false);
-  const [backfillRequested, setBackfillRequested] = useState(false);
+  const [partyBackfillRequested, setPartyBackfillRequested] = useState(false);
+  const [userBackfillRequested, setUserBackfillRequested] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const {
@@ -180,6 +181,7 @@ export default function AdminQuickMatch() {
     regenerateUserEmbedding,
     regeneratePartyEmbedding,
     runEmbeddingBackfill,
+    runUserEmbeddingBackfill,
   } = useAdminQuickMatch();
 
   useEffect(() => {
@@ -249,12 +251,23 @@ export default function AdminQuickMatch() {
     setPolicySaved(false);
   };
 
-  const handleBackfill = async () => {
+  const handlePartyBackfill = async () => {
     try {
-      setActionLoading('backfill');
+      setActionLoading('party-backfill');
       await runEmbeddingBackfill();
-      setBackfillRequested(true);
-      setTimeout(() => setBackfillRequested(false), 2500);
+      setPartyBackfillRequested(true);
+      setTimeout(() => setPartyBackfillRequested(false), 2500);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUserBackfill = async () => {
+    try {
+      setActionLoading('user-backfill');
+      await runUserEmbeddingBackfill();
+      setUserBackfillRequested(true);
+      setTimeout(() => setUserBackfillRequested(false), 2500);
     } finally {
       setActionLoading(null);
     }
@@ -448,7 +461,6 @@ export default function AdminQuickMatch() {
                         '상태',
                         '선택 파티',
                         '소요 시간',
-                        // '재시도',
                       ].map((head) => (
                         <th
                           key={head}
@@ -500,9 +512,6 @@ export default function AdminQuickMatch() {
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
                           {formatSeconds(row.totalMatchSeconds)}
                         </td>
-                        {/* <td className="px-4 py-3 text-sm text-slate-600">
-                          {row.retryCount}회
-                        </td> */}
                       </tr>
                     ))}
 
@@ -700,7 +709,6 @@ export default function AdminQuickMatch() {
                       </div>
                     </div>
                   </div>
-
                   <div className="mt-6">
                     <div className="mb-3 flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-slate-900">
@@ -1093,13 +1101,30 @@ export default function AdminQuickMatch() {
                       처리해야 하는 항목입니다.
                     </p>
                   </div>
-                  <button
-                    onClick={handleBackfill}
-                    disabled={actionLoading !== null}
-                    className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {backfillRequested ? '백필 요청됨 ✓' : '임베딩 백필 실행'}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={handlePartyBackfill}
+                      disabled={actionLoading !== null}
+                      className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {partyBackfillRequested
+                        ? '파티 백필 요청됨 ✓'
+                        : actionLoading === 'party-backfill'
+                          ? '파티 백필 요청 중...'
+                          : '파티 임베딩 백필 실행'}
+                    </button>
+                    <button
+                      onClick={handleUserBackfill}
+                      disabled={actionLoading !== null}
+                      className="rounded-md border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {userBackfillRequested
+                        ? '사용자 백필 요청됨 ✓'
+                        : actionLoading === 'user-backfill'
+                          ? '사용자 백필 요청 중...'
+                          : '사용자 임베딩 백필 실행'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-5 grid gap-4">
@@ -1145,9 +1170,9 @@ export default function AdminQuickMatch() {
                   </div>
 
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-                    임베딩 백필은 파티 생성/수정 로직이 바뀌었거나 기존 파티에
-                    임베딩이 없는 경우에만 실행하세요. 반복 실행은 비용과 시간이
-                    증가할 수 있습니다.
+                    임베딩 백필은 사용자/파티 프로필 직렬화 로직이 바뀌었거나
+                    기존 데이터에 임베딩이 없는 경우에만 실행하세요. 반복 실행은
+                    비용과 시간이 증가할 수 있습니다.
                   </div>
                 </div>
               </div>
