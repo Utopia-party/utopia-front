@@ -107,9 +107,18 @@ export async function regeneratePartyQuickMatchEmbedding(partyId: string) {
   );
 }
 
+// 파티 임베딩 백필
 export async function runQuickMatchEmbeddingBackfill() {
   return request<AdminQuickMatchActionResponse>(
     '/api/admin/quick-match/embedding-backfill',
+    { method: 'POST' },
+  );
+}
+
+// 사용자 임베딩 백필
+export async function runUserQuickMatchEmbeddingBackfill() {
+  return request<AdminQuickMatchActionResponse>(
+    '/api/admin/quick-match/users/embedding-backfill',
     { method: 'POST' },
   );
 }
