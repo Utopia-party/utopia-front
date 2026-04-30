@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import AdminHeader from './components/AdminHeader';
 
 const API = '/api/admin/cloud-monitor';
 
 // ── 서버 역할 매핑 (이름 기반) ──
 const SERVER_ROLE: Record<string, { label: string; color: string }> = {
-  front:   { label: 'Frontend',  color: 'bg-blue-100 text-blue-700' },
-  backe:   { label: 'Backend',   color: 'bg-violet-100 text-violet-700' },
-  db:      { label: 'DB',        color: 'bg-amber-100 text-amber-700' },
-  gpu:     { label: 'GPU',       color: 'bg-emerald-100 text-emerald-700' },
+  front: { label: 'Frontend', color: 'bg-blue-100 text-blue-700' },
+  backe: { label: 'Backend', color: 'bg-violet-100 text-violet-700' },
+  db: { label: 'DB', color: 'bg-amber-100 text-amber-700' },
+  gpu: { label: 'GPU', color: 'bg-emerald-100 text-emerald-700' },
 };
 
 function getRoleTag(name: string) {
@@ -19,8 +19,22 @@ function getRoleTag(name: string) {
 }
 
 // ── 타입 ──
-type PromResult = { metric: Record<string, string>; value?: [number, string]; values?: [number, string][] };
-type SummaryMetrics = { cpu: PromResult[]; mem: PromResult[]; mem_used: PromResult[]; mem_total: PromResult[]; net_in: PromResult[]; net_out: PromResult[]; disk: PromResult[]; disk_used: PromResult[]; disk_total: PromResult[] };
+type PromResult = {
+  metric: Record<string, string>;
+  value?: [number, string];
+  values?: [number, string][];
+};
+type SummaryMetrics = {
+  cpu: PromResult[];
+  mem: PromResult[];
+  mem_used: PromResult[];
+  mem_total: PromResult[];
+  net_in: PromResult[];
+  net_out: PromResult[];
+  disk: PromResult[];
+  disk_used: PromResult[];
+  disk_total: PromResult[];
+};
 type RangePoint = { ts: number; val: number };
 
 // ── ID → 서버 이름 매핑 (카카오클라우드 VM instance_id 기준) ──
@@ -31,35 +45,63 @@ const INSTANCE_NAME_MAP: Record<string, string> = {
   '3fd334a5-c5cc-49d9-84d5-f8918fb74196': 't1_1vm_gpu_gn1i_4xlarge',
 };
 
+const PERIOD_MAP: Record<string, { seconds: number; step: string }> = {
+  '30m': { seconds: 1800, step: '30' },
+  '1h': { seconds: 3600, step: '60' },
+  '3h': { seconds: 10800, step: '120' },
+  '6h': { seconds: 21600, step: '300' },
+  '24h': { seconds: 86400, step: '600' },
+};
+
 // ── 레이블에서 인스턴스명 추출 ──
 function instanceName(r: PromResult): string {
   const m = r.metric;
   const id = m?.instance_id;
   if (id && INSTANCE_NAME_MAP[id]) return INSTANCE_NAME_MAP[id];
   return (
-    m?.instance_name ?? m?.display_name ?? m?.name ??
-    m?.hostname ?? m?.host ?? m?.instance ??
-    m?.resource_id ?? id ?? '알 수 없음'
+    m?.instance_name ??
+    m?.display_name ??
+    m?.name ??
+    m?.hostname ??
+    m?.host ??
+    m?.instance ??
+    m?.resource_id ??
+    id ??
+    '알 수 없음'
   );
 }
 
 // ── 유틸 ──
-function metricVal(r: PromResult): number { return parseFloat(r.value?.[1] ?? '0') || 0; }
-function avgOf(arr: PromResult[]) { return arr.length ? arr.reduce((s, r) => s + metricVal(r), 0) / arr.length : 0; }
-function maxOf(arr: PromResult[]) { return arr.length ? Math.max(...arr.map(metricVal)) : 0; }
-function sumOf(arr: PromResult[]) { return arr.reduce((s, r) => s + metricVal(r), 0); }
+function metricVal(r: PromResult): number {
+  return parseFloat(r.value?.[1] ?? '0') || 0;
+}
+function avgOf(arr: PromResult[]) {
+  return arr.length
+    ? arr.reduce((s, r) => s + metricVal(r), 0) / arr.length
+    : 0;
+}
+function maxOf(arr: PromResult[]) {
+  return arr.length ? Math.max(...arr.map(metricVal)) : 0;
+}
+function sumOf(arr: PromResult[]) {
+  return arr.reduce((s, r) => s + metricVal(r), 0);
+}
 
 function fmtBytes(b: number) {
   if (b >= 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB/s`;
   if (b >= 1024) return `${(b / 1024).toFixed(1)} KB/s`;
   return `${b.toFixed(0)} B/s`;
 }
-function fmtPct(v: number) { return `${v.toFixed(1)}%`; }
+function fmtPct(v: number) {
+  return `${v.toFixed(1)}%`;
+}
 function fmtDatetime(d: Date) {
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 `
-    + `${String(d.getHours()).padStart(2, '0')}시 `
-    + `${String(d.getMinutes()).padStart(2, '0')}분 `
-    + `${String(d.getSeconds()).padStart(2, '0')}초`;
+  return (
+    `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ` +
+    `${String(d.getHours()).padStart(2, '0')}시 ` +
+    `${String(d.getMinutes()).padStart(2, '0')}분 ` +
+    `${String(d.getSeconds()).padStart(2, '0')}초`
+  );
 }
 function statusColor(pct: number) {
   if (pct >= 90) return 'text-red-600';
@@ -73,20 +115,46 @@ function barColor(pct: number) {
 }
 
 // ── 스파크라인 (요약카드용 미니) ──
-function SparkLine({ data, color = '#6366f1', height = 48 }: { data: RangePoint[]; color?: string; height?: number }) {
-  if (data.length < 2) return (
-    <div className="flex items-center justify-center text-xs text-gray-300" style={{ height }}>데이터 없음</div>
-  );
-  const W = 300, H = height, P = 2;
-  const vals = data.map(d => d.val);
-  const min = Math.min(...vals), max = Math.max(...vals) || 1;
+function SparkLine({
+  data,
+  color = '#6366f1',
+  height = 48,
+}: {
+  data: RangePoint[];
+  color?: string;
+  height?: number;
+}) {
+  if (data.length < 2)
+    return (
+      <div
+        className="flex items-center justify-center text-[10px] md:text-xs text-gray-300"
+        style={{ height }}
+      >
+        데이터 없음
+      </div>
+    );
+  const W = 300,
+    H = height,
+    P = 2;
+  const vals = data.map((d) => d.val);
+  const min = Math.min(...vals),
+    max = Math.max(...vals) || 1;
   const xs = data.map((_, i) => P + (i / (data.length - 1)) * (W - P * 2));
-  const ys = vals.map(v => H - P - ((v - min) / (max - min || 1)) * (H - P * 2));
-  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const ys = vals.map(
+    (v) => H - P - ((v - min) / (max - min || 1)) * (H - P * 2),
+  );
+  const path = xs
+    .map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`)
+    .join(' ');
   const fill = `${path} L${xs[xs.length - 1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`;
   const gradId = `sg_${color.replace('#', '')}`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }} preserveAspectRatio="none">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full"
+      style={{ height }}
+      preserveAspectRatio="none"
+    >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.25" />
@@ -94,55 +162,85 @@ function SparkLine({ data, color = '#6366f1', height = 48 }: { data: RangePoint[
         </linearGradient>
       </defs>
       <path d={fill} fill={`url(#${gradId})`} />
-      <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      <path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 // ── 메인 라인 차트 (리소스 추이용 — Y축 0~100, X축 시간) ──
-function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
-  data: RangePoint[]; color?: string; period: string; isBytes?: boolean;
+function LineChart({
+  data,
+  color = '#6366f1',
+  period,
+  isBytes = false,
+}: {
+  data: RangePoint[];
+  color?: string;
+  period: string;
+  isBytes?: boolean;
 }) {
-  const [tooltip, setTooltip] = React.useState<{ x: number; y: number; val: number; time: string } | null>(null);
+  const [tooltip, setTooltip] = React.useState<{
+    x: number;
+    y: number;
+    val: number;
+    time: string;
+  } | null>(null);
 
-  if (data.length < 2) return (
-    <div className="flex items-center justify-center h-full text-sm text-gray-400">
-      데이터가 없습니다. 서버를 선택하거나 에이전트 설치를 확인해 주세요.
-    </div>
-  );
+  if (data.length < 2)
+    return (
+      <div className="flex items-center justify-center h-full text-xs md:text-sm text-gray-400 break-keep px-4 text-center">
+        데이터가 없습니다. 서버를 선택하거나 에이전트 설치를 확인해 주세요.
+      </div>
+    );
 
-  const W = 800, H = 180;
+  const W = 800,
+    H = 180;
   const PAD = { top: 12, right: 16, bottom: 32, left: 44 };
   const CW = W - PAD.left - PAD.right;
   const CH = H - PAD.top - PAD.bottom;
 
-  const vals = data.map(d => d.val);
+  const vals = data.map((d) => d.val);
   const yMin = 0;
   const yMax = isBytes ? Math.max(...vals) * 1.15 || 1 : 100;
 
   const toX = (i: number) => PAD.left + (i / (data.length - 1)) * CW;
   const toY = (v: number) => PAD.top + CH - ((v - yMin) / (yMax - yMin)) * CH;
 
-  const linePath = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(d.val).toFixed(1)}`).join(' ');
+  const linePath = data
+    .map(
+      (d, i) =>
+        `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(d.val).toFixed(1)}`,
+    )
+    .join(' ');
   const fillPath = `${linePath} L${toX(data.length - 1).toFixed(1)},${PAD.top + CH} L${toX(0).toFixed(1)},${PAD.top + CH} Z`;
 
   // Y축 눈금
   const yTicks = isBytes
-    ? [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax].map(v => ({
+    ? [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax].map((v) => ({
         v,
-        label: v === 0 ? '0'
-          : v >= 1024*1024 ? `${(v/1024/1024).toFixed(1)}M`
-          : v >= 1024 ? `${(v/1024).toFixed(0)}K`
-          : `${v.toFixed(0)}`
+        label:
+          v === 0
+            ? '0'
+            : v >= 1024 * 1024
+              ? `${(v / 1024 / 1024).toFixed(1)}M`
+              : v >= 1024
+                ? `${(v / 1024).toFixed(0)}K`
+                : `${v.toFixed(0)}`,
       }))
-    : [0, 25, 50, 75, 100].map(v => ({ v, label: `${v}` }));
+    : [0, 25, 50, 75, 100].map((v) => ({ v, label: `${v}` }));
 
   // X축 눈금 — 시간 범위 기반 고정 틱 (데이터 중복 방지)
   const PERIOD_INTERVAL_MS: Record<string, number> = {
-    '30m': 5 * 60 * 1000,      // 5분
-    '1h':  10 * 60 * 1000,     // 10분
-    '3h':  30 * 60 * 1000,     // 30분
-    '6h':  60 * 60 * 1000,     // 1시간
+    '30m': 5 * 60 * 1000, // 5분
+    '1h': 10 * 60 * 1000, // 10분
+    '3h': 30 * 60 * 1000, // 30분
+    '6h': 60 * 60 * 1000, // 1시간
     '24h': 3 * 60 * 60 * 1000, // 3시간
   };
   const intervalMs = PERIOD_INTERVAL_MS[period] ?? 10 * 60 * 1000;
@@ -157,7 +255,7 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
   for (let ts = firstAligned; ts <= endTs; ts += intervalMs) {
     const d = new Date(ts);
     const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     const showDate = dateStr !== prevDate && d.getHours() === 0;
     prevDate = dateStr;
     const x = PAD.left + ((ts - startTs) / totalMs) * CW;
@@ -170,102 +268,195 @@ function LineChart({ data, color = '#6366f1', period, isBytes = false }: {
     const rect = e.currentTarget.getBoundingClientRect();
     const svgX = ((e.clientX - rect.left) / rect.width) * W;
     const chartX = svgX - PAD.left;
-    if (chartX < 0 || chartX > CW) { setTooltip(null); return; }
+    if (chartX < 0 || chartX > CW) {
+      setTooltip(null);
+      return;
+    }
     const idx = Math.round((chartX / CW) * (data.length - 1));
     const clamped = Math.max(0, Math.min(data.length - 1, idx));
     const pt = data[clamped];
     const d = new Date(pt.ts);
-    const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
     setTooltip({ x: toX(clamped), y: toY(pt.val), val: pt.val, time });
   };
 
-  const fmtVal = (v: number) => isBytes
-    ? v >= 1024*1024 ? `${(v/1024/1024).toFixed(2)} MB/s`
-      : v >= 1024 ? `${(v/1024).toFixed(1)} KB/s`
-      : `${v.toFixed(0)} B/s`
-    : `${v.toFixed(2)}%`;
+  const fmtVal = (v: number) =>
+    isBytes
+      ? v >= 1024 * 1024
+        ? `${(v / 1024 / 1024).toFixed(2)} MB/s`
+        : v >= 1024
+          ? `${(v / 1024).toFixed(1)} KB/s`
+          : `${v.toFixed(0)} B/s`
+      : `${v.toFixed(2)}%`;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="w-full h-full cursor-crosshair"
-      preserveAspectRatio="none"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => setTooltip(null)}
-    >
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.01" />
-        </linearGradient>
-      </defs>
+    // 💡 차트가 좁아지지 않도록 min-w-[600px] 설정 및 가로 스와이프 지원
+    <div className="overflow-x-auto w-full h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-full cursor-crosshair min-w-150 md:min-w-full"
+        preserveAspectRatio="none"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setTooltip(null)}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
 
-      {/* Y축 그리드 */}
-      {yTicks.map(({ v, label }) => {
-        const y = toY(v);
-        return (
-          <g key={v}>
-            <line x1={PAD.left} x2={PAD.left + CW} y1={y} y2={y} stroke="#f3f4f6" strokeWidth="1" />
-            <text x={PAD.left - 5} y={y + 3.5} textAnchor="end" fontSize="9" fill="#9ca3af">{label}</text>
-          </g>
-        );
-      })}
+        {/* Y축 그리드 */}
+        {yTicks.map(({ v, label }) => {
+          const y = toY(v);
+          return (
+            <g key={v}>
+              <line
+                x1={PAD.left}
+                x2={PAD.left + CW}
+                y1={y}
+                y2={y}
+                stroke="#f3f4f6"
+                strokeWidth="1"
+              />
+              <text
+                x={PAD.left - 5}
+                y={y + 3.5}
+                textAnchor="end"
+                fontSize="9"
+                fill="#9ca3af"
+              >
+                {label}
+              </text>
+            </g>
+          );
+        })}
 
-      {/* X축 레이블 */}
-      {xTicks.map(({ x, label, showDate }, i) => (
-        <g key={i}>
-          <line x1={x} x2={x} y1={PAD.top} y2={PAD.top + CH} stroke="#f3f4f6" strokeWidth="1" />
-          <text x={x} y={H - 18} textAnchor="middle" fontSize="9" fill="#9ca3af">{label}</text>
-          {showDate && (
-            <text x={x} y={H - 6} textAnchor="middle" fontSize="8" fill="#c084fc" fontWeight="600">
-              {new Date(data[0].ts + ((x - PAD.left) / CW) * totalMs).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+        {/* X축 레이블 */}
+        {xTicks.map(({ x, label, showDate }, i) => (
+          <g key={i}>
+            <line
+              x1={x}
+              x2={x}
+              y1={PAD.top}
+              y2={PAD.top + CH}
+              stroke="#f3f4f6"
+              strokeWidth="1"
+            />
+            <text
+              x={x}
+              y={H - 18}
+              textAnchor="middle"
+              fontSize="9"
+              fill="#9ca3af"
+            >
+              {label}
             </text>
-          )}
-        </g>
-      ))}
+            {showDate && (
+              <text
+                x={x}
+                y={H - 6}
+                textAnchor="middle"
+                fontSize="8"
+                fill="#c084fc"
+                fontWeight="600"
+              >
+                {new Date(
+                  data[0].ts + ((x - PAD.left) / CW) * totalMs,
+                ).toLocaleDateString('ko-KR', {
+                  month: 'numeric',
+                  day: 'numeric',
+                })}
+              </text>
+            )}
+          </g>
+        ))}
 
-      {/* 영역 채우기 */}
-      <path d={fillPath} fill={`url(#${gradId})`} />
+        {/* 영역 채우기 */}
+        <path d={fillPath} fill={`url(#${gradId})`} />
 
-      {/* 라인 */}
-      <path d={linePath} fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
+        {/* 라인 */}
+        <path
+          d={linePath}
+          fill="none"
+          stroke={color}
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
 
-      {/* 테두리 */}
-      <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
-      <line x1={PAD.left} x2={PAD.left + CW} y1={PAD.top + CH} y2={PAD.top + CH} stroke="#e5e7eb" strokeWidth="1" />
+        {/* 테두리 */}
+        <line
+          x1={PAD.left}
+          x2={PAD.left}
+          y1={PAD.top}
+          y2={PAD.top + CH}
+          stroke="#e5e7eb"
+          strokeWidth="1"
+        />
+        <line
+          x1={PAD.left}
+          x2={PAD.left + CW}
+          y1={PAD.top + CH}
+          y2={PAD.top + CH}
+          stroke="#e5e7eb"
+          strokeWidth="1"
+        />
 
-      {/* 툴팁 */}
-      {tooltip && (
-        <g>
-          <line x1={tooltip.x} x2={tooltip.x} y1={PAD.top} y2={PAD.top + CH} stroke={color} strokeWidth="1" strokeDasharray="3,2" opacity="0.5" />
-          <circle cx={tooltip.x} cy={tooltip.y} r="3.5" fill={color} />
-          <rect
-            x={tooltip.x < W - 110 ? tooltip.x + 8 : tooltip.x - 108}
-            y={tooltip.y < 40 ? tooltip.y + 6 : tooltip.y - 36}
-            width="100" height="28" rx="5"
-            fill="white" stroke="#e5e7eb" strokeWidth="1"
-          />
-          <text
-            x={tooltip.x < W - 110 ? tooltip.x + 58 : tooltip.x - 58}
-            y={tooltip.y < 40 ? tooltip.y + 17 : tooltip.y - 25}
-            textAnchor="middle" fontSize="9" fill="#6b7280"
-          >{tooltip.time}</text>
-          <text
-            x={tooltip.x < W - 110 ? tooltip.x + 58 : tooltip.x - 58}
-            y={tooltip.y < 40 ? tooltip.y + 28 : tooltip.y - 14}
-            textAnchor="middle" fontSize="10" fontWeight="600" fill={color}
-          >{fmtVal(tooltip.val)}</text>
-        </g>
-      )}
-    </svg>
+        {/* 툴팁 */}
+        {tooltip && (
+          <g>
+            <line
+              x1={tooltip.x}
+              x2={tooltip.x}
+              y1={PAD.top}
+              y2={PAD.top + CH}
+              stroke={color}
+              strokeWidth="1"
+              strokeDasharray="3,2"
+              opacity="0.5"
+            />
+            <circle cx={tooltip.x} cy={tooltip.y} r="3.5" fill={color} />
+            <rect
+              x={tooltip.x < W - 110 ? tooltip.x + 8 : tooltip.x - 108}
+              y={tooltip.y < 40 ? tooltip.y + 6 : tooltip.y - 36}
+              width="100"
+              height="28"
+              rx="5"
+              fill="white"
+              stroke="#e5e7eb"
+              strokeWidth="1"
+            />
+            <text
+              x={tooltip.x < W - 110 ? tooltip.x + 58 : tooltip.x - 58}
+              y={tooltip.y < 40 ? tooltip.y + 17 : tooltip.y - 25}
+              textAnchor="middle"
+              fontSize="9"
+              fill="#6b7280"
+            >
+              {tooltip.time}
+            </text>
+            <text
+              x={tooltip.x < W - 110 ? tooltip.x + 58 : tooltip.x - 58}
+              y={tooltip.y < 40 ? tooltip.y + 28 : tooltip.y - 14}
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="600"
+              fill={color}
+            >
+              {fmtVal(tooltip.val)}
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
   );
 }
-
 
 // ── 게이지 바 ──
 function GaugeBar({ value }: { value: number }) {
   return (
-    <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+    <div className="h-1.5 md:h-2 w-full rounded-full bg-gray-100 overflow-hidden">
       <div
         className={`h-full rounded-full transition-all duration-700 ${barColor(Math.min(100, value))}`}
         style={{ width: `${Math.min(100, value)}%` }}
@@ -275,15 +466,33 @@ function GaugeBar({ value }: { value: number }) {
 }
 
 // ── 요약 카드 ──
-function SummaryCard({ title, value, sub, color, spark }: {
-  title: string; value: string; sub?: string; color: string; spark?: RangePoint[];
+function SummaryCard({
+  title,
+  value,
+  sub,
+  color,
+  spark,
+}: {
+  title: string;
+  value: string;
+  sub?: string;
+  color: string;
+  spark?: RangePoint[];
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex flex-col gap-1.5">
-      <p className="text-xs font-medium text-gray-400">{title}</p>
-      <p className="text-2xl font-bold text-gray-900 leading-none">{value}</p>
-      {sub && <p className="text-xs text-gray-400">{sub}</p>}
-      {spark && <SparkLine data={spark} color={color} height={36} />}
+    <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-3 md:p-4 shadow-sm flex flex-col gap-1.5">
+      <p className="text-[11px] md:text-xs font-medium text-gray-400">
+        {title}
+      </p>
+      <p className="text-xl md:text-2xl font-bold text-gray-900 leading-none truncate">
+        {value}
+      </p>
+      {sub && <p className="text-[10px] md:text-xs text-gray-400">{sub}</p>}
+      {spark && (
+        <div className="mt-auto pt-1">
+          <SparkLine data={spark} color={color} height={32} />
+        </div>
+      )}
     </div>
   );
 }
@@ -298,84 +507,158 @@ export default function AdminCloudMonitor() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [rangeData, setRangeData] = useState<Record<string, RangePoint[]>>({});
-  const [rangeLoading, setRangeLoading] = useState(false);
+  const [rangeLoadedKeys, setRangeLoadedKeys] = useState<
+    Record<string, boolean>
+  >({});
   const [selectedMetric, setSelectedMetric] = useState('cpu_usage');
   const [selectedPeriod, setSelectedPeriod] = useState('1h');
   const [selectedServer, setSelectedServer] = useState<string>('all');
 
-  const PERIOD_MAP: Record<string, { seconds: number; step: string }> = {
-    '30m': { seconds: 1800, step: '30' },
-    '1h':  { seconds: 3600, step: '60' },
-    '3h':  { seconds: 10800, step: '120' },
-    '6h':  { seconds: 21600, step: '300' },
-    '24h': { seconds: 86400, step: '600' },
-  };
-
   const METRIC_OPTIONS = [
-    { value: 'cpu_usage',               label: 'CPU 사용률',        color: '#6366f1' },
-    { value: 'cpu_usage_user',          label: 'CPU User',          color: '#818cf8' },
-    { value: 'cpu_usage_system',        label: 'CPU System',        color: '#a5b4fc' },
-    { value: 'mem_usage',               label: '메모리 사용률',     color: '#0ea5e9' },
-    { value: 'network_rx_bytes_persec', label: '인바운드 트래픽',   color: '#10b981' },
-    { value: 'network_tx_bytes_persec', label: '아웃바운드 트래픽', color: '#f59e0b' },
-    { value: 'disk_used_percent',       label: '디스크 사용률',     color: '#ef4444' },
-    { value: 'disk_read_bytes_persec',  label: '디스크 읽기',       color: '#f97316' },
-    { value: 'disk_write_bytes_persec', label: '디스크 쓰기',       color: '#fb923c' },
+    { value: 'cpu_usage', label: 'CPU 사용률', color: '#6366f1' },
+    { value: 'cpu_usage_user', label: 'CPU User', color: '#818cf8' },
+    { value: 'cpu_usage_system', label: 'CPU System', color: '#a5b4fc' },
+    { value: 'mem_usage', label: '메모리 사용률', color: '#0ea5e9' },
+    {
+      value: 'network_rx_bytes_persec',
+      label: '인바운드 트래픽',
+      color: '#10b981',
+    },
+    {
+      value: 'network_tx_bytes_persec',
+      label: '아웃바운드 트래픽',
+      color: '#f59e0b',
+    },
+    { value: 'disk_used_percent', label: '디스크 사용률', color: '#ef4444' },
+    { value: 'disk_read_bytes_persec', label: '디스크 읽기', color: '#f97316' },
+    {
+      value: 'disk_write_bytes_persec',
+      label: '디스크 쓰기',
+      color: '#fb923c',
+    },
   ];
 
-  const currentColor = METRIC_OPTIONS.find(o => o.value === selectedMetric)?.color ?? '#6366f1';
+  const currentColor =
+    METRIC_OPTIONS.find((o) => o.value === selectedMetric)?.color ?? '#6366f1';
 
   const loadSummary = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const res = await fetch(API + '/summary');
       const data = await res.json();
-      if (res.ok) { setSummary(data.metrics); setErrors(data.errors ?? []); }
-      else setErrors([data.detail ?? '조회 실패']);
-    } catch { setErrors(['네트워크 오류']); }
+      if (res.ok) {
+        setSummary(data.metrics);
+        setErrors(data.errors ?? []);
+      } else setErrors([data.detail ?? '조회 실패']);
+    } catch {
+      setErrors(['네트워크 오류']);
+    }
     setLastUpdated(new Date());
     if (!silent) setLoading(false);
   }, []);
 
-  const loadRange = useCallback(async (metric: string, period: string, server?: string) => {
-    setRangeLoading(true);
-    const { seconds, step } = PERIOD_MAP[period] ?? PERIOD_MAP['1h'];
-    const now = Math.floor(Date.now() / 1000);
-    try {
-      const serverParam = server && server !== 'all' ? `&instance_id=${encodeURIComponent(server)}` : '';
-      const res = await fetch(`${API}/range?metric=${metric}&start=${now - seconds}&end=${now}&step=${step}${serverParam}`);
-      const data = await res.json();
-      if (res.ok) {
-        const pts: RangePoint[] = [];
-        for (const s of data.result ?? [])
-          for (const [ts, val] of s.values ?? [])
-            pts.push({ ts: (ts as number) * 1000, val: parseFloat(val as string) || 0 });
-        pts.sort((a, b) => a.ts - b.ts);
-        const key = `${metric}_${period}_${server ?? 'all'}`;
-        setRangeData(prev => ({ ...prev, [key]: pts }));
+  const loadRange = useCallback(
+    async (metric: string, period: string, server?: string) => {
+      const { seconds, step } = PERIOD_MAP[period] ?? PERIOD_MAP['1h'];
+      const now = Math.floor(Date.now() / 1000);
+      const key = `${metric}_${period}_${server ?? 'all'}`;
+      try {
+        const serverParam =
+          server && server !== 'all'
+            ? `&instance_id=${encodeURIComponent(server)}`
+            : '';
+        const res = await fetch(
+          `${API}/range?metric=${metric}&start=${now - seconds}&end=${now}&step=${step}${serverParam}`,
+        );
+        const data = await res.json();
+        if (res.ok) {
+          const pts: RangePoint[] = [];
+          for (const s of data.result ?? [])
+            for (const [ts, val] of s.values ?? [])
+              pts.push({
+                ts: (ts as number) * 1000,
+                val: parseFloat(val as string) || 0,
+              });
+          pts.sort((a, b) => a.ts - b.ts);
+          setRangeData((prev) => ({ ...prev, [key]: pts }));
+        }
+      } catch (error) {
+        console.error('Failed to load range data:', error);
       }
-    } catch {}
-    setRangeLoading(false);
-  }, []);
+      setRangeLoadedKeys((prev) => ({ ...prev, [key]: true }));
+    },
+    [],
+  );
 
-  useEffect(() => { void loadSummary(); }, [loadSummary]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadSummary();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadSummary]);
 
   // 5초 실시간 갱신
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (liveActive) intervalRef.current = setInterval(() => void loadSummary(true), 5000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    if (liveActive)
+      intervalRef.current = setInterval(() => void loadSummary(true), 5000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [liveActive, loadSummary]);
 
-  useEffect(() => { void loadRange(selectedMetric, selectedPeriod, selectedServer); }, [selectedMetric, selectedPeriod, selectedServer, loadRange]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadRange(selectedMetric, selectedPeriod, selectedServer);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedMetric, selectedPeriod, selectedServer, loadRange]);
 
   // 서버별 집계
-  const serverMap: Record<string, { cpu: number; mem: number; memUsed: number; memTotal: number; netIn: number; netOut: number; disk: number; diskUsed: number; diskTotal: number }> = {};
+  const serverMap: Record<
+    string,
+    {
+      cpu: number;
+      mem: number;
+      memUsed: number;
+      memTotal: number;
+      netIn: number;
+      netOut: number;
+      disk: number;
+      diskUsed: number;
+      diskTotal: number;
+    }
+  > = {};
   if (summary) {
-    const merge = (arr: PromResult[], key: 'cpu' | 'mem' | 'memUsed' | 'memTotal' | 'netIn' | 'netOut' | 'disk' | 'diskUsed' | 'diskTotal') => {
+    const merge = (
+      arr: PromResult[],
+      key:
+        | 'cpu'
+        | 'mem'
+        | 'memUsed'
+        | 'memTotal'
+        | 'netIn'
+        | 'netOut'
+        | 'disk'
+        | 'diskUsed'
+        | 'diskTotal',
+    ) => {
       for (const r of arr) {
         const k = instanceName(r);
-        if (!serverMap[k]) serverMap[k] = { cpu: 0, mem: 0, memUsed: 0, memTotal: 0, netIn: 0, netOut: 0, disk: 0, diskUsed: 0, diskTotal: 0 };
+        if (!serverMap[k])
+          serverMap[k] = {
+            cpu: 0,
+            mem: 0,
+            memUsed: 0,
+            memTotal: 0,
+            netIn: 0,
+            netOut: 0,
+            disk: 0,
+            diskUsed: 0,
+            diskTotal: 0,
+          };
         serverMap[k][key] = metricVal(r);
       }
     };
@@ -390,50 +673,59 @@ export default function AdminCloudMonitor() {
     merge(summary.disk_total ?? [], 'diskTotal');
   }
   const servers = Object.entries(serverMap);
-  const currentRange = rangeData[`${selectedMetric}_${selectedPeriod}_${selectedServer}`] ?? [];
+  const currentRange =
+    rangeData[`${selectedMetric}_${selectedPeriod}_${selectedServer}`] ?? [];
   const cpuSpark = rangeData[`cpu_usage_${selectedPeriod}`] ?? [];
   const memSpark = rangeData[`mem_usage_${selectedPeriod}`] ?? [];
 
   return (
-    <>
+    // 💡 최상위 wrapper: flex-col 추가하여 화면 가로/세로 축소 방지
+    <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
         placeholder="서버 검색..."
         onSearch={() => {}}
         rightContent={
-          <span className="rounded-md border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-sm font-semibold text-blue-700">
+          <span className="hidden sm:inline-block rounded-md border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs md:text-sm font-semibold text-blue-700">
             클라우드 모니터링
           </span>
         }
       />
 
-      <div className="p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-
+      <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
           {/* 헤더 */}
-          <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">클라우드 모니터링</h1>
-              <p className="mt-0.5 text-sm text-gray-400">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-keep">
+                클라우드 모니터링
+              </h1>
+              <p className="mt-1 text-[11px] md:text-sm text-gray-400 break-keep">
                 카카오클라우드 서버 리소스 실시간 현황
-                {lastUpdated && <span className="ml-2 text-gray-300">· {fmtDatetime(lastUpdated)} 갱신</span>}
+                {lastUpdated && (
+                  <span className="ml-1.5 text-gray-400">
+                    · {fmtDatetime(lastUpdated)} 갱신
+                  </span>
+                )}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <button
-                onClick={() => setLiveActive(v => !v)}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                onClick={() => setLiveActive((v) => !v)}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 md:px-3 md:py-1.5 text-[11px] md:text-xs font-bold transition-all active:scale-95 ${
                   liveActive
                     ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
                     : 'border-gray-200 bg-white text-gray-500'
                 }`}
               >
-                <span className={`inline-block h-1.5 w-1.5 rounded-full ${liveActive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+                <span
+                  className={`inline-block h-1.5 w-1.5 md:h-2 md:w-2 rounded-full ${liveActive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`}
+                />
                 {liveActive ? '실시간 ON' : '실시간 OFF'}
               </button>
               <button
                 onClick={() => void loadSummary()}
                 disabled={loading}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 md:px-3 md:py-1.5 text-[11px] md:text-xs font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-40 active:scale-95 transition"
               >
                 {loading ? '갱신 중...' : '새로고침'}
               </button>
@@ -442,67 +734,127 @@ export default function AdminCloudMonitor() {
 
           {/* 오류 배너 */}
           {errors.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 space-y-1">
-              <p className="font-semibold">일부 메트릭을 가져오지 못했습니다.</p>
-              {errors.map((e, i) => <p key={i} className="text-xs opacity-80">{e}</p>)}
-              <p className="text-xs opacity-60 mt-1">.env에 KAKAO_CLOUD_* 키 3개 설정이 필요합니다.</p>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs md:text-sm text-amber-700 space-y-1">
+              <p className="font-bold">일부 메트릭을 가져오지 못했습니다.</p>
+              {errors.map((e, i) => (
+                <p
+                  key={i}
+                  className="text-[11px] md:text-xs opacity-80 break-all"
+                >
+                  {e}
+                </p>
+              ))}
+              <p className="text-[10px] md:text-xs opacity-60 mt-1 break-keep">
+                .env에 KAKAO_CLOUD_* 키 3개 설정이 필요합니다.
+              </p>
             </div>
           )}
 
           {/* 요약 카드 */}
           {loading && !summary ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            // 모바일 2단, 태블릿/PC 5단
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-28 rounded-2xl bg-gray-100 animate-pulse" />
+                <div
+                  key={i}
+                  className="h-24 md:h-28 rounded-xl md:rounded-2xl bg-gray-100 animate-pulse"
+                />
               ))}
             </div>
           ) : summary ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <SummaryCard title="평균 CPU"    value={fmtPct(avgOf(summary.cpu))}      sub={`최대 ${fmtPct(maxOf(summary.cpu))}`}   color="#6366f1" spark={cpuSpark} />
-              <SummaryCard title="평균 메모리" value={fmtPct(avgOf(summary.mem))}      sub={`최대 ${fmtPct(maxOf(summary.mem))}`}   color="#0ea5e9" spark={memSpark} />
-              <SummaryCard title="인바운드"    value={fmtBytes(sumOf(summary.net_in))} sub="전체 합산"                              color="#10b981" />
-              <SummaryCard title="아웃바운드"  value={fmtBytes(sumOf(summary.net_out))} sub="전체 합산"                             color="#f59e0b" />
-              <SummaryCard title="평균 디스크" value={fmtPct(avgOf(summary.disk))}     sub={`최대 ${fmtPct(maxOf(summary.disk))}`}  color="#ef4444" />
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+              <SummaryCard
+                title="평균 CPU"
+                value={fmtPct(avgOf(summary.cpu))}
+                sub={`최대 ${fmtPct(maxOf(summary.cpu))}`}
+                color="#6366f1"
+                spark={cpuSpark}
+              />
+              <SummaryCard
+                title="평균 메모리"
+                value={fmtPct(avgOf(summary.mem))}
+                sub={`최대 ${fmtPct(maxOf(summary.mem))}`}
+                color="#0ea5e9"
+                spark={memSpark}
+              />
+              {/* 모바일에서는 아래 항목들도 2칸씩 차지하도록 조정 */}
+              <SummaryCard
+                title="인바운드"
+                value={fmtBytes(sumOf(summary.net_in))}
+                sub="전체 합산"
+                color="#10b981"
+              />
+              <SummaryCard
+                title="아웃바운드"
+                value={fmtBytes(sumOf(summary.net_out))}
+                sub="전체 합산"
+                color="#f59e0b"
+              />
+              <SummaryCard
+                title="평균 디스크"
+                value={fmtPct(avgOf(summary.disk))}
+                sub={`최대 ${fmtPct(maxOf(summary.disk))}`}
+                color="#ef4444"
+              />
             </div>
           ) : null}
 
-          {/* 리소스 추이 */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            {/* 헤더 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          {/* 리소스 추이 (LineChart) */}
+          <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm">
+            {/* 💡 헤더/컨트롤 패널 스태킹 최적화 */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4">
               <div>
-                <p className="text-sm font-bold text-gray-800">리소스</p>
-                <p className="text-xs text-gray-400">서버 선택 후 기간별 그래프 확인</p>
+                <p className="text-sm md:text-base font-bold text-gray-800">
+                  리소스
+                </p>
+                <p className="text-[11px] md:text-xs text-gray-400 mt-0.5">
+                  서버 선택 후 기간별 그래프 확인
+                </p>
               </div>
-              <div className="flex gap-2 flex-wrap items-center">
-                {/* 서버 선택 */}
-                <select
-                  value={selectedServer}
-                  onChange={e => setSelectedServer(e.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400 bg-white"
-                >
-                  <option value="all">전체 합산</option>
-                  {servers.map(([label]) => {
-                    const idEntry = Object.entries(INSTANCE_NAME_MAP).find(([, v]) => v === label);
-                    return <option key={label} value={idEntry?.[0] ?? label}>{label}</option>;
-                  })}
-                </select>
-                {/* 메트릭 선택 */}
-                <select
-                  value={selectedMetric}
-                  onChange={e => setSelectedMetric(e.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400 bg-white"
-                >
-                  {METRIC_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-                {/* 기간 선택 */}
-                <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                  {Object.keys(PERIOD_MAP).map(p => (
+
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <div className="flex flex-1 sm:flex-none gap-2">
+                  {/* 서버 선택 */}
+                  <select
+                    value={selectedServer}
+                    onChange={(e) => setSelectedServer(e.target.value)}
+                    className="flex-1 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 md:py-2 text-[11px] md:text-sm outline-none focus:border-blue-400 bg-white"
+                  >
+                    <option value="all">전체 합산</option>
+                    {servers.map(([label]) => {
+                      const idEntry = Object.entries(INSTANCE_NAME_MAP).find(
+                        ([, v]) => v === label,
+                      );
+                      return (
+                        <option key={label} value={idEntry?.[0] ?? label}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {/* 메트릭 선택 */}
+                  <select
+                    value={selectedMetric}
+                    onChange={(e) => setSelectedMetric(e.target.value)}
+                    className="flex-1 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 md:py-2 text-[11px] md:text-sm outline-none focus:border-blue-400 bg-white"
+                  >
+                    {METRIC_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {/* 기간 선택 - 가로 스와이프 지원 */}
+                <div className="flex gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                  {Object.keys(PERIOD_MAP).map((p) => (
                     <button
                       key={p}
                       onClick={() => setSelectedPeriod(p)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-                        selectedPeriod === p ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
+                      className={`shrink-0 px-3 py-1.5 md:py-1 text-[11px] md:text-xs font-bold rounded-md transition-all active:scale-95 ${
+                        selectedPeriod === p
+                          ? 'bg-white text-gray-800 shadow-sm'
+                          : 'text-gray-500'
                       }`}
                     >
                       {p}
@@ -511,10 +863,15 @@ export default function AdminCloudMonitor() {
                 </div>
               </div>
             </div>
+
             {/* 차트 */}
-            <div className="relative h-52">
-              {rangeLoading ? (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">불러오는 중...</div>
+            <div className="relative h-48 md:h-52">
+              {!rangeLoadedKeys[
+                `${selectedMetric}_${selectedPeriod}_${selectedServer}`
+              ] ? (
+                <div className="absolute inset-0 flex items-center justify-center text-xs md:text-sm font-bold text-gray-400">
+                  불러오는 중...
+                </div>
               ) : (
                 <LineChart
                   data={currentRange}
@@ -527,40 +884,60 @@ export default function AdminCloudMonitor() {
           </div>
 
           {/* 서버별 리소스 테이블 */}
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-gray-800">서버별 리소스 현황</p>
-                {lastUpdated ? (
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {fmtDatetime(lastUpdated)} 기준
-                    {liveActive && <span className="ml-1.5 text-emerald-500">· 5초마다 갱신</span>}
-                  </p>
-                ) : null}
-              </div>
+          <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <p className="text-sm md:text-base font-bold text-gray-800">
+                서버별 리소스 현황
+              </p>
+              {lastUpdated ? (
+                <p className="text-[10px] md:text-xs text-gray-400">
+                  {fmtDatetime(lastUpdated)} 기준
+                  {liveActive && (
+                    <span className="ml-1 md:ml-1.5 font-bold text-emerald-500">
+                      · 5초마다 갱신
+                    </span>
+                  )}
+                </p>
+              ) : null}
             </div>
 
             {servers.length === 0 && !loading ? (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">
-                서버 데이터가 없습니다.<br />
-                <span className="text-xs">카카오클라우드 콘솔에서 모니터링 에이전트 설치 여부를 확인해 주세요.</span>
+              <div className="px-4 md:px-5 py-10 md:py-12 text-center text-xs md:text-sm text-gray-400 leading-relaxed">
+                서버 데이터가 없습니다.
+                <br />
+                <span className="text-[10px] md:text-xs">
+                  카카오클라우드 콘솔에서 모니터링 에이전트 설치 여부를 확인해
+                  주세요.
+                </span>
                 <br />
                 <a
                   href={`${API}/debug/labels`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-500 underline mt-1 inline-block"
+                  className="text-[10px] md:text-xs font-bold text-blue-500 underline mt-2 inline-block"
                 >
                   레이블 디버그 확인
                 </a>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+              // 💡 테이블 가로 스크롤 허용
+              <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                <table className="min-w-200 md:min-w-250 w-full border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      {['인스턴스', '역할', 'CPU', '메모리', '인바운드', '아웃바운드', '디스크'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+                      {[
+                        '인스턴스',
+                        '역할',
+                        'CPU',
+                        '메모리',
+                        '인바운드',
+                        '아웃바운드',
+                        '디스크',
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className="px-3 md:px-4 py-3 text-left text-[11px] md:text-xs font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                        >
                           {h}
                         </th>
                       ))}
@@ -570,35 +947,67 @@ export default function AdminCloudMonitor() {
                     {servers.map(([label, s]) => {
                       const role = getRoleTag(label);
                       return (
-                        <tr key={label} className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
-                          <td className="px-4 py-3 text-sm font-mono text-gray-700 truncate max-w-[180px]">{label}</td>
-                          <td className="px-4 py-3">
-                            {role
-                              ? <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${role.color}`}>{role.label}</span>
-                              : <span className="text-xs text-gray-300">-</span>
-                            }
+                        <tr
+                          key={label}
+                          className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors"
+                        >
+                          <td className="px-3 md:px-4 py-3 text-[11px] md:text-sm font-mono text-gray-700 font-bold truncate max-w-35 md:max-w-45">
+                            {label}
                           </td>
-                          <td className="px-4 py-3 min-w-[130px]">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.cpu)}`}>{fmtPct(s.cpu)}</span>
-                              <div className="flex-1"><GaugeBar value={s.cpu} /></div>
+                          <td className="px-3 md:px-4 py-3">
+                            {role ? (
+                              <span
+                                className={`rounded-full px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${role.color}`}
+                              >
+                                {role.label}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] md:text-xs text-gray-300">
+                                -
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 md:px-4 py-3 min-w-27.5 md:min-w-32.5">
+                            <div className="flex items-center gap-1.5 md:gap-2">
+                              <span
+                                className={`text-[11px] md:text-sm font-bold w-10 md:w-14 text-right tabular-nums ${statusColor(s.cpu)}`}
+                              >
+                                {fmtPct(s.cpu)}
+                              </span>
+                              <div className="flex-1">
+                                <GaugeBar value={s.cpu} />
+                              </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 min-w-[150px]">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.mem)}`}>{fmtPct(s.mem)}</span>
-                              <div className="flex-1"><GaugeBar value={s.mem} /></div>
+                          <td className="px-3 md:px-4 py-3 min-w-30 md:min-w-37.5">
+                            <div className="flex items-center gap-1.5 md:gap-2">
+                              <span
+                                className={`text-[11px] md:text-sm font-bold w-10 md:w-14 text-right tabular-nums ${statusColor(s.mem)}`}
+                              >
+                                {fmtPct(s.mem)}
+                              </span>
+                              <div className="flex-1">
+                                <GaugeBar value={s.mem} />
+                              </div>
                             </div>
-
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600 text-right tabular-nums whitespace-nowrap">{fmtBytes(s.netIn)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600 text-right tabular-nums whitespace-nowrap">{fmtBytes(s.netOut)}</td>
-                          <td className="px-4 py-3 min-w-[150px]">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm font-semibold w-14 text-right tabular-nums ${statusColor(s.disk)}`}>{fmtPct(s.disk)}</span>
-                              <div className="flex-1"><GaugeBar value={s.disk} /></div>
+                          <td className="px-3 md:px-4 py-3 text-[11px] md:text-sm text-gray-600 text-right tabular-nums whitespace-nowrap">
+                            {fmtBytes(s.netIn)}
+                          </td>
+                          <td className="px-3 md:px-4 py-3 text-[11px] md:text-sm text-gray-600 text-right tabular-nums whitespace-nowrap">
+                            {fmtBytes(s.netOut)}
+                          </td>
+                          <td className="px-3 md:px-4 py-3 min-w-30 md:min-w-36">
+                            <div className="flex items-center gap-1.5 md:gap-2">
+                              <span
+                                className={`text-[11px] md:text-sm font-bold w-10 md:w-14 text-right tabular-nums ${statusColor(s.disk)}`}
+                              >
+                                {fmtPct(s.disk)}
+                              </span>
+                              <div className="flex-1">
+                                <GaugeBar value={s.disk} />
+                              </div>
                             </div>
-
                           </td>
                         </tr>
                       );
@@ -608,9 +1017,8 @@ export default function AdminCloudMonitor() {
               </div>
             )}
           </div>
-
         </div>
       </div>
-    </>
+    </div>
   );
 }
