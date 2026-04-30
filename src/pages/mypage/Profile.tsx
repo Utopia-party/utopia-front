@@ -329,8 +329,7 @@ function ProfileDashboard() {
                   </div>
 
                   <p className="mt-1 text-xs font-medium text-slate-500">
-                    기존 추천인은 최신순으로 조회되며, 한 번에 한 명만 추가할 수
-                    있습니다.
+                    다른 사용자를 추천한 횟수
                   </p>
                 </div>
 
