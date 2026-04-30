@@ -51,12 +51,10 @@ export default function AdminHeader({
   };
 
   return (
-    // 💡 패딩을 모바일에 맞게 축소 (px-8 -> px-4 md:px-8)
-    <header className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 sm:px-6 md:px-8">
+    // 💡 핵심 수정: z-40을 z-30으로 낮춰서 모바일 사이드바의 어두운 배경(z-40) 아래로 들어가도록 조치!
+    <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 sm:px-6 md:px-8">
       <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-3 md:gap-4">
-        {/* 💡 검색창 그룹: 모바일에서는 아래로(order-2), 데스크탑에서는 왼쪽으로(order-1) 배치 */}
         <div className="order-2 md:order-1 flex w-full md:w-auto flex-1 items-center gap-3">
-          {/* 시간 표시는 데스크탑(lg 이상) 환경에서만 노출하여 모바일 공간 확보 */}
           <div className="hidden lg:block shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm">
             {currentTime}
           </div>
@@ -82,9 +80,7 @@ export default function AdminHeader({
           </div>
         </div>
 
-        {/* 💡 컨트롤 버튼 그룹: 모바일에서는 위로(order-1), 데스크탑에서는 오른쪽으로(order-2) 배치 */}
         <div className="order-1 md:order-2 flex w-full md:w-auto items-center justify-between md:justify-end gap-2 sm:gap-3 shrink-0">
-          {/* rightContent가 길어질 경우를 대비해 스와이프 허용 및 스크롤바 숨김 */}
           <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             {rightContent}
           </div>
