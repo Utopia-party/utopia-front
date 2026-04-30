@@ -449,7 +449,7 @@ export default function Home() {
   };
 
   return (
-    <>
+    <div className="flex w-full min-w-0 flex-1 flex-col bg-slate-50">
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#4f46e5_0%,#6366f1_42%,#0ea5e9_100%)] px-4 sm:px-6 py-8 sm:py-10 text-center">
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(15,23,42,0.08))]" />
         <div className="relative mx-auto max-w-3xl">
@@ -480,7 +480,7 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="min-h-screen bg-slate-50">
+      <div className="flex-1 bg-slate-50">
         {/* 모바일 여백 줄임: px-4 -> sm:px-6 */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
           <div className="mt-4 sm:mt-6 flex flex-col gap-6 md:gap-8 md:flex-row">
@@ -661,6 +661,6 @@ export default function Home() {
           }
         }}
       />
-    </>
+    </div>
   );
 }
