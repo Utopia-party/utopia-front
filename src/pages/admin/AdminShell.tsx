@@ -125,8 +125,12 @@ export default function AdminShell() {
       />
 
       <div
-        className={`flex flex-1 flex-col transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-18' : 'ml-60'
+        // 💡 핵심 수정 포인트:
+        // 모바일 환경에서는 `ml-0`을 적용하여 화면을 꽉 채우고,
+        // 데스크탑(`md:`) 환경에서만 사이드바 너비만큼(`ml-18` 또는 `ml-60`)을 밀어냅니다.
+        // `min-w-0`은 자식 요소들이 화면을 찢고 나가는 현상을 완벽히 차단합니다.
+        className={`flex min-w-0 flex-1 flex-col transition-all duration-300 ml-0 ${
+          sidebarCollapsed ? 'md:ml-18' : 'md:ml-60'
         }`}
       >
         <Outlet />
