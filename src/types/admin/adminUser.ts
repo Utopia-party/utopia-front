@@ -33,6 +33,7 @@ export type AdminUserDetail = {
 
   referrerId?: string | null;
   referrerNickname?: string | null;
+  referrerName?: string | null;
   referrerCount?: number;
 
   trustHistories: AdminUserTrustHistory[];
@@ -98,3 +99,43 @@ export type AdminUserRecommenderUpdatePayload = {
   referrerNickname: string | null;
   reason?: string;
 };
+
+export type AdminOperationLogType =
+  | 'STATUS_CHANGE'
+  | 'SANCTION'
+  | 'REPORT_RECEIVED'
+  | 'REPORT_CREATED'
+  | 'TRUST_SCORE_CHANGE'
+  | 'RECOMMENDER_CHANGE';
+
+export interface AdminOperationLog {
+  id: string;
+  type: AdminOperationLogType;
+  userId: string;
+
+  beforeStatus?: string;
+  afterStatus?: string;
+
+  sanctionType?: 'SUSPENSION' | 'BAN' | 'WARNING' | string;
+  sanctionDurationDays?: number | null;
+
+  reportId?: string;
+  reportReason?: string;
+  reportTargetUserId?: string;
+
+  beforeTrustScore?: number;
+  afterTrustScore?: number;
+
+  beforeRecommenderId?: string;
+  afterRecommenderId?: string;
+
+  reason?: string | null;
+  adminId?: string | null;
+
+  createdAt: string;
+}
+
+export interface AdminOperationLogListResponse {
+  logs: AdminOperationLog[];
+  total: number;
+}

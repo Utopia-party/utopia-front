@@ -2,6 +2,7 @@ import axios from 'axios';
 import { api } from '../api';
 
 import type {
+  AdminOperationLogListResponse,
   AdminUserDetail,
   AdminUserListParams,
   AdminUserRecord,
@@ -70,6 +71,16 @@ export async function fetchAdminUserStatusLogs(
 ): Promise<AdminUserStatusLog[]> {
   const { data } = await api.get<AdminUserStatusLog[]>(
     `/api/admin/users/${userId}/status-logs`,
+  );
+
+  return data;
+}
+
+export async function fetchAdminOperationLogs(
+  userId: string,
+): Promise<AdminOperationLogListResponse> {
+  const { data } = await api.get<AdminOperationLogListResponse>(
+    `/api/admin/users/${userId}/operation-logs`,
   );
 
   return data;
