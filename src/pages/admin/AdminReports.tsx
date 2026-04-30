@@ -71,8 +71,9 @@ function EvidencePreview({
   const hasUrl = Boolean(evidence.url);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-      <div className="flex h-44 items-center justify-center bg-slate-100">
+    <div className="overflow-hidden rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50">
+      {/* 💡 모바일에서는 이미지 프리뷰 높이를 살짝 줄여 공간 확보 */}
+      <div className="flex h-36 md:h-44 items-center justify-center bg-slate-100">
         {isImage && hasUrl ? (
           <a
             href={evidence.url ?? '#'}
@@ -93,33 +94,35 @@ function EvidencePreview({
             rel="noreferrer"
             className="flex h-full w-full flex-col items-center justify-center gap-2 text-center transition hover:bg-slate-200"
           >
-            <span className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+            <span className="rounded-lg md:rounded-xl bg-red-50 px-2.5 py-1.5 md:px-3 md:py-2 text-[11px] md:text-xs font-bold text-red-600">
               PDF
             </span>
-            <span className="px-4 text-xs font-semibold text-slate-600">
+            <span className="px-4 text-[11px] md:text-xs font-semibold text-slate-600">
               새 탭에서 파일 열기
             </span>
           </a>
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 px-4 text-center">
-            <span className="rounded-xl bg-slate-200 px-3 py-2 text-xs font-bold text-slate-500">
+            <span className="rounded-lg md:rounded-xl bg-slate-200 px-2.5 py-1.5 md:px-3 md:py-2 text-[11px] md:text-xs font-bold text-slate-500">
               NO URL
             </span>
-            <span className="text-xs text-slate-400">조회 URL이 없습니다.</span>
+            <span className="text-[10px] md:text-xs text-slate-400">
+              조회 URL이 없습니다.
+            </span>
           </div>
         )}
       </div>
 
-      <div className="px-4 py-3">
-        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-          <p className="truncate text-sm font-bold text-slate-800">
+      <div className="px-3 py-2.5 md:px-4 md:py-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <p className="truncate text-xs md:text-sm font-bold text-slate-800">
             {evidence.originalFilename ?? '첨부 파일'}
           </p>
-          <span className="shrink-0 text-xs font-semibold text-slate-400">
+          <span className="shrink-0 text-[10px] md:text-xs font-semibold text-slate-400">
             {formatFileSize(evidence.fileSize)}
           </span>
         </div>
-        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
+        <div className="mt-1.5 md:mt-2 flex flex-wrap gap-1.5 md:gap-2 text-[10px] md:text-xs text-slate-400">
           <span>{evidence.contentType ?? 'unknown'}</span>
           <span>·</span>
           <span>{formatDateTime(evidence.createdAt)}</span>
@@ -207,332 +210,378 @@ export default function AdminReports() {
   const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   return (
-    <>
+    // 💡 최상위 wrapper: flex 추가하여 축소 방지
+    <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
         placeholder="신고 검색 (대상/사유/상태)..."
         onSearch={setSearch}
       />
-      <div className="p-8">
-        <h1 className="mb-1 text-2xl font-bold">신고 관리</h1>
-        <p className="mb-4 text-sm text-gray-500">
-          신고 접수 시각, 대상, 사유, 처리 상태와 증빙 자료를 한 화면에서
-          확인하고 운영 조치까지 바로 연결할 수 있게 구성했습니다.
-        </p>
 
-        <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">키워드</span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="대상 이름 / 사유 / 상태"
-              className="w-52 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">시작일</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">종료일</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </label>
-          <div className="flex gap-2 pb-0.5">
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              조회
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-            >
-              초기화
-            </button>
+      {/* 💡 전반적인 패딩 최적화 */}
+      <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
+          <section>
+            <h1 className="mb-1 text-xl sm:text-2xl font-bold text-gray-900 break-keep">
+              신고 관리
+            </h1>
+            <p className="mb-4 text-xs sm:text-sm text-gray-500 leading-relaxed break-keep">
+              신고 접수 시각, 대상, 사유, 처리 상태와 증빙 자료를 한 화면에서
+              확인하고 운영 조치까지 바로 연결할 수 있게 구성했습니다.
+            </p>
+          </section>
+
+          {/* 💡 검색 폼 영역 모바일 최적화 (flex-col 기반 유연한 배치) */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <label className="flex w-full sm:w-auto flex-col gap-1.5">
+              <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                키워드
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="대상 이름 / 사유 / 상태"
+                className="w-full sm:w-52 rounded-lg md:rounded-xl border border-gray-200 px-3.5 py-2 md:py-2.5 text-sm outline-none transition focus:border-blue-400"
+              />
+            </label>
+
+            <div className="flex w-full sm:w-auto gap-2">
+              <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                  시작일
+                </span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2 md:py-2.5 text-xs md:text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+              <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                  종료일
+                </span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2 md:py-2.5 text-xs md:text-sm outline-none transition focus:border-blue-400"
+                />
+              </label>
+            </div>
+
+            <div className="mt-1 flex w-full sm:w-auto gap-2 sm:ml-auto">
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="flex-1 sm:flex-none rounded-lg md:rounded-xl bg-blue-600 px-4 py-2.5 text-xs md:text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-95"
+              >
+                조회
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="flex-1 sm:flex-none rounded-lg md:rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-xs md:text-sm font-medium text-gray-600 transition hover:bg-gray-50 active:scale-95"
+              >
+                초기화
+              </button>
+            </div>
           </div>
-        </div>
 
-        <FilterTabs
-          tabs={FILTER_TABS}
-          activeTab={activeTab}
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            setPage(1);
-          }}
-        />
-
-        {loading && (
-          <div className="mb-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
-            신고 목록을 불러오는 중입니다.
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  접수 시각
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  유형
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  대상
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  사유
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  상태
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  첨부
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  내용
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  관리
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((report) => {
-                const isExpanded = expandedReportId === report.id;
-
-                return (
-                  <Fragment key={report.id}>
-                    <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3.5 text-sm text-gray-500">
-                        {formatDateTime(report.createdAt)}
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">{report.type}</td>
-                      <td className="px-4 py-3.5 text-sm">{report.target}</td>
-                      <td className="px-4 py-3.5 text-sm">{report.reason}</td>
-                      <td className="px-4 py-3.5 text-sm">
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                            STATUS_STYLE[report.status] ?? ''
-                          }`}
-                        >
-                          {report.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">
-                        {report.evidences.length > 0 ? (
-                          <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                            {report.evidences.length}개
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">없음</span>
-                        )}
-                      </td>
-                      <td className="max-w-xs truncate px-4 py-3.5 text-sm">
-                        {report.content}
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            className={`rounded-md border px-3 py-1 text-xs transition ${
-                              isExpanded
-                                ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                            }`}
-                            onClick={() =>
-                              setExpandedReportId((prev) =>
-                                prev === report.id ? null : report.id,
-                              )
-                            }
-                          >
-                            {isExpanded ? '닫기' : '상세'}
-                          </button>
-
-                          {report.status === '접수' && (
-                            <>
-                              <button
-                                type="button"
-                                className="cursor-pointer rounded-md border border-blue-400 bg-blue-500 px-3 py-1 text-xs text-white transition hover:bg-blue-600 disabled:opacity-60"
-                                disabled={busyReportId === report.id}
-                                onClick={() =>
-                                  void handleReportStatus(report.id, '처리')
-                                }
-                              >
-                                {busyReportId === report.id
-                                  ? '처리 중...'
-                                  : '처리'}
-                              </button>
-                              <button
-                                type="button"
-                                className="cursor-pointer rounded-md border border-red-300 px-3 py-1 text-xs text-red-500 transition hover:bg-red-50 disabled:opacity-60"
-                                disabled={busyReportId === report.id}
-                                onClick={() =>
-                                  void handleReportStatus(report.id, '기각')
-                                }
-                              >
-                                기각
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-
-                    {isExpanded && (
-                      <tr className="border-b border-gray-100 bg-slate-50/70">
-                        <td colSpan={8} className="px-4 py-4">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                              <div>
-                                <h3 className="text-base font-semibold text-slate-900">
-                                  신고 상세
-                                </h3>
-                                <p className="mt-1 text-sm text-slate-500">
-                                  신고 내용, 접수 맥락, 증빙 파일을 확인하고
-                                  바로 처리합니다.
-                                </p>
-                              </div>
-                              <span
-                                className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                  STATUS_STYLE[report.status] ?? ''
-                                }`}
-                              >
-                                {report.status}
-                              </span>
-                            </div>
-
-                            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                              {[
-                                ['신고 ID', report.id],
-                                [
-                                  '신고자',
-                                  report.reporterNickname ??
-                                    report.reporterId ??
-                                    '-',
-                                ],
-                                ['유형', report.type],
-                                ['대상', report.target],
-                                ['사유', report.reason],
-                                ['상태', report.status],
-                                ['접수일', formatDateTime(report.createdAt)],
-                                ['검토일', formatDateTime(report.reviewedAt)],
-                                [
-                                  '처리 결과',
-                                  getActionResultLabel(report.actionResultCode),
-                                ],
-                              ].map(([label, value]) => (
-                                <div
-                                  key={label}
-                                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                >
-                                  <div className="text-xs font-medium text-slate-400">
-                                    {label}
-                                  </div>
-                                  <div className="mt-1 break-all text-sm font-semibold text-slate-800">
-                                    {value}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                              <div className="text-xs font-medium text-slate-400">
-                                신고 내용
-                              </div>
-                              <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">
-                                {report.content || '-'}
-                              </div>
-                            </div>
-
-                            <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
-                              <div className="mb-3 flex items-center justify-between gap-3">
-                                <h4 className="text-sm font-bold text-slate-900">
-                                  증빙 파일
-                                </h4>
-                                <span className="text-xs font-semibold text-slate-400">
-                                  {report.evidences.length}개
-                                </span>
-                              </div>
-
-                              {report.evidences.length === 0 ? (
-                                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
-                                  첨부된 증빙 파일이 없습니다.
-                                </div>
-                              ) : (
-                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                                  {report.evidences.map((evidence) => (
-                                    <EvidencePreview
-                                      key={evidence.id}
-                                      evidence={evidence}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            {report.adminMemo && (
-                              <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                                <div className="text-xs font-medium text-blue-500">
-                                  관리자 메모
-                                </div>
-                                <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-blue-900">
-                                  {report.adminMemo}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-
-              {paginated.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-400">
-                    검색 결과가 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
-          <Pagination
-            total={filtered.length}
-            page={page}
-            pageSize={20}
-            onChange={(p) => {
-              setPage(p);
+          <FilterTabs
+            tabs={FILTER_TABS}
+            activeTab={activeTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab);
+              setPage(1);
             }}
           />
 
-          <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
-            처리와 기각 버튼은 실제 관리자 신고 상태 API를 호출합니다.
-          </div>
+          {loading && (
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-gray-500 shadow-sm">
+              신고 목록을 불러오는 중입니다.
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-xl md:rounded-2xl border border-red-200 bg-red-50 px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-red-600 shadow-sm">
+              {error}
+            </div>
+          )}
+
+          <section className="overflow-hidden rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {/* 💡 테이블 가로 스크롤 설정 */}
+            <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              <table className="min-w-200 w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      접수 시각
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      유형
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      대상
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      사유
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      상태
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      첨부
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      내용
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      관리
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginated.map((report) => {
+                    const isExpanded = expandedReportId === report.id;
+
+                    return (
+                      <Fragment key={report.id}>
+                        <tr className="border-b border-gray-100 transition hover:bg-gray-50">
+                          <td className="whitespace-nowrap px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-500">
+                            {formatDateTime(report.createdAt)}
+                          </td>
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm whitespace-nowrap">
+                            {report.type}
+                          </td>
+                          <td className="px-3 md:px-4 py-3.5 text-xs md:text-sm font-bold truncate max-w-25 md:max-w-none">
+                            {report.target}
+                          </td>
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm truncate max-w-30 md:max-w-none">
+                            {report.reason}
+                          </td>
+                          <td className="px-3 md:px-4 py-3.5 text-sm whitespace-nowrap">
+                            <span
+                              className={`inline-block rounded-full px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${
+                                STATUS_STYLE[report.status] ?? ''
+                              }`}
+                            >
+                              {report.status}
+                            </span>
+                          </td>
+                          <td className="px-3 md:px-4 py-3.5 text-sm whitespace-nowrap">
+                            {report.evidences.length > 0 ? (
+                              <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold text-slate-600">
+                                {report.evidences.length}개
+                              </span>
+                            ) : (
+                              <span className="text-[10px] md:text-xs text-slate-400">
+                                없음
+                              </span>
+                            )}
+                          </td>
+                          <td className="max-w-37.5 md:max-w-xs truncate px-3 md:px-4 py-3.5 text-[11px] md:text-sm">
+                            {report.content}
+                          </td>
+                          <td className="px-3 md:px-4 py-3.5 text-sm whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                className={`rounded-lg border px-2.5 py-1.5 md:px-3 md:py-1.5 text-[10px] md:text-xs font-bold transition active:scale-95 ${
+                                  isExpanded
+                                    ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                                onClick={() =>
+                                  setExpandedReportId((prev) =>
+                                    prev === report.id ? null : report.id,
+                                  )
+                                }
+                              >
+                                {isExpanded ? '닫기' : '상세'}
+                              </button>
+
+                              {report.status === '접수' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="cursor-pointer rounded-lg border border-blue-400 bg-blue-500 px-2.5 py-1.5 md:px-3 md:py-1.5 text-[10px] md:text-xs font-bold text-white transition hover:bg-blue-600 disabled:opacity-60 active:scale-95"
+                                    disabled={busyReportId === report.id}
+                                    onClick={() =>
+                                      void handleReportStatus(report.id, '처리')
+                                    }
+                                  >
+                                    {busyReportId === report.id
+                                      ? '처리 중...'
+                                      : '처리'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="cursor-pointer rounded-lg border border-red-300 bg-white px-2.5 py-1.5 md:px-3 md:py-1.5 text-[10px] md:text-xs font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-60 active:scale-95"
+                                    disabled={busyReportId === report.id}
+                                    onClick={() =>
+                                      void handleReportStatus(report.id, '기각')
+                                    }
+                                  >
+                                    기각
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* 💡 확장 상세 패널 */}
+                        {isExpanded && (
+                          <tr className="border-b border-gray-100 bg-slate-50/70">
+                            <td colSpan={8} className="p-3 md:px-4 md:py-4">
+                              <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+                                <div className="flex flex-col gap-3 md:gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                  <div>
+                                    <h3 className="text-sm md:text-base font-bold text-slate-900">
+                                      신고 상세
+                                    </h3>
+                                    <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
+                                      신고 내용, 접수 맥락, 증빙 파일을 확인하고
+                                      바로 처리합니다.
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={`inline-block self-start lg:self-auto rounded-full px-2.5 py-1 text-[10px] md:text-xs font-bold ${
+                                      STATUS_STYLE[report.status] ?? ''
+                                    }`}
+                                  >
+                                    {report.status}
+                                  </span>
+                                </div>
+
+                                <div className="mt-4 md:mt-5 grid grid-cols-2 gap-2 md:gap-3 xl:grid-cols-4">
+                                  {[
+                                    ['신고 ID', report.id],
+                                    [
+                                      '신고자',
+                                      report.reporterNickname ??
+                                        report.reporterId ??
+                                        '-',
+                                    ],
+                                    ['유형', report.type],
+                                    ['대상', report.target],
+                                    ['사유', report.reason],
+                                    ['상태', report.status],
+                                    [
+                                      '접수일',
+                                      formatDateTime(report.createdAt),
+                                    ],
+                                    [
+                                      '검토일',
+                                      formatDateTime(report.reviewedAt),
+                                    ],
+                                    [
+                                      '처리 결과',
+                                      getActionResultLabel(
+                                        report.actionResultCode,
+                                      ),
+                                    ],
+                                  ].map(([label, value]) => (
+                                    <div
+                                      key={label}
+                                      className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3"
+                                    >
+                                      <div className="text-[10px] md:text-xs font-medium text-slate-400">
+                                        {label}
+                                      </div>
+                                      <div className="mt-1 break-all text-xs md:text-sm font-bold text-slate-800">
+                                        {value}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <div className="mt-4 md:mt-5 rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 p-3 md:p-4">
+                                  <div className="text-[10px] md:text-xs font-medium text-slate-400">
+                                    신고 내용
+                                  </div>
+                                  <div className="mt-1.5 md:mt-2 whitespace-pre-wrap wrap-break-word text-xs md:text-sm leading-relaxed text-slate-800">
+                                    {report.content || '-'}
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 md:mt-5 rounded-lg md:rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+                                  <div className="mb-2.5 md:mb-3 flex items-center justify-between gap-3">
+                                    <h4 className="text-xs md:text-sm font-bold text-slate-900">
+                                      증빙 파일
+                                    </h4>
+                                    <span className="text-[10px] md:text-xs font-semibold text-slate-400">
+                                      {report.evidences.length}개
+                                    </span>
+                                  </div>
+
+                                  {report.evidences.length === 0 ? (
+                                    <div className="rounded-lg md:rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 md:py-8 text-center text-[11px] md:text-sm text-slate-400">
+                                      첨부된 증빙 파일이 없습니다.
+                                    </div>
+                                  ) : (
+                                    // 💡 이미지 썸네일 그리드: 모바일은 1열, 태블릿 이상은 다열 구조 적용
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                      {report.evidences.map((evidence) => (
+                                        <EvidencePreview
+                                          key={evidence.id}
+                                          evidence={evidence}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {report.adminMemo && (
+                                  <div className="mt-4 md:mt-5 rounded-lg md:rounded-xl border border-blue-100 bg-blue-50 p-3 md:p-4">
+                                    <div className="text-[10px] md:text-xs font-bold text-blue-500">
+                                      관리자 메모
+                                    </div>
+                                    <div className="mt-1.5 md:mt-2 whitespace-pre-wrap wrap-break-word text-xs md:text-sm leading-relaxed text-blue-900">
+                                      {report.adminMemo}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+
+                  {paginated.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="py-10 md:py-16 text-center text-xs md:text-sm text-gray-400"
+                      >
+                        검색 결과가 없습니다.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="border-t border-slate-100 px-4 py-3 md:px-5 md:py-4">
+              <Pagination
+                total={filtered.length}
+                page={page}
+                pageSize={20}
+                onChange={(p) => {
+                  setPage(p);
+                }}
+              />
+            </div>
+
+            <div className="border-t border-gray-100 bg-slate-50/50 px-4 py-3 text-[10px] md:text-xs text-gray-400 break-keep">
+              처리와 기각 버튼은 실제 관리자 신고 상태 API를 호출합니다.
+            </div>
+          </section>
         </div>
       </div>
-    </>
+    </div>
   );
 }
