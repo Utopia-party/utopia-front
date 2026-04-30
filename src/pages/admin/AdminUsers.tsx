@@ -114,14 +114,14 @@ function toAdminUserStatus(
 
 function TrustBar({ score }: { score: number }) {
   return (
-    <div className="min-w-[120px]">
-      <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+    <div className="min-w-25 md:min-w-30">
+      <div className="mb-1 flex items-center justify-between text-[11px] md:text-xs text-gray-500">
         <span>신뢰도</span>
         <span className="font-semibold text-gray-700">{score.toFixed(1)}</span>
       </div>
-      <div className="h-2 rounded-full bg-gray-100">
+      <div className="h-1.5 md:h-2 rounded-full bg-gray-100">
         <div
-          className={`h-2 rounded-full ${getTrustTone(score)}`}
+          className={`h-1.5 md:h-2 rounded-full ${getTrustTone(score)}`}
           style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }}
         />
       </div>
@@ -131,76 +131,78 @@ function TrustBar({ score }: { score: number }) {
 
 function OperationLogCard({ log }: { log: AdminOperationLog }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:px-4 md:py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
         <div className="flex items-center gap-2">
           <span
-            className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+            className={`rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-semibold ${
               OPERATION_LOG_STYLE[log.type]
             }`}
           >
             {OPERATION_LOG_TITLE[log.type]}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-[11px] md:text-xs text-slate-400">
             {formatAdminDateTime(log.createdAt)}
           </span>
         </div>
 
         {log.adminId && (
-          <span className="text-xs text-slate-400">관리자: {log.adminId}</span>
+          <span className="text-[11px] md:text-xs text-slate-400">
+            관리자: {log.adminId}
+          </span>
         )}
       </div>
 
-      <p className="mt-3 text-sm text-slate-700">
+      <p className="mt-2.5 md:mt-3 text-xs md:text-sm text-slate-700 break-keep">
         {log.reason || log.reportReason || '사유 없음'}
       </p>
 
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+      <div className="mt-2.5 md:mt-3 flex flex-wrap gap-1.5 md:gap-2 text-[10px] md:text-xs text-slate-500">
         {log.beforeStatus && (
-          <span className="rounded-full bg-white px-2.5 py-1">
+          <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
             이전 상태: {log.beforeStatus}
           </span>
         )}
 
         {log.afterStatus && (
-          <span className="rounded-full bg-white px-2.5 py-1">
+          <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
             변경 상태: {log.afterStatus}
           </span>
         )}
 
         {log.sanctionType && (
-          <span className="rounded-full bg-white px-2.5 py-1">
+          <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
             제재 유형: {log.sanctionType}
           </span>
         )}
 
         {log.sanctionDurationDays !== undefined &&
           log.sanctionDurationDays !== null && (
-            <span className="rounded-full bg-white px-2.5 py-1">
+            <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
               제재 기간: {log.sanctionDurationDays}일
             </span>
           )}
 
         {log.beforeTrustScore !== undefined && (
-          <span className="rounded-full bg-white px-2.5 py-1">
+          <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
             이전 신뢰도: {log.beforeTrustScore}
           </span>
         )}
 
         {log.afterTrustScore !== undefined && (
-          <span className="rounded-full bg-white px-2.5 py-1">
-            변경 후 신뢰도: {log.afterTrustScore}
+          <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
+            변경 후: {log.afterTrustScore}
           </span>
         )}
 
         {log.reportReason && (
-          <span className="rounded-full bg-white px-2.5 py-1">
+          <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
             신고 사유: {log.reportReason}
           </span>
         )}
 
         {log.reportId && (
-          <span className="rounded-full bg-white px-2.5 py-1">
+          <span className="rounded-full border border-slate-100 bg-white px-2 py-1 md:px-2.5">
             신고 ID: {log.reportId}
           </span>
         )}
@@ -528,29 +530,35 @@ export default function AdminUsers() {
   );
 
   return (
-    <>
+    <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
         placeholder="사용자 검색 (이름/닉네임/상태)..."
         onSearch={setSearch}
       />
 
-      <div className="p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      {/* 💡 모바일 쾌적함을 위한 전체 여백 최적화 */}
+      <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
           <section>
-            <h1 className="text-2xl font-bold text-gray-900">사용자관리</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-keep">
+              사용자관리
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 break-keep">
               사용자 상태, 신뢰도, 추천인, 운영 이력을 한 화면에서 관리합니다.
             </p>
           </section>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* 💡 요약 카드: 2단 그리드로 배치 */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             {summary.map((item) => (
               <div
                 key={item.label}
-                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm"
               >
-                <p className="text-sm text-gray-500">{item.label}</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
+                <p className="text-[11px] md:text-sm text-gray-500 truncate">
+                  {item.label}
+                </p>
+                <p className="mt-1 md:mt-2 text-xl md:text-2xl font-bold text-gray-900">
                   {item.value}
                 </p>
               </div>
@@ -566,10 +574,11 @@ export default function AdminUsers() {
             }}
           />
 
-          <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
+          {/* 💡 필터 영역 모바일 최적화 (Flex-col, W-full) */}
+          <section className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="flex w-full sm:w-auto flex-col gap-1.5">
+                <span className="text-[11px] md:text-xs font-medium text-gray-500">
                   키워드
                 </span>
                 <input
@@ -577,39 +586,41 @@ export default function AdminUsers() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="사용자 ID / 이름 / 닉네임"
-                  className="w-56 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                  className="w-full sm:w-56 rounded-lg md:rounded-xl border border-gray-200 px-3.5 py-2 md:py-2.5 text-sm outline-none transition focus:border-blue-400"
                 />
               </label>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
-                  시작일
-                </span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(event) => setDateFrom(event.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
-                />
-              </label>
+              <div className="flex w-full sm:w-auto gap-2">
+                <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                  <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                    시작일
+                  </span>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(event) => setDateFrom(event.target.value)}
+                    className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2 md:py-2.5 text-xs md:text-sm outline-none transition focus:border-blue-400"
+                  />
+                </label>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
-                  종료일
-                </span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(event) => setDateTo(event.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
-                />
-              </label>
+                <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                  <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                    종료일
+                  </span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => setDateTo(event.target.value)}
+                    className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2 md:py-2.5 text-xs md:text-sm outline-none transition focus:border-blue-400"
+                  />
+                </label>
+              </div>
 
-              <div className="flex gap-2 pb-0.5">
+              <div className="mt-1 flex w-full sm:w-auto gap-2 sm:ml-auto">
                 <button
                   type="button"
                   onClick={() => void handleSearch()}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  className="flex-1 sm:flex-none rounded-lg md:rounded-xl bg-blue-600 px-4 py-2.5 text-xs md:text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-95"
                 >
                   조회
                 </button>
@@ -617,7 +628,7 @@ export default function AdminUsers() {
                 <button
                   type="button"
                   onClick={() => void handleReset()}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                  className="flex-1 sm:flex-none rounded-lg md:rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-xs md:text-sm font-medium text-gray-600 transition hover:bg-gray-50 active:scale-95"
                 >
                   초기화
                 </button>
@@ -626,44 +637,45 @@ export default function AdminUsers() {
           </section>
 
           {loading && (
-            <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
               사용자 목록을 불러오는 중입니다.
             </div>
           )}
 
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
+            <div className="rounded-xl md:rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
               {error}
             </div>
           )}
 
-          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
+          <section className="overflow-hidden rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {/* 💡 테이블 가로 스크롤 및 브라우저 스크롤바 숨김 */}
+            <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              <table className="min-w-225 w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       생성 시각
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       사용자
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       상태
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       신고
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       참여
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       신뢰도
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       최근 활동
                     </th>
-                    <th className="w-[100px] px-4 py-3 text-right text-xs font-semibold text-gray-500">
+                    <th className="w-20 md:w-25 px-3 md:px-4 py-3 md:py-3.5 text-right text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       관리
                     </th>
                   </tr>
@@ -690,51 +702,51 @@ export default function AdminUsers() {
                     return (
                       <Fragment key={user.id}>
                         <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                          <td className="whitespace-nowrap px-4 py-3.5 text-sm text-gray-500">
+                          <td className="whitespace-nowrap px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-500">
                             {user.createdAt}
                           </td>
 
-                          <td className="px-4 py-3.5">
-                            <div className="text-sm font-medium text-gray-900">
+                          <td className="px-3 md:px-4 py-3.5">
+                            <div className="text-xs md:text-sm font-bold text-gray-900 break-keep">
                               {primaryLabel}
                             </div>
                             {secondaryLabel && (
-                              <div className="text-xs text-gray-400">
+                              <div className="text-[10px] md:text-xs text-gray-400">
                                 {secondaryLabel}
                               </div>
                             )}
                           </td>
 
-                          <td className="px-4 py-3.5 text-sm">
+                          <td className="px-3 md:px-4 py-3.5 text-sm">
                             <span
-                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[user.status]}`}
+                              className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-semibold ${STATUS_STYLE[user.status]}`}
                             >
                               {user.status}
                             </span>
                           </td>
 
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
                             {user.reportCount}건
                           </td>
 
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
                             {user.partyCount}개
                           </td>
 
-                          <td className="px-4 py-3.5">
+                          <td className="px-3 md:px-4 py-3.5">
                             <TrustBar score={user.trustScore} />
                           </td>
 
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
                             {user.lastActive}
                           </td>
 
-                          <td className="w-[100px] px-4 py-3.5 text-right text-sm">
+                          <td className="w-20 md:w-25 px-3 md:px-4 py-3.5 text-right text-sm">
                             <button
                               type="button"
                               aria-expanded={isExpanded}
                               onClick={() => void openDetail(user)}
-                              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                              className={`inline-flex items-center gap-1 rounded-lg md:rounded-xl border px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-xs font-bold transition active:scale-95 ${
                                 isExpanded
                                   ? 'border-slate-300 bg-slate-100 text-slate-700'
                                   : 'border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600'
@@ -761,7 +773,8 @@ export default function AdminUsers() {
 
                         {isExpanded && (
                           <tr className="border-b border-gray-100 bg-slate-50/70">
-                            <td colSpan={8} className="px-4 py-4">
+                            {/* 💡 확장 패널 모바일 최적화 (좌우 여백 축소) */}
+                            <td colSpan={8} className="p-3 md:px-4 md:py-5">
                               {isDetailLoading && (
                                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-5 text-sm text-slate-500 shadow-sm">
                                   사용자 상세 정보를 불러오는 중입니다.
@@ -775,7 +788,7 @@ export default function AdminUsers() {
                               )}
 
                               {!isDetailLoading && detail && (
-                                <div className="space-y-4">
+                                <div className="space-y-4 md:space-y-5">
                                   <div className="flex flex-wrap items-center justify-between gap-3">
                                     <div className="flex gap-2">
                                       {DETAIL_TABS.map((tab) => (
@@ -785,7 +798,7 @@ export default function AdminUsers() {
                                           onClick={() =>
                                             void changeDetailTab(user.id, tab)
                                           }
-                                          className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                                          className={`rounded-full border px-3 py-1.5 md:px-4 md:py-2 text-[11px] md:text-xs font-bold transition active:scale-95 ${
                                             activeDetailTab === tab
                                               ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
                                               : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
@@ -797,23 +810,24 @@ export default function AdminUsers() {
                                     </div>
                                   </div>
 
+                                  {/* --- 1. 요약 탭 --- */}
                                   {activeDetailTab === '요약' && (
-                                    <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                    <div className="grid gap-3 md:gap-4 xl:grid-cols-[1.4fr_1fr]">
+                                      <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
                                         <div className="flex items-start justify-between gap-4">
                                           <div>
-                                            <h3 className="text-base font-semibold text-slate-900">
+                                            <h3 className="text-sm md:text-base font-bold text-slate-900 break-keep">
                                               {detail.name?.trim() ||
                                                 detail.nickname}
                                             </h3>
-                                            <p className="mt-1 text-sm text-slate-500">
+                                            <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
                                               운영 판단에 필요한 핵심 사용자
                                               정보입니다.
                                             </p>
                                           </div>
 
                                           <span
-                                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                            className={`inline-flex shrink-0 rounded-full border px-2.5 py-1 text-[10px] md:text-xs font-semibold ${
                                               STATUS_STYLE[detail.status] ??
                                               STATUS_STYLE[user.status]
                                             }`}
@@ -822,7 +836,8 @@ export default function AdminUsers() {
                                           </span>
                                         </div>
 
-                                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                        {/* 💡 요약 정보 카드들: 모바일 2단 그리드 적용 */}
+                                        <div className="mt-4 md:mt-5 grid grid-cols-2 gap-2 md:gap-3 xl:grid-cols-4">
                                           {[
                                             ['사용자 ID', detail.id],
                                             ['이메일', detail.email],
@@ -854,12 +869,12 @@ export default function AdminUsers() {
                                           ].map(([label, value]) => (
                                             <div
                                               key={label}
-                                              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                              className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3"
                                             >
-                                              <div className="text-xs font-medium text-slate-400">
+                                              <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                                 {label}
                                               </div>
-                                              <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                              <div className="mt-1 truncate text-xs md:text-sm font-semibold text-slate-800">
                                                 {value}
                                               </div>
                                             </div>
@@ -867,12 +882,12 @@ export default function AdminUsers() {
                                         </div>
                                       </div>
 
-                                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                        <h4 className="text-sm font-semibold text-slate-900">
+                                      <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+                                        <h4 className="text-xs md:text-sm font-bold text-slate-900">
                                           최근 접속 정보
                                         </h4>
 
-                                        <div className="mt-4 space-y-3">
+                                        <div className="mt-3 md:mt-4 space-y-2.5 md:space-y-3">
                                           {[
                                             [
                                               '최근 로그인 시각',
@@ -894,12 +909,12 @@ export default function AdminUsers() {
                                           ].map(([label, value]) => (
                                             <div
                                               key={label}
-                                              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                              className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3"
                                             >
-                                              <div className="text-xs font-medium text-slate-400">
+                                              <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                                 {label}
                                               </div>
-                                              <div className="mt-1 break-all text-sm text-slate-700">
+                                              <div className="mt-1 break-all text-[11px] md:text-sm text-slate-700">
                                                 {value}
                                               </div>
                                             </div>
@@ -909,13 +924,16 @@ export default function AdminUsers() {
                                     </div>
                                   )}
 
+                                  {/* --- 2. 수정 탭 --- */}
                                   {activeDetailTab === '수정' && (
-                                    <div className="grid gap-4 xl:grid-cols-3">
-                                      <div className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
-                                        <h3 className="text-base font-semibold text-slate-900">
+                                    // 💡 수정 패널 모바일 스태킹 (세로로 쌓기)
+                                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                                      {/* 상태 변경 */}
+                                      <div className="rounded-xl md:rounded-2xl border border-blue-100 bg-white p-4 md:p-5 shadow-sm">
+                                        <h3 className="text-sm md:text-base font-bold text-slate-900">
                                           상태 변경
                                         </h3>
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        <p className="mt-1 text-[11px] md:text-sm text-slate-500">
                                           정상·주의·정지 상태를 변경합니다.
                                         </p>
 
@@ -927,15 +945,13 @@ export default function AdminUsers() {
                                               key={status}
                                               type="button"
                                               onClick={() =>
-                                                updateDraft(user.id, {
-                                                  status,
-                                                })
+                                                updateDraft(user.id, { status })
                                               }
                                               disabled={
                                                 isCurrentAdmin &&
                                                 status === '정지'
                                               }
-                                              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                                              className={`flex-1 sm:flex-none rounded-lg md:rounded-full border px-3 py-2 md:px-4 md:py-2 text-xs md:text-sm font-semibold transition active:scale-95 ${
                                                 draft.status === status
                                                   ? STATUS_STYLE[status]
                                                   : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
@@ -952,7 +968,7 @@ export default function AdminUsers() {
                                         </div>
 
                                         {isCurrentAdmin && (
-                                          <p className="mt-3 text-xs text-slate-500">
+                                          <p className="mt-2.5 text-[10px] md:text-xs text-slate-500 break-keep">
                                             현재 로그인한 관리자 본인 계정은
                                             정지할 수 없습니다.
                                           </p>
@@ -965,16 +981,16 @@ export default function AdminUsers() {
                                               statusReason: event.target.value,
                                             })
                                           }
-                                          rows={4}
+                                          rows={3}
                                           placeholder="상태 변경 사유"
-                                          className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-400"
+                                          className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 md:px-4 md:py-3 text-xs md:text-sm outline-none transition focus:border-blue-400"
                                         />
 
                                         <button
                                           type="button"
                                           disabled={busyUserId === user.id}
                                           onClick={() => void saveStatus(user)}
-                                          className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                                          className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-2.5 md:py-3 text-xs md:text-sm font-bold text-white transition hover:bg-blue-700 active:scale-95 disabled:opacity-50"
                                         >
                                           {busyUserId === user.id
                                             ? '저장 중...'
@@ -982,27 +998,26 @@ export default function AdminUsers() {
                                         </button>
                                       </div>
 
-                                      <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
-                                        <h3 className="text-base font-semibold text-slate-900">
+                                      {/* 신뢰도 변경 */}
+                                      <div className="rounded-xl md:rounded-2xl border border-emerald-100 bg-white p-4 md:p-5 shadow-sm">
+                                        <h3 className="text-sm md:text-base font-bold text-slate-900">
                                           신뢰도 변경
                                         </h3>
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        <p className="mt-1 text-[11px] md:text-sm text-slate-500">
                                           0~100점 범위에서 직접 보정합니다.
                                         </p>
 
-                                        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                                          <div className="flex justify-between text-xs text-slate-500">
+                                        <div className="mt-4 rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 p-3 md:px-4 md:py-4">
+                                          <div className="flex justify-between text-[11px] md:text-xs text-slate-500">
                                             <span>미리보기</span>
-                                            <span className="font-semibold text-slate-700">
+                                            <span className="font-bold text-slate-700">
                                               {trustPreview.toFixed(1)}
                                             </span>
                                           </div>
 
-                                          <div className="mt-3 h-3 rounded-full bg-white">
+                                          <div className="mt-2.5 h-2.5 md:h-3 rounded-full bg-white">
                                             <div
-                                              className={`h-3 rounded-full ${getTrustTone(
-                                                trustPreview,
-                                              )}`}
+                                              className={`h-2.5 md:h-3 rounded-full ${getTrustTone(trustPreview)}`}
                                               style={{
                                                 width: `${trustPreview}%`,
                                               }}
@@ -1035,7 +1050,7 @@ export default function AdminUsers() {
                                               trustScore: event.target.value,
                                             })
                                           }
-                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400"
+                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm outline-none transition focus:border-emerald-400"
                                         />
 
                                         <textarea
@@ -1045,9 +1060,9 @@ export default function AdminUsers() {
                                               trustReason: event.target.value,
                                             })
                                           }
-                                          rows={3}
+                                          rows={2}
                                           placeholder="신뢰도 변경 사유"
-                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400"
+                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 md:px-4 md:py-3 text-xs md:text-sm outline-none transition focus:border-emerald-400"
                                         />
 
                                         <button
@@ -1056,7 +1071,7 @@ export default function AdminUsers() {
                                           onClick={() =>
                                             void saveTrustScore(user)
                                           }
-                                          className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                                          className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-2.5 md:py-3 text-xs md:text-sm font-bold text-white transition hover:bg-emerald-700 active:scale-95 disabled:opacity-50"
                                         >
                                           {busyUserId === user.id
                                             ? '저장 중...'
@@ -1064,26 +1079,27 @@ export default function AdminUsers() {
                                         </button>
                                       </div>
 
-                                      <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
-                                        <h3 className="text-base font-semibold text-slate-900">
+                                      {/* 추천인 변경 */}
+                                      <div className="rounded-xl md:rounded-2xl border border-violet-100 bg-white p-4 md:p-5 shadow-sm">
+                                        <h3 className="text-sm md:text-base font-bold text-slate-900">
                                           추천인 변경
                                         </h3>
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
                                           오입력된 추천인 닉네임을 수정하거나
                                           비울 수 있습니다.
                                         </p>
 
-                                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                          <div className="text-xs font-medium text-slate-400">
+                                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3">
+                                          <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                             현재 추천인
                                           </div>
-                                          <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                          <div className="mt-1 break-all text-sm font-bold text-slate-800">
                                             {getRecommenderText(detail)}
                                           </div>
                                         </div>
 
                                         <label className="mt-4 block">
-                                          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                          <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
                                             추천인 닉네임
                                           </span>
 
@@ -1097,7 +1113,7 @@ export default function AdminUsers() {
                                               })
                                             }
                                             placeholder="비우면 추천인 해제"
-                                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+                                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm outline-none transition focus:border-violet-400"
                                           />
                                         </label>
 
@@ -1109,9 +1125,9 @@ export default function AdminUsers() {
                                                 event.target.value,
                                             })
                                           }
-                                          rows={4}
+                                          rows={3}
                                           placeholder="추천인 변경 사유"
-                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+                                          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 md:px-4 md:py-3 text-xs md:text-sm outline-none transition focus:border-violet-400"
                                         />
 
                                         <button
@@ -1120,7 +1136,7 @@ export default function AdminUsers() {
                                           onClick={() =>
                                             void saveRecommender(user)
                                           }
-                                          className="mt-3 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                                          className="mt-3 w-full rounded-xl bg-violet-600 px-4 py-2.5 md:py-3 text-xs md:text-sm font-bold text-white transition hover:bg-violet-700 active:scale-95 disabled:opacity-50"
                                         >
                                           {busyUserId === user.id
                                             ? '저장 중...'
@@ -1130,14 +1146,15 @@ export default function AdminUsers() {
                                     </div>
                                   )}
 
+                                  {/* --- 3. 이력 탭 --- */}
                                   {activeDetailTab === '이력' && (
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                    <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
                                       <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div>
-                                          <h3 className="text-base font-semibold text-slate-900">
+                                          <h3 className="text-sm md:text-base font-bold text-slate-900">
                                             운영 이력
                                           </h3>
-                                          <p className="mt-1 text-sm text-slate-500">
+                                          <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
                                             상태 변경, 신고, 제재, 신뢰도 변경,
                                             추천인 변경을 시간순으로 확인합니다.
                                           </p>
@@ -1145,7 +1162,7 @@ export default function AdminUsers() {
                                       </div>
 
                                       {operationLogsLoading === user.id && (
-                                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+                                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs md:text-sm text-slate-400">
                                           운영 이력을 불러오는 중입니다...
                                         </div>
                                       )}
@@ -1153,12 +1170,12 @@ export default function AdminUsers() {
                                       {operationLogsLoading !== user.id &&
                                         (operationLogsMap[user.id] ?? [])
                                           .length === 0 && (
-                                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+                                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs md:text-sm text-slate-400">
                                             운영 이력이 없습니다.
                                           </div>
                                         )}
 
-                                      <div className="mt-4 space-y-3">
+                                      <div className="mt-4 space-y-2.5 md:space-y-3">
                                         {(operationLogsMap[user.id] ?? []).map(
                                           (log) => (
                                             <OperationLogCard
@@ -1183,7 +1200,7 @@ export default function AdminUsers() {
                     <tr>
                       <td
                         colSpan={8}
-                        className="px-4 py-8 text-center text-sm text-gray-400"
+                        className="px-4 py-10 text-center text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.
                       </td>
@@ -1193,20 +1210,23 @@ export default function AdminUsers() {
               </table>
             </div>
 
-            <Pagination
-              total={filtered.length}
-              page={page}
-              pageSize={20}
-              onChange={setPage}
-            />
+            {/* Pagination Component는 자체적으로 반응형을 지원한다고 가정 */}
+            <div className="mt-2 md:mt-0">
+              <Pagination
+                total={filtered.length}
+                page={page}
+                pageSize={20}
+                onChange={setPage}
+              />
+            </div>
 
-            <div className="px-4 py-3 text-xs text-gray-400">
-              목록에서는 공간을 줄이고, 실제 수정 작업은 상세 패널 안에서
-              처리합니다.
+            <div className="border-t border-gray-100 bg-slate-50/50 px-4 py-3 text-[10px] md:text-xs text-gray-400 break-keep">
+              목록에서는 공간을 줄이고, 실제 수정 작업은 우측 관리 탭 상세 패널
+              안에서 처리합니다.
             </div>
           </section>
         </div>
       </div>
-    </>
+    </div>
   );
 }

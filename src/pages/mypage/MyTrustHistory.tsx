@@ -50,7 +50,7 @@ function TrustScoreLineChart({
 
   if (data.length === 0) {
     return (
-      <div className="flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white text-sm font-semibold text-slate-400">
+      <div className="flex h-55 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-center text-sm font-semibold text-slate-400 break-keep">
         그래프로 표시할 신뢰도 변화 데이터가 없습니다.
       </div>
     );
@@ -130,10 +130,11 @@ function TrustScoreLineChart({
   });
 
   return (
-    <div className="overflow-x-auto">
+    // 💡 모바일 가로 스크롤 허용 & 못생긴 브라우저 기본 스크롤바 숨김 처리
+    <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="h-[220px] w-full min-w-[760px]"
+        className="h-55 w-full min-w-190"
         role="img"
         aria-label="신뢰도 변화 그래프"
       >
@@ -335,30 +336,33 @@ export default function MyTrustHistory() {
   }, [totalPages]);
 
   return (
-    <div className="min-h-full bg-[#f5f7fb] px-10 py-8">
+    // 💡 최외곽 여백 모바일 최적화 (px-10 -> px-4 sm:px-6 md:px-10)
+    <div className="min-h-full bg-[#f5f7fb] px-4 py-6 sm:px-6 sm:py-8 md:px-10">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-7">
-          <h1 className="text-[24px] font-extrabold tracking-tight text-slate-900">
+        <div className="mb-5 sm:mb-7">
+          <h1 className="text-xl sm:text-[24px] font-extrabold tracking-tight text-slate-900 break-keep">
             마이페이지 - 신뢰도 변화 이력
           </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500">
+          <p className="mt-1 text-xs sm:text-sm font-medium text-slate-500">
             내 신뢰도 변화 이력
           </p>
         </div>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="rounded-3xl border border-slate-200 bg-slate-50/60 p-5">
-            <div className="mb-4 flex items-center justify-between">
+        <section className="rounded-2xl sm:rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+          {/* 상단 그래프 영역 */}
+          <div className="rounded-xl sm:rounded-3xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+            {/* 💡 모바일에서는 타이틀과 '현재 신뢰도' 뱃지가 좁아서 세로로 배치되도록 수정 */}
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-base font-extrabold text-slate-900">
+                <h2 className="text-sm sm:text-base font-extrabold text-slate-900">
                   신뢰도 변화 그래프
                 </h2>
-                <p className="mt-1 text-sm font-medium text-slate-500">
+                <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm font-medium text-slate-500">
                   {period} 기준 신뢰도 변화 흐름입니다.
                 </p>
               </div>
 
-              <div className="inline-flex rounded-full bg-blue-50 px-4 py-2 text-sm font-extrabold text-primary">
+              <div className="inline-flex self-start sm:self-auto rounded-full bg-blue-50 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-extrabold text-primary">
                 현재 신뢰도 {formatTrustScore(currentTrustScore)}
               </div>
             </div>
@@ -366,22 +370,24 @@ export default function MyTrustHistory() {
             <TrustScoreLineChart data={cumulativeGraphData} />
           </div>
 
-          <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
+          {/* 중간 필터 및 검색 영역 */}
+          <div className="mt-5 sm:mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            {/* 💡 모바일에서 두 Select 박스가 동일한 너비(flex-1)를 차지하도록 조절 */}
+            <div className="flex w-full sm:w-auto gap-2">
+              <div className="relative flex-1 sm:flex-none">
                 <select
                   value={category}
                   onChange={(e) => {
                     setCategory(e.target.value as CategoryFilter);
                     setCurrentPage(1);
                   }}
-                  className="h-11 min-w-[132px] appearance-none rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
+                  className="w-full sm:w-auto h-11 sm:min-w-33 appearance-none rounded-xl sm:rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
                 >
                   <option>전체</option>
                   <option>점수 상승</option>
                   <option>점수 하락</option>
                 </select>
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4"
@@ -397,20 +403,20 @@ export default function MyTrustHistory() {
                 </span>
               </div>
 
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <select
                   value={period}
                   onChange={(e) => {
                     setPeriod(e.target.value as PeriodFilter);
                     setCurrentPage(1);
                   }}
-                  className="h-11 min-w-[132px] appearance-none rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
+                  className="w-full sm:w-auto h-11 sm:min-w-33 appearance-none rounded-xl sm:rounded-full border border-slate-200 bg-slate-50 px-4 pr-10 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm outline-none transition hover:bg-white focus:border-primary focus:bg-white"
                 >
                   <option>최근 1개월</option>
                   <option>최근 3개월</option>
                   <option>최근 6개월</option>
                 </select>
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4"
@@ -435,19 +441,21 @@ export default function MyTrustHistory() {
                 setCurrentPage(1);
               }}
               placeholder="사유/파티명 검색"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400 md:w-[250px]"
+              // 모바일 높이 통일 및 글꼴 크기 조정
+              className="w-full h-11 rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400 md:w-62.5"
             />
           </div>
 
+          {/* 리스트 영역 */}
           <div className="mt-4 flex flex-col gap-3">
             {loading && (
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-10 text-center text-sm font-semibold text-slate-500">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50/60 px-5 py-10 text-center text-sm font-semibold text-slate-500">
                 신뢰도 변화 이력을 불러오는 중입니다.
               </div>
             )}
 
             {!loading && error && (
-              <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-10 text-center text-sm font-semibold text-rose-600">
+              <div className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-10 text-center text-sm font-semibold text-rose-600">
                 {error}
               </div>
             )}
@@ -457,19 +465,20 @@ export default function MyTrustHistory() {
               pagedHistory.map((item) => (
                 <article
                   key={item.id}
-                  className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5"
+                  // 💡 모바일에서는 뱃지가 너무 크면 텍스트를 밀어내므로 갭과 크기를 반응형으로 조정
+                  className="flex items-center justify-between gap-3 rounded-2xl sm:rounded-3xl border border-slate-200 bg-slate-50/60 p-4 sm:px-5 sm:py-5"
                 >
-                  <div>
-                    <p className="text-[15px] font-extrabold text-slate-900">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm sm:text-[15px] font-extrabold text-slate-900">
                       {item.title}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                    <p className="mt-1 truncate text-xs sm:text-sm font-semibold text-slate-500">
                       {item.date} · {item.detail}
                     </p>
                   </div>
 
                   <div
-                    className={`inline-flex min-w-[118px] items-center justify-center rounded-full px-7 py-3 text-[18px] font-extrabold ${getScoreBadgeClass(
+                    className={`inline-flex shrink-0 min-w-17.5 sm:min-w-29.5 items-center justify-center rounded-xl sm:rounded-full px-3 py-2 sm:px-7 sm:py-3 text-sm sm:text-[18px] font-extrabold ${getScoreBadgeClass(
                       item.score,
                     )}`}
                   >
@@ -479,17 +488,19 @@ export default function MyTrustHistory() {
               ))}
 
             {!loading && !error && filteredHistory.length === 0 && (
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-10 text-center text-sm font-semibold text-slate-500">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50/60 px-5 py-10 text-center text-sm font-semibold text-slate-500">
                 검색 조건에 맞는 신뢰도 변화 이력이 없습니다.
               </div>
             )}
           </div>
 
+          {/* 페이지네이션 */}
           {!loading && !error && filteredHistory.length > 0 && (
-            <div className="mt-8 flex items-center justify-center gap-2">
+            // 💡 페이지가 많을 경우 대비 flex-wrap 추가
+            <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
-                className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-9 sm:h-11 rounded-lg sm:rounded-full border border-slate-200 bg-white px-3 sm:px-4 text-xs sm:text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={() => setCurrentPage(Math.max(safeCurrentPage - 1, 1))}
                 disabled={safeCurrentPage === 1}
               >
@@ -501,7 +512,7 @@ export default function MyTrustHistory() {
                   key={page}
                   type="button"
                   className={[
-                    'h-11 min-w-[44px] rounded-full px-4 text-sm font-extrabold transition',
+                    'h-9 sm:h-11 min-w-9 sm:min-w-11 rounded-lg sm:rounded-full px-3 sm:px-4 text-xs sm:text-sm font-extrabold transition',
                     safeCurrentPage === page
                       ? 'bg-primary text-white'
                       : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
@@ -514,7 +525,7 @@ export default function MyTrustHistory() {
 
               <button
                 type="button"
-                className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-9 sm:h-11 rounded-lg sm:rounded-full border border-slate-200 bg-white px-3 sm:px-4 text-xs sm:text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={() =>
                   setCurrentPage(Math.min(safeCurrentPage + 1, totalPages))
                 }

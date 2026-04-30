@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import {
   fetchAdminDashboard,
@@ -87,29 +87,34 @@ function DashboardLineChart({
   const pathCurrent = buildLinePath(currentValues, width, height);
 
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(36,54,94,0.08)]">
+    // 💡 모바일 여백(p-5) 조절
+    <div className="rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_60px_rgba(36,54,94,0.08)]">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-500">
             {eyebrow}
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+          <h2 className="mt-1 md:mt-2 text-xl md:text-2xl font-semibold text-slate-900 break-keep">
             {title}
           </h2>
-          <p className="mt-2 text-sm text-slate-500">{description}</p>
+          <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-slate-500 break-keep">
+            {description}
+          </p>
         </div>
-        <div className="grid gap-2 text-sm text-slate-600">
+        <div className="grid gap-2 text-xs md:text-sm text-slate-600">
           <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
+            <span className="h-2 w-2 md:h-2.5 md:w-2.5 shrink-0 rounded-full bg-sky-500" />
             {periodLabel}
           </div>
         </div>
       </div>
 
-      <div className="mt-8 overflow-x-auto">
+      {/* 💡 스크롤바 숨김 처리 및 가로 스크롤 허용 */}
+      <div className="mt-6 md:mt-8 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <svg
           viewBox={`0 0 ${viewWidth} ${labelY + 16}`}
-          className="h-[280px] min-w-[760px] w-full"
+          // 모바일 높이 약간 축소, 최소 너비 유지
+          className="h-55 md:h-70 min-w-190 w-full"
           role="img"
           aria-label="기간별 승인 매출 비교 그래프"
         >
@@ -188,21 +193,23 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
   const accent = CARD_ACCENTS[metric.id] ?? CARD_ACCENTS.members;
 
   return (
-    <article className="relative overflow-hidden rounded-[28px] border border-white/50 bg-white p-6 shadow-[0_20px_50px_rgba(39,64,120,0.10)]">
+    <article className="relative overflow-hidden rounded-3xl md:rounded-[28px] border border-white/50 bg-white p-5 md:p-6 shadow-[0_20px_50px_rgba(39,64,120,0.10)] transition-transform hover:-translate-y-1">
       <div
-        className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`}
+        className={`absolute inset-x-0 top-0 h-1 bg-linear-to-r ${accent}`}
       />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+          <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
             {metric.label}
           </p>
-          <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+          <p className="mt-3 md:mt-4 text-2xl md:text-3xl font-semibold tracking-tight text-slate-900 break-all">
             {metric.value}
           </p>
         </div>
       </div>
-      <p className="mt-4 text-sm leading-6 text-slate-500">{metric.helper}</p>
+      <p className="mt-3 md:mt-4 text-xs md:text-sm leading-relaxed text-slate-500 break-keep">
+        {metric.helper}
+      </p>
     </article>
   );
 }
@@ -217,19 +224,23 @@ function SummaryPanel({
   rows: { label: string; value: string }[];
 }) {
   return (
-    <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+    <section className="rounded-3xl md:rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
+      <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
         {title}
       </p>
-      <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
-      <div className="mt-6 space-y-3">
+      <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-slate-500 break-keep">
+        {subtitle}
+      </p>
+      <div className="mt-5 md:mt-6 space-y-2.5 md:space-y-3">
         {rows.map((row) => (
           <div
             key={row.label}
-            className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
+            className="flex items-center justify-between rounded-xl md:rounded-2xl bg-slate-50 px-4 py-3"
           >
-            <span className="text-sm text-slate-600">{row.label}</span>
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="text-xs md:text-sm text-slate-600">
+              {row.label}
+            </span>
+            <span className="text-xs md:text-sm font-semibold text-slate-900">
               {row.value}
             </span>
           </div>
@@ -250,20 +261,22 @@ function CompactStatCard({
 }) {
   return (
     <div
-      className={`rounded-[24px] border p-5 shadow-[0_14px_30px_rgba(39,64,120,0.06)] ${
+      className={`rounded-[20px] md:rounded-3xl border p-4 md:p-5 shadow-[0_14px_30px_rgba(39,64,120,0.06)] ${
         tone === 'accent'
-          ? 'border-cyan-100 bg-gradient-to-r from-[#61e4c5] to-[#54a8ff] text-white'
+          ? 'border-cyan-100 bg-linear-to-r from-[#61e4c5] to-[#54a8ff] text-white'
           : 'border-slate-200 bg-white text-slate-900'
       }`}
     >
       <div
-        className={`text-xs font-semibold uppercase tracking-[0.22em] ${
+        className={`text-[10px] md:text-xs font-semibold uppercase tracking-[0.22em] ${
           tone === 'accent' ? 'text-white/75' : 'text-slate-400'
         }`}
       >
         {label}
       </div>
-      <div className="mt-3 text-3xl font-semibold tracking-tight">{value}</div>
+      <div className="mt-2.5 md:mt-3 text-2xl md:text-3xl font-semibold tracking-tight break-all">
+        {value}
+      </div>
     </div>
   );
 }
@@ -282,66 +295,76 @@ export default function AdminDashboard() {
   const [breakdownError, setBreakdownError] = useState('');
   const breakdownCompareMode: CompareMode = 'previous_period';
 
-  const loadDashboard = async (
-    nextParams?: Partial<{
-      date_from: string;
-      date_to: string;
-      compare_mode: CompareMode;
-    }>,
-  ) => {
-    try {
-      setLoading(true);
-      setError('');
-      const nextDashboard = await fetchAdminDashboard({
-        date_from: nextParams?.date_from ?? (dateFrom || undefined),
-        date_to: nextParams?.date_to ?? (dateTo || undefined),
-        compare_mode: nextParams?.compare_mode ?? compareMode,
-      });
-      setDashboard(nextDashboard);
-      setDateFrom(nextDashboard.rangeStart);
-      setDateTo(nextDashboard.rangeEnd);
-      setBreakdownDashboard(nextDashboard);
-    } catch (err) {
-      setError(getAdminErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadDashboard = useCallback(
+    async (
+      nextParams?: Partial<{
+        date_from: string;
+        date_to: string;
+        compare_mode: CompareMode;
+      }>,
+    ) => {
+      try {
+        setLoading(true);
+        setError('');
+        const nextDashboard = await fetchAdminDashboard({
+          date_from: nextParams?.date_from ?? (dateFrom || undefined),
+          date_to: nextParams?.date_to ?? (dateTo || undefined),
+          compare_mode: nextParams?.compare_mode ?? compareMode,
+        });
+        setDashboard(nextDashboard);
+        setDateFrom(nextDashboard.rangeStart);
+        setDateTo(nextDashboard.rangeEnd);
+        setBreakdownDashboard(nextDashboard);
+      } catch (err) {
+        setError(getAdminErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [dateFrom, dateTo, compareMode],
+  );
 
   useEffect(() => {
     void loadDashboard();
-    const timer = setInterval(() => { void loadDashboard(); }, 30_000);
+    const timer = setInterval(() => {
+      void loadDashboard();
+    }, 30_000);
     return () => clearInterval(timer);
-  }, []);
+  }, [loadDashboard]);
 
-  const loadBreakdownDashboard = async (
-    nextParams?: Partial<{
-      date_from: string;
-      date_to: string;
-      compare_mode: CompareMode;
-    }>,
-  ) => {
-    try {
-      setBreakdownLoading(true);
-      setBreakdownError('');
-      const nextDashboard = await fetchAdminDashboard({
-        date_from: nextParams?.date_from ?? (dateFrom || undefined),
-        date_to: nextParams?.date_to ?? (dateTo || undefined),
-        compare_mode: nextParams?.compare_mode ?? breakdownCompareMode,
-      });
-      setBreakdownDashboard(nextDashboard);
-    } catch (err) {
-      setBreakdownError(getAdminErrorMessage(err));
-    } finally {
-      setBreakdownLoading(false);
-    }
-  };
+  const loadBreakdownDashboard = useCallback(
+    async (
+      nextParams?: Partial<{
+        date_from: string;
+        date_to: string;
+        compare_mode: CompareMode;
+      }>,
+    ) => {
+      try {
+        setBreakdownLoading(true);
+        setBreakdownError('');
+        const nextDashboard = await fetchAdminDashboard({
+          date_from: nextParams?.date_from ?? (dateFrom || undefined),
+          date_to: nextParams?.date_to ?? (dateTo || undefined),
+          compare_mode: nextParams?.compare_mode ?? breakdownCompareMode,
+        });
+        setBreakdownDashboard(nextDashboard);
+      } catch (err) {
+        setBreakdownError(getAdminErrorMessage(err));
+      } finally {
+        setBreakdownLoading(false);
+      }
+    },
+    [dateFrom, dateTo, breakdownCompareMode],
+  );
 
   useEffect(() => {
     void loadBreakdownDashboard();
-    const timer = setInterval(() => { void loadBreakdownDashboard(); }, 30_000);
+    const timer = setInterval(() => {
+      void loadBreakdownDashboard();
+    }, 30_000);
     return () => clearInterval(timer);
-  }, []);
+  }, [loadBreakdownDashboard]);
 
   const handleAnalyzeDashboard = async () => {
     await loadDashboard({
@@ -367,79 +390,89 @@ export default function AdminDashboard() {
     const rows = breakdownDashboard?.salesStats ?? [];
     return rows.filter((row) => row.label !== '비교 기준');
   }, [breakdownDashboard]);
+
   return (
-    <>
+    <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
         placeholder="관리자 검색..."
         rightContent={
-          <span className="rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+          <span className="hidden sm:inline-block rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
             비교형 분석 대시보드
           </span>
         }
       />
-      <div className="min-h-screen bg-[#f5f5f5] p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <section className="overflow-hidden rounded-[32px] border border-white/70 bg-white/80 shadow-[0_35px_90px_rgba(39,64,120,0.12)] backdrop-blur">
+
+      {/* 💡 모바일 여백(p-4) 축소 및 배경색 채움 */}
+      <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
+          <section className="overflow-hidden rounded-2xl md:rounded-4xl border border-white/70 bg-white/80 shadow-[0_35px_90px_rgba(39,64,120,0.12)] backdrop-blur">
             <div className="grid gap-0 xl:grid-cols-[260px_minmax(0,1fr)]">
-              <div className="border-b border-slate-200/80 bg-white/90 p-6 xl:border-b-0 xl:border-r">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+              {/* 왼쪽 제목 패널 */}
+              <div className="border-b border-slate-200/80 bg-white/90 p-5 md:p-6 xl:border-b-0 xl:border-r">
+                <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
                   Dashboard
                 </p>
-                <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+                <h1 className="mt-2 md:mt-4 text-2xl md:text-3xl font-semibold tracking-tight text-slate-900 break-keep">
                   통계 대시보드
                 </h1>
-                <p className="mt-3 text-sm leading-6 text-slate-500">
+                <p className="mt-2 md:mt-3 text-xs md:text-sm leading-relaxed text-slate-500 break-keep">
                   날짜 범위를 선택하면 해당 기간 실적과 변화 흐름을 바로 확인할
                   수 있습니다.
                 </p>
-                <div className="mt-8 rounded-3xl bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                <div className="mt-5 md:mt-8 rounded-2xl md:rounded-3xl bg-slate-50 p-4">
+                  <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                     Period
                   </p>
-                  <p className="mt-2 text-lg font-semibold text-slate-900">
+                  <p className="mt-1 md:mt-2 text-base md:text-lg font-semibold text-slate-900">
                     {dashboard?.periodLabel ?? '-'}
                   </p>
                 </div>
               </div>
 
-              <div className="p-6">
-                <div className="rounded-[28px] bg-gradient-to-r from-[#63e3c4] via-[#58c6e8] to-[#6faeff] p-[1px]">
-                  <div className="rounded-[27px] bg-white px-5 py-4">
-                    <div className="flex flex-wrap items-end gap-3">
-                      <label className="flex min-w-[160px] flex-col gap-1">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Start Date
-                        </span>
-                        <input
-                          type="date"
-                          value={dateFrom}
-                          onChange={(event) => setDateFrom(event.target.value)}
-                          className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
-                        />
-                      </label>
-                      <label className="flex min-w-[160px] flex-col gap-1">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          End Date
-                        </span>
-                        <input
-                          type="date"
-                          value={dateTo}
-                          onChange={(event) => setDateTo(event.target.value)}
-                          className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
-                        />
-                      </label>
-                      <div className="ml-auto flex gap-2">
+              {/* 우측 컨트롤 및 메트릭 패널 */}
+              <div className="p-4 md:p-6">
+                <div className="rounded-2xl md:rounded-[28px] bg-linear-to-r from-[#63e3c4] via-[#58c6e8] to-[#6faeff] p-px">
+                  <div className="rounded-[15px] md:rounded-[27px] bg-white p-4 md:px-5 md:py-4">
+                    {/* 💡 모바일 폼 레이아웃을 flex-col 기반으로 변경하여 찌그러짐 방지 */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                      <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+                        <label className="flex flex-1 flex-col gap-1">
+                          <span className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            Start Date
+                          </span>
+                          <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(event) =>
+                              setDateFrom(event.target.value)
+                            }
+                            className="w-full rounded-xl md:rounded-2xl border border-slate-200 px-3 py-2.5 md:px-4 md:py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
+                          />
+                        </label>
+                        <label className="flex flex-1 flex-col gap-1">
+                          <span className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            End Date
+                          </span>
+                          <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(event) => setDateTo(event.target.value)}
+                            className="w-full rounded-xl md:rounded-2xl border border-slate-200 px-3 py-2.5 md:px-4 md:py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
+                          />
+                        </label>
+                      </div>
+                      <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
                         <button
                           type="button"
                           onClick={() => void handleAnalyzeDashboard()}
-                          className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                          className="flex-1 sm:flex-none rounded-xl md:rounded-2xl bg-slate-900 px-4 py-2.5 md:px-5 md:py-3 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-95"
                         >
                           분석 보기
                         </button>
                         <button
                           type="button"
                           onClick={() => void loadDashboard({})}
-                          className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                          className="flex-1 sm:flex-none rounded-xl md:rounded-2xl border border-slate-200 bg-white px-4 py-2.5 md:px-5 md:py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95"
                         >
                           최신화
                         </button>
@@ -448,7 +481,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-5 md:mt-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
                   {(dashboard?.metrics ?? []).map((metric) => (
                     <MetricCard key={metric.id} metric={metric} />
                   ))}
@@ -458,26 +491,27 @@ export default function AdminDashboard() {
           </section>
 
           {loading && (
-            <section className="rounded-[28px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">
+            <section className="rounded-2xl md:rounded-[28px] border border-slate-200 bg-white px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-slate-500 shadow-sm">
               관리자 대시보드를 불러오는 중입니다.
             </section>
           )}
 
           {error && (
-            <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600 shadow-sm">
+            <section className="rounded-2xl md:rounded-[28px] border border-rose-200 bg-rose-50 px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-rose-600 shadow-sm">
               {error}
             </section>
           )}
 
-          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
+          <section className="grid gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
+              {/* 💡 탭 버튼 모바일 최적화 (가로 스크롤 가능하게) */}
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                 {(dashboard?.chartGroups ?? []).map((chart) => (
                   <button
                     key={chart.id}
                     type="button"
                     onClick={() => setActiveChartId(chart.id as ChartTabId)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs md:text-sm font-semibold transition active:scale-95 ${
                       activeChart?.id === chart.id
                         ? 'bg-slate-900 text-white'
                         : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -500,7 +534,7 @@ export default function AdminDashboard() {
                 points={activeChart?.points ?? []}
               />
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
                 <CompactStatCard
                   label="조회 기간 총합"
                   value={formatPointValue(
@@ -519,26 +553,28 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+            <div className="space-y-5 md:space-y-6">
+              <section className="rounded-2xl md:rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
+                <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                   Snapshot
                 </p>
-                <div className="mt-5 space-y-4">
-                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                    <div className="text-sm text-slate-500">조회 기간 합계</div>
-                    <div className="mt-2 text-3xl font-semibold text-slate-900">
+                <div className="mt-4 md:mt-5 space-y-3 md:space-y-4">
+                  <div className="rounded-xl md:rounded-2xl bg-slate-50 p-4">
+                    <div className="text-xs md:text-sm text-slate-500">
+                      조회 기간 합계
+                    </div>
+                    <div className="mt-1 md:mt-2 text-2xl md:text-3xl font-semibold text-slate-900 break-all">
                       {formatPointValue(
                         chartSnapshot.totalCurrent,
                         activeChart?.unit ?? 'count',
                       )}
                     </div>
                   </div>
-                  <div className="rounded-2xl bg-gradient-to-r from-[#61e4c5] to-[#54a8ff] px-4 py-4 text-white">
-                    <div className="text-sm text-white/80">
+                  <div className="rounded-xl md:rounded-2xl bg-linear-to-r from-[#61e4c5] to-[#54a8ff] p-4 text-white">
+                    <div className="text-xs md:text-sm text-white/80 break-keep">
                       조회 기간 최고 피크
                     </div>
-                    <div className="mt-2 text-2xl font-semibold">
+                    <div className="mt-1 md:mt-2 text-xl md:text-2xl font-semibold break-all">
                       {formatPointValue(
                         chartSnapshot.peak,
                         activeChart?.unit ?? 'count',
@@ -556,27 +592,29 @@ export default function AdminDashboard() {
             </div>
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <section className="grid gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+            <section className="rounded-2xl md:rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
+              <div className="flex flex-col gap-2 md:gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                  <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                     매출/정산 세부 내역
                   </p>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-slate-500 break-keep">
                     상단에서 선택한 날짜 기준으로 함께 갱신됩니다.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-5 md:mt-6 space-y-2.5 md:space-y-3">
                 {breakdownRows.map((row) => (
                   <div
                     key={row.label}
-                    className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
+                    className="flex items-center justify-between rounded-xl md:rounded-2xl bg-slate-50 px-4 py-3"
                   >
-                    <span className="text-sm text-slate-600">{row.label}</span>
-                    <span className="text-sm font-semibold text-slate-900">
+                    <span className="text-xs md:text-sm text-slate-600">
+                      {row.label}
+                    </span>
+                    <span className="text-xs md:text-sm font-semibold text-slate-900 break-all ml-2 text-right">
                       {row.value}
                     </span>
                   </div>
@@ -584,52 +622,52 @@ export default function AdminDashboard() {
               </div>
 
               {breakdownLoading && (
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs md:text-sm text-slate-500">
                   세부 내역을 불러오는 중입니다.
                 </div>
               )}
 
               {breakdownError && (
-                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+                <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs md:text-sm text-rose-600">
                   {breakdownError}
                 </div>
               )}
             </section>
 
-            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+            <section className="rounded-2xl md:rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
+              <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                 Recent Activities
               </p>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-slate-500 break-keep">
                 최근 관리자 활동 로그를 요약해 운영 이상 징후를 빠르게 봅니다.
               </p>
-              <div className="mt-6 space-y-3">
+              <div className="mt-5 md:mt-6 space-y-3 md:space-y-4">
                 {(dashboard?.recentActivities ?? []).map((activity) => (
                   <div
                     key={`${activity.timestamp}-${activity.title}`}
-                    className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4"
+                    className="rounded-xl md:rounded-2xl border border-slate-100 bg-slate-50 p-4"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-slate-900">
+                      <p className="text-sm font-semibold text-slate-900 truncate">
                         {activity.title}
                       </p>
-                      <span className="text-xs text-slate-400">
+                      <span className="shrink-0 text-[10px] md:text-xs text-slate-400">
                         {activity.timestamp}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                    <p className="mt-2 text-xs md:text-sm leading-relaxed text-slate-500 break-keep">
                       {activity.description}
                     </p>
                   </div>
                 ))}
               </div>
-              <div className="mt-5 rounded-2xl bg-slate-900 px-4 py-4 text-sm text-slate-100">
+              <div className="mt-4 md:mt-5 rounded-xl md:rounded-2xl bg-slate-900 p-4 text-xs md:text-sm text-slate-100 break-keep leading-relaxed">
                 {dashboard?.todaySummary ?? '운영 요약을 계산 중입니다.'}
               </div>
             </section>
           </section>
         </div>
       </div>
-    </>
+    </div>
   );
 }

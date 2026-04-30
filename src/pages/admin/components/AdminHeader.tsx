@@ -51,39 +51,50 @@ export default function AdminHeader({
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between sticky top-0 z-40">
-      <div className="flex items-center gap-4">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm">
-          {currentTime}
+    // 💡 패딩을 모바일에 맞게 축소 (px-8 -> px-4 md:px-8)
+    <header className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 sm:px-6 md:px-8">
+      <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-3 md:gap-4">
+        {/* 💡 검색창 그룹: 모바일에서는 아래로(order-2), 데스크탑에서는 왼쪽으로(order-1) 배치 */}
+        <div className="order-2 md:order-1 flex w-full md:w-auto flex-1 items-center gap-3">
+          {/* 시간 표시는 데스크탑(lg 이상) 환경에서만 노출하여 모바일 공간 확보 */}
+          <div className="hidden lg:block shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm">
+            {currentTime}
+          </div>
+          <div className="flex flex-1 items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl px-3 py-2 max-w-full md:max-w-[320px] lg:max-w-120 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100 transition-all">
+            <svg
+              width="16"
+              height="16"
+              fill="none"
+              stroke="#9ca3af"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              className="shrink-0"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              placeholder={placeholder}
+              onChange={(e) => onSearch?.(e.target.value)}
+              className="w-full border-none bg-transparent outline-none text-xs md:text-sm text-gray-700 placeholder:text-gray-400"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 w-[480px]">
-          <svg
-            width="16"
-            height="16"
-            fill="none"
-            stroke="#9ca3af"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
+
+        {/* 💡 컨트롤 버튼 그룹: 모바일에서는 위로(order-1), 데스크탑에서는 오른쪽으로(order-2) 배치 */}
+        <div className="order-1 md:order-2 flex w-full md:w-auto items-center justify-between md:justify-end gap-2 sm:gap-3 shrink-0">
+          {/* rightContent가 길어질 경우를 대비해 스와이프 허용 및 스크롤바 숨김 */}
+          <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            {rightContent}
+          </div>
+          <button
+            className="shrink-0 px-3 md:px-4 py-1.5 md:py-2 border border-gray-300 rounded-lg bg-white text-[11px] md:text-sm font-bold text-gray-700 hover:bg-gray-50 active:scale-95 transition"
+            onClick={() => void handleLogout()}
           >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            type="text"
-            placeholder={placeholder}
-            onChange={(e) => onSearch?.(e.target.value)}
-            className="border-none bg-transparent outline-none text-sm text-gray-500 w-full"
-          />
+            로그아웃
+          </button>
         </div>
-      </div>
-      <div className="flex items-center gap-4">
-        {rightContent}
-        <button
-          className="px-3.5 py-1.5 border border-gray-300 rounded-md bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition"
-          onClick={() => void handleLogout()}
-        >
-          로그아웃
-        </button>
       </div>
     </header>
   );
