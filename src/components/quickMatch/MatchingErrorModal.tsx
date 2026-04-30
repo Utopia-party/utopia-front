@@ -84,31 +84,34 @@ export default function MatchingErrorModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl"
+        // 모바일 최적화: 여백(p)과 모서리 둥글기를 반응형으로 조정
+        className="w-full max-w-md rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-50 text-3xl ring-1 ring-rose-100">
+          {/* 아이콘 크기 유동적 조절 */}
+          <div className="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-rose-50 text-2xl sm:text-3xl ring-1 ring-rose-100">
             😥
           </div>
 
-          <h3 className="mt-4 text-2xl font-extrabold text-slate-900">
+          <h3 className="mt-3 sm:mt-4 break-keep text-lg sm:text-xl font-extrabold text-slate-900">
             {content.title}
           </h3>
 
-          <p className="mt-3 text-sm leading-6 text-slate-500">
+          <p className="mt-2 sm:mt-3 break-keep text-xs sm:text-sm leading-relaxed sm:leading-6 text-slate-500">
             {content.message}
           </p>
 
-          <p className="mt-2 text-xs leading-5 text-slate-400">
+          <p className="mt-1.5 sm:mt-2 break-keep text-[11px] sm:text-xs leading-relaxed sm:leading-5 text-slate-400">
             {content.subMessage}
           </p>
         </div>
 
-        <div className="mt-6 flex gap-2">
+        {/* 버튼 영역 터치감 개선 및 비율 조정 */}
+        <div className="mt-5 sm:mt-6 flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="flex-1 rounded-xl sm:rounded-2xl border border-slate-200 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-95"
           >
             {content.secondaryButtonText}
           </button>
@@ -116,14 +119,14 @@ export default function MatchingErrorModal({
           {shouldShowRetryButton ? (
             <button
               onClick={onRetry}
-              className="flex-1 rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+              className="flex-1 rounded-xl sm:rounded-2xl bg-slate-900 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white transition hover:bg-slate-800 active:scale-95"
             >
               {content.primaryButtonText}
             </button>
           ) : (
             <button
               onClick={onClose}
-              className="flex-1 rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+              className="flex-1 rounded-xl sm:rounded-2xl bg-slate-900 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white transition hover:bg-slate-800 active:scale-95"
             >
               {content.primaryButtonText === '다시 시도'
                 ? '확인'
