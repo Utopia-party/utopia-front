@@ -162,3 +162,7 @@ export interface MeResponse {
 export interface ExtendSessionResponse {
   message: string;
 }
+
+export interface RandomNicknameResponse {
+  nickname: string;
+}

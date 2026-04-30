@@ -19,6 +19,7 @@ import type {
   SocialSignupPayload,
   SocialSignupResponse,
   ExtendSessionResponse,
+  RandomNicknameResponse,
 } from '../types/auth';
 
 // 회원가입
@@ -71,6 +72,14 @@ export const checkNickname = async (
       params: { nickname },
     },
   );
+  return response.data;
+};
+
+export const getRandomNickname = async (): Promise<RandomNicknameResponse> => {
+  const response = await api.get<RandomNicknameResponse>(
+    '/api/users/random-nickname',
+  );
+
   return response.data;
 };
 

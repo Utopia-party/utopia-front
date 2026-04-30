@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Shuffle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
 import { useAuthStore } from '../../stores/authStore';
@@ -7,6 +7,7 @@ import {
   requestEmailVerification,
   verifyEmailCode,
   checkNickname,
+  getRandomNickname,
   signup,
 } from '../../apis/auth';
 
@@ -34,6 +35,8 @@ export default function Signup() {
   const [emailTimer, setEmailTimer] = useState(0);
 
   const [isNicknameChecked, setIsNicknameChecked] = useState(false);
+  const [isNicknameGenerating, setIsNicknameGenerating] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
@@ -189,6 +192,36 @@ export default function Signup() {
 
     return () => clearTimeout(timer);
   }, [form.nickname]);
+
+  const handleRandomNickname = async () => {
+    try {
+      setIsNicknameGenerating(true);
+      setNicknameError('');
+      setNicknameSuccess('');
+      setIsNicknameChecked(false);
+
+      const data = await getRandomNickname();
+
+      setForm((prev) => ({
+        ...prev,
+        nickname: data.nickname,
+      }));
+
+      setNicknameError('');
+      setNicknameSuccess('사용 가능한 닉네임입니다.');
+      setIsNicknameChecked(true);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { detail?: string } } };
+
+      setNicknameError(
+        axiosError.response?.data?.detail || '랜덤 닉네임 생성에 실패했습니다.',
+      );
+      setNicknameSuccess('');
+      setIsNicknameChecked(false);
+    } finally {
+      setIsNicknameGenerating(false);
+    }
+  };
 
   const handleEmailRequest = async () => {
     if (!form.email) {
@@ -472,14 +505,27 @@ export default function Signup() {
             닉네임 <span className="text-red-500">*</span>
           </label>
 
-          <input
-            name="nickname"
-            type="text"
-            placeholder="닉네임 입력"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-            onChange={handleChange}
-            required
-          />
+          <div className="relative">
+            <input
+              name="nickname"
+              type="text"
+              placeholder="닉네임 입력"
+              value={form.nickname}
+              className="w-full rounded-lg border border-gray-300 p-3 pr-28 focus:border-blue-500 focus:outline-none"
+              onChange={handleChange}
+              required
+            />
+
+            <button
+              type="button"
+              onClick={handleRandomNickname}
+              disabled={isNicknameGenerating}
+              className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:bg-gray-300"
+            >
+              <Shuffle size={14} />
+              {isNicknameGenerating ? '생성 중' : '랜덤'}
+            </button>
+          </div>
 
           {nicknameError && (
             <p className="mt-1 text-xs text-red-500">{nicknameError}</p>
