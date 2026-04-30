@@ -317,7 +317,7 @@ export default function AdminHandOCR() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [pageSize]);
 
   useEffect(() => {
     let alive = true;
@@ -624,14 +624,15 @@ export default function AdminHandOCR() {
   );
 
   return (
-    <>
+    // 💡 최상위 wrapper
+    <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
         placeholder="세션 / 요청 ID / 기대 문자열 검색..."
         onSearch={setSearch}
         rightContent={
           <div className="flex items-center gap-2">
             <span
-              className={`inline-flex rounded-md border px-3 py-1.5 text-xs font-semibold ${getHealthBadgeClass(healthTone)}`}
+              className={`inline-flex rounded-md border px-3 py-1.5 text-xs font-bold ${getHealthBadgeClass(healthTone)}`}
             >
               {healthLabel}
             </span>
@@ -639,27 +640,30 @@ export default function AdminHandOCR() {
         }
       />
 
-      <div className="p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
           <section>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-keep">
               HandOCR CAPTCHA 관리
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-xs md:text-sm text-gray-500 break-keep leading-relaxed">
               인증 성공/실패, OCR/포즈 품질, GPU 상태, 샘플 이미지, 차단 IP와
               활성 세션을 한 화면에서 관리할 수 있게 구성했습니다.
             </p>
           </section>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {/* 💡 요약 카드 2단 그리드화 */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-3">
             {summaryCards.map((item) => (
               <div
                 key={item.label}
-                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-3 md:p-5 shadow-sm"
               >
-                <p className="text-sm text-gray-500">{item.label}</p>
+                <p className="text-[10px] md:text-sm text-gray-500 truncate">
+                  {item.label}
+                </p>
                 <p
-                  className={`mt-2 text-2xl font-bold text-gray-900 ${item.tone ?? ''}`}
+                  className={`mt-1 md:mt-2 text-xl md:text-2xl font-bold text-gray-900 ${item.tone ?? ''}`}
                 >
                   {item.value}
                 </p>
@@ -668,30 +672,31 @@ export default function AdminHandOCR() {
           </div>
 
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold text-gray-900">
+                  <h2 className="text-sm md:text-base font-bold text-gray-900">
                     GPU / OCR 상태
                   </h2>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-[11px] md:text-xs text-gray-500 break-keep">
                     health 체크와 추론 런타임 구성을 같이 표시합니다.
                   </p>
                 </div>
                 <span
-                  className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getHealthBadgeClass(healthTone)}`}
+                  className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] md:text-xs font-bold shrink-0 ${getHealthBadgeClass(healthTone)}`}
                 >
                   {healthLabel}
                 </span>
               </div>
 
               {healthError && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm text-red-600">
                   {healthError}
                 </div>
               )}
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {/* 모바일 2열 스태킹 */}
+              <div className="mt-4 grid grid-cols-2 gap-2 md:gap-3 xl:grid-cols-3">
                 {[
                   ['서비스', health?.service ?? '-'],
                   ['Paddle Device', health?.paddleDevice ?? '-'],
@@ -705,12 +710,12 @@ export default function AdminHandOCR() {
                 ].map(([label, value]) => (
                   <div
                     key={label}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                    className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3"
                   >
-                    <div className="text-xs font-medium text-slate-400">
+                    <div className="text-[10px] md:text-xs font-medium text-slate-400 truncate">
                       {label}
                     </div>
-                    <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                    <div className="mt-0.5 md:mt-1 break-all text-xs md:text-sm font-bold text-slate-800">
                       {value}
                     </div>
                   </div>
@@ -718,31 +723,33 @@ export default function AdminHandOCR() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-900">운영 기준</h2>
-              <p className="mt-1 text-xs text-gray-500">
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm">
+              <h2 className="text-sm md:text-base font-bold text-gray-900">
+                운영 기준
+              </h2>
+              <p className="mt-1 text-[11px] md:text-xs text-gray-500 break-keep">
                 화면 분류는 저장된 검증 결과와 Redis 상태를 기준으로 계산합니다.
               </p>
-              <div className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <span className="font-semibold text-slate-800">성공</span> :
-                  verifySuccess = true
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-3 text-[11px] md:text-sm text-slate-600">
+                <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3 truncate">
+                  <span className="font-bold text-slate-800">성공</span> :{' '}
+                  <span className="md:inline hidden">verifySuccess = true</span>
+                  <span className="md:hidden inline">verify = true</span>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <span className="font-semibold text-slate-800">저신뢰</span> :
-                  ocrLowConfidence = true
+                <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3 truncate">
+                  <span className="font-bold text-slate-800">저신뢰</span> :{' '}
+                  <span className="md:inline hidden">
+                    ocrLowConfidence = true
+                  </span>
+                  <span className="md:hidden inline">ocrConf = true</span>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <span className="font-semibold text-slate-800">
-                    포즈불일치
-                  </span>{' '}
-                  : poseMatch = false
+                <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3 truncate">
+                  <span className="font-bold text-slate-800">포즈불일치</span> :
+                  poseMatch = false
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <span className="font-semibold text-slate-800">
-                    문자불일치
-                  </span>{' '}
-                  : textMatch = false
+                <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3 truncate">
+                  <span className="font-bold text-slate-800">문자불일치</span> :
+                  textMatch = false
                 </div>
               </div>
             </div>
@@ -757,91 +764,95 @@ export default function AdminHandOCR() {
             }}
           />
 
-          <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
+          {/* 💡 검색 폼 영역 모바일 최적화 (flex-col 기반 유연한 배치) */}
+          <section className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="flex w-full sm:w-auto flex-col gap-1.5">
+                <span className="text-[11px] md:text-xs font-medium text-gray-500">
                   키워드
                 </span>
                 <input
                   type="text"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="session ID / request ID / expected text / detected text"
-                  className="w-72 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                  placeholder="session ID / request ID / text"
+                  className="w-full sm:w-72 rounded-lg md:rounded-xl border border-gray-200 px-3.5 py-2.5 md:py-2 text-xs md:text-sm outline-none transition focus:border-blue-400"
                 />
               </label>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
-                  에러코드
-                </span>
-                <select
-                  value={errorCode}
-                  onChange={(event) => setErrorCode(event.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
-                >
-                  {errorCodeOptions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="flex w-full sm:w-auto gap-2">
+                <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                  <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                    에러코드
+                  </span>
+                  <select
+                    value={errorCode}
+                    onChange={(event) => setErrorCode(event.target.value)}
+                    className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2.5 md:py-2 text-xs md:text-sm outline-none transition focus:border-blue-400 bg-white"
+                  >
+                    {errorCodeOptions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
-                  손 포즈
-                </span>
-                <select
-                  value={poseFilter}
-                  onChange={(event) => setPoseFilter(event.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
-                >
-                  {poseOptions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                  <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                    손 포즈
+                  </span>
+                  <select
+                    value={poseFilter}
+                    onChange={(event) => setPoseFilter(event.target.value)}
+                    className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2.5 md:py-2 text-xs md:text-sm outline-none transition focus:border-blue-400 bg-white"
+                  >
+                    {poseOptions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
-                  시작일
-                </span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(event) => setDateFrom(event.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
-                />
-              </label>
+              <div className="flex w-full sm:w-auto gap-2">
+                <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                  <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                    시작일
+                  </span>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(event) => setDateFrom(event.target.value)}
+                    className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2.5 md:py-2 text-[11px] md:text-sm outline-none transition focus:border-blue-400"
+                  />
+                </label>
+                <label className="flex flex-1 sm:flex-none flex-col gap-1.5">
+                  <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                    종료일
+                  </span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => setDateTo(event.target.value)}
+                    className="w-full rounded-lg md:rounded-xl border border-gray-200 px-3 py-2.5 md:py-2 text-[11px] md:text-sm outline-none transition focus:border-blue-400"
+                  />
+                </label>
+              </div>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-gray-500">
-                  종료일
-                </span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(event) => setDateTo(event.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
-                />
-              </label>
-
-              <div className="flex gap-2 pb-0.5">
+              <div className="mt-1 flex w-full sm:w-auto gap-2 sm:ml-auto">
                 <button
                   type="button"
                   onClick={() => void handleSearch()}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  className="flex-1 sm:flex-none rounded-lg md:rounded-xl bg-blue-600 px-4 py-2.5 text-xs md:text-sm font-bold text-white transition hover:bg-blue-700 active:scale-95"
                 >
                   조회
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleReset()}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                  className="flex-1 sm:flex-none rounded-lg md:rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-xs md:text-sm font-bold text-gray-600 transition hover:bg-gray-50 active:scale-95"
                 >
                   초기화
                 </button>
@@ -850,47 +861,48 @@ export default function AdminHandOCR() {
           </section>
 
           {loading && (
-            <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-gray-500 shadow-sm">
               HandOCR 검증 이력을 불러오는 중입니다.
             </div>
           )}
 
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
+            <div className="rounded-xl md:rounded-2xl border border-red-200 bg-red-50 px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-red-600 shadow-sm">
               {error}
             </div>
           )}
 
-          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
+          {/* 💡 테이블 가로 스크롤 설정 */}
+          <section className="overflow-hidden rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              <table className="min-w-225 w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       생성 시각
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       세션 / 요청
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       요구 미션
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       인식 결과
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       상태
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       OCR
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       포즈
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       에러
                     </th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       관리
                     </th>
                   </tr>
@@ -904,59 +916,65 @@ export default function AdminHandOCR() {
                     return (
                       <Fragment key={key}>
                         <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-500 whitespace-nowrap">
                             {formatDateTime(record.createdAt)}
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
-                            <div className="font-medium text-gray-900">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600">
+                            <div className="font-bold text-gray-900 truncate max-w-30">
                               {record.sessionId}
                             </div>
-                            <div className="mt-1 text-xs text-gray-400">
+                            <div className="mt-0.5 text-[10px] md:text-xs text-gray-400 truncate max-w-30">
                               {record.requestId ?? '-'}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
-                            <div>{record.expectedPose}</div>
-                            <div className="mt-1 text-xs text-gray-400">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600">
+                            <div className="font-bold">
+                              {record.expectedPose}
+                            </div>
+                            <div className="mt-0.5 text-[10px] md:text-xs text-gray-400">
                               {record.expectedText}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
-                            <div>{record.detectedPose ?? '-'}</div>
-                            <div className="mt-1 text-xs text-gray-400">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600">
+                            <div className="font-bold">
+                              {record.detectedPose ?? '-'}
+                            </div>
+                            <div className="mt-0.5 text-[10px] md:text-xs text-gray-400">
                               {record.detectedText ?? '-'}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm">
+                          <td className="px-3 md:px-4 py-3.5 text-sm">
                             <span
-                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[statusLabel]}`}
+                              className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${STATUS_STYLE[statusLabel]}`}
                             >
                               {statusLabel}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
-                            <div>{formatConfidence(record.ocrConfidence)}</div>
-                            <div className="mt-1 text-xs text-gray-400">
-                              {record.ocrLowConfidence
-                                ? 'low confidence'
-                                : 'normal'}
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
+                            <div className="font-bold">
+                              {formatConfidence(record.ocrConfidence)}
+                            </div>
+                            <div className="mt-0.5 text-[10px] md:text-xs text-gray-400">
+                              {record.ocrLowConfidence ? 'low conf' : 'normal'}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
-                            <div>{formatConfidence(record.poseConfidence)}</div>
-                            <div className="mt-1 text-xs text-gray-400">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
+                            <div className="font-bold">
+                              {formatConfidence(record.poseConfidence)}
+                            </div>
+                            <div className="mt-0.5 text-[10px] md:text-xs text-gray-400">
                               {record.poseMatch === false
                                 ? 'mismatch'
                                 : 'match'}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600 break-all max-w-25">
                             {record.aiErrorCode ?? '-'}
                           </td>
-                          <td className="px-4 py-3.5 text-sm">
+                          <td className="px-3 md:px-4 py-3.5 text-sm">
                             <button
                               type="button"
-                              className={`rounded-md border px-3 py-1 text-xs font-medium transition ${
+                              className={`rounded-lg border px-2.5 py-1.5 md:px-3 md:py-1.5 text-[10px] md:text-xs font-bold transition active:scale-95 ${
                                 isExpanded
                                   ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
                                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
@@ -968,34 +986,29 @@ export default function AdminHandOCR() {
                           </td>
                         </tr>
 
+                        {/* 💡 확장 상세 패널 */}
                         {isExpanded &&
                           (() => {
                             const inspection = (record.inspection ??
                               null) as InspectionRecord | null;
                             const elapsedMs = getElapsedMs(inspection);
-
                             const imageUrl =
                               imageUrlMap[record.imageKey ?? ''] ??
                               record.imageUrl ??
                               null;
-
                             const textCropUrl =
                               imageUrlMap[record.textCropKey ?? ''] ??
                               record.textCropUrl ??
                               null;
-
                             const isOriginalImageLoading = record.imageKey
                               ? Boolean(imageLoadingMap[record.imageKey])
                               : false;
-
                             const isTextCropLoading = record.textCropKey
                               ? Boolean(imageLoadingMap[record.textCropKey])
                               : false;
-
                             const bbox =
                               record.textRegionBbox ??
                               getNestedValue(inspection, ['ocr', 'best_bbox']);
-
                             const ocrCandidates = Array.isArray(
                               record.ocrTextCandidates,
                             )
@@ -1004,27 +1017,27 @@ export default function AdminHandOCR() {
 
                             return (
                               <tr className="border-b border-gray-100 bg-slate-50/70">
-                                <td colSpan={9} className="px-4 py-4">
-                                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(320px,1fr)]">
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <td colSpan={9} className="p-3 md:px-4 md:py-4">
+                                  <div className="grid gap-3 md:gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(320px,1fr)]">
+                                    <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
                                       <div className="flex items-start justify-between gap-3">
                                         <div>
-                                          <h3 className="text-base font-semibold text-slate-900">
+                                          <h3 className="text-sm md:text-base font-bold text-slate-900">
                                             검증 상세
                                           </h3>
-                                          <p className="mt-1 text-sm text-slate-500">
+                                          <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
                                             기대값, 인식값, 매칭 결과, 에러
                                             메시지를 확인합니다.
                                           </p>
                                         </div>
                                         <span
-                                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[statusLabel]}`}
+                                          className={`inline-flex shrink-0 rounded-full border px-2.5 py-1 text-[10px] md:text-xs font-bold ${STATUS_STYLE[statusLabel]}`}
                                         >
                                           {statusLabel}
                                         </span>
                                       </div>
 
-                                      <div className="mt-5 grid gap-3 md:grid-cols-2">
+                                      <div className="mt-4 md:mt-5 grid grid-cols-2 gap-2 md:gap-3">
                                         {[
                                           ['Session ID', record.sessionId],
                                           [
@@ -1075,12 +1088,12 @@ export default function AdminHandOCR() {
                                         ].map(([label, value]) => (
                                           <div
                                             key={label}
-                                            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                            className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3"
                                           >
-                                            <div className="text-xs font-medium text-slate-400">
+                                            <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                               {label}
                                             </div>
-                                            <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                            <div className="mt-0.5 md:mt-1 break-all text-xs md:text-sm font-bold text-slate-800">
                                               {value}
                                             </div>
                                           </div>
@@ -1088,144 +1101,144 @@ export default function AdminHandOCR() {
                                       </div>
                                     </div>
 
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                      <h3 className="text-base font-semibold text-slate-900">
+                                    <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+                                      <h3 className="text-sm md:text-base font-bold text-slate-900">
                                         이미지 샘플
                                       </h3>
-                                      <p className="mt-1 text-sm text-slate-500">
+                                      <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
                                         상세를 열면 원본 이미지와 OCR crop을
                                         바로 확인합니다.
                                       </p>
 
-                                      <div className="mt-5 grid gap-4">
-                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                                          <div className="mb-2 text-xs font-semibold text-slate-500">
+                                      <div className="mt-4 md:mt-5 grid gap-3 md:gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                                        <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                          <div className="mb-1.5 md:mb-2 text-[10px] md:text-xs font-bold text-slate-500">
                                             원본 이미지
                                           </div>
                                           {isOriginalImageLoading ? (
-                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                              이미지 URL을 불러오는 중입니다.
+                                            <div className="flex h-36 md:h-52 items-center justify-center rounded-lg md:rounded-xl border border-dashed border-slate-200 bg-white text-[11px] md:text-sm text-slate-400">
+                                              로딩 중...
                                             </div>
                                           ) : imageUrl ? (
                                             <img
                                               src={imageUrl}
                                               alt="HandOCR original"
-                                              className="h-52 w-full rounded-xl border border-slate-200 object-contain bg-white"
+                                              className="h-36 md:h-52 w-full rounded-lg md:rounded-xl border border-slate-200 object-contain bg-white"
                                             />
                                           ) : (
-                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                              이미지 URL이 없습니다.
+                                            <div className="flex h-36 md:h-52 items-center justify-center rounded-lg md:rounded-xl border border-dashed border-slate-200 bg-white text-[11px] md:text-sm text-slate-400">
+                                              이미지 없음
                                             </div>
                                           )}
-                                          <div className="mt-2 break-all text-xs text-slate-400">
+                                          <div className="mt-1.5 md:mt-2 break-all text-[9px] md:text-[10px] text-slate-400">
                                             {record.imageKey ?? '-'}
                                           </div>
                                         </div>
 
-                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                                          <div className="mb-2 text-xs font-semibold text-slate-500">
+                                        <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                          <div className="mb-1.5 md:mb-2 text-[10px] md:text-xs font-bold text-slate-500">
                                             Text Crop
                                           </div>
                                           {isTextCropLoading ? (
-                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                              Crop 이미지 URL을 불러오는
-                                              중입니다.
+                                            <div className="flex h-36 md:h-52 items-center justify-center rounded-lg md:rounded-xl border border-dashed border-slate-200 bg-white text-[11px] md:text-sm text-slate-400">
+                                              로딩 중...
                                             </div>
                                           ) : textCropUrl ? (
                                             <img
                                               src={textCropUrl}
                                               alt="HandOCR crop"
-                                              className="h-52 w-full rounded-xl border border-slate-200 object-contain bg-white"
+                                              className="h-36 md:h-52 w-full rounded-lg md:rounded-xl border border-slate-200 object-contain bg-white"
                                             />
                                           ) : (
-                                            <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-sm text-slate-400">
-                                              Crop 이미지 URL이 없습니다.
+                                            <div className="flex h-36 md:h-52 items-center justify-center rounded-lg md:rounded-xl border border-dashed border-slate-200 bg-white text-[11px] md:text-sm text-slate-400">
+                                              Crop 없음
                                             </div>
                                           )}
-                                          <div className="mt-2 break-all text-xs text-slate-400">
+                                          <div className="mt-1.5 md:mt-2 break-all text-[9px] md:text-[10px] text-slate-400">
                                             {record.textCropKey ?? '-'}
                                           </div>
                                         </div>
                                       </div>
                                     </div>
 
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                      <h3 className="text-base font-semibold text-slate-900">
+                                    <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+                                      <h3 className="text-sm md:text-base font-bold text-slate-900">
                                         OCR / Inspection
                                       </h3>
-                                      <p className="mt-1 text-sm text-slate-500">
+                                      <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
                                         OCR 후보, bbox, inspection 원문을
                                         확인합니다.
                                       </p>
 
-                                      <div className="mt-5 space-y-4">
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                          <div className="text-xs font-medium text-slate-400">
+                                      <div className="mt-4 md:mt-5 grid grid-cols-2 xl:grid-cols-1 gap-2.5 md:gap-4">
+                                        <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3">
+                                          <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                             OCR confidence
                                           </div>
-                                          <div className="mt-1 text-sm font-semibold text-slate-800">
+                                          <div className="mt-0.5 md:mt-1 text-xs md:text-sm font-bold text-slate-800">
                                             {formatConfidence(
                                               record.ocrConfidence,
                                             )}
                                           </div>
                                         </div>
 
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                          <div className="text-xs font-medium text-slate-400">
+                                        <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3">
+                                          <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                             Pose confidence
                                           </div>
-                                          <div className="mt-1 text-sm font-semibold text-slate-800">
+                                          <div className="mt-0.5 md:mt-1 text-xs md:text-sm font-bold text-slate-800">
                                             {formatConfidence(
                                               record.poseConfidence,
                                             )}
                                           </div>
                                         </div>
 
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                          <div className="text-xs font-medium text-slate-400">
+                                        <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3 col-span-2 xl:col-span-1">
+                                          <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                             OCR best attempt
                                           </div>
-                                          <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                          <div className="mt-0.5 md:mt-1 break-all text-xs md:text-sm font-bold text-slate-800">
                                             {record.ocrBestAttempt ?? '-'}
                                           </div>
                                         </div>
 
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                          <div className="text-xs font-medium text-slate-400">
+                                        <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3 col-span-2 xl:col-span-1">
+                                          <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                             Text region bbox
                                           </div>
-                                          <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                          <div className="mt-0.5 md:mt-1 break-all text-xs md:text-sm font-bold text-slate-800">
                                             {renderBBoxSummary(bbox)}
                                           </div>
                                         </div>
 
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                          <div className="text-xs font-medium text-slate-400">
+                                        <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3 col-span-2 xl:col-span-1">
+                                          <div className="text-[10px] md:text-xs font-medium text-slate-400">
                                             OCR 후보
                                           </div>
-                                          <div className="mt-2 flex flex-wrap gap-2">
+                                          <div className="mt-1.5 md:mt-2 flex flex-wrap gap-1.5 md:gap-2">
                                             {ocrCandidates.length > 0 ? (
                                               ocrCandidates.map((candidate) => (
                                                 <span
                                                   key={candidate}
-                                                  className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
+                                                  className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold text-slate-700"
                                                 >
                                                   {candidate}
                                                 </span>
                                               ))
                                             ) : (
-                                              <span className="text-sm text-slate-400">
+                                              <span className="text-[11px] md:text-sm text-slate-400">
                                                 OCR 후보가 없습니다.
                                               </span>
                                             )}
                                           </div>
                                         </div>
 
-                                        <div className="rounded-xl border border-slate-200 bg-slate-950 p-0 shadow-inner">
-                                          <div className="border-b border-slate-800 px-4 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                                        <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-950 p-0 shadow-inner col-span-2 xl:col-span-1">
+                                          <div className="border-b border-slate-800 px-3 py-2 md:px-4 md:py-3 text-[9px] md:text-xs font-bold uppercase tracking-[0.24em] text-slate-400">
                                             inspection
                                           </div>
-                                          <pre className="max-h-[360px] overflow-auto px-4 py-4 text-xs leading-6 text-slate-200">
+                                          {/* 💡 pre 태그 오버플로우 방어: overflow-x-auto */}
+                                          <pre className="max-h-50 md:max-h-96 overflow-auto px-3 py-3 md:px-4 md:py-4 text-[10px] md:text-xs leading-relaxed text-slate-200 break-all">
                                             {JSON.stringify(
                                               record.inspection ?? {},
                                               null,
@@ -1248,7 +1261,7 @@ export default function AdminHandOCR() {
                     <tr>
                       <td
                         colSpan={9}
-                        className="px-4 py-8 text-center text-sm text-gray-400"
+                        className="px-4 py-12 md:py-16 text-center text-xs md:text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.
                       </td>
@@ -1258,19 +1271,20 @@ export default function AdminHandOCR() {
               </table>
             </div>
 
+            {/* Pagination 영역 모바일 정렬 */}
             <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between">
-              <div className="text-xs text-gray-500">
+              <div className="text-[11px] md:text-xs text-gray-500 font-bold text-center md:text-left">
                 총 {totalCount.toLocaleString()}건 중 {page} / {totalPages}{' '}
                 페이지
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center md:justify-end gap-2">
                 <select
                   value={pageSize}
                   onChange={(event) =>
                     void handlePageSizeChange(Number(event.target.value))
                   }
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                  className="rounded-lg border border-gray-200 px-2 py-1.5 md:px-3 md:py-2 text-[11px] md:text-sm outline-none transition focus:border-blue-400 bg-white"
                 >
                   {PAGE_SIZE_OPTIONS.map((size) => (
                     <option key={size} value={size}>
@@ -1283,7 +1297,7 @@ export default function AdminHandOCR() {
                   type="button"
                   onClick={() => void handlePageChange(page - 1)}
                   disabled={page <= 1}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 md:px-3 md:py-2 text-[11px] md:text-sm font-bold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
                 >
                   이전
                 </button>
@@ -1294,7 +1308,7 @@ export default function AdminHandOCR() {
                       key={pageNumber}
                       type="button"
                       onClick={() => void handlePageChange(pageNumber)}
-                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      className={`rounded-lg px-2.5 py-1.5 md:px-3 md:py-2 text-[11px] md:text-sm font-bold transition active:scale-95 ${
                         pageNumber === page
                           ? 'bg-blue-600 text-white'
                           : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
@@ -1309,7 +1323,7 @@ export default function AdminHandOCR() {
                   type="button"
                   onClick={() => void handlePageChange(page + 1)}
                   disabled={page >= totalPages}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 md:px-3 md:py-2 text-[11px] md:text-sm font-bold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
                 >
                   다음
                 </button>
@@ -1317,31 +1331,32 @@ export default function AdminHandOCR() {
             </div>
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-2">
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="border-b border-gray-100 px-5 py-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
+          <section className="grid gap-5 md:gap-6 xl:grid-cols-2">
+            {/* 차단 IP 관리 */}
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-100 px-4 md:px-5 py-3 md:py-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h2 className="text-base font-semibold text-gray-900">
+                    <h2 className="text-sm md:text-base font-bold text-gray-900">
                       차단 IP 관리
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-[11px] md:text-sm text-gray-500 break-keep">
                       Redis 차단 상태와 남은 TTL을 확인하고 차단 해제/실패
                       카운트 초기화를 수행합니다.
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full md:w-auto gap-2">
                     <input
                       type="text"
                       value={blockKeyword}
                       onChange={(event) => setBlockKeyword(event.target.value)}
                       placeholder="IP / 사유 검색"
-                      className="w-52 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                      className="flex-1 md:w-48 rounded-lg md:rounded-xl border border-gray-200 px-3 py-2 md:py-2 text-[11px] md:text-sm outline-none transition focus:border-blue-400"
                     />
                     <button
                       type="button"
                       onClick={() => void reloadBlocks()}
-                      className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                      className="shrink-0 rounded-lg md:rounded-xl border border-gray-300 bg-white px-3 md:px-4 py-2 text-[11px] md:text-sm font-bold text-gray-600 transition hover:bg-gray-50 active:scale-95"
                     >
                       새로고침
                     </button>
@@ -1350,31 +1365,31 @@ export default function AdminHandOCR() {
               </div>
 
               {blocksLoading && (
-                <div className="px-5 py-4 text-sm text-gray-500">
+                <div className="px-4 md:px-5 py-3 md:py-4 text-xs md:text-sm text-gray-500">
                   차단 IP 목록을 불러오는 중입니다.
                 </div>
               )}
 
               {blocksError && (
-                <div className="mx-5 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="mx-4 md:mx-5 mt-3 md:mt-4 rounded-lg md:rounded-xl border border-red-200 bg-red-50 px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-red-600">
                   {blocksError}
                 </div>
               )}
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse">
+              <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                <table className="min-w-125 md:min-w-150 w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         IP
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         사유
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         남은 시간
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         관리
                       </th>
                     </tr>
@@ -1383,22 +1398,22 @@ export default function AdminHandOCR() {
                     {blocks.map((block) => (
                       <tr
                         key={block.ip}
-                        className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                        className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition"
                       >
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm font-bold text-gray-900 font-mono">
                           {block.ip}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm text-gray-600 truncate max-w-30">
                           {block.reason ?? '-'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
                           {formatSeconds(block.ttlSeconds)}
                         </td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="flex flex-wrap gap-1.5">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-sm">
+                          <div className="flex flex-wrap gap-1.5 md:gap-2">
                             <button
                               type="button"
-                              className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-lg md:rounded-md border border-red-300 px-2.5 py-1.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
                               disabled={busyBlockIp === block.ip}
                               onClick={() => void handleReleaseBlock(block.ip)}
                             >
@@ -1408,7 +1423,7 @@ export default function AdminHandOCR() {
                             </button>
                             <button
                               type="button"
-                              className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-lg md:rounded-md border border-amber-300 px-2.5 py-1.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
                               disabled={busyResetIp === block.ip}
                               onClick={() =>
                                 void handleResetIpFailures(block.ip)
@@ -1426,7 +1441,7 @@ export default function AdminHandOCR() {
                       <tr>
                         <td
                           colSpan={4}
-                          className="px-4 py-8 text-center text-sm text-gray-400"
+                          className="px-4 py-10 text-center text-xs md:text-sm text-gray-400"
                         >
                           차단된 IP가 없습니다.
                         </td>
@@ -1437,32 +1452,33 @@ export default function AdminHandOCR() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="border-b border-gray-100 px-5 py-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
+            {/* 활성 세션 관리 */}
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-100 px-4 md:px-5 py-3 md:py-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h2 className="text-base font-semibold text-gray-900">
+                    <h2 className="text-sm md:text-base font-bold text-gray-900">
                       활성 세션 관리
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-[11px] md:text-sm text-gray-500 break-keep">
                       현재 발급된 HandOCR 세션, 남은 TTL, 시도 횟수를 조회하고
                       강제 만료시킬 수 있습니다.
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full md:w-auto gap-2">
                     <input
                       type="text"
                       value={sessionKeyword}
                       onChange={(event) =>
                         setSessionKeyword(event.target.value)
                       }
-                      placeholder="IP / session / text / pose 검색"
-                      className="w-56 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400"
+                      placeholder="IP / session / text / pose"
+                      className="flex-1 md:w-52 rounded-lg md:rounded-xl border border-gray-200 px-3 py-2 md:py-2 text-[11px] md:text-sm outline-none transition focus:border-blue-400"
                     />
                     <button
                       type="button"
                       onClick={() => void reloadSessions()}
-                      className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                      className="shrink-0 rounded-lg md:rounded-xl border border-gray-300 bg-white px-3 md:px-4 py-2 text-[11px] md:text-sm font-bold text-gray-600 transition hover:bg-gray-50 active:scale-95"
                     >
                       새로고침
                     </button>
@@ -1471,34 +1487,34 @@ export default function AdminHandOCR() {
               </div>
 
               {sessionsLoading && (
-                <div className="px-5 py-4 text-sm text-gray-500">
+                <div className="px-4 md:px-5 py-3 md:py-4 text-xs md:text-sm text-gray-500">
                   활성 세션 목록을 불러오는 중입니다.
                 </div>
               )}
 
               {sessionsError && (
-                <div className="mx-5 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="mx-4 md:mx-5 mt-3 md:mt-4 rounded-lg md:rounded-xl border border-red-200 bg-red-50 px-3 md:px-4 py-2 md:py-3 text-[11px] md:text-sm text-red-600">
                   {sessionsError}
                 </div>
               )}
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse">
+              <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                <table className="min-w-175 w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         IP
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         세션
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         미션
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         TTL / 시도
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-3 md:px-4 py-2.5 md:py-3 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                         관리
                       </th>
                     </tr>
@@ -1507,35 +1523,35 @@ export default function AdminHandOCR() {
                     {sessions.map((session) => (
                       <tr
                         key={`${session.ip}:${session.sessionId ?? 'none'}`}
-                        className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                        className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition"
                       >
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm font-bold text-gray-900 font-mono">
                           {session.ip}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600 break-all">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm text-gray-600 break-all max-w-37.5">
                           {session.sessionId ?? '-'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          <div>{session.pose ?? '-'}</div>
-                          <div className="mt-1 text-xs text-gray-400">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
+                          <div className="font-bold">{session.pose ?? '-'}</div>
+                          <div className="mt-0.5 text-[10px] md:text-xs text-gray-400">
                             {session.text ?? '-'}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
                           <div>
-                            active:{' '}
+                            <span className="font-bold">active:</span>{' '}
                             {formatSeconds(session.activeSessionTtlSeconds)}
                           </div>
-                          <div className="mt-1 text-xs text-gray-400">
+                          <div className="mt-0.5 text-[10px] md:text-xs text-gray-400">
                             session: {formatSeconds(session.sessionTtlSeconds)}{' '}
                             / attempts: {session.attempts ?? '-'}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="flex flex-wrap gap-1.5">
+                        <td className="px-3 md:px-4 py-2.5 md:py-3 text-sm">
+                          <div className="flex flex-wrap gap-1.5 md:gap-2">
                             <button
                               type="button"
-                              className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-lg md:rounded-md border border-red-300 px-2.5 py-1.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
                               disabled={
                                 !session.sessionId ||
                                 busySessionId === session.sessionId
@@ -1551,7 +1567,7 @@ export default function AdminHandOCR() {
                             </button>
                             <button
                               type="button"
-                              className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-lg md:rounded-md border border-amber-300 px-2.5 py-1.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
                               disabled={busyResetIp === session.ip}
                               onClick={() =>
                                 void handleResetIpFailures(session.ip)
@@ -1569,7 +1585,7 @@ export default function AdminHandOCR() {
                       <tr>
                         <td
                           colSpan={5}
-                          className="px-4 py-8 text-center text-sm text-gray-400"
+                          className="px-4 py-10 text-center text-xs md:text-sm text-gray-400"
                         >
                           활성 세션이 없습니다.
                         </td>
@@ -1582,6 +1598,6 @@ export default function AdminHandOCR() {
           </section>
         </div>
       </div>
-    </>
+    </div>
   );
 }
