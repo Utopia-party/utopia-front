@@ -87,7 +87,6 @@ function DashboardLineChart({
   const pathCurrent = buildLinePath(currentValues, width, height);
 
   return (
-    // 💡 모바일 여백(p-5) 조절
     <div className="rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_60px_rgba(36,54,94,0.08)]">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
@@ -109,11 +108,9 @@ function DashboardLineChart({
         </div>
       </div>
 
-      {/* 💡 스크롤바 숨김 처리 및 가로 스크롤 허용 */}
       <div className="mt-6 md:mt-8 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <svg
           viewBox={`0 0 ${viewWidth} ${labelY + 16}`}
-          // 모바일 높이 약간 축소, 최소 너비 유지
           className="h-55 md:h-70 min-w-190 w-full"
           role="img"
           aria-label="기간별 승인 매출 비교 그래프"
@@ -261,7 +258,7 @@ function CompactStatCard({
 }) {
   return (
     <div
-      className={`rounded-[20px] md:rounded-3xl border p-4 md:p-5 shadow-[0_14px_30px_rgba(39,64,120,0.06)] ${
+      className={`rounded-[20px] md:rounded-3xl border p-4 md:p-5 shadow-[0_14px_30px_rgba(39,64,120,0.06)] flex flex-col justify-center ${
         tone === 'accent'
           ? 'border-cyan-100 bg-linear-to-r from-[#61e4c5] to-[#54a8ff] text-white'
           : 'border-slate-200 bg-white text-slate-900'
@@ -274,7 +271,7 @@ function CompactStatCard({
       >
         {label}
       </div>
-      <div className="mt-2.5 md:mt-3 text-2xl md:text-3xl font-semibold tracking-tight break-all">
+      <div className="mt-2 md:mt-3 text-xl md:text-3xl font-semibold tracking-tight break-all">
         {value}
       </div>
     </div>
@@ -380,12 +377,14 @@ export default function AdminDashboard() {
       dashboard?.chartGroups[0];
     return chart ?? null;
   }, [activeChartId, dashboard]);
+
   const chartSnapshot = useMemo(() => {
     const points = activeChart?.points ?? [];
     const totalCurrent = points.reduce((sum, point) => sum + point.current, 0);
     const peak = Math.max(...points.map((point) => point.current), 0);
     return { totalCurrent, peak };
   }, [activeChart]);
+
   const breakdownRows = useMemo(() => {
     const rows = breakdownDashboard?.salesStats ?? [];
     return rows.filter((row) => row.label !== '비교 기준');
@@ -402,11 +401,11 @@ export default function AdminDashboard() {
         }
       />
 
-      {/* 💡 모바일 여백(p-4) 축소 및 배경색 채움 */}
       <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
           <section className="overflow-hidden rounded-2xl md:rounded-4xl border border-white/70 bg-white/80 shadow-[0_35px_90px_rgba(39,64,120,0.12)] backdrop-blur">
-            <div className="grid gap-0 xl:grid-cols-[260px_minmax(0,1fr)]">
+            {/* 💡 핵심: xl:grid-cols-[260px_minmax(0,1fr)] 대신 grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]로 변경 */}
+            <div className="grid grid-cols-1 gap-0 xl:grid-cols-[260px_minmax(0,1fr)]">
               {/* 왼쪽 제목 패널 */}
               <div className="border-b border-slate-200/80 bg-white/90 p-5 md:p-6 xl:border-b-0 xl:border-r">
                 <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
@@ -433,7 +432,6 @@ export default function AdminDashboard() {
               <div className="p-4 md:p-6">
                 <div className="rounded-2xl md:rounded-[28px] bg-linear-to-r from-[#63e3c4] via-[#58c6e8] to-[#6faeff] p-px">
                   <div className="rounded-[15px] md:rounded-[27px] bg-white p-4 md:px-5 md:py-4">
-                    {/* 💡 모바일 폼 레이아웃을 flex-col 기반으로 변경하여 찌그러짐 방지 */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
                       <div className="flex flex-1 flex-col gap-3 sm:flex-row">
                         <label className="flex flex-1 flex-col gap-1">
@@ -504,7 +502,6 @@ export default function AdminDashboard() {
 
           <section className="grid gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
             <div className="space-y-4">
-              {/* 💡 탭 버튼 모바일 최적화 (가로 스크롤 가능하게) */}
               <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                 {(dashboard?.chartGroups ?? []).map((chart) => (
                   <button
@@ -534,7 +531,7 @@ export default function AdminDashboard() {
                 points={activeChart?.points ?? []}
               />
 
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4">
                 <CompactStatCard
                   label="조회 기간 총합"
                   value={formatPointValue(
@@ -543,7 +540,7 @@ export default function AdminDashboard() {
                   )}
                 />
                 <CompactStatCard
-                  label="조회 기간 최고 피크"
+                  label="조회 최고 피크"
                   value={formatPointValue(
                     chartSnapshot.peak,
                     activeChart?.unit ?? 'count',
@@ -554,7 +551,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="space-y-5 md:space-y-6">
-              <section className="rounded-2xl md:rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
+              <section className="rounded-3xl md:rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-[0_20px_50px_rgba(39,64,120,0.08)]">
                 <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                   Snapshot
                 </p>
