@@ -334,13 +334,14 @@ export default function AdminRoles() {
   );
 
   return (
-    <>
+    <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
         placeholder="권한 검색 (관리자 ID/권한명)..."
         onSearch={setSearch}
         rightContent={
           <button
-            className="rounded-md border border-blue-500 bg-blue-500 px-3.5 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+            // 💡 버튼 터치 영역 및 인터랙션 강화
+            className="rounded-lg md:rounded-xl border border-blue-500 bg-blue-500 px-3.5 py-2 md:px-4 md:py-2.5 text-xs md:text-sm font-bold text-white transition hover:bg-blue-600 active:scale-95"
             onClick={() => openRoleEditor()}
           >
             {isEditorOpen && editorMode === 'create'
@@ -349,29 +350,36 @@ export default function AdminRoles() {
           </button>
         }
       />
-      <div className="p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+
+      {/* 💡 모바일 여백(p-4) 최적화 및 레이아웃 간격(space-y-5) 조정 */}
+      <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
           <section>
-            <h1 className="text-2xl font-bold text-gray-900">권한관리</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-keep">
+              권한관리
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 break-keep">
               관리자별로 실제 권한 토글을 확인하고 필요한 범위만 열어
               운영합니다.
             </p>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-xs sm:text-sm leading-relaxed text-gray-500 break-keep">
               사용자관리, 파티관리, 신고관리, 정산 승인, 로그 조회 권한을
               계정별로 나눠서 제어할 수 있고 관리자 추가 후에도 필요한 권한만
               열어 최소 권한 원칙으로 운영할 수 있습니다.
             </p>
           </section>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* 💡 요약 카드: 모바일에서는 2단 그리드로 컴팩트하게 */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             {summary.map((item) => (
               <div
                 key={item.label}
-                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm"
               >
-                <p className="text-sm text-gray-500">{item.label}</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
+                <p className="text-[11px] md:text-sm font-medium text-gray-500 truncate">
+                  {item.label}
+                </p>
+                <p className="mt-1 md:mt-2 text-xl md:text-2xl font-bold text-gray-900">
                   {item.value}
                 </p>
               </div>
@@ -385,31 +393,31 @@ export default function AdminRoles() {
           />
 
           {isEditorOpen && (
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <section className="rounded-2xl md:rounded-3xl border border-blue-100 bg-blue-50/70 p-4 md:p-6 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div className="flex-1">
-                  <h2 className="text-base font-semibold text-slate-900">
+                  <h2 className="text-base md:text-lg font-bold text-slate-900">
                     {editorMode === 'create'
                       ? '관리자 추가'
                       : '관리자 권한 편집'}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-xs md:text-sm text-slate-500 break-keep">
                     역할명 대신 실제 `can_manage_*` 권한 토글을 직접 켜고 끄는
                     방식입니다.
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="self-start rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                  className="self-end lg:self-start rounded-lg border border-slate-200 bg-white px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95"
                   onClick={() => setIsEditorOpen(false)}
                 >
                   닫기
                 </button>
               </div>
 
-              <div className="mt-5 space-y-4">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-slate-700">
+              <div className="mt-5 md:mt-6 space-y-4 md:space-y-5">
+                <label className="flex flex-col gap-1.5 md:gap-2">
+                  <span className="text-xs md:text-sm font-bold text-slate-700">
                     사용자 식별자
                   </span>
                   <input
@@ -418,31 +426,34 @@ export default function AdminRoles() {
                     onChange={(event) => setDraftUserId(event.target.value)}
                     disabled={editorMode === 'update'}
                     placeholder="사용자 UUID, 닉네임, 또는 이메일"
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 md:px-4 md:py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 disabled:bg-slate-50 disabled:text-slate-400"
                   />
                 </label>
 
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {/* 💡 권한 토글 리스트: 모바일에서는 1단 또는 2단으로 유연하게 배치 */}
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:gap-3 xl:grid-cols-4">
                   {PERMISSION_OPTIONS.map((option) => (
                     <button
                       key={option.key}
                       type="button"
                       onClick={() => togglePermission(option.key)}
-                      className={`rounded-2xl border p-4 text-left transition ${
+                      className={`rounded-xl md:rounded-2xl border p-3 md:p-4 text-left transition active:scale-[0.98] ${
                         draftPermissions[option.key]
                           ? option.tone
                           : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-semibold">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs md:text-sm font-bold break-keep">
                           {option.label}
                         </span>
-                        <span className="text-xs font-bold">
+                        <span
+                          className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${draftPermissions[option.key] ? 'bg-current/10' : 'bg-slate-100'}`}
+                        >
                           {draftPermissions[option.key] ? 'ON' : 'OFF'}
                         </span>
                       </div>
-                      <p className="mt-2 text-xs leading-5 opacity-90">
+                      <p className="mt-1.5 md:mt-2 text-[11px] md:text-xs leading-relaxed opacity-90 break-keep">
                         {option.description}
                       </p>
                     </button>
@@ -450,10 +461,10 @@ export default function AdminRoles() {
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-5 md:mt-6 flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full sm:w-auto rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={busyUserId === draftUserId.trim()}
                   onClick={() => void handleRoleUpdate()}
                 >
@@ -461,7 +472,7 @@ export default function AdminRoles() {
                 </button>
                 <button
                   type="button"
-                  className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                  className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-95"
                   onClick={() => {
                     setIsEditorOpen(false);
                     setDraftUserId('');
@@ -477,36 +488,38 @@ export default function AdminRoles() {
           )}
 
           {loading && (
-            <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
+            <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-gray-500 shadow-sm">
               관리자 권한 목록을 불러오는 중입니다.
             </div>
           )}
 
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
+            <div className="rounded-xl md:rounded-2xl border border-red-200 bg-red-50 px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-red-600 shadow-sm">
               {error}
             </div>
           )}
 
           <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1.8fr)_320px]">
-            <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse">
+            {/* 💡 테이블 영역: 가로 스크롤 허용 & 스크롤바 숨김 */}
+            <section className="overflow-hidden rounded-2xl md:rounded-3xl border border-gray-200 bg-white shadow-sm">
+              <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                {/* 💡 min-w-200 설정으로 테이블 원형 보존 */}
+                <table className="min-w-200 w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-4 py-3 text-left text-xs md:text-sm font-bold text-gray-500 whitespace-nowrap">
                         관리자
                       </th>
-                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-4 py-3 text-left text-xs md:text-sm font-bold text-gray-500 whitespace-nowrap">
                         권한 토글
                       </th>
-                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-4 py-3 text-left text-xs md:text-sm font-bold text-gray-500 whitespace-nowrap">
                         최근 수정
                       </th>
-                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-4 py-3 text-left text-xs md:text-sm font-bold text-gray-500 whitespace-nowrap">
                         수정자
                       </th>
-                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                      <th className="px-4 py-3 text-left text-xs md:text-sm font-bold text-gray-500 whitespace-nowrap">
                         편집
                       </th>
                     </tr>
@@ -521,35 +534,35 @@ export default function AdminRoles() {
                           key={role.id}
                           className="border-b border-gray-100 align-top transition hover:bg-gray-50"
                         >
-                          <td className="px-4 py-3.5 text-sm font-medium text-gray-900">
+                          <td className="px-4 py-3.5 text-xs md:text-sm font-bold text-gray-900 break-all">
                             {role.adminId}
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
-                            <div className="flex flex-wrap gap-2">
+                          <td className="px-4 py-3.5">
+                            <div className="flex flex-wrap gap-1.5">
                               {enabled.map((option) => (
                                 <span
                                   key={option.key}
-                                  className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${option.tone}`}
+                                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] md:text-[11px] font-bold ${option.tone}`}
                                 >
                                   {option.label}
                                 </span>
                               ))}
                               {enabled.length === 0 && (
-                                <span className="text-xs text-gray-400">
+                                <span className="text-[10px] md:text-xs text-gray-400">
                                   설정된 권한이 없습니다.
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
+                          <td className="px-4 py-3.5 text-[11px] md:text-xs text-gray-500 whitespace-nowrap">
                             {role.lastUpdated}
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">
+                          <td className="px-4 py-3.5 text-[11px] md:text-xs text-gray-500 break-all">
                             {role.updatedBy}
                           </td>
-                          <td className="px-4 py-3.5 text-sm">
+                          <td className="px-4 py-3.5">
                             <button
-                              className="rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                              className="shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] md:text-xs font-bold text-gray-700 transition hover:bg-gray-50 active:scale-95"
                               disabled={busyUserId === role.userId}
                               onClick={() => openRoleEditor(role)}
                             >
@@ -565,7 +578,7 @@ export default function AdminRoles() {
                       <tr>
                         <td
                           colSpan={5}
-                          className="px-4 py-8 text-center text-sm text-gray-400"
+                          className="px-4 py-10 text-center text-sm text-gray-400"
                         >
                           검색 결과가 없습니다.
                         </td>
@@ -574,27 +587,25 @@ export default function AdminRoles() {
                   </tbody>
                 </table>
               </div>
-              <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
+              <div className="border-t border-gray-100 bg-slate-50/50 px-4 py-3 text-[10px] md:text-xs text-gray-500 break-keep">
                 관리자 페이지는 역할명보다 실제 권한 토글을 기준으로 접근 범위를
                 관리합니다.
               </div>
             </section>
 
             <div className="space-y-4">
-              <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-gray-900">
-                  권한 가이드
-                </h2>
-                <div className="mt-4 space-y-3">
+              <section className="rounded-2xl md:rounded-3xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-gray-900">권한 가이드</h2>
+                <div className="mt-4 space-y-2.5 md:space-y-3">
                   {PERMISSION_OPTIONS.map((option) => (
                     <div
                       key={option.key}
-                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                      className="rounded-xl border border-gray-100 bg-gray-50 p-3 md:p-4"
                     >
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-xs md:text-sm font-bold text-gray-900">
                         {option.label}
                       </p>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 break-keep text-[11px] md:text-xs leading-relaxed text-gray-500">
                         {option.description}
                       </p>
                     </div>
@@ -605,6 +616,6 @@ export default function AdminRoles() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
