@@ -8,13 +8,13 @@ import {
   retryAdminQuickMatchRequest,
   runQuickMatchEmbeddingBackfill,
   updateAdminQuickMatchPolicy,
-} from '../../apis/admin/admin-quick-match';
+} from '../../apis/admin/adminQuickMatch';
 import type {
   AdminQuickMatchListParams,
   AdminQuickMatchSummary,
   QuickMatchRequestRow,
   TuningPolicy,
-} from '../../types/admin/admin-quick-match';
+} from '../../types/admin/adminQuickMatch.ts';
 
 const PAGE_SIZE = 20;
 

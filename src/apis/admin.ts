@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { api } from './api';
 
+export * from './admin/adminUser';
+export * from './admin/adminQuickMatch';
+
 export type DashboardMetric = {
   id: string;
   label: string;
@@ -123,68 +126,6 @@ export type AdminServiceUpdatePayload = {
   referralDiscountRate: number;
 };
 
-export type AdminUserRecord = {
-  id: string;
-  name?: string | null;
-  nickname: string;
-  createdAt: string;
-  status: '정상' | '주의' | '정지';
-  reportCount: number;
-  partyCount: number;
-  trustScore: number;
-  lastActive: string;
-};
-
-export type AdminUserDetail = {
-  id: string;
-  email: string;
-  nickname: string;
-  name?: string | null;
-  phone?: string | null;
-  role: string;
-  status: string;
-  trustScore: number;
-  reportCount: number;
-  partyCount: number;
-  createdAt?: string | null;
-  lastActive?: string | null;
-  bannedUntil?: string | null;
-  recentLoginIp?: string | null;
-  recentLoginUserAgent?: string | null;
-  recentLoginAt?: string | null;
-  trustHistories: AdminUserTrustHistory[];
-  accessLogs: AdminUserAccessLog[];
-  moderationHistories: AdminUserModerationHistory[];
-};
-
-export type AdminUserAccessLog = {
-  id: string;
-  ipAddress?: string | null;
-  userAgent?: string | null;
-  createdAt: string;
-  isActive: boolean;
-};
-
-export type AdminUserTrustHistory = {
-  id: string;
-  title: string;
-  detail?: string | null;
-  scoreChange: number;
-  trustScoreAfter: number;
-  createdAt: string;
-  changedBy: string;
-};
-
-export type AdminUserModerationHistory = {
-  id: string;
-  actionType: string;
-  reason?: string | null;
-  trustScoreChange?: number | null;
-  durationMinutes?: number | null;
-  createdAt: string;
-  createdBy: string;
-};
-
 export type AdminPartyRecord = {
   id: string;
   title: string;
@@ -274,47 +215,6 @@ export async function updateAdminRole(
 ) {
   const { data } = await api.put<AdminRoleRecord>(
     `/api/admin/roles/${userId}`,
-    payload,
-  );
-  return data;
-}
-
-export async function fetchAdminUsers(params?: {
-  keyword?: string;
-  status?: string;
-  date_from?: string;
-  date_to?: string;
-}): Promise<AdminUserRecord[]> {
-  const { data } = await api.get<AdminUserRecord[]>('/api/admin/users', {
-    params,
-  });
-  return data;
-}
-
-export async function fetchAdminUserDetail(
-  userId: string,
-): Promise<AdminUserDetail> {
-  const { data } = await api.get<AdminUserDetail>(`/api/admin/users/${userId}`);
-  return data;
-}
-
-export async function updateAdminUserStatus(
-  userId: string,
-  payload: { status: string; reason?: string },
-) {
-  const { data } = await api.patch<AdminUserRecord>(
-    `/api/admin/users/${userId}/status`,
-    payload,
-  );
-  return data;
-}
-
-export async function updateAdminUserTrustScore(
-  userId: string,
-  payload: { trustScore: number; reason?: string },
-): Promise<AdminUserDetail> {
-  const { data } = await api.patch<AdminUserDetail>(
-    `/api/admin/users/${userId}/trust-score`,
     payload,
   );
   return data;
@@ -520,24 +420,6 @@ export async function fetchAdminModerationStats(params?: {
   const { data } = await api.get<AdminModerationStat>(
     '/api/admin/moderation/chat-stats',
     { params },
-  );
-  return data;
-}
-
-export type AdminUserStatusLog = {
-  id: string;
-  toStatus: string;
-  changedBy: string;
-  reason?: string | null;
-  trigger: 'manual' | 'report' | 'auto';
-  createdAt: string;
-};
-
-export async function fetchAdminUserStatusLogs(
-  userId: string,
-): Promise<AdminUserStatusLog[]> {
-  const { data } = await api.get<AdminUserStatusLog[]>(
-    `/api/admin/users/${userId}/status-logs`,
   );
   return data;
 }

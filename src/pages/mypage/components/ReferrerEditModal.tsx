@@ -112,8 +112,8 @@ export default function ReferrerEditModal({
             </h2>
 
             <p className="mt-1 text-sm font-medium text-slate-500">
-              기존 추천인은 최신순으로 조회만 가능하며, 추천인은 한 번에 한 명만
-              추가할 수 있습니다.
+              최대 5명까지 추천할 수 있으며, 이미 추천한 사용자는 중복
+              추천하거나 수정할 수 없습니다.
             </p>
           </div>
 
