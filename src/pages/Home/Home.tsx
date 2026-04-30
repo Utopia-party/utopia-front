@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { ComponentProps } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 
@@ -76,6 +77,10 @@ type PartyDetailResponse = {
 };
 
 type MatchStep = 'idle' | 'requesting' | 'finding' | 'selecting' | 'joining';
+
+type MatchedParty = NonNullable<
+  ComponentProps<typeof MatchingSuccessModal>['matchedParty']
+> & { id?: number | string };
 
 const COOLDOWN_SECONDS = 600;
 const STORAGE_KEY = 'party_refresh_until';
@@ -222,11 +227,11 @@ export default function Home() {
     return '지금 바로 참여할 수 있는 파티를 한눈에 확인해보세요.';
   }, [category, search]);
 
-  const matchedParty = useMemo(() => {
-    if (!matchResult) return null;
+  const matchedParty = useMemo<MatchedParty | undefined>(() => {
+    if (!matchResult) return undefined;
 
     const targetPartyId = matchResult.party_id ?? matchResult.id;
-    if (!targetPartyId) return null;
+    if (!targetPartyId) return undefined;
 
     const found = parties.find(
       (party) => String(party.id) === String(targetPartyId),
@@ -246,10 +251,11 @@ export default function Home() {
         category_name:
           matchResult.category_name ?? found.category_name ?? '기타',
         member_count: matchResult.member_count ?? found.member_count ?? 0,
-        max_members: matchResult.max_members ?? found.max_members ?? null,
-        monthly_price: matchResult.monthly_price ?? found.monthly_price ?? null,
+        max_members: matchResult.max_members ?? found.max_members ?? 0,
+        monthly_price:
+          matchResult.monthly_price ?? found.monthly_price ?? undefined,
         original_price:
-          matchResult.original_price ?? found.original_price ?? null,
+          matchResult.original_price ?? found.original_price ?? undefined,
         host_nickname:
           matchResult.host_nickname ?? found.host_nickname ?? '익명',
         description: matchResult.description ?? found.description ?? '',
@@ -264,13 +270,13 @@ export default function Home() {
       service_name: matchResult.service_name ?? '',
       category_name: matchResult.category_name ?? '기타',
       member_count: matchResult.member_count ?? 0,
-      max_members: matchResult.max_members ?? null,
-      monthly_price: matchResult.monthly_price ?? null,
-      original_price: matchResult.original_price ?? null,
+      max_members: matchResult.max_members ?? 0,
+      monthly_price: matchResult.monthly_price ?? undefined,
+      original_price: matchResult.original_price ?? undefined,
       host_nickname: matchResult.host_nickname ?? '익명',
       description: matchResult.description ?? '',
       status: matchResult.status ?? 'recruiting',
-    } as JoinResult;
+    } as MatchedParty;
   }, [matchResult, parties]);
 
   const currentStepTitle = useMemo(() => {
@@ -409,7 +415,9 @@ export default function Home() {
         original_price:
           detailedParty?.original_price ?? joinResponse?.original_price ?? null,
         service_total_price:
-          detailedParty?.service_total_price ?? joinResponse?.service_total_price ?? null,
+          detailedParty?.service_total_price ??
+          joinResponse?.service_total_price ??
+          null,
         host_nickname:
           detailedParty?.host_nickname ?? joinResponse?.host_nickname ?? '익명',
         host_trust_score:
@@ -442,7 +450,7 @@ export default function Home() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#4f46e5_0%,#6366f1_42%,#0ea5e9_100%)] px-6 pb-10 pt-10 text-center">
+      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#4f46e5_0%,#6366f1_42%,#0ea5e9_100%)] px-4 sm:px-6 py-8 sm:py-10 text-center">
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(15,23,42,0.08))]" />
         <div className="relative mx-auto max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 backdrop-blur-sm">
@@ -450,13 +458,14 @@ export default function Home() {
             <span>함께 쓰면 더 저렴한 구독 생활</span>
           </div>
 
-          <h1 className="relative mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">
+          {/* 폰트 크기 모바일 대응: text-2xl -> sm:text-3xl -> md:text-4xl */}
+          <h1 className="relative mt-4 text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white">
             같이 구독하고,
-            <br className="hidden md:block" />
+            <br className="hidden sm:block" />
             부담은 더 가볍게
           </h1>
 
-          <p className="relative mx-auto mt-3 max-w-xl text-sm leading-6 text-white/80 md:text-base">
+          <p className="relative mx-auto mt-3 max-w-xl text-sm leading-6 text-white/80 sm:text-base">
             구독 서비스부터 공동구매까지, 원하는 파티를 찾고 바로 참여해보세요.
           </p>
 
@@ -472,8 +481,9 @@ export default function Home() {
       </section>
 
       <div className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-7xl px-6 py-8">
-          <div className="mt-6 flex flex-col gap-8 md:flex-row">
+        {/* 모바일 여백 줄임: px-4 -> sm:px-6 */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
+          <div className="mt-4 sm:mt-6 flex flex-col gap-6 md:gap-8 md:flex-row">
             <CategorySidebar
               categories={categories}
               category={category}
@@ -483,13 +493,17 @@ export default function Home() {
             />
 
             <section className="min-w-0 flex-1">
-              <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
+              {/* 컨트롤 패널 모바일 최적화 */}
+              <div className="mb-5 flex flex-col gap-4 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
                 <SectionTitle title={titleText} subtitle={subtitleText} />
-                <div className="flex items-center gap-2">
+
+                {/* 모바일에서는 하단 요소들이 가로 꽉 차게 변경 */}
+                <div className="flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
                   <button
                     onClick={handleRefresh}
                     disabled={cooldown > 0}
-                    className={`flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-semibold transition
+                    // 모바일 w-full, 터치 영역 확보를 위해 py-3 추가
+                    className={`flex w-full sm:w-auto justify-center items-center gap-1.5 rounded-xl sm:rounded-2xl border px-3 py-3 sm:py-2 text-sm font-semibold transition
                       ${
                         cooldown > 0
                           ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
@@ -535,7 +549,7 @@ export default function Home() {
                       </>
                     )}
                   </button>
-                  <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                  <div className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl sm:rounded-2xl bg-slate-100 px-3 py-3 sm:py-2 text-sm font-semibold text-slate-700">
                     <span className="text-slate-400">총</span>
                     <span className="text-base font-black text-slate-900">
                       {partyData?.total ?? 0}
@@ -550,32 +564,32 @@ export default function Home() {
                   {[...Array(6)].map((_, i) => (
                     <div
                       key={i}
-                      className="h-72 animate-pulse rounded-3xl border border-slate-200 bg-white"
+                      className="h-72 animate-pulse rounded-2xl sm:rounded-3xl border border-slate-200 bg-white"
                     />
                   ))}
                 </div>
               ) : parties.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center shadow-sm">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
+                <div className="flex flex-col items-center justify-center rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 bg-white px-4 py-16 sm:px-6 sm:py-20 text-center shadow-sm">
+                  <div className="mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-slate-100 text-2xl sm:text-3xl">
                     🔎
                   </div>
-                  <h3 className="text-lg font-extrabold text-slate-900">
+                  <h3 className="text-base sm:text-lg font-extrabold text-slate-900">
                     조건에 맞는 파티가 아직 없어요
                   </h3>
                   <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
                     검색어를 바꿔보거나, 직접 새 파티를 만들어 멤버를
                     모집해보세요.
                   </p>
-                  <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                  <div className="mt-6 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <button
                       onClick={() => navigate('/handcaptcha')}
-                      className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+                      className="w-full sm:w-auto rounded-xl sm:rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
                     >
                       파티 생성하기
                     </button>
                     <button
                       onClick={handleQuickMatchOpen}
-                      className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                      className="w-full sm:w-auto rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                     >
                       빠른 매칭 열기
                     </button>

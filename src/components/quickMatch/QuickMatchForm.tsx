@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react'; // 💡 화살표 아이콘 추가 (lucide-react가 없다면 일반 svg로 대체 가능)
 
 import { useAuthStore } from '../../stores/authStore';
 
@@ -144,98 +145,117 @@ export default function QuickMatchForm({
       onClick={isSubmitting ? undefined : handleClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        // 패딩 및 라운딩 유연화
+        className="w-full max-w-md rounded-2xl sm:rounded-3xl bg-white p-5 sm:p-7 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-5">
-          <h2 className="text-xl font-extrabold text-slate-900">빠른 매칭</h2>
-          <p className="mt-1 text-sm text-slate-500">
+        <div className="mb-5 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">
+            빠른 매칭
+          </h2>
+          <p className="mt-1 sm:mt-1.5 break-keep text-xs sm:text-sm leading-relaxed text-slate-500">
             원하는 서비스와 선호 조건을 선택하면 빠르게 어울리는 파티를
             찾아드려요.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 sm:space-y-5">
+          {/* 카테고리 선택 */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-800">
+            <label className="mb-2 block text-xs sm:text-sm font-semibold text-slate-800">
               카테고리 <span className="text-rose-500">*</span>
             </label>
-            <select
-              value={category}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-              disabled={isSubmitting || loading}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
-            >
-              <option value="">카테고리를 선택해주세요</option>
-              {CATEGORY_OPTIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={category}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                disabled={isSubmitting || loading}
+                // appearance-none 으로 기본 화살표 제거, 모바일 터치를 위해 py 증가
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white pl-4 pr-10 py-3.5 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400"
+              >
+                <option value="">카테고리를 선택해주세요</option>
+                {CATEGORY_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                <ChevronDown size={16} />
+              </div>
+            </div>
           </div>
 
+          {/* 플랫폼 선택 */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-800">
+            <label className="mb-2 block text-xs sm:text-sm font-semibold text-slate-800">
               플랫폼 <span className="text-rose-500">*</span>
             </label>
-            <select
-              value={serviceId}
-              onChange={(e) => setServiceId(e.target.value)}
-              disabled={!category || isSubmitting || loading}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
-            >
-              <option value="">
-                {category
-                  ? '플랫폼을 선택해주세요'
-                  : '먼저 카테고리를 선택해주세요'}
-              </option>
-              {serviceOptions.map((service) => (
-                <option key={service.id} value={String(service.id)}>
-                  {service.name}
+            <div className="relative">
+              <select
+                value={serviceId}
+                onChange={(e) => setServiceId(e.target.value)}
+                disabled={!category || isSubmitting || loading}
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white pl-4 pr-10 py-3.5 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400"
+              >
+                <option value="">
+                  {category
+                    ? '플랫폼을 선택해주세요'
+                    : '먼저 카테고리를 선택해주세요'}
                 </option>
-              ))}
-            </select>
+                {serviceOptions.map((service) => (
+                  <option key={service.id} value={String(service.id)}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                <ChevronDown size={16} />
+              </div>
+            </div>
           </div>
 
+          {/* 이용 기간 선택 */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-800">
-              이용 기간 <span className="text-slate-400">(선택)</span>
+            <label className="mb-2 block text-xs sm:text-sm font-semibold text-slate-800">
+              이용 기간{' '}
+              <span className="text-slate-400 font-normal">(선택)</span>
             </label>
-            <select
-              value={durationPreference}
-              onChange={(e) =>
-                setDurationPreference(
-                  e.target.value as
-                    | ''
-                    | 'under_1_month'
-                    | '1_3_months'
-                    | 'over_3_months',
-                )
-              }
-              disabled={isSubmitting || loading}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
-            >
-              {DURATION_OPTIONS.map((option) => (
-                <option key={option.value || 'empty'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={durationPreference}
+                onChange={(e) =>
+                  setDurationPreference(
+                    e.target.value as
+                      | ''
+                      | 'under_1_month'
+                      | '1_3_months'
+                      | 'over_3_months',
+                  )
+                }
+                disabled={isSubmitting || loading}
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white pl-4 pr-10 py-3.5 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400"
+              >
+                {DURATION_OPTIONS.map((option) => (
+                  <option key={option.value || 'empty'} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                <ChevronDown size={16} />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700">
-          ⚠️ 빠른매칭은 자동으로 파티를 탐색하고 참여까지 진행하는 기능이며,
-          서비스에 따라 수수료가 발생할 수 있습니다.
-        </div> */}
-
-        <div className="mt-6 flex gap-3">
+        {/* 하단 버튼 */}
+        <div className="mt-6 sm:mt-8 flex gap-2 sm:gap-3">
           <button
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-xl sm:rounded-2xl border border-slate-200 px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             취소
           </button>
@@ -243,7 +263,7 @@ export default function QuickMatchForm({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || loading}
-            className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-2 sm:flex-1 rounded-xl sm:rounded-2xl bg-primary px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-white shadow-md transition hover:brightness-95 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? '매칭 중...' : '빠른 매칭 시작'}
           </button>
