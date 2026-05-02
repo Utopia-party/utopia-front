@@ -242,7 +242,6 @@ export default function Chat() {
             return;
           }
 
-          // 누군가 채팅방 입장 → 실제로 새로 읽은 chat_id만 -1
           if (msg.type === 'read_update') {
             const readSet = new Set<string>(msg.chat_ids ?? []);
             if (readSet.size === 0) return;
