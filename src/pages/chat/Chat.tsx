@@ -263,9 +263,14 @@ export default function Chat() {
 
           const typedMsg = msg as Message;
           if (typedMsg.chat_id && typeof typedMsg.unread_count === 'number') {
+            // 내가 채팅방에 있으므로 나는 이미 읽음 → 내가 보낸 메시지가 아닐 때만 -1
+            const adjusted = typedMsg.user_id !== currentUserId
+              ? Math.max(0, typedMsg.unread_count - 1)
+              : typedMsg.unread_count;
+            typedMsg.unread_count = adjusted;
             setUnreadCounts((prev) => ({
               ...prev,
-              [typedMsg.chat_id!]: typedMsg.unread_count!,
+              [typedMsg.chat_id!]: adjusted,
             }));
           }
           setMessages((prev) => [...prev, typedMsg]);
