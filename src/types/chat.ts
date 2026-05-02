@@ -1,6 +1,7 @@
 export interface Message {
   type: 'message' | 'system' | 'warning' | 'error' | 'message_deleted';
   chat_id?: string;
+  chat_ids?: string[];
   party_id?: string;
   user_id?: string;
   nickname?: string;

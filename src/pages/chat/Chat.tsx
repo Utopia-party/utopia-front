@@ -242,18 +242,21 @@ export default function Chat() {
             return;
           }
 
-          // 누군가 채팅방에 입장 → 해당 유저가 읽은 것으로 처리 → 모든 메시지 unread_count -1
           if (msg.type === 'read_update') {
+            const readSet = new Set<string>(msg.chat_ids ?? []);
+            if (readSet.size === 0) return;
             setUnreadCounts((prev) => {
               const next = { ...prev };
-              Object.keys(next).forEach((chatId) => {
-                next[chatId] = Math.max(0, (next[chatId] ?? 0) - 1);
+              readSet.forEach((chatId) => {
+                if (next[chatId] !== undefined) {
+                  next[chatId] = Math.max(0, next[chatId] - 1);
+                }
               });
               return next;
             });
             setMessages((prev) =>
               prev.map((m) =>
-                m.chat_id
+                m.chat_id && readSet.has(m.chat_id)
                   ? { ...m, unread_count: Math.max(0, (m.unread_count ?? 0) - 1) }
                   : m,
               ),
