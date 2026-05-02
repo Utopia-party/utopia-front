@@ -69,6 +69,7 @@ export default function Chat() {
   const { user, logout } = useAuthStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [input, setInput] = useState('');
   const [partyInfo, setPartyInfo] = useState<PartyInfo | null>(null);
   const [paymentPreview, setPaymentPreview] = useState<{
@@ -151,7 +152,17 @@ export default function Chat() {
 
     api
       .get(`/api/chat/parties/${partyId}/messages`)
-      .then(({ data }) => setMessages(Array.isArray(data) ? data : []))
+      .then(({ data }) => {
+        const msgs: Message[] = Array.isArray(data) ? data : [];
+        setMessages(msgs);
+        const counts: Record<string, number> = {};
+        msgs.forEach((m) => {
+          if (m.chat_id && typeof m.unread_count === 'number') {
+            counts[m.chat_id] = m.unread_count;
+          }
+        });
+        setUnreadCounts(counts);
+      })
       .catch((err) => {
         console.error('메시지 로딩 실패:', err);
         setMessages([]);
@@ -231,7 +242,33 @@ export default function Chat() {
             return;
           }
 
-          setMessages((prev) => [...prev, msg as Message]);
+          // 누군가 채팅방에 입장 → 해당 유저가 읽은 것으로 처리 → 모든 메시지 unread_count -1
+          if (msg.type === 'read_update') {
+            setUnreadCounts((prev) => {
+              const next = { ...prev };
+              Object.keys(next).forEach((chatId) => {
+                next[chatId] = Math.max(0, (next[chatId] ?? 0) - 1);
+              });
+              return next;
+            });
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.chat_id
+                  ? { ...m, unread_count: Math.max(0, (m.unread_count ?? 0) - 1) }
+                  : m,
+              ),
+            );
+            return;
+          }
+
+          const typedMsg = msg as Message;
+          if (typedMsg.chat_id && typeof typedMsg.unread_count === 'number') {
+            setUnreadCounts((prev) => ({
+              ...prev,
+              [typedMsg.chat_id!]: typedMsg.unread_count!,
+            }));
+          }
+          setMessages((prev) => [...prev, typedMsg]);
         } catch (err) {
           console.error('메시지 파싱 에러:', err);
         }
@@ -537,6 +574,11 @@ export default function Chat() {
         ? myProfileImage
         : (msg.profile_image ?? memberMeta.profile_image ?? null);
 
+      // chat_id 기준으로 unreadCounts에서 최신 값 우선 사용
+      const unreadCount = msg.chat_id
+        ? (unreadCounts[msg.chat_id] ?? msg.unread_count ?? 0)
+        : (msg.unread_count ?? 0);
+
       return (
         <div
           key={i}
@@ -575,40 +617,49 @@ export default function Chat() {
               </p>
             )}
 
-            <div
-              className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                isMe
-                  ? 'bg-primary text-primary-foreground rounded-br-sm'
-                  : 'bg-card border border-border text-foreground rounded-bl-sm'
-              }`}
-            >
-              {msg.content}
+            <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div
+                className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  isMe
+                    ? 'bg-primary text-primary-foreground rounded-br-sm'
+                    : 'bg-card border border-border text-foreground rounded-bl-sm'
+                }`}
+              >
+                {msg.content}
+              </div>
+
+              <div className={`flex flex-col shrink-0 gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
+                {unreadCount > 0 && (
+                  <span className="text-[10px] font-bold text-primary leading-none">
+                    {unreadCount}
+                  </span>
+                )}
+                <p className="text-[10px] text-muted-foreground">
+                  {(() => {
+                    if (!msg.created_at) return '';
+
+                    const raw =
+                      msg.created_at.endsWith('Z') || msg.created_at.includes('+')
+                        ? msg.created_at
+                        : msg.created_at.replace(' ', 'T') + 'Z';
+
+                    const d = new Date(raw);
+
+                    if (isNaN(d.getTime())) return '';
+
+                    return d.toLocaleTimeString('ko-KR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    });
+                  })()}
+                </p>
+              </div>
             </div>
-
-            <p className="text-[10px] text-muted-foreground px-1">
-              {(() => {
-                if (!msg.created_at) return '';
-
-                const raw =
-                  msg.created_at.endsWith('Z') || msg.created_at.includes('+')
-                    ? msg.created_at
-                    : msg.created_at.replace(' ', 'T') + 'Z';
-
-                const d = new Date(raw);
-
-                if (isNaN(d.getTime())) return '';
-
-                return d.toLocaleTimeString('ko-KR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
-              })()}
-            </p>
           </div>
         </div>
       );
     },
-    [getMemberMeta, openProfileDrawer, myProfileImage],
+    [getMemberMeta, openProfileDrawer, myProfileImage, unreadCounts],
   );
 
   return (
