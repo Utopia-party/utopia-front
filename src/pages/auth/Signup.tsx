@@ -21,6 +21,7 @@ export default function Signup() {
     email: '',
     email_code: '',
     password: '',
+    password_confirm: '',
     name: '',
     nickname: '',
     birth_date: '',
@@ -38,9 +39,11 @@ export default function Signup() {
   const [isNicknameGenerating, setIsNicknameGenerating] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const [passwordError, setPasswordError] = useState('');
+  const [passwordConfirmError, setPasswordConfirmError] = useState('');
   const [nicknameError, setNicknameError] = useState('');
   const [nicknameSuccess, setNicknameSuccess] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -59,6 +62,9 @@ export default function Signup() {
     /(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{}:;,.?~\\/-]).{8,}$/.test(
       password,
     );
+
+  const validatePasswordConfirm = (password: string, passwordConfirm: string) =>
+    password === passwordConfirm;
 
   const formatTimer = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -123,6 +129,24 @@ export default function Signup() {
           ? ''
           : '8자 이상, 영문/숫자/특수문자를 포함해야 합니다.',
       );
+
+      if (form.password_confirm) {
+        setPasswordConfirmError(
+          validatePasswordConfirm(value, form.password_confirm)
+            ? ''
+            : '비밀번호가 일치하지 않습니다.',
+        );
+      }
+    }
+
+    if (name === 'password_confirm') {
+      if (!value) {
+        setPasswordConfirmError('');
+      } else if (!validatePasswordConfirm(form.password, value)) {
+        setPasswordConfirmError('비밀번호가 일치하지 않습니다.');
+      } else {
+        setPasswordConfirmError('');
+      }
     }
 
     if (name === 'name') {
@@ -310,6 +334,11 @@ export default function Signup() {
       return;
     }
 
+    if (!validatePasswordConfirm(form.password, form.password_confirm)) {
+      alert('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
     if (!captchaToken) {
       alert('캡챠 인증을 완료해주세요.');
       return;
@@ -344,6 +373,9 @@ export default function Signup() {
     !emailError &&
     isEmailVerified &&
     validatePassword(form.password) &&
+    form.password_confirm &&
+    validatePasswordConfirm(form.password, form.password_confirm) &&
+    !passwordConfirmError &&
     form.name &&
     !nameError &&
     form.nickname &&
@@ -462,6 +494,7 @@ export default function Signup() {
               name="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="8자 이상"
+              value={form.password}
               className="w-full rounded-lg border border-gray-300 p-3 pr-12 focus:border-blue-500 focus:outline-none"
               onChange={handleChange}
               required
@@ -483,6 +516,54 @@ export default function Signup() {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-600">
+            비밀번호 재확인 <span className="text-red-500">*</span>
+          </label>
+
+          <div className="relative">
+            <input
+              name="password_confirm"
+              type={showPasswordConfirm ? 'text' : 'password'}
+              placeholder="비밀번호를 다시 입력해주세요"
+              value={form.password_confirm}
+              className={`w-full rounded-lg border p-3 pr-12 focus:outline-none ${
+                passwordConfirmError
+                  ? 'border-red-500 bg-red-50'
+                  : form.password_confirm &&
+                      validatePasswordConfirm(
+                        form.password,
+                        form.password_confirm,
+                      )
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-300 focus:border-blue-500'
+              }`}
+              onChange={handleChange}
+              required
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPasswordConfirm((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {showPasswordConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+
+          {passwordConfirmError && (
+            <p className="mt-1 text-xs text-red-500">{passwordConfirmError}</p>
+          )}
+
+          {!passwordConfirmError &&
+            form.password_confirm &&
+            validatePasswordConfirm(form.password, form.password_confirm) && (
+              <p className="mt-1 text-xs text-green-600">
+                비밀번호가 일치합니다.
+              </p>
+            )}
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-600">
             이름 <span className="text-red-500">*</span>
           </label>
 
@@ -490,6 +571,7 @@ export default function Signup() {
             name="name"
             type="text"
             placeholder="실명 입력"
+            value={form.name}
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}
             required
