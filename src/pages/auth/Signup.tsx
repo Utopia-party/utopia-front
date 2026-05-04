@@ -6,12 +6,22 @@ import { useAuthStore } from '../../stores/authStore';
 import {
   requestEmailVerification,
   verifyEmailCode,
+  checkEmail,
   checkNickname,
   getRandomNickname,
   signup,
 } from '../../apis/auth';
 
 const DEFAULT_EMAIL_TIMER_SECONDS = 180;
+
+const EMAIL_DOMAINS = [
+  'gmail.com',
+  'naver.com',
+  'kakao.com',
+  'daum.net',
+  'hanmail.net',
+  'nate.com',
+];
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -25,15 +35,18 @@ export default function Signup() {
     name: '',
     nickname: '',
     birth_date: '',
-    phone: '',
+    phone: '010',
   });
 
   const [referrer, setReferrer] = useState('');
 
+  const [isEmailChecking, setIsEmailChecking] = useState(false);
+  const [isEmailAvailable, setIsEmailAvailable] = useState(false);
   const [isEmailRequesting, setIsEmailRequesting] = useState(false);
   const [isEmailCodeSent, setIsEmailCodeSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [emailTimer, setEmailTimer] = useState(0);
+  const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
 
   const [isNicknameChecked, setIsNicknameChecked] = useState(false);
   const [isNicknameGenerating, setIsNicknameGenerating] = useState(false);
@@ -49,6 +62,7 @@ export default function Signup() {
   const [emailError, setEmailError] = useState('');
   const [emailSuccess, setEmailSuccess] = useState('');
   const [nameError, setNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const validateEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -66,6 +80,22 @@ export default function Signup() {
   const validatePasswordConfirm = (password: string, passwordConfirm: string) =>
     password === passwordConfirm;
 
+  const validatePhone = (phone: string) => /^010\d{8}$/.test(phone);
+
+  const isNameValid = form.name && validateName(form.name);
+
+  const getEmailSuggestions = () => {
+    const [localPart, domainPart = ''] = form.email.split('@');
+
+    if (!localPart || !form.email.includes('@') || isEmailVerified) return [];
+
+    return EMAIL_DOMAINS.filter((domain) =>
+      domain.startsWith(domainPart.toLowerCase()),
+    ).map((domain) => `${localPart}@${domain}`);
+  };
+
+  const emailSuggestions = getEmailSuggestions();
+
   const formatTimer = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainSeconds = seconds % 60;
@@ -82,7 +112,9 @@ export default function Signup() {
           clearInterval(timer);
           setIsEmailCodeSent(false);
           setEmailSuccess('');
-          setEmailError('인증 시간이 만료되었습니다. 다시 인증요청 해주세요.');
+          setEmailError(
+            '인증 시간이 만료되었습니다. 다시 인증번호를 받아주세요.',
+          );
           return 0;
         }
 
@@ -93,13 +125,82 @@ export default function Signup() {
     return () => clearInterval(timer);
   }, [isEmailCodeSent, isEmailVerified, emailTimer]);
 
+  const checkEmailAvailability = async (email: string) => {
+    if (!email) {
+      setEmailError('이메일을 입력해주세요.');
+      setEmailSuccess('');
+      setIsEmailAvailable(false);
+      return false;
+    }
+
+    if (!validateEmail(email)) {
+      setEmailError('올바른 이메일 형식을 입력해주세요.');
+      setEmailSuccess('');
+      setIsEmailAvailable(false);
+      return false;
+    }
+
+    try {
+      setIsEmailChecking(true);
+      setEmailError('');
+      setEmailSuccess('');
+
+      const data = await checkEmail(email);
+
+      if (data.exists) {
+        setEmailError('이미 가입된 이메일입니다.');
+        setEmailSuccess('');
+        setIsEmailAvailable(false);
+        return false;
+      }
+
+      setEmailError('');
+      setEmailSuccess('사용 가능한 이메일입니다. 인증하기 버튼을 눌러주세요.');
+      setIsEmailAvailable(true);
+      return true;
+    } catch {
+      setEmailError('이메일 확인 중 오류가 발생했습니다.');
+      setEmailSuccess('');
+      setIsEmailAvailable(false);
+      return false;
+    } finally {
+      setIsEmailChecking(false);
+    }
+  };
+
+  const handleEmailBlur = async () => {
+    setTimeout(() => setShowEmailSuggestions(false), 150);
+
+    if (!form.email || isEmailVerified) return;
+    await checkEmailAvailability(form.email);
+  };
+
+  const handleEmailSuggestionClick = async (email: string) => {
+    setForm((prev) => ({
+      ...prev,
+      email,
+      email_code: '',
+    }));
+
+    setShowEmailSuggestions(false);
+    setIsEmailCodeSent(false);
+    setIsEmailVerified(false);
+    setIsEmailAvailable(false);
+    setEmailTimer(0);
+    setEmailError('');
+    setEmailSuccess('');
+
+    await checkEmailAvailability(email);
+  };
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
     let newValue = value;
 
     if (name === 'phone') {
-      newValue = value.replace(/[^0-9]/g, '').slice(0, 11);
+      const numbers = value.replace(/[^0-9]/g, '').slice(0, 11);
+      newValue = numbers.startsWith('010') ? numbers : `010${numbers.slice(3)}`;
     }
 
     setForm((prev) => ({ ...prev, [name]: newValue }));
@@ -107,8 +208,16 @@ export default function Signup() {
     if (name === 'email') {
       setIsEmailCodeSent(false);
       setIsEmailVerified(false);
+      setIsEmailAvailable(false);
       setEmailTimer(0);
       setEmailSuccess('');
+      setShowEmailSuggestions(value.includes('@'));
+
+      setForm((prev) => ({
+        ...prev,
+        email: newValue,
+        email_code: '',
+      }));
 
       if (!value) {
         setEmailError('');
@@ -117,6 +226,8 @@ export default function Signup() {
       } else {
         setEmailError('');
       }
+
+      return;
     }
 
     if (name === 'email_code') {
@@ -171,6 +282,16 @@ export default function Signup() {
         );
       } else {
         setNicknameError('');
+      }
+    }
+
+    if (name === 'phone') {
+      if (!newValue || newValue === '010') {
+        setPhoneError('');
+      } else if (newValue.length === 11 && validatePhone(newValue)) {
+        setPhoneError('');
+      } else {
+        setPhoneError('010을 포함한 휴대폰 번호 11자리를 입력해주세요.');
       }
     }
   };
@@ -248,15 +369,11 @@ export default function Signup() {
   };
 
   const handleEmailRequest = async () => {
-    if (!form.email) {
-      setEmailError('이메일을 입력해주세요.');
-      return;
-    }
+    const available = isEmailAvailable
+      ? true
+      : await checkEmailAvailability(form.email);
 
-    if (!validateEmail(form.email)) {
-      setEmailError('올바른 이메일 형식을 입력해주세요.');
-      return;
-    }
+    if (!available) return;
 
     try {
       setIsEmailRequesting(true);
@@ -265,7 +382,7 @@ export default function Signup() {
 
       const data = await requestEmailVerification(form.email);
 
-      setEmailSuccess('인증번호를 발송했습니다. 메일함을 확인해주세요.');
+      setEmailSuccess('인증번호를 발송했습니다.');
       setIsEmailCodeSent(true);
       setIsEmailVerified(false);
       setEmailTimer(data?.expires_in || DEFAULT_EMAIL_TIMER_SECONDS);
@@ -290,7 +407,7 @@ export default function Signup() {
     }
 
     if (emailTimer <= 0) {
-      setEmailError('인증 시간이 만료되었습니다. 다시 인증요청 해주세요.');
+      setEmailError('인증 시간이 만료되었습니다. 다시 인증번호를 받아주세요.');
       setIsEmailCodeSent(false);
       return;
     }
@@ -318,7 +435,10 @@ export default function Signup() {
       return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
     }
 
-    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(
+      7,
+      11,
+    )}`;
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -336,6 +456,11 @@ export default function Signup() {
 
     if (!validatePasswordConfirm(form.password, form.password_confirm)) {
       alert('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    if (!validatePhone(form.phone)) {
+      alert('올바른 휴대폰 번호를 입력해주세요.');
       return;
     }
 
@@ -377,12 +502,15 @@ export default function Signup() {
     validatePasswordConfirm(form.password, form.password_confirm) &&
     !passwordConfirmError &&
     form.name &&
+    validateName(form.name) &&
     !nameError &&
     form.nickname &&
     !nicknameError &&
     isNicknameChecked &&
-    captchaToken &&
-    form.phone;
+    form.phone &&
+    validatePhone(form.phone) &&
+    !phoneError &&
+    captchaToken;
 
   return (
     <div className="mx-auto mt-10 mb-12 max-w-2xl rounded-xl border border-gray-100 bg-white p-10 shadow-lg">
@@ -400,14 +528,18 @@ export default function Signup() {
               type="email"
               placeholder="name@email.com"
               value={form.email}
-              className={`w-full rounded-lg border p-3 pr-28 focus:outline-none ${
-                isEmailVerified
-                  ? 'border-green-500 bg-green-50'
-                  : emailError
-                    ? 'border-red-500 bg-red-50'
+              className={`w-full rounded-lg border p-3 pr-32 focus:outline-none disabled:opacity-100 disabled:text-gray-900 ${
+                emailError
+                  ? 'border-red-500 bg-red-50'
+                  : isEmailVerified || isEmailAvailable
+                    ? 'border-blue-500 bg-blue-50 disabled:bg-blue-50'
                     : 'border-gray-300 focus:border-blue-500'
               }`}
               onChange={handleChange}
+              onFocus={() => {
+                if (form.email.includes('@')) setShowEmailSuggestions(true);
+              }}
+              onBlur={handleEmailBlur}
               disabled={isEmailVerified || isEmailRequesting}
               required
             />
@@ -417,20 +549,38 @@ export default function Signup() {
               onClick={handleEmailRequest}
               disabled={
                 !form.email ||
-                !!emailError ||
+                !validateEmail(form.email) ||
                 isEmailVerified ||
-                isEmailRequesting
+                isEmailRequesting ||
+                isEmailChecking
               }
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:bg-gray-300"
             >
-              {isEmailRequesting
-                ? '발송 중'
-                : isEmailVerified
-                  ? '완료'
-                  : isEmailCodeSent
-                    ? '재전송'
-                    : '인증요청'}
+              {isEmailChecking
+                ? '확인 중'
+                : isEmailRequesting
+                  ? '발송 중'
+                  : isEmailVerified
+                    ? '인증완료'
+                    : isEmailCodeSent
+                      ? '재전송'
+                      : '인증하기'}
             </button>
+
+            {showEmailSuggestions && emailSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                {emailSuggestions.map((email) => (
+                  <button
+                    key={email}
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    onMouseDown={() => handleEmailSuggestionClick(email)}
+                  >
+                    {email}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {emailError && (
@@ -438,14 +588,14 @@ export default function Signup() {
           )}
 
           {!emailError && emailSuccess && (
-            <p className="mt-1 text-xs text-green-600">{emailSuccess}</p>
+            <p className="mt-1 text-xs text-blue-600">{emailSuccess}</p>
           )}
         </div>
 
         {!isEmailVerified && isEmailCodeSent && (
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-600">
-              인증번호
+              인증번호 <span className="text-red-500">*</span>
             </label>
 
             <div className="relative">
@@ -456,7 +606,11 @@ export default function Signup() {
                 maxLength={6}
                 placeholder="인증번호 6자리"
                 value={form.email_code}
-                className="w-full rounded-lg border border-gray-300 p-3 pr-20 focus:border-blue-500 focus:outline-none"
+                className={`w-full rounded-lg border p-3 pr-20 focus:outline-none ${
+                  form.email_code
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 focus:border-blue-500'
+                }`}
                 onChange={handleChange}
               />
 
@@ -471,8 +625,8 @@ export default function Signup() {
             </div>
 
             <div className="mt-1 flex items-center justify-between text-xs">
-              <p className="text-gray-500">
-                메일로 받은 인증번호를 입력해주세요.
+              <p className="text-blue-500">
+                이메일로 받은 6자리 인증번호를 입력해주세요.
               </p>
 
               <p
@@ -493,9 +647,15 @@ export default function Signup() {
             <input
               name="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="8자 이상"
+              placeholder="8자 이상, 영문/숫자/특수문자 포함"
               value={form.password}
-              className="w-full rounded-lg border border-gray-300 p-3 pr-12 focus:border-blue-500 focus:outline-none"
+              className={`w-full rounded-lg border p-3 pr-12 focus:outline-none ${
+                passwordError
+                  ? 'border-red-500 bg-red-50'
+                  : form.password && validatePassword(form.password)
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 focus:border-blue-500'
+              }`}
               onChange={handleChange}
               required
             />
@@ -533,7 +693,7 @@ export default function Signup() {
                         form.password,
                         form.password_confirm,
                       )
-                    ? 'border-green-500 bg-green-50'
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-300 focus:border-blue-500'
               }`}
               onChange={handleChange}
@@ -556,7 +716,7 @@ export default function Signup() {
           {!passwordConfirmError &&
             form.password_confirm &&
             validatePasswordConfirm(form.password, form.password_confirm) && (
-              <p className="mt-1 text-xs text-green-600">
+              <p className="mt-1 text-xs text-blue-600">
                 비밀번호가 일치합니다.
               </p>
             )}
@@ -572,7 +732,13 @@ export default function Signup() {
             type="text"
             placeholder="실명 입력"
             value={form.name}
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+            className={`w-full rounded-lg border p-3 focus:outline-none ${
+              nameError
+                ? 'border-red-500 bg-red-50'
+                : isNameValid
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 focus:border-blue-500'
+            }`}
             onChange={handleChange}
             required
           />
@@ -593,7 +759,13 @@ export default function Signup() {
               type="text"
               placeholder="닉네임 입력"
               value={form.nickname}
-              className="w-full rounded-lg border border-gray-300 p-3 pr-28 focus:border-blue-500 focus:outline-none"
+              className={`w-full rounded-lg border p-3 pr-28 focus:outline-none ${
+                nicknameError
+                  ? 'border-red-500 bg-red-50'
+                  : isNicknameChecked
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 focus:border-blue-500'
+              }`}
               onChange={handleChange}
               required
             />
@@ -614,7 +786,7 @@ export default function Signup() {
           )}
 
           {!nicknameError && nicknameSuccess && (
-            <p className="mt-1 text-xs text-green-600">{nicknameSuccess}</p>
+            <p className="mt-1 text-xs text-blue-600">{nicknameSuccess}</p>
           )}
         </div>
 
@@ -630,10 +802,20 @@ export default function Signup() {
             value={formatPhone(form.phone)}
             maxLength={13}
             inputMode="numeric"
-            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+            className={`w-full rounded-lg border p-3 focus:outline-none ${
+              phoneError
+                ? 'border-red-500 bg-red-50'
+                : form.phone && validatePhone(form.phone)
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 focus:border-blue-500'
+            }`}
             onChange={handleChange}
             required
           />
+
+          {phoneError && (
+            <p className="mt-1 text-xs text-red-500">{phoneError}</p>
+          )}
         </div>
 
         <div>
@@ -654,24 +836,37 @@ export default function Signup() {
           </p>
         </div>
 
-        <div className="flex justify-center py-2">
-          <CaptchaWidget
-            onSuccess={(token) => setCaptchaToken(token)}
-            onError={() => setCaptchaToken(null)}
-            triggerType="register"
-          />
+        <div>
+          <div className="mb-2 text-center">
+            {/* <p className="text-sm font-medium text-gray-600">
+      자동 가입 방지를 위해 캡챠 인증을 완료해주세요.
+    </p> */}
+            {!captchaToken && (
+              <p className="mt-1 text-xs text-red-600">
+                캡챠 인증까지 완료하면 가입하기 버튼이 활성화됩니다.
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-center py-2">
+            <CaptchaWidget
+              onSuccess={(token) => setCaptchaToken(token)}
+              onError={() => setCaptchaToken(null)}
+              triggerType="register"
+            />
+          </div>
         </div>
 
         <button
           type="submit"
-          disabled={!isFormValid || !captchaToken}
+          disabled={!isFormValid}
           className={`w-full rounded-xl py-4 font-bold text-white transition ${
-            isFormValid && captchaToken
+            isFormValid
               ? 'bg-blue-600 hover:bg-blue-700'
               : 'cursor-not-allowed bg-gray-300'
           }`}
         >
-          {!captchaToken ? '캡챠 인증 필요' : '회원가입 완료'}
+          {!captchaToken ? '가입하기' : '가입하기'}
         </button>
       </form>
     </div>
