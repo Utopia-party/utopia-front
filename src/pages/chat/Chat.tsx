@@ -151,8 +151,8 @@ export default function Chat() {
       return {
         role: member.role,
         status: member.status,
-        trust_score: member.trust_score,
-        joined_at: member.joined_at,
+        trust_score: member.trust_score ?? undefined,
+        joined_at: member.joined_at ?? undefined,
         payment_status: member.payment_status ?? null,
         profile_image: member.profile_image ?? null,
       };
