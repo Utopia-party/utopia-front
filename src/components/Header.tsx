@@ -93,7 +93,8 @@ export default function Header() {
         const refId = msg.reference_id ?? '';
         const params = new URLSearchParams({ reason: 'banned', ban_type: banType });
         if (refId) params.set('ref_id', refId);
-        void logout().then(() => navigate(`/login?${params.toString()}`));
+        navigate(`/login?${params.toString()}`);
+        void logout();
         return;
       }
       queryClient.setQueryData<NotificationItem[]>(notificationKeys.me, (prev: NotificationItem[] = []) => {

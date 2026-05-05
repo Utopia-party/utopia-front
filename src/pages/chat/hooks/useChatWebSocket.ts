@@ -84,7 +84,8 @@ export function useChatWebSocket({
             const refId = msg.reference_id ?? '';
             const params = new URLSearchParams({ reason: 'banned', ban_type: banType });
             if (refId) params.set('ref_id', refId);
-            logout().then(() => navigate(`/login?${params.toString()}`));
+            navigate(`/login?${params.toString()}`);
+            logout();
             return;
           }
 
