@@ -154,15 +154,15 @@ export default function Home() {
     return {
       ...base,
       title: matchResult.title ?? matchResult.party_title ?? (found?.title) ?? '매칭된 파티',
-      service_name: matchResult.service_name ?? found?.service_name ?? '',
+      service_name: (matchResult.service_name ?? found?.service_name ?? '') as string,
       category_name: matchResult.category_name ?? found?.category_name ?? '기타',
       member_count: matchResult.member_count ?? found?.member_count ?? 0,
-      max_members: matchResult.max_members ?? found?.max_members ?? 0,
-      monthly_price: matchResult.monthly_price ?? found?.monthly_price ?? undefined,
-      original_price: matchResult.original_price ?? found?.original_price ?? undefined,
-      host_nickname: matchResult.host_nickname ?? found?.host_nickname ?? '익명',
+      max_members: (matchResult.max_members ?? found?.max_members) ?? 0,
+      monthly_price: (matchResult.monthly_price ?? found?.monthly_price) ?? undefined,
+      original_price: (matchResult.original_price ?? found?.original_price) ?? undefined,
+      host_nickname: (matchResult.host_nickname ?? found?.host_nickname) || '익명',
       description: matchResult.description ?? (found as PartyWithDetails | undefined)?.description ?? '',
-      status: matchResult.status ?? found?.status ?? 'recruiting',
+      status: (matchResult.status ?? found?.status) || 'recruiting',
     } as MatchedParty;
   }, [matchResult, parties]);
 

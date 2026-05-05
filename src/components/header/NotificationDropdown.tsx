@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -15,7 +14,6 @@ import { formatRelativeTime, getNotificationBadge, getNotificationTargetPath } f
 interface NotificationDropdownProps {
   isOpen: boolean;
   onToggle: () => void;
-  notifications: NotificationItem[];
   latestNotifications: NotificationItem[];
   unreadCount: number;
   isLoading: boolean;
@@ -27,7 +25,6 @@ interface NotificationDropdownProps {
 export function NotificationDropdown({
   isOpen,
   onToggle,
-  notifications,
   latestNotifications,
   unreadCount,
   isLoading,
