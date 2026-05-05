@@ -143,7 +143,6 @@ export default function Header() {
               <NotificationDropdown
                 isOpen={isNotificationOpen}
                 onToggle={() => { setIsNotificationOpen((p) => !p); setIsProfileMenuOpen(false); }}
-                notifications={notifications}
                 latestNotifications={latestNotifications}
                 unreadCount={unreadCount}
                 isLoading={isNotificationsLoading}
