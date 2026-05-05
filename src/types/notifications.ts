@@ -56,4 +56,6 @@ export type NotificationSocketMessage = {
   unread_count?: number | null;
   message?: string | null;
   timestamp?: string | null;
+  ban_type?: string | null;
+  reference_id?: string | null;
 };
