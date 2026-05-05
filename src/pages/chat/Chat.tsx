@@ -4,29 +4,18 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../apis/api';
 
-import type {
-  Message,
-  PartyInfo,
-  ProfileDrawerState,
-  ProfileDrawerUser,
-} from '../../types/chat';
+import type { PartyInfo, ProfileDrawerUser } from '../../types/chat';
 import ReportModal from './components/ReportModal';
 import { PaymentModal } from './components/PaymentModal';
-import {
-  Avatar,
-  ProfileDrawer,
-  ProfileInfoModal,
-  DetailRow,
-  MemberItem,
-} from './components/ChatComponents';
-import {
-  WS_BASE,
-  CATEGORY_COLOR,
-  PARTY_STATUS_LABEL,
-  formatCurrency,
-} from './ChatConstants';
+import { ProfileDrawer, ProfileInfoModal } from './components/ChatComponents';
+import { MessageItem } from './components/MessageItem';
+import { ChatSidebar } from './components/ChatSidebar';
+import { ChatInputBar } from './components/ChatInputBar';
 import PraiseModal from './components/PraiseModal';
-import { createPraise, getPraiseAvailability } from '../../apis/praises';
+
+import { useChatWebSocket } from './hooks/useChatWebSocket';
+import { useProfileDrawer } from './hooks/useProfileDrawer';
+import { usePraiseActions } from './hooks/usePraiseActions';
 
 declare global {
   interface Window {
@@ -41,35 +30,15 @@ declare global {
   }
 }
 
-function getErrorStatus(err: unknown) {
-  if (
-    typeof err === 'object' &&
-    err !== null &&
-    'response' in err &&
-    typeof (err as { response?: { status?: unknown } }).response?.status ===
-      'number'
-  ) {
-    return (err as { response?: { status?: number } }).response?.status;
-  }
-
-  return undefined;
-}
-
-function getPraiseDisabledLabel(remainingDays?: number) {
-  if (typeof remainingDays === 'number' && remainingDays > 0) {
-    return `${remainingDays}일 뒤 다시 가능`;
-  }
-
-  return '30일 뒤 다시 가능';
-}
-
 export default function Chat() {
   const { partyId } = useParams<{ partyId: string }>();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const currentUserId = user?.user_id ?? 'guest';
+  const currentNickname = user?.nickname ?? '익명';
+  const myProfileImage = user?.profile_image ?? null;
+
   const [input, setInput] = useState('');
   const [partyInfo, setPartyInfo] = useState<PartyInfo | null>(null);
   const [paymentPreview, setPaymentPreview] = useState<{
@@ -83,48 +52,14 @@ export default function Chat() {
     quick_match_fee_rate: number;
   } | null>(null);
 
-  const [connected, setConnected] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
-    null,
-  );
-  const [profileInfoUser, setProfileInfoUser] =
-    useState<ProfileDrawerUser | null>(null);
   const [alreadyPaid, setAlreadyPaid] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(
-    null,
-  );
 
-  const [showPraiseModal, setShowPraiseModal] = useState(false);
-  const [praiseTarget, setPraiseTarget] = useState<ProfileDrawerUser | null>(
-    null,
-  );
-
-  const [praisedUserIds, setPraisedUserIds] = useState<Record<string, boolean>>(
-    {},
-  );
-
-  const [praiseDisabledLabels, setPraiseDisabledLabels] = useState<
-    Record<string, string>
-  >({});
-
-  const nicknameRef = useRef(user?.nickname ?? '익명');
-  const myProfileImage = user?.profile_image ?? null;
-  const currentNickname = user?.nickname ?? '익명';
-  const currentUserId = user?.user_id ?? 'guest';
-
-  useEffect(() => {
-    if (user?.nickname) nicknameRef.current = user.nickname;
-  }, [user]);
-
-  const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const userReadyRef = useRef(false);
 
   const loadPartyInfo = useCallback(async () => {
     if (!partyId) return;
-
     try {
       const { data } = await api.get(`/api/chat/parties/${partyId}/info`);
       setPartyInfo(data);
@@ -136,207 +71,73 @@ export default function Chat() {
 
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
-
     try {
-      const { data } = await api.get(
-        `/api/payments/status?party_id=${partyId}`,
-      );
+      const { data } = await api.get(`/api/payments/status?party_id=${partyId}`);
       setAlreadyPaid(data.paid);
     } catch (e) {
       console.error(e);
     }
   }, [partyId]);
 
-  useEffect(() => {
-    if (!partyId) return;
+  const { messages, unreadCounts, connected, sendMessage, initMessages } =
+    useChatWebSocket({ partyId, currentUserId, onPartyUpdated: loadPartyInfo });
 
-    api
-      .get(`/api/chat/parties/${partyId}/messages`)
-      .then(({ data }) => {
-        const msgs: Message[] = Array.isArray(data) ? data : [];
-        setMessages(msgs);
-        const counts: Record<string, number> = {};
-        msgs.forEach((m) => {
-          if (m.chat_id && typeof m.unread_count === 'number') {
-            counts[m.chat_id] = m.unread_count;
-          }
-        });
-        setUnreadCounts(counts);
-      })
-      .catch((err) => {
-        console.error('메시지 로딩 실패:', err);
-        setMessages([]);
-      });
+  const {
+    profileDrawer,
+    profileInfoUser,
+    praisedUserIds,
+    praiseDisabledLabels,
+    openProfileDrawer,
+    closeProfileDrawer,
+    handleProfileInfo,
+    setProfileDrawer: _setProfileDrawer,
+    setProfileInfoUser,
+    markPraised,
+  } = useProfileDrawer({ currentUserId, partyId });
 
-    void loadPartyInfo();
+  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(null);
 
-    api
-      .get(`/api/payments/preview?party_id=${partyId}`)
-      .then(({ data }) => setPaymentPreview(data))
-      .catch((err) => {
-        console.error('빠른매칭 정산 금액 로딩 실패:', err);
-        setPaymentPreview(null);
-      });
-
-    const t = window.setTimeout(() => {
-      void checkPaymentStatus();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(t);
-    };
-  }, [partyId, checkPaymentStatus, loadPartyInfo]);
-
-  useEffect(() => {
-    if (!partyId) return;
-
-    let cancelled = false;
-
-    const connect = async () => {
-      if (!userReadyRef.current) await new Promise((r) => setTimeout(r, 600));
-      if (cancelled) return;
-
-      if (
-        wsRef.current &&
-        (wsRef.current.readyState === WebSocket.OPEN ||
-          wsRef.current.readyState === WebSocket.CONNECTING)
-      ) {
-        return;
-      }
-
-      const ws = new WebSocket(
-        `${WS_BASE}/api/chat/ws/${partyId}?nickname=${encodeURIComponent(
-          nicknameRef.current,
-        )}`,
-      );
-
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setConnected(true);
-        userReadyRef.current = true;
-      };
-
-      ws.onclose = () => setConnected(false);
-
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-
-          if (msg.type === 'message_deleted') {
-            setMessages((prev) =>
-              prev.filter((m) => m.content !== msg.content),
-            );
-            return;
-          }
-
-          if (msg.type === 'force_logout') {
-            wsRef.current?.close();
-            wsRef.current = null;
-            logout().then(() => navigate('/login?reason=banned'));
-            return;
-          }
-
-          if (msg.type === 'party_updated') {
-            void loadPartyInfo();
-            return;
-          }
-
-          if (msg.type === 'read_update') {
-            const readSet = new Set<string>(msg.chat_ids ?? []);
-            if (readSet.size === 0) return;
-            setUnreadCounts((prev) => {
-              const next = { ...prev };
-              readSet.forEach((chatId) => {
-                if (next[chatId] !== undefined) {
-                  next[chatId] = Math.max(0, next[chatId] - 1);
-                }
-              });
-              return next;
-            });
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.chat_id && readSet.has(m.chat_id)
-                  ? { ...m, unread_count: Math.max(0, (m.unread_count ?? 0) - 1) }
-                  : m,
-              ),
-            );
-            return;
-          }
-
-          const typedMsg = msg as Message;
-          if (typedMsg.chat_id && typeof typedMsg.unread_count === 'number') {
-            // 내가 채팅방에 있으므로 나는 이미 읽음 → 내가 보낸 메시지가 아닐 때만 -1
-            const adjusted = typedMsg.user_id !== currentUserId
-              ? Math.max(0, typedMsg.unread_count - 1)
-              : typedMsg.unread_count;
-            typedMsg.unread_count = adjusted;
-            setUnreadCounts((prev) => ({
-              ...prev,
-              [typedMsg.chat_id!]: adjusted,
-            }));
-          }
-          setMessages((prev) => [...prev, typedMsg]);
-        } catch (err) {
-          console.error('메시지 파싱 에러:', err);
-        }
-      };
-
-      ws.onerror = (e) => console.error('WebSocket 에러:', e);
-    };
-
-    connect();
-
-    return () => {
-      cancelled = true;
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    };
-  }, [partyId, logout, navigate, loadPartyInfo]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
+  const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
+    setReportTarget(profileDrawer.user);
+    closeProfileDrawer();
+    setShowReportModal(true);
+  }, [profileDrawer, closeProfileDrawer]);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setProfileDrawer(null);
-    };
+  const {
+    showPraiseModal,
+    praiseTarget,
+    setShowPraiseModal,
+    setPraiseTarget,
+    handlePraiseUser,
+    handleSubmitPraise,
+  } = usePraiseActions({
+    partyId,
+    currentUserId,
+    praisedUserIds,
+    onMarkPraised: markPraised,
+    onCloseDrawer: closeProfileDrawer,
+  });
 
-    const handleResize = () => setProfileDrawer(null);
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [profileDrawer]);
-
-  const sendMessage = useCallback(() => {
-    if (
-      !input.trim() ||
-      !wsRef.current ||
-      wsRef.current.readyState !== WebSocket.OPEN
-    ) {
-      return;
+  const handleKickUser = useCallback(async () => {
+    if (!profileDrawer?.user.user_id || !partyId) return;
+    const targetUserId = String(profileDrawer.user.user_id);
+    const targetNickname = profileDrawer.user.nickname ?? '해당 멤버';
+    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`)) return;
+    try {
+      await api.delete(`/api/parties/${partyId}/members/${targetUserId}`);
+      closeProfileDrawer();
+      await loadPartyInfo();
+      toast.success(`${targetNickname}님을 파티에서 강퇴했습니다.`);
+    } catch (err) {
+      console.error('멤버 강퇴 실패:', err);
+      toast.error('멤버를 강퇴하지 못했습니다. 잠시 후 다시 시도해주세요.');
     }
-
-    wsRef.current.send(input.trim());
-    setInput('');
-  }, [input]);
+  }, [loadPartyInfo, partyId, profileDrawer, closeProfileDrawer]);
 
   const getMemberMeta = useCallback(
     (targetUserId?: string) => {
-      const member = partyInfo?.members?.find(
-        (m) => m.user_id === targetUserId,
-      );
-
+      const member = partyInfo?.members?.find((m) => m.user_id === targetUserId);
       if (!member) {
         return {
           role: undefined,
@@ -347,7 +148,6 @@ export default function Chat() {
           profile_image: null as string | null,
         };
       }
-
       return {
         role: member.role,
         status: member.status,
@@ -360,315 +160,30 @@ export default function Chat() {
     [partyInfo],
   );
 
-  const openProfileDrawer = useCallback(
-    (e: React.MouseEvent<HTMLElement>, targetUser: ProfileDrawerUser) => {
-      e.stopPropagation();
+  useEffect(() => {
+    if (!partyId) return;
+    api
+      .get(`/api/chat/parties/${partyId}/messages`)
+      .then(({ data }) => initMessages(Array.isArray(data) ? data : []))
+      .catch((err) => { console.error('메시지 로딩 실패:', err); initMessages([]); });
+    void loadPartyInfo();
+    api
+      .get(`/api/payments/preview?party_id=${partyId}`)
+      .then(({ data }) => setPaymentPreview(data))
+      .catch((err) => { console.error('빠른매칭 정산 금액 로딩 실패:', err); setPaymentPreview(null); });
+    const t = window.setTimeout(() => void checkPaymentStatus(), 0);
+    return () => window.clearTimeout(t);
+  }, [partyId, checkPaymentStatus, loadPartyInfo, initMessages]);
 
-      const rect = e.currentTarget.getBoundingClientRect();
-      const drawerWidth = 280;
-      const drawerHeight = 270;
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-      const hasRightSpace =
-        rect.right + 12 + drawerWidth <= window.innerWidth - 12;
-
-      const left = hasRightSpace
-        ? rect.right + 12
-        : Math.max(12, rect.left - drawerWidth - 12);
-
-      const top = Math.min(
-        Math.max(12, rect.top - 8),
-        window.innerHeight - drawerHeight - 12,
-      );
-
-      setProfileDrawer({ user: targetUser, top, left });
-
-      const targetUserId = targetUser.user_id;
-
-      if (!targetUserId || targetUserId === currentUserId) return;
-
-      const targetUserIdText = String(targetUserId);
-
-      void getPraiseAvailability(targetUserIdText, partyId)
-        .then((data) => {
-          if (!data.can_praise) {
-            setPraisedUserIds((prev) => ({
-              ...prev,
-              [targetUserIdText]: true,
-            }));
-
-            setPraiseDisabledLabels((prev) => ({
-              ...prev,
-              [targetUserIdText]: getPraiseDisabledLabel(data.remaining_days),
-            }));
-
-            return;
-          }
-
-          setPraisedUserIds((prev) => {
-            const next = { ...prev };
-            delete next[targetUserIdText];
-            return next;
-          });
-
-          setPraiseDisabledLabels((prev) => {
-            const next = { ...prev };
-            delete next[targetUserIdText];
-            return next;
-          });
-        })
-        .catch((err) => {
-          console.error('칭찬 가능 여부 조회 실패:', err);
-        });
-    },
-    [currentUserId, partyId],
-  );
-
-  const closeProfileDrawer = useCallback(() => setProfileDrawer(null), []);
-
-  const handleProfileInfo = useCallback(() => {
-    if (!profileDrawer) return;
-    setProfileInfoUser(profileDrawer.user);
-    setProfileDrawer(null);
-  }, [profileDrawer]);
-
-  const handleReportUser = useCallback(() => {
-    if (!profileDrawer) return;
-
-    setReportTarget(profileDrawer.user);
-    setProfileDrawer(null);
-    setShowReportModal(true);
-  }, [profileDrawer]);
-
-  const handlePraiseUser = useCallback(() => {
-    if (!profileDrawer) return;
-    const targetUserId = profileDrawer.user.user_id;
-    if (!targetUserId || targetUserId === currentUserId) return;
-
-    const targetUserIdText = String(targetUserId);
-
-    if (praisedUserIds[targetUserIdText]) {
-      toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
-      setProfileDrawer(null);
-      return;
-    }
-    setPraiseTarget(profileDrawer.user);
-    setProfileDrawer(null);
-    setShowPraiseModal(true);
-  }, [profileDrawer, currentUserId, praisedUserIds]);
-
-  const handleKickUser = useCallback(async () => {
-    if (!profileDrawer?.user.user_id || !partyId) return;
-
-    const targetUserId = String(profileDrawer.user.user_id);
-    const targetNickname = profileDrawer.user.nickname ?? '해당 멤버';
-
-    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/api/parties/${partyId}/members/${targetUserId}`);
-      setProfileDrawer(null);
-      await loadPartyInfo();
-      toast.success(`${targetNickname}님을 파티에서 강퇴했습니다.`);
-    } catch (err) {
-      console.error('멤버 강퇴 실패:', err);
-      toast.error('멤버를 강퇴하지 못했습니다. 잠시 후 다시 시도해주세요.');
-    }
-  }, [loadPartyInfo, partyId, profileDrawer]);
-
-  const handleSubmitPraise = useCallback(
-    async ({
-      praise_type,
-      message,
-    }: {
-      praise_type: Parameters<typeof createPraise>[0]['praise_type'];
-      message: string | null;
-    }) => {
-      if (!praiseTarget?.user_id) return;
-      const targetUserId = String(praiseTarget.user_id);
-      const targetNickname = praiseTarget.nickname ?? '상대방';
-      try {
-        await createPraise({
-          party_id: partyId,
-          to_user_id: targetUserId,
-          praise_type,
-          message,
-        });
-
-        setPraisedUserIds((prev) => ({
-          ...prev,
-          [targetUserId]: true,
-        }));
-
-        setPraiseDisabledLabels((prev) => ({
-          ...prev,
-          [targetUserId]: '30일 뒤 다시 가능',
-        }));
-
-        setShowPraiseModal(false);
-        setPraiseTarget(null);
-        toast.success(`${targetNickname}님에게 칭찬을 보냈어요.`);
-      } catch (err: unknown) {
-        console.error('칭찬 실패:', err);
-
-        const status = getErrorStatus(err);
-
-        if (status === 409) {
-          toast.error('이미 최근 30일 안에 칭찬한 사용자입니다.');
-
-          setPraisedUserIds((prev) => ({
-            ...prev,
-            [targetUserId]: true,
-          }));
-
-          setPraiseDisabledLabels((prev) => ({
-            ...prev,
-            [targetUserId]: '30일 뒤 다시 가능',
-          }));
-
-          setShowPraiseModal(false);
-          setPraiseTarget(null);
-          return;
-        }
-
-        if (status === 403) {
-          toast.error('같은 파티의 활성 멤버에게만 칭찬할 수 있습니다.');
-          setShowPraiseModal(false);
-          setPraiseTarget(null);
-          return;
-        }
-
-        toast.error('칭찬을 보내지 못했습니다. 잠시 후 다시 시도해주세요.');
-      }
-    },
-    [praiseTarget, partyId],
-  );
-
-  const renderMessage = useCallback(
-    (msg: Message, i: number, currentUserId: string) => {
-      const isMe = msg.user_id === currentUserId;
-      const memberMeta = getMemberMeta(msg.user_id);
-
-      if (msg.type === 'system') {
-        return (
-          <div key={i} className="flex justify-center">
-            <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-              {msg.content}
-            </span>
-          </div>
-        );
-      }
-
-      if (msg.type === 'warning' || msg.type === 'error') {
-        const isError = msg.type === 'error';
-
-        return (
-          <div key={i} className="flex justify-center">
-            <span
-              className={`text-xs border px-3 py-1.5 rounded-xl ${
-                isError
-                  ? 'text-red-600 bg-red-50 border-red-200'
-                  : 'text-orange-600 bg-orange-50 border-orange-200'
-              }`}
-            >
-              {msg.content}
-            </span>
-          </div>
-        );
-      }
-
-      const senderImage = isMe
-        ? myProfileImage
-        : (msg.profile_image ?? memberMeta.profile_image ?? null);
-
-      // chat_id 기준으로 unreadCounts에서 최신 값 우선 사용
-      const unreadCount = msg.chat_id
-        ? (unreadCounts[msg.chat_id] ?? msg.unread_count ?? 0)
-        : (msg.unread_count ?? 0);
-
-      return (
-        <div
-          key={i}
-          className={`flex ${isMe ? 'justify-end' : 'justify-start gap-2'}`}
-        >
-          {!isMe && (
-            <div className="shrink-0 mt-1">
-              <Avatar
-                nickname={msg.nickname}
-                profileImage={senderImage}
-                size="sm"
-                onClick={(e) =>
-                  openProfileDrawer(e, {
-                    user_id: msg.user_id,
-                    nickname: msg.nickname,
-                    profile_image: senderImage,
-                    role: memberMeta.role,
-                    status: memberMeta.status,
-                    trust_score: memberMeta.trust_score,
-                    joined_at: memberMeta.joined_at,
-                    payment_status: memberMeta.payment_status,
-                  })
-                }
-              />
-            </div>
-          )}
-
-          <div
-            className={`flex flex-col gap-0.5 max-w-xs ${
-              isMe ? 'items-end' : 'items-start'
-            }`}
-          >
-            {!isMe && (
-              <p className="text-xs text-muted-foreground px-1">
-                {msg.nickname ?? '익명'}
-              </p>
-            )}
-
-            <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div
-                className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  isMe
-                    ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : 'bg-card border border-border text-foreground rounded-bl-sm'
-                }`}
-              >
-                {msg.content}
-              </div>
-
-              <div className={`flex flex-col shrink-0 gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-                {unreadCount > 0 && (
-                  <span className="text-[10px] font-bold text-primary leading-none">
-                    {unreadCount}
-                  </span>
-                )}
-                <p className="text-[10px] text-muted-foreground">
-                  {(() => {
-                    if (!msg.created_at) return '';
-
-                    const raw =
-                      msg.created_at.endsWith('Z') || msg.created_at.includes('+')
-                        ? msg.created_at
-                        : msg.created_at.replace(' ', 'T') + 'Z';
-
-                    const d = new Date(raw);
-
-                    if (isNaN(d.getTime())) return '';
-
-                    return d.toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    });
-                  })()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    },
-    [getMemberMeta, openProfileDrawer, myProfileImage, unreadCounts],
-  );
+  const handleSend = useCallback(() => {
+    if (!input.trim()) return;
+    sendMessage(input);
+    setInput('');
+  }, [input, sendMessage]);
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -685,33 +200,22 @@ export default function Chat() {
           hasReferrerDiscount={partyInfo?.has_referrer_discount ?? false}
           leaderDiscountRate={partyInfo?.leader_discount_rate ?? null}
           referralDiscountRate={partyInfo?.referral_discount_rate ?? null}
-          onPaymentComplete={() => {
-            setAlreadyPaid(true);
-          }}
+          onPaymentComplete={() => setAlreadyPaid(true)}
         />
       )}
 
       {showReportModal && (
         <ReportModal
           targetUser={reportTarget}
-          onClose={() => {
-            setShowReportModal(false);
-            setReportTarget(null);
-          }}
-          onSuccess={() => {
-            setShowReportModal(false);
-            setReportTarget(null);
-          }}
+          onClose={() => { setShowReportModal(false); setReportTarget(null); }}
+          onSuccess={() => { setShowReportModal(false); setReportTarget(null); }}
         />
       )}
 
       {showPraiseModal && (
         <PraiseModal
           targetUser={praiseTarget}
-          onClose={() => {
-            setShowPraiseModal(false);
-            setPraiseTarget(null);
-          }}
+          onClose={() => { setShowPraiseModal(false); setPraiseTarget(null); }}
           onSubmit={handleSubmitPraise}
         />
       )}
@@ -724,15 +228,14 @@ export default function Chat() {
           isMe={profileDrawer.user.user_id === currentUserId}
           onClose={closeProfileDrawer}
           onProfileInfo={handleProfileInfo}
-          onPraise={handlePraiseUser}
+          onPraise={() => handlePraiseUser(profileDrawer.user)}
           praiseDisabled={
             !!profileDrawer.user.user_id &&
             !!praisedUserIds[String(profileDrawer.user.user_id)]
           }
           praiseDisabledLabel={
             profileDrawer.user.user_id
-              ? (praiseDisabledLabels[String(profileDrawer.user.user_id)] ??
-                '30일 뒤 다시 가능')
+              ? (praiseDisabledLabels[String(profileDrawer.user.user_id)] ?? '30일 뒤 다시 가능')
               : '30일 뒤 다시 가능'
           }
           onReport={handleReportUser}
@@ -744,6 +247,7 @@ export default function Chat() {
           onKick={handleKickUser}
         />
       )}
+
       {profileInfoUser && (
         <ProfileInfoModal
           user={profileInfoUser}
@@ -758,7 +262,6 @@ export default function Chat() {
         >
           ← 파티 목록
         </button>
-
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-extrabold text-foreground truncate">
             {partyInfo?.title ?? '채팅방'}
@@ -775,172 +278,41 @@ export default function Chat() {
 
           <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-3 border border-border rounded-xl mx-5 mb-3 bg-white min-h-0">
             {messages.length > 0 ? (
-              messages.map((msg, i) => renderMessage(msg, i, currentUserId))
+              messages.map((msg, i) => (
+                <MessageItem
+                  key={i}
+                  msg={msg}
+                  index={i}
+                  currentUserId={currentUserId}
+                  myProfileImage={myProfileImage}
+                  unreadCounts={unreadCounts}
+                  getMemberMeta={getMemberMeta}
+                  onAvatarClick={openProfileDrawer}
+                />
+              ))
             ) : (
               <p className="text-xs text-muted-foreground">
                 [시스템] 채팅방이 생성되었습니다.
               </p>
             )}
-
             <div ref={bottomRef} />
           </div>
 
-          <div className="mx-5 mb-3 flex gap-2">
-            <input
-              className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm outline-none focus:border-primary bg-background"
-              placeholder="메시지 입력"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                  sendMessage();
-                }
-              }}
-            />
-
-            <button
-              onClick={sendMessage}
-              disabled={!connected || !input.trim()}
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-bold disabled:opacity-40"
-            >
-              전송
-            </button>
-          </div>
-
-          <div className="mx-5 mb-4">
-            <button
-              onClick={() => !alreadyPaid && setShowPaymentModal(true)}
-              disabled={alreadyPaid}
-              className={`w-full py-3 border-2 rounded-2xl text-sm font-bold transition ${
-                alreadyPaid
-                  ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                  : 'border-primary text-primary hover:bg-primary/5'
-              }`}
-            >
-              {alreadyPaid ? '이번 달 결제 완료 ✓' : '정산요청'}
-            </button>
-          </div>
+          <ChatInputBar
+            input={input}
+            connected={connected}
+            alreadyPaid={alreadyPaid}
+            onChange={setInput}
+            onSend={handleSend}
+            onPaymentClick={() => setShowPaymentModal(true)}
+          />
         </div>
 
-        <div className="w-80 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
-          <div className="p-5 border-b border-border">
-            <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
-
-            {Array.isArray(partyInfo?.members) &&
-            partyInfo.members.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {partyInfo.members.map((member) => (
-                  <MemberItem
-                    key={member.user_id}
-                    member={member}
-                    onClick={(e) =>
-                      openProfileDrawer(e, {
-                        user_id: member.user_id,
-                        nickname: member.nickname,
-                        profile_image: member.profile_image ?? null,
-                        role: member.role,
-                        status: member.status,
-                        trust_score: member.trust_score,
-                        joined_at: member.joined_at,
-                        payment_status: member.payment_status ?? null,
-                      })
-                    }
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                참여 중인 멤버 정보가 없습니다.
-              </p>
-            )}
-          </div>
-
-          <div className="p-5">
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              {partyInfo?.category_name && (
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                    CATEGORY_COLOR[partyInfo.category_name] ??
-                    'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {partyInfo.category_name}
-                </span>
-              )}
-
-              {partyInfo?.status && (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
-                  {PARTY_STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
-                </span>
-              )}
-            </div>
-
-            <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
-
-            <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <DetailRow
-                label="서비스명"
-                value={partyInfo?.service_name ?? '-'}
-              />
-              <DetailRow
-                label="파티장"
-                value={partyInfo?.host_nickname ?? '-'}
-              />
-              <DetailRow
-                label="판매가"
-                value={formatCurrency(partyInfo?.monthly_price)}
-              />
-              <DetailRow
-                label="1인 부담"
-                value={formatCurrency(
-                  paymentPreview != null
-                    ? paymentPreview.amount
-                    : partyInfo?.monthly_per_person,
-                )}
-                emphasized
-              />
-              {(paymentPreview?.is_quick_match ||
-                (paymentPreview == null &&
-                  (partyInfo?.quick_match_fee_rate ?? 0) > 0)) && (
-                <p className="text-[11px] text-indigo-500 text-right">
-                  빠른매칭 수수료 포함
-                </p>
-              )}
-              {partyInfo?.is_leader && (partyInfo?.leader_discount_rate ?? 0) > 0 && (
-                <p className="text-[11px] text-blue-500 text-right">
-                  방장 할인 적용
-                </p>
-              )}
-              {partyInfo?.has_referrer_discount && (
-                <p className="text-[11px] text-green-500 text-right">
-                  추천인 할인 적용
-                </p>
-              )}
-              {(() => {
-                const perPerson = paymentPreview != null ? paymentPreview.amount : partyInfo?.monthly_per_person;
-                const originalPerPerson =
-                  partyInfo?.monthly_price != null && (partyInfo?.max_members ?? 0) > 0
-                    ? Math.round(partyInfo.monthly_price / partyInfo.max_members!)
-                    : null;
-                const saving =
-                  originalPerPerson != null && perPerson != null && originalPerPerson > perPerson
-                    ? originalPerPerson - perPerson
-                    : null;
-                return saving != null ? (
-                  <p className="text-[11px] text-emerald-500 text-right font-semibold">
-                    월 {saving.toLocaleString()}원 절약
-                  </p>
-                ) : null;
-              })()}
-              <DetailRow
-                label="인원"
-                value={`${partyInfo?.member_count ?? '-'} / ${
-                  partyInfo?.max_members ?? '-'
-                }`}
-              />
-            </div>
-          </div>
-        </div>
+        <ChatSidebar
+          partyInfo={partyInfo}
+          paymentPreview={paymentPreview}
+          onMemberClick={openProfileDrawer}
+        />
       </div>
     </div>
   );
