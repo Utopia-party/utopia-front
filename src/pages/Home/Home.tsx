@@ -150,7 +150,18 @@ export default function Home() {
     const targetId = matchResult.party_id ?? matchResult.id;
     if (!targetId) return undefined;
     const found = parties.find((p) => String(p.id) === String(targetId));
-    const base: JoinResult = found ? { ...found, ...matchResult, id: found.id } : { ...matchResult, id: targetId };
+    const foundNormalized = found ? {
+      ...found,
+      service_name: found.service_name ?? undefined,
+      monthly_price: found.monthly_price ?? undefined,
+      original_price: found.original_price ?? undefined,
+      service_total_price: found.service_total_price ?? undefined,
+      host_nickname: found.host_nickname ?? undefined,
+      status: found.status ?? undefined,
+    } : undefined;
+    const base: JoinResult = foundNormalized
+      ? { ...foundNormalized, ...matchResult, id: found!.id }
+      : { ...matchResult, id: targetId };
     return {
       ...base,
       title: matchResult.title ?? matchResult.party_title ?? (found?.title) ?? '매칭된 파티',
