@@ -8,6 +8,7 @@ import type { AuthErrorResponse, LoginPayload } from '../../types/auth';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
 import { SiNaver } from 'react-icons/si';
+import AppealModal from '../../components/AppealModal';
 
 type LoginForm = LoginPayload & {
   rememberMe: boolean;
@@ -17,10 +18,13 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isBanned = searchParams.get('reason') === 'banned';
+  const banType = searchParams.get('ban_type') ?? 'manual';
+  const banRefId = searchParams.get('ref_id') ?? undefined;
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showAppealModal, setShowAppealModal] = useState(false);
 
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -174,7 +178,17 @@ export default function Login() {
             욕설 등 위반 행위로 인해 자동 로그아웃 처리되었습니다. 문의가
             필요하면 고객센터로 연락해주세요.
           </p>
+          <button
+            type="button"
+            onClick={() => setShowAppealModal(true)}
+            className="mt-3 w-full rounded-lg border border-red-300 bg-white py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+          >
+            이의제기 신청
+          </button>
         </div>
+      )}
+      {showAppealModal && (
+        <AppealModal banType={banType} banRefId={banRefId} onClose={() => setShowAppealModal(false)} />
       )}
       <div className="flex justify-between mb-4">
         <h1 className=" text-2xl font-bold text-gray-800">로그인</h1>

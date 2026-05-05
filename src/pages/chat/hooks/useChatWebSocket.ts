@@ -80,7 +80,11 @@ export function useChatWebSocket({
           if (msg.type === 'force_logout') {
             wsRef.current?.close();
             wsRef.current = null;
-            logout().then(() => navigate('/login?reason=banned'));
+            const banType = msg.ban_type ?? 'trust_score';
+            const refId = msg.reference_id ?? '';
+            const params = new URLSearchParams({ reason: 'banned', ban_type: banType });
+            if (refId) params.set('ref_id', refId);
+            logout().then(() => navigate(`/login?${params.toString()}`));
             return;
           }
 

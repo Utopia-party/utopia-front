@@ -50,6 +50,7 @@ import AdminCloudMonitor from './pages/admin/AdminCloudMonitor';
 import AdminHandOCR from './pages/admin/AdminHandOCR';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
 import AdminQuickMatch from './pages/admin/AdminQuickMatch';
+import AdminAppeals from './pages/admin/AdminAppeals';
 
 const router = createBrowserRouter([
   {
@@ -240,6 +241,10 @@ const router = createBrowserRouter([
       {
         path: 'cloud-monitor',
         Component: AdminCloudMonitor,
+      },
+      {
+        path: 'appeals',
+        Component: AdminAppeals,
       },
     ],
   },
