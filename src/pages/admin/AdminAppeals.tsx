@@ -91,10 +91,7 @@ export default function AdminAppeals() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <AdminHeader
-        title="이의제기 관리"
-        description="제재에 대한 이의제기 신청을 검토하고 처리합니다."
-      />
+      <AdminHeader placeholder="이의제기 검색..." />
 
       {pendingCount > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -102,7 +99,7 @@ export default function AdminAppeals() {
         </div>
       )}
 
-      <FilterTabs tabs={FILTER_TABS} active={tab} onChange={setTab} />
+      <FilterTabs tabs={FILTER_TABS} activeTab={tab} onTabChange={setTab} />
 
       {loading ? (
         <div className="py-20 text-center text-sm text-gray-400">불러오는 중...</div>
