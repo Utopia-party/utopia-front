@@ -85,7 +85,7 @@ export default function Header() {
     if (!isLoggedIn) return;
     const unsubscribe = subscribeNotificationSocket((msg: NotificationSocketMessage) => {
       if (msg.type === 'ip_banned') {
-        void logout().then(() => setIpBannedModal(true));
+        setIpBannedModal(true);
         return;
       }
       if (msg.type === 'force_logout') {
@@ -196,13 +196,13 @@ export default function Header() {
             </p>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { setIpBannedModal(false); navigate('/login?reason=banned&ban_type=ip_ban'); }}
+                onClick={() => { setIpBannedModal(false); navigate('/login?reason=banned&ban_type=ip_ban'); void logout(); }}
                 className="w-full rounded-lg bg-gray-800 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition"
               >
                 이의제기 신청
               </button>
               <button
-                onClick={() => { setIpBannedModal(false); navigate('/'); }}
+                onClick={() => { setIpBannedModal(false); navigate('/'); void logout(); }}
                 className="w-full rounded-lg bg-rose-500 py-2.5 text-sm font-semibold text-white hover:bg-rose-600 transition"
               >
                 확인
