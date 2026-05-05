@@ -152,12 +152,24 @@ export default function Home() {
     const found = parties.find((p) => String(p.id) === String(targetId));
     const foundNormalized = found ? {
       ...found,
+      leader_id: found.leader_id ?? undefined,
+      service_id: found.service_id ?? undefined,
+      status: found.status ?? undefined,
+      host_nickname: found.host_nickname ?? undefined,
+      host_trust_score: found.host_trust_score ?? undefined,
       service_name: found.service_name ?? undefined,
+      category_name: found.category_name ?? undefined,
+      max_members: found.max_members ?? undefined,
       monthly_price: found.monthly_price ?? undefined,
       original_price: found.original_price ?? undefined,
       service_total_price: found.service_total_price ?? undefined,
-      host_nickname: found.host_nickname ?? undefined,
-      status: found.status ?? undefined,
+      logo_image_key: found.logo_image_key ?? undefined,
+      logo_image_url: found.logo_image_url ?? undefined,
+      start_date: found.start_date ?? undefined,
+      end_date: found.end_date ?? undefined,
+      min_trust_score: found.min_trust_score ?? undefined,
+      created_at: found.created_at ?? undefined,
+      leader_discount_rate: found.leader_discount_rate ?? undefined,
     } : undefined;
     const base: JoinResult = foundNormalized
       ? { ...foundNormalized, ...matchResult, id: found!.id }
