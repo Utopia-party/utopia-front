@@ -14,6 +14,16 @@ type LoginForm = LoginPayload & {
   rememberMe: boolean;
 };
 
+const EMAIL_DOMAINS = [
+  'naver.com',
+  'gmail.com',
+  'daum.net',
+  'kakao.com',
+  'nate.com',
+  'icloud.com',
+  'outlook.com',
+];
+
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -25,6 +35,7 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showAppealModal, setShowAppealModal] = useState(false);
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
 
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -43,6 +54,28 @@ export default function Login() {
     },
   } as const;
 
+  const emailValue = form.email.trim();
+  const [emailId, emailDomainInput = ''] = emailValue.split('@');
+
+  const shouldShowEmailDomainSuggestions =
+    isEmailFocused && emailId.length > 0 && !emailValue.includes('@');
+
+  const shouldShowFilteredEmailDomainSuggestions =
+    isEmailFocused &&
+    emailId.length > 0 &&
+    emailValue.includes('@') &&
+    emailDomainInput.length > 0;
+
+  const filteredEmailDomains = EMAIL_DOMAINS.filter((domain) =>
+    domain.startsWith(emailDomainInput.toLowerCase()),
+  );
+
+  const emailSuggestions = shouldShowEmailDomainSuggestions
+    ? EMAIL_DOMAINS.map((domain) => `${emailId}@${domain}`)
+    : shouldShowFilteredEmailDomainSuggestions
+      ? filteredEmailDomains.map((domain) => `${emailId}@${domain}`)
+      : [];
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
 
@@ -50,6 +83,14 @@ export default function Login() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const handleEmailSuggestionClick = (email: string) => {
+    setForm((prev) => ({
+      ...prev,
+      email,
+    }));
+    setIsEmailFocused(false);
   };
 
   const fillDemoAccount = (type: 'user' | 'admin') => {
@@ -187,6 +228,7 @@ export default function Login() {
           </button>
         </div>
       )}
+
       {showAppealModal && (
         <AppealModal
           banType={banType}
@@ -194,13 +236,15 @@ export default function Login() {
           onClose={() => setShowAppealModal(false)}
         />
       )}
-      <div className="flex justify-between mb-4">
-        <h1 className=" text-2xl font-bold text-gray-800">로그인</h1>
+
+      <div className="mb-4 flex justify-between">
+        <h1 className="text-2xl font-bold text-gray-800">로그인</h1>
+
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => fillDemoAccount('user')}
-            className="px-2 py-4 rounded-xl border border-gray-300 bg-gray-50 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            className="rounded-xl border border-gray-300 bg-gray-50 px-2 py-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
           >
             일반 유저 체험 계정 입력
           </button>
@@ -208,7 +252,7 @@ export default function Login() {
           <button
             type="button"
             onClick={() => fillDemoAccount('admin')}
-            className="px-2 py-4 rounded-xl border border-purple-300 bg-purple-50 text-sm font-semibold text-purple-700 transition hover:bg-purple-100"
+            className="rounded-xl border border-purple-300 bg-purple-50 px-2 py-4 text-sm font-semibold text-purple-700 transition hover:bg-purple-100"
           >
             관리자 체험 계정 입력
           </button>
@@ -216,7 +260,7 @@ export default function Login() {
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <div>
+        <div className="relative">
           <label className="mb-1 block text-sm font-medium text-gray-600">
             이메일
           </label>
@@ -227,9 +271,29 @@ export default function Login() {
             placeholder="example@email.com"
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={handleChange}
+            onFocus={() => setIsEmailFocused(true)}
+            onBlur={() => {
+              setTimeout(() => setIsEmailFocused(false), 150);
+            }}
             autoComplete="email"
             required
           />
+
+          {emailSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+              {emailSuggestions.map((email) => (
+                <button
+                  key={email}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleEmailSuggestionClick(email)}
+                  className="block w-full px-4 py-2 text-left text-sm text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+                >
+                  {email}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -258,31 +322,21 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              name="rememberMe"
-              checked={form.rememberMe}
-              className="h-4 w-4 rounded border-gray-300"
-              onChange={handleChange}
-            />
-            <span>자동 로그인</span>
-          </label>
-
-          <div className="flex gap-2">
-            <Link to="/find-id" className="hover:underline">
-              이메일 찾기
-            </Link>
-            <span>|</span>
-            <Link to="/find-password" className="hover:underline">
-              비밀번호 찾기
-            </Link>
-            <span>|</span>
-            <Link to="/signup" className="hover:underline">
-              회원가입
-            </Link>
-          </div>
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+          <Link to="/find-id" className="hover:text-blue-600 hover:underline">
+            이메일 찾기
+          </Link>
+          <span className="text-gray-300">|</span>
+          <Link
+            to="/find-password"
+            className="hover:text-blue-600 hover:underline"
+          >
+            비밀번호 찾기
+          </Link>
+          <span className="text-gray-300">|</span>
+          <Link to="/signup" className="hover:text-blue-600 hover:underline">
+            회원가입
+          </Link>
         </div>
 
         <div className="flex justify-center py-1">
