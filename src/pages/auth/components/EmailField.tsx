@@ -43,7 +43,7 @@ export function EmailField({
             value={email}
             className={`w-full rounded-lg border p-3 pr-28 focus:outline-none ${
               isEmailVerified
-                ? 'border-green-500 bg-green-50'
+                ? 'border-blue-500 bg-blue-50'
                 : emailError
                   ? 'border-red-500 bg-red-50'
                   : 'border-gray-300 focus:border-blue-500'
@@ -73,7 +73,7 @@ export function EmailField({
           <p className="mt-1 text-xs text-red-500">{emailError}</p>
         )}
         {!emailError && emailSuccess && (
-          <p className="mt-1 text-xs text-green-600">{emailSuccess}</p>
+          <p className="mt-1 text-xs text-blue-600">{emailSuccess}</p>
         )}
       </div>
 

@@ -22,16 +22,24 @@ export function NicknameField({
       <label className="mb-1 block text-sm font-medium text-gray-600">
         닉네임 <span className="text-red-500">*</span>
       </label>
+
       <div className="relative">
         <input
           name="nickname"
           type="text"
           placeholder="닉네임 입력"
           value={nickname}
-          className="w-full rounded-lg border border-gray-300 p-3 pr-28 focus:border-blue-500 focus:outline-none"
+          className={`w-full rounded-lg border p-3 pr-28 focus:outline-none ${
+            nicknameSuccess
+              ? 'border-blue-500 bg-blue-50'
+              : nicknameError
+                ? 'border-red-500 bg-red-50'
+                : 'border-gray-300 focus:border-blue-500'
+          }`}
           onChange={onChange}
           required
         />
+
         <button
           type="button"
           onClick={onRandom}
@@ -42,11 +50,13 @@ export function NicknameField({
           {isGenerating ? '생성 중' : '랜덤'}
         </button>
       </div>
+
       {nicknameError && (
         <p className="mt-1 text-xs text-red-500">{nicknameError}</p>
       )}
+
       {!nicknameError && nicknameSuccess && (
-        <p className="mt-1 text-xs text-green-600">{nicknameSuccess}</p>
+        <p className="mt-1 text-xs text-blue-600">{nicknameSuccess}</p>
       )}
     </div>
   );
