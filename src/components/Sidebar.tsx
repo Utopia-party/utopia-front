@@ -6,6 +6,7 @@ import {
   LayoutGrid,
   UserRound,
   OctagonAlert,
+  Book,
 } from 'lucide-react';
 import logoImage from '../assets/logo.png';
 
@@ -216,6 +217,21 @@ export default function Sidebar() {
             >
               <OctagonAlert className={iconClass} />
               {isSidebarOpen && <span>신고</span>}
+            </div>
+          </NavLink>
+
+          <NavLink
+            to="/manual"
+            onClick={handleMenuClick}
+            className={({ isActive }) => getMainLinkClass(isActive)}
+          >
+            <div
+              className={`flex items-center ${
+                isSidebarOpen ? 'gap-3' : 'justify-center'
+              }`}
+            >
+              <Book className={iconClass} />
+              {isSidebarOpen && <span>매뉴얼</span>}
             </div>
           </NavLink>
         </nav>

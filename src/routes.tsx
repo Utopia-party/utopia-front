@@ -51,6 +51,7 @@ import AdminHandOCR from './pages/admin/AdminHandOCR';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
 import AdminQuickMatch from './pages/admin/AdminQuickMatch';
 import AdminAppeals from './pages/admin/AdminAppeals';
+import ManualPage from './pages/manual/ManualPage';
 
 const router = createBrowserRouter([
   {
@@ -89,6 +90,10 @@ const router = createBrowserRouter([
       {
         path: 'reset-password',
         Component: ResetPassword,
+      },
+      {
+        path: 'manual',
+        Component: ManualPage,
       },
       {
         path: 'handcaptcha',
