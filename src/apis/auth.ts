@@ -7,8 +7,6 @@ import type {
   EmailVerifyResponse,
   FindIdPayload,
   FindIdResponse,
-  FindPasswordPayload,
-  FindPasswordResponse,
   ResetPasswordPayload,
   ResetPasswordResponse,
   LoginPayload,
@@ -52,12 +50,13 @@ export const requestEmailVerification = async (
 export const verifyEmailCode = async (
   email: string,
   code: string,
+  type: 'signup' | 'reset-password' = 'signup',
 ): Promise<EmailVerifyResponse> => {
   const response = await api.post<EmailVerifyResponse>(
     '/api/email-verify',
     null,
     {
-      params: { email, code },
+      params: { email, code, type },
     },
   );
   return response.data;
@@ -98,16 +97,6 @@ export const findId = async (
 ): Promise<FindIdResponse> => {
   const response = await api.post<FindIdResponse>(
     '/api/users/find-id',
-    payload,
-  );
-  return response.data;
-};
-
-export const findPassword = async (
-  payload: FindPasswordPayload,
-): Promise<FindPasswordResponse> => {
-  const response = await api.post<FindPasswordResponse>(
-    '/api/users/find-password',
     payload,
   );
   return response.data;
