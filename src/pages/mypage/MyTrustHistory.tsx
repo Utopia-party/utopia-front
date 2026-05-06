@@ -131,10 +131,10 @@ function TrustScoreLineChart({
 
   return (
     // 💡 모바일 가로 스크롤 허용 & 못생긴 브라우저 기본 스크롤바 숨김 처리
-    <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+    <div className="w-full overflow-hidden">
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="h-55 w-full min-w-190"
+        className="h-55 w-full"
         role="img"
         aria-label="신뢰도 변화 그래프"
       >

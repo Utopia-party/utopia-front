@@ -89,6 +89,9 @@ export default function ResetPassword() {
 
   const isFormValid = isPasswordValid && isConfirmPasswordValid && !!email;
 
+  const isSamePasswordError =
+    errors.submit === '이전 비밀번호와 동일한 비밀번호는 사용할 수 없습니다.';
+
   const getInputClassName = (hasError: boolean, isValid: boolean) => {
     if (hasError) {
       return 'border-red-500 bg-red-50 focus:border-red-500';
@@ -212,10 +215,7 @@ export default function ResetPassword() {
     <div className="mx-auto mt-10 mb-12 max-w-xl rounded-xl border border-gray-100 bg-white p-10 shadow-lg">
       <h1 className="mb-2 text-2xl font-bold text-gray-800">비밀번호 재설정</h1>
 
-      <p className="mb-8 text-sm text-gray-500">
-        새로운 비밀번호를 입력해주세요. 이전에 사용한 비밀번호와 동일한
-        비밀번호는 사용할 수 없습니다.
-      </p>
+      <p className="mb-8 text-sm text-gray-500">새 비밀번호를 입력해주세요.</p>
 
       {errors.email && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
@@ -236,9 +236,10 @@ export default function ResetPassword() {
               value={form.new_password}
               placeholder="8자 이상, 영문/숫자/특수문자 포함"
               className={`w-full rounded-lg border p-3 pr-12 focus:outline-none ${getInputClassName(
-                (touched.new_password || !!errors.new_password) &&
-                  !!passwordError,
-                isPasswordValid,
+                ((touched.new_password || !!errors.new_password) &&
+                  !!passwordError) ||
+                  isSamePasswordError,
+                isPasswordValid && !isSamePasswordError,
               )}`}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -261,9 +262,15 @@ export default function ResetPassword() {
             <p className="mt-1 text-xs text-red-500">{passwordError}</p>
           )}
 
-          {isPasswordValid && (
+          {isSamePasswordError && (
+            <p className="mt-1 text-xs text-red-500">
+              이전 비밀번호와 동일한 비밀번호는 사용할 수 없습니다.
+            </p>
+          )}
+
+          {isPasswordValid && !isSamePasswordError && (
             <p className="mt-1 text-xs text-blue-600">
-              사용 가능한 비밀번호 입니다.
+              사용 가능한 비밀번호 형식입니다.
             </p>
           )}
 
@@ -321,7 +328,7 @@ export default function ResetPassword() {
           )}
         </div>
 
-        {errors.submit && (
+        {errors.submit && !isSamePasswordError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
             <p className="text-sm text-red-600">{errors.submit}</p>
           </div>
