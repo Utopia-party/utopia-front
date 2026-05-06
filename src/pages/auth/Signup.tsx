@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react';
 import { Eye, EyeOff, Shuffle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
@@ -470,7 +470,6 @@ export default function Signup() {
     }
 
     const trimmedReferrer = referrer.trim();
-
     try {
       await signup(
         {
@@ -483,13 +482,12 @@ export default function Signup() {
         },
         captchaToken,
       );
-
       await checkAuth();
       alert('회원가입이 완료되었습니다!');
       navigate('/home');
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { detail?: string } } };
-      alert(axiosError.response?.data?.detail || '회원가입에 실패했습니다.');
+      const e = error as { response?: { data?: { detail?: string } } };
+      alert(e.response?.data?.detail || '회원가입에 실패했습니다.');
     }
   };
 
@@ -642,7 +640,6 @@ export default function Signup() {
           <label className="mb-1 block text-sm font-medium text-gray-600">
             비밀번호 <span className="text-red-500">*</span>
           </label>
-
           <div className="relative">
             <input
               name="password"
@@ -659,16 +656,14 @@ export default function Signup() {
               onChange={handleChange}
               required
             />
-
             <button
               type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
+              onClick={() => setShowPassword((p) => !p)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
-
           {passwordError && (
             <p className="mt-1 text-xs text-red-500">{passwordError}</p>
           )}
@@ -822,7 +817,6 @@ export default function Signup() {
           <label className="mb-1 block text-sm font-medium text-gray-600">
             추천인 입력 (선택)
           </label>
-
           <input
             type="text"
             value={referrer}
@@ -830,7 +824,6 @@ export default function Signup() {
             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
             onChange={(e) => setReferrer(e.target.value)}
           />
-
           <p className="mt-1 text-xs text-gray-400">
             추천인은 한 명만 입력할 수 있습니다.
           </p>

@@ -1,11 +1,14 @@
 export interface Message {
   type: 'message' | 'system' | 'warning' | 'error' | 'message_deleted';
+  chat_id?: string;
+  chat_ids?: string[];
   party_id?: string;
   user_id?: string;
   nickname?: string;
   profile_image?: string | null;
   content: string;
   created_at: string;
+  unread_count?: number;
 }
 
 export interface Member {

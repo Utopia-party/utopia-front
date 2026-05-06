@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Siren,
   Users,
+  MessageCircleWarning,
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminPermissions } from '../../../apis/admin';
@@ -61,6 +62,12 @@ const menuSections: MenuSection[] = [
         path: '/admin/users',
         label: '사용자관리',
         icon: Users,
+        visibleIf: (permissions) => Boolean(permissions?.canManageUsers),
+      },
+      {
+        path: '/admin/appeals',
+        label: '이의제기 관리',
+        icon: MessageCircleWarning,
         visibleIf: (permissions) => Boolean(permissions?.canManageUsers),
       },
     ],
@@ -164,10 +171,12 @@ export default function AdminSidebar({
   permissions,
   collapsed,
   onToggleCollapsed,
+  appealPendingCount = 0,
 }: {
   permissions: AdminPermissions | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  appealPendingCount?: number;
 }) {
   // 💡 모바일 상태 관리를 위한 State 추가
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -319,7 +328,17 @@ export default function AdminSidebar({
                         }
                       >
                         <Icon size={20} strokeWidth={2} className="shrink-0" />
-                        {!displayCollapsed && <span>{item.label}</span>}
+                        {!displayCollapsed && (
+                          <span className="flex flex-1 items-center justify-between">
+                            {item.label}
+                            {item.path === '/admin/appeals' &&
+                              appealPendingCount > 0 && (
+                                <span className="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                                  {appealPendingCount}
+                                </span>
+                              )}
+                          </span>
+                        )}
                       </NavLink>
                     );
                   })}

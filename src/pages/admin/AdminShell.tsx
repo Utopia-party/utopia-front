@@ -6,6 +6,7 @@ import {
   getAdminErrorMessage,
   type AdminPermissions,
 } from '../../apis/admin';
+import { fetchAdminAppeals } from '../../apis/admin/adminAppeals';
 
 /**
  * 관리자 전용 레이아웃
@@ -18,6 +19,7 @@ export default function AdminShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [appealPendingCount, setAppealPendingCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -46,6 +48,12 @@ export default function AdminShell() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    fetchAdminAppeals('PENDING')
+      .then((data) => setAppealPendingCount(data.length))
+      .catch(() => {});
+  }, [location.pathname]);
 
   const allowedByPath = useMemo(() => {
     const path = location.pathname;
@@ -94,6 +102,9 @@ export default function AdminShell() {
         permissions?.canManageHandOcr ?? permissions?.canManageCaptcha ?? false,
       );
     }
+    if (path.startsWith('/admin/appeals')) {
+      return permissions?.canManageUsers ?? false;
+    }
 
     return true;
   }, [location.pathname, permissions]);
@@ -122,6 +133,7 @@ export default function AdminShell() {
         permissions={permissions}
         collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed((prev) => !prev)}
+        appealPendingCount={appealPendingCount}
       />
 
       <div
