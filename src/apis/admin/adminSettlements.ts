@@ -58,12 +58,20 @@ export async function fetchAdminReceipts(params?: {
   date_from?: string;
   date_to?: string;
 }): Promise<ReceiptRecord[]> {
-  const { data } = await api.get<ReceiptRecord[]>('/api/admin/receipts', { params });
+  const { data } = await api.get<ReceiptRecord[]>('/api/admin/receipts', {
+    params,
+  });
   return data;
 }
 
-export async function updateAdminReceiptStatus(receiptId: string, status: string): Promise<ReceiptRecord> {
-  const { data } = await api.patch<ReceiptRecord>(`/api/admin/receipts/${receiptId}`, { status });
+export async function updateAdminReceiptStatus(
+  receiptId: string,
+  status: string,
+): Promise<ReceiptRecord> {
+  const { data } = await api.patch<ReceiptRecord>(
+    `/api/admin/receipts/${receiptId}`,
+    { status },
+  );
   return data;
 }
 
@@ -73,12 +81,20 @@ export async function fetchAdminSettlements(params?: {
   date_from?: string;
   date_to?: string;
 }): Promise<SettlementRecord[]> {
-  const { data } = await api.get<SettlementRecord[]>('/api/admin/settlements', { params });
+  const { data } = await api.get<SettlementRecord[]>('/api/admin/settlements', {
+    params,
+  });
   return data;
 }
 
-export async function updateAdminSettlementStatus(settlementId: string, status: string): Promise<SettlementRecord> {
-  const { data } = await api.patch<SettlementRecord>(`/api/admin/settlements/${settlementId}`, { status });
+export async function updateAdminSettlementStatus(
+  settlementId: string,
+  status: string,
+): Promise<SettlementRecord> {
+  const { data } = await api.patch<SettlementRecord>(
+    `/api/admin/settlements/${settlementId}`,
+    { status },
+  );
   return data;
 }
 
@@ -90,6 +106,9 @@ export async function fetchAdminPayments(params?: {
   page?: number;
   limit?: number;
 }): Promise<AdminPaymentListResponse> {
-  const { data } = await api.get<AdminPaymentListResponse>('/api/admin/payments', { params });
+  const { data } = await api.get<AdminPaymentListResponse>(
+    '/api/admin/payments',
+    { params },
+  );
   return data;
 }

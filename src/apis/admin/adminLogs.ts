@@ -18,6 +18,8 @@ export async function fetchAdminLogs(params?: {
   date_from?: string;
   date_to?: string;
 }): Promise<SystemLogRecord[]> {
-  const { data } = await api.get<SystemLogRecord[]>('/api/admin/logs', { params });
+  const { data } = await api.get<SystemLogRecord[]>('/api/admin/logs', {
+    params,
+  });
   return data;
 }

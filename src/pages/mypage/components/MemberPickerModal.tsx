@@ -56,8 +56,12 @@ export function MemberPickerModal({
   const confirmLabel =
     mode === 'kick' ? '강퇴' : mode === 'transfer' ? '위임' : '위임 후 탈퇴';
 
-  const kickMut = useMutation({ mutationFn: (uid: string) => kickMember(partyId, uid) });
-  const transferMut = useMutation({ mutationFn: (uid: string) => transferLeader(partyId, uid) });
+  const kickMut = useMutation({
+    mutationFn: (uid: string) => kickMember(partyId, uid),
+  });
+  const transferMut = useMutation({
+    mutationFn: (uid: string) => transferLeader(partyId, uid),
+  });
   const leaveMut = useMutation({ mutationFn: () => leaveParty(partyId) });
 
   const handleConfirm = async () => {
@@ -73,7 +77,9 @@ export function MemberPickerModal({
         await leaveMut.mutateAsync();
       }
       await queryClient.invalidateQueries({ queryKey: ['my-parties'] });
-      await queryClient.invalidateQueries({ queryKey: ['party-members', partyId] });
+      await queryClient.invalidateQueries({
+        queryKey: ['party-members', partyId],
+      });
       onDone();
     } catch (e) {
       setErrMsg(errorMessage(e, '처리 중 오류가 발생했습니다.'));
@@ -94,9 +100,13 @@ export function MemberPickerModal({
 
         <div className="mt-5 max-h-[320px] overflow-y-auto rounded-2xl border border-slate-200">
           {isLoading ? (
-            <div className="p-6 text-center text-sm text-slate-500">불러오는 중…</div>
+            <div className="p-6 text-center text-sm text-slate-500">
+              불러오는 중…
+            </div>
           ) : pickableMembers.length === 0 ? (
-            <div className="p-6 text-center text-sm text-slate-500">선택 가능한 멤버가 없습니다.</div>
+            <div className="p-6 text-center text-sm text-slate-500">
+              선택 가능한 멤버가 없습니다.
+            </div>
           ) : (
             <ul>
               {pickableMembers.map((m) => (
@@ -108,7 +118,9 @@ export function MemberPickerModal({
                   ].join(' ')}
                   onClick={() => setSelected(m.user_id)}
                 >
-                  <span className="font-semibold text-slate-800">{m.nickname ?? '이름 없음'}</span>
+                  <span className="font-semibold text-slate-800">
+                    {m.nickname ?? '이름 없음'}
+                  </span>
                   <span className="text-xs font-bold text-slate-400">
                     {m.role === 'leader' ? '리더' : '멤버'}
                   </span>
@@ -118,7 +130,9 @@ export function MemberPickerModal({
           )}
         </div>
 
-        {errMsg && <p className="mt-3 text-sm font-semibold text-red-500">{errMsg}</p>}
+        {errMsg && (
+          <p className="mt-3 text-sm font-semibold text-red-500">{errMsg}</p>
+        )}
 
         <div className="mt-6 flex gap-3">
           <button

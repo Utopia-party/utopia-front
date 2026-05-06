@@ -72,7 +72,9 @@ export default function Chat() {
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
     try {
-      const { data } = await api.get(`/api/payments/status?party_id=${partyId}`);
+      const { data } = await api.get(
+        `/api/payments/status?party_id=${partyId}`,
+      );
       setAlreadyPaid(data.paid);
     } catch (e) {
       console.error(e);
@@ -95,7 +97,9 @@ export default function Chat() {
     markPraised,
   } = useProfileDrawer({ currentUserId, partyId });
 
-  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(null);
+  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(
+    null,
+  );
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
@@ -123,7 +127,8 @@ export default function Chat() {
     if (!profileDrawer?.user.user_id || !partyId) return;
     const targetUserId = String(profileDrawer.user.user_id);
     const targetNickname = profileDrawer.user.nickname ?? '해당 멤버';
-    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`)) return;
+    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`))
+      return;
     try {
       await api.delete(`/api/parties/${partyId}/members/${targetUserId}`);
       closeProfileDrawer();
@@ -137,7 +142,9 @@ export default function Chat() {
 
   const getMemberMeta = useCallback(
     (targetUserId?: string) => {
-      const member = partyInfo?.members?.find((m) => m.user_id === targetUserId);
+      const member = partyInfo?.members?.find(
+        (m) => m.user_id === targetUserId,
+      );
       if (!member) {
         return {
           role: undefined,
@@ -165,12 +172,18 @@ export default function Chat() {
     api
       .get(`/api/chat/parties/${partyId}/messages`)
       .then(({ data }) => initMessages(Array.isArray(data) ? data : []))
-      .catch((err) => { console.error('메시지 로딩 실패:', err); initMessages([]); });
+      .catch((err) => {
+        console.error('메시지 로딩 실패:', err);
+        initMessages([]);
+      });
     void loadPartyInfo();
     api
       .get(`/api/payments/preview?party_id=${partyId}`)
       .then(({ data }) => setPaymentPreview(data))
-      .catch((err) => { console.error('빠른매칭 정산 금액 로딩 실패:', err); setPaymentPreview(null); });
+      .catch((err) => {
+        console.error('빠른매칭 정산 금액 로딩 실패:', err);
+        setPaymentPreview(null);
+      });
     const t = window.setTimeout(() => void checkPaymentStatus(), 0);
     return () => window.clearTimeout(t);
   }, [partyId, checkPaymentStatus, loadPartyInfo, initMessages]);
@@ -207,15 +220,24 @@ export default function Chat() {
       {showReportModal && (
         <ReportModal
           targetUser={reportTarget}
-          onClose={() => { setShowReportModal(false); setReportTarget(null); }}
-          onSuccess={() => { setShowReportModal(false); setReportTarget(null); }}
+          onClose={() => {
+            setShowReportModal(false);
+            setReportTarget(null);
+          }}
+          onSuccess={() => {
+            setShowReportModal(false);
+            setReportTarget(null);
+          }}
         />
       )}
 
       {showPraiseModal && (
         <PraiseModal
           targetUser={praiseTarget}
-          onClose={() => { setShowPraiseModal(false); setPraiseTarget(null); }}
+          onClose={() => {
+            setShowPraiseModal(false);
+            setPraiseTarget(null);
+          }}
           onSubmit={handleSubmitPraise}
         />
       )}
@@ -235,7 +257,8 @@ export default function Chat() {
           }
           praiseDisabledLabel={
             profileDrawer.user.user_id
-              ? (praiseDisabledLabels[String(profileDrawer.user.user_id)] ?? '30일 뒤 다시 가능')
+              ? (praiseDisabledLabels[String(profileDrawer.user.user_id)] ??
+                '30일 뒤 다시 가능')
               : '30일 뒤 다시 가능'
           }
           onReport={handleReportUser}

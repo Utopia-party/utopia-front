@@ -16,7 +16,10 @@ interface MessageItemProps {
     payment_status: 'completed' | 'pending' | null;
     profile_image: string | null;
   };
-  onAvatarClick: (e: React.MouseEvent<HTMLElement>, user: ProfileDrawerUser) => void;
+  onAvatarClick: (
+    e: React.MouseEvent<HTMLElement>,
+    user: ProfileDrawerUser,
+  ) => void;
 }
 
 function formatMessageTime(createdAt?: string): string {
@@ -113,7 +116,9 @@ export function MessageItem({
           </p>
         )}
 
-        <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div
+          className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+        >
           <div
             className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
               isMe

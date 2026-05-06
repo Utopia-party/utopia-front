@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { ProfileDrawerState, ProfileDrawerUser } from '../../../types/chat';
+import type {
+  ProfileDrawerState,
+  ProfileDrawerUser,
+} from '../../../types/chat';
 import { getPraiseAvailability } from '../../../apis/praises';
 
 function getPraiseDisabledLabel(remainingDays?: number) {
@@ -14,11 +17,21 @@ interface UseProfileDrawerProps {
   partyId: string | undefined;
 }
 
-export function useProfileDrawer({ currentUserId, partyId }: UseProfileDrawerProps) {
-  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(null);
-  const [profileInfoUser, setProfileInfoUser] = useState<ProfileDrawerUser | null>(null);
-  const [praisedUserIds, setPraisedUserIds] = useState<Record<string, boolean>>({});
-  const [praiseDisabledLabels, setPraiseDisabledLabels] = useState<Record<string, string>>({});
+export function useProfileDrawer({
+  currentUserId,
+  partyId,
+}: UseProfileDrawerProps) {
+  const [profileDrawer, setProfileDrawer] = useState<ProfileDrawerState | null>(
+    null,
+  );
+  const [profileInfoUser, setProfileInfoUser] =
+    useState<ProfileDrawerUser | null>(null);
+  const [praisedUserIds, setPraisedUserIds] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [praiseDisabledLabels, setPraiseDisabledLabels] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     if (!profileDrawer) return;
@@ -45,7 +58,8 @@ export function useProfileDrawer({ currentUserId, partyId }: UseProfileDrawerPro
       const drawerWidth = 280;
       const drawerHeight = 270;
 
-      const hasRightSpace = rect.right + 12 + drawerWidth <= window.innerWidth - 12;
+      const hasRightSpace =
+        rect.right + 12 + drawerWidth <= window.innerWidth - 12;
       const left = hasRightSpace
         ? rect.right + 12
         : Math.max(12, rect.left - drawerWidth - 12);
@@ -64,7 +78,10 @@ export function useProfileDrawer({ currentUserId, partyId }: UseProfileDrawerPro
       void getPraiseAvailability(targetUserIdText, partyId)
         .then((data) => {
           if (!data.can_praise) {
-            setPraisedUserIds((prev) => ({ ...prev, [targetUserIdText]: true }));
+            setPraisedUserIds((prev) => ({
+              ...prev,
+              [targetUserIdText]: true,
+            }));
             setPraiseDisabledLabels((prev) => ({
               ...prev,
               [targetUserIdText]: getPraiseDisabledLabel(data.remaining_days),
@@ -95,10 +112,13 @@ export function useProfileDrawer({ currentUserId, partyId }: UseProfileDrawerPro
     setProfileDrawer(null);
   }, [profileDrawer]);
 
-  const markPraised = useCallback((userId: string, label = '30일 뒤 다시 가능') => {
-    setPraisedUserIds((prev) => ({ ...prev, [userId]: true }));
-    setPraiseDisabledLabels((prev) => ({ ...prev, [userId]: label }));
-  }, []);
+  const markPraised = useCallback(
+    (userId: string, label = '30일 뒤 다시 가능') => {
+      setPraisedUserIds((prev) => ({ ...prev, [userId]: true }));
+      setPraiseDisabledLabels((prev) => ({ ...prev, [userId]: label }));
+    },
+    [],
+  );
 
   return {
     profileDrawer,

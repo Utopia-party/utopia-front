@@ -167,12 +167,19 @@ export async function fetchBlockedIps(): Promise<BlockedIpsResponse> {
   return data;
 }
 
-export async function unblockIp(ip: string): Promise<{ ip: string; unblocked: boolean; message: string }> {
-  const { data } = await api.delete(`/api/admin/captcha/blocked-ips/${encodeURIComponent(ip)}`);
+export async function unblockIp(
+  ip: string,
+): Promise<{ ip: string; unblocked: boolean; message: string }> {
+  const { data } = await api.delete(
+    `/api/admin/captcha/blocked-ips/${encodeURIComponent(ip)}`,
+  );
   return data;
 }
 
-export async function unblockAllIps(): Promise<{ total_deleted: number; message: string }> {
+export async function unblockAllIps(): Promise<{
+  total_deleted: number;
+  message: string;
+}> {
   const { data } = await api.delete('/api/admin/captcha/blocked-ips');
   return data;
 }
@@ -189,8 +196,13 @@ export async function updateCaptchaConfig(
   return data;
 }
 
-export async function forceChallenge(ip?: string): Promise<{ message: string }> {
-  const { data } = await api.post('/api/admin/captcha/force-challenge', ip ? { ip } : {});
+export async function forceChallenge(
+  ip?: string,
+): Promise<{ message: string }> {
+  const { data } = await api.post(
+    '/api/admin/captcha/force-challenge',
+    ip ? { ip } : {},
+  );
   return data;
 }
 
@@ -220,8 +232,12 @@ export async function fetchCaptchaSessions(
   return data;
 }
 
-export async function fetchSessionImages(sessionId: string): Promise<SessionImagesResponse> {
-  const { data } = await api.get(`/api/admin/captcha/sessions/${sessionId}/images`);
+export async function fetchSessionImages(
+  sessionId: string,
+): Promise<SessionImagesResponse> {
+  const { data } = await api.get(
+    `/api/admin/captcha/sessions/${sessionId}/images`,
+  );
   return data;
 }
 
@@ -232,12 +248,20 @@ export async function fetchCaptchaImages(
   size: number = 50,
 ): Promise<CaptchaImagesResponse> {
   const { data } = await api.get('/api/admin/captcha/images', {
-    params: { image_type: imageType, ...(category ? { category } : {}), page, size },
+    params: {
+      image_type: imageType,
+      ...(category ? { category } : {}),
+      page,
+      size,
+    },
   });
   return data;
 }
 
-export async function fetchImageSets(imageId: string, imageType: 'emoji' | 'photo'): Promise<ImageSetsResponse> {
+export async function fetchImageSets(
+  imageId: string,
+  imageType: 'emoji' | 'photo',
+): Promise<ImageSetsResponse> {
   const { data } = await api.get(`/api/admin/captcha/images/${imageId}/sets`, {
     params: { image_type: imageType },
   });
@@ -254,7 +278,13 @@ export async function deactivateCaptchaSet(
 export async function deactivateImage(
   imageId: string,
   imageType: 'emoji' | 'photo',
-): Promise<{ image_id: string; image_type: string; category: string; deactivated_sets_count: number; message: string }> {
+): Promise<{
+  image_id: string;
+  image_type: string;
+  category: string;
+  deactivated_sets_count: number;
+  message: string;
+}> {
   const { data } = await api.put(
     `/api/admin/captcha/images/${imageId}/deactivate`,
     null,
@@ -266,7 +296,11 @@ export async function deactivateImage(
 export async function batchDeactivateImages(
   imageIds: string[],
   imageType: 'emoji' | 'photo',
-): Promise<{ deactivated_images: number; deactivated_sets: number; message: string }> {
+): Promise<{
+  deactivated_images: number;
+  deactivated_sets: number;
+  message: string;
+}> {
   const { data } = await api.put('/api/admin/captcha/images/batch-deactivate', {
     image_ids: imageIds,
     image_type: imageType,
@@ -278,12 +312,21 @@ export async function generateCaptchaImages(params: {
   num_per_category: number;
   num_sets: number;
   categories?: string;
-}): Promise<{ status: string; message: string; num_per_category?: number; num_sets?: number; categories?: string }> {
+}): Promise<{
+  status: string;
+  message: string;
+  num_per_category?: number;
+  num_sets?: number;
+  categories?: string;
+}> {
   const { data } = await api.post('/api/admin/captcha/generate', params);
   return data;
 }
 
-export async function getGenerateStatus(): Promise<{ progress: string; last_result: string | null }> {
+export async function getGenerateStatus(): Promise<{
+  progress: string;
+  last_result: string | null;
+}> {
   const { data } = await api.get('/api/admin/captcha/generate/status');
   return data;
 }

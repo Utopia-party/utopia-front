@@ -8,7 +8,11 @@ type Props = {
   onClose: () => void;
 };
 
-export default function AppealModal({ banType = 'manual', banRefId, onClose }: Props) {
+export default function AppealModal({
+  banType = 'manual',
+  banRefId,
+  onClose,
+}: Props) {
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDone, setIsDone] = useState(false);
@@ -56,8 +60,12 @@ export default function AppealModal({ banType = 'manual', banRefId, onClose }: P
 
         {isDone ? (
           <div className="py-6 text-center">
-            <p className="text-base font-semibold text-green-600">이의제기가 접수되었습니다.</p>
-            <p className="mt-1 text-sm text-gray-500">검토 후 결과를 알림으로 알려드릴게요.</p>
+            <p className="text-base font-semibold text-green-600">
+              이의제기가 접수되었습니다.
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              검토 후 결과를 알림으로 알려드릴게요.
+            </p>
             <button
               type="button"
               onClick={onClose}
@@ -69,7 +77,8 @@ export default function AppealModal({ banType = 'manual', banRefId, onClose }: P
         ) : (
           <>
             <p className="mb-3 text-sm text-gray-500">
-              제재에 불복하는 사유를 작성해주세요. 관리자가 검토 후 처리 결과를 알려드립니다.
+              제재에 불복하는 사유를 작성해주세요. 관리자가 검토 후 처리 결과를
+              알려드립니다.
             </p>
             <textarea
               value={reason}
@@ -79,11 +88,11 @@ export default function AppealModal({ banType = 'manual', banRefId, onClose }: P
               rows={5}
               className="w-full resize-none rounded-lg border border-gray-300 p-3 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
             />
-            <div className="mt-1 text-right text-xs text-gray-400">{reason.length}/500</div>
+            <div className="mt-1 text-right text-xs text-gray-400">
+              {reason.length}/500
+            </div>
 
-            {error && (
-              <p className="mt-2 text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
             <div className="mt-4 flex gap-2">
               <button

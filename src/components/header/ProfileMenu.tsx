@@ -44,11 +44,20 @@ export function ProfileMenu({
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-bold text-white">
           {showImage ? (
-            <img src={profileImage ?? ''} alt="" onError={onProfileImageError} className="h-full w-full object-cover" />
-          ) : profileInitial}
+            <img
+              src={profileImage ?? ''}
+              alt=""
+              onError={onProfileImageError}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            profileInitial
+          )}
         </div>
         <div className="hidden min-w-0 text-left sm:block">
-          <p className="max-w-[120px] truncate text-sm font-semibold text-slate-800">{nickname ?? '사용자'}</p>
+          <p className="max-w-[120px] truncate text-sm font-semibold text-slate-800">
+            {nickname ?? '사용자'}
+          </p>
           <p className="text-xs font-medium text-slate-400">내 프로필</p>
         </div>
         <svg
@@ -57,7 +66,11 @@ export function ProfileMenu({
           viewBox="0 0 20 20"
           fill="currentColor"
         >
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
         </svg>
       </button>
 
@@ -67,12 +80,23 @@ export function ProfileMenu({
             <div className="flex items-start gap-3">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-base font-bold text-white shadow-sm">
                 {showImage ? (
-                  <img src={profileImage ?? ''} alt="" onError={onProfileImageError} className="h-full w-full object-cover" />
-                ) : profileInitial}
+                  <img
+                    src={profileImage ?? ''}
+                    alt=""
+                    onError={onProfileImageError}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  profileInitial
+                )}
               </div>
               <div className="min-w-0 flex-1 pt-1">
-                <p className="truncate text-base font-bold text-slate-900">{nickname ?? '사용자'}</p>
-                <p className="mt-1 truncate text-xs text-slate-500">{email ?? '이메일 정보 없음'}</p>
+                <p className="truncate text-base font-bold text-slate-900">
+                  {nickname ?? '사용자'}
+                </p>
+                <p className="mt-1 truncate text-xs text-slate-500">
+                  {email ?? '이메일 정보 없음'}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600">
                     {role === 'admin' ? '관리자' : '회원'}

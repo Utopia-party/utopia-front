@@ -69,7 +69,10 @@ export async function fetchAdminDashboard(params?: {
   date_to?: string;
   compare_mode?: 'previous_period' | 'year_over_year';
 }): Promise<AdminDashboard> {
-  const { data } = await api.get<AdminDashboardApiResponse>('/api/admin/dashboard', { params });
+  const { data } = await api.get<AdminDashboardApiResponse>(
+    '/api/admin/dashboard',
+    { params },
+  );
   return {
     metrics: data.metrics,
     memberStats: data.member_stats,

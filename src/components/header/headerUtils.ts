@@ -20,21 +20,46 @@ export function getNotificationBadge(item: NotificationItem) {
   const refType = item.reference_type?.toLowerCase();
   const type = item.type?.toLowerCase();
   if (refType === 'report' || type === 'report')
-    return { label: '신고', className: 'border-rose-200 bg-rose-50 text-rose-700' };
-  if (refType === 'settlement' || refType === 'payment' || type === 'settlement' || type === 'payment')
-    return { label: '결제', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' };
+    return {
+      label: '신고',
+      className: 'border-rose-200 bg-rose-50 text-rose-700',
+    };
+  if (
+    refType === 'settlement' ||
+    refType === 'payment' ||
+    type === 'settlement' ||
+    type === 'payment'
+  )
+    return {
+      label: '결제',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    };
   if (refType === 'party' || type?.includes('party'))
-    return { label: '파티', className: 'border-blue-200 bg-blue-50 text-blue-700' };
+    return {
+      label: '파티',
+      className: 'border-blue-200 bg-blue-50 text-blue-700',
+    };
   if (refType === 'user_praise' || type === 'praise')
-    return { label: '칭찬', className: 'border-yellow-200 bg-yellow-50 text-yellow-700' };
-  return { label: '알림', className: 'border-slate-200 bg-slate-50 text-slate-700' };
+    return {
+      label: '칭찬',
+      className: 'border-yellow-200 bg-yellow-50 text-yellow-700',
+    };
+  return {
+    label: '알림',
+    className: 'border-slate-200 bg-slate-50 text-slate-700',
+  };
 }
 
 export function getNotificationTargetPath(item: NotificationItem) {
   const refType = item.reference_type?.toLowerCase();
   const type = item.type?.toLowerCase();
   if (refType === 'report' || type === 'report') return '/mypage/report';
-  if (refType === 'settlement' || refType === 'payment' || type === 'settlement' || type === 'payment')
+  if (
+    refType === 'settlement' ||
+    refType === 'payment' ||
+    type === 'settlement' ||
+    type === 'payment'
+  )
     return '/mypage/payment';
   if (refType === 'party' || type?.includes('party')) return '/mypage/party';
   if (refType === 'user_praise' || type === 'praise') return '/mypage/praises';
@@ -52,7 +77,9 @@ export function formatTrustScore(score?: number | null) {
 }
 
 export function formatSessionTime(seconds: number) {
-  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const m = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
   const s = (seconds % 60).toString().padStart(2, '0');
   return `${m}:${s}`;
 }

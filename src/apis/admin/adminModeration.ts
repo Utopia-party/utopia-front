@@ -40,7 +40,10 @@ export async function fetchAdminFlaggedChats(params?: {
   date_to?: string;
   keyword?: string;
 }): Promise<AdminChatFlagged[]> {
-  const { data } = await api.get<AdminChatFlagged[]>('/api/admin/moderation/chat-logs', { params });
+  const { data } = await api.get<AdminChatFlagged[]>(
+    '/api/admin/moderation/chat-logs',
+    { params },
+  );
   return data;
 }
 
@@ -60,7 +63,10 @@ export async function fetchAdminModerationStats(params?: {
   date_from?: string;
   date_to?: string;
 }): Promise<AdminModerationStat> {
-  const { data } = await api.get<AdminModerationStat>('/api/admin/moderation/chat-stats', { params });
+  const { data } = await api.get<AdminModerationStat>(
+    '/api/admin/moderation/chat-stats',
+    { params },
+  );
   return data;
 }
 
@@ -69,6 +75,9 @@ export async function fetchModerationTrend(params?: {
   start_date?: string;
   end_date?: string;
 }): Promise<ModerationTrendPoint[]> {
-  const { data } = await api.get<ModerationTrendPoint[]>('/api/admin/moderation/chat-trend', { params });
+  const { data } = await api.get<ModerationTrendPoint[]>(
+    '/api/admin/moderation/chat-trend',
+    { params },
+  );
   return data;
 }

@@ -1,7 +1,11 @@
 import type { PartyInfo } from '../../../types/chat';
 import type { ProfileDrawerUser } from '../../../types/chat';
 import { MemberItem, DetailRow } from './ChatComponents';
-import { CATEGORY_COLOR, PARTY_STATUS_LABEL, formatCurrency } from '../ChatConstants';
+import {
+  CATEGORY_COLOR,
+  PARTY_STATUS_LABEL,
+  formatCurrency,
+} from '../ChatConstants';
 
 interface ChatSidebarProps {
   partyInfo: PartyInfo | null;
@@ -10,18 +14,29 @@ interface ChatSidebarProps {
     is_quick_match: boolean;
     quick_match_fee_rate: number;
   } | null;
-  onMemberClick: (e: React.MouseEvent<HTMLElement>, user: ProfileDrawerUser) => void;
+  onMemberClick: (
+    e: React.MouseEvent<HTMLElement>,
+    user: ProfileDrawerUser,
+  ) => void;
 }
 
-export function ChatSidebar({ partyInfo, paymentPreview, onMemberClick }: ChatSidebarProps) {
+export function ChatSidebar({
+  partyInfo,
+  paymentPreview,
+  onMemberClick,
+}: ChatSidebarProps) {
   const originalPerPerson =
     partyInfo?.monthly_price != null && (partyInfo?.max_members ?? 0) > 0
       ? Math.round(partyInfo.monthly_price / partyInfo.max_members!)
       : null;
   const perPerson =
-    paymentPreview != null ? paymentPreview.amount : partyInfo?.monthly_per_person;
+    paymentPreview != null
+      ? paymentPreview.amount
+      : partyInfo?.monthly_per_person;
   const saving =
-    originalPerPerson != null && perPerson != null && originalPerPerson > perPerson
+    originalPerPerson != null &&
+    perPerson != null &&
+    originalPerPerson > perPerson
       ? originalPerPerson - perPerson
       : null;
 
@@ -52,7 +67,9 @@ export function ChatSidebar({ partyInfo, paymentPreview, onMemberClick }: ChatSi
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">참여 중인 멤버 정보가 없습니다.</p>
+          <p className="text-xs text-muted-foreground">
+            참여 중인 멤버 정보가 없습니다.
+          </p>
         )}
       </div>
 
@@ -62,7 +79,8 @@ export function ChatSidebar({ partyInfo, paymentPreview, onMemberClick }: ChatSi
           {partyInfo?.category_name && (
             <span
               className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                CATEGORY_COLOR[partyInfo.category_name] ?? 'bg-slate-100 text-slate-600'
+                CATEGORY_COLOR[partyInfo.category_name] ??
+                'bg-slate-100 text-slate-600'
               }`}
             >
               {partyInfo.category_name}
@@ -80,21 +98,32 @@ export function ChatSidebar({ partyInfo, paymentPreview, onMemberClick }: ChatSi
         <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
           <DetailRow label="서비스명" value={partyInfo?.service_name ?? '-'} />
           <DetailRow label="파티장" value={partyInfo?.host_nickname ?? '-'} />
-          <DetailRow label="판매가" value={formatCurrency(partyInfo?.monthly_price)} />
+          <DetailRow
+            label="판매가"
+            value={formatCurrency(partyInfo?.monthly_price)}
+          />
           <DetailRow
             label="1인 부담"
             value={formatCurrency(perPerson)}
             emphasized
           />
           {(paymentPreview?.is_quick_match ||
-            (paymentPreview == null && (partyInfo?.quick_match_fee_rate ?? 0) > 0)) && (
-            <p className="text-[11px] text-indigo-500 text-right">빠른매칭 수수료 포함</p>
+            (paymentPreview == null &&
+              (partyInfo?.quick_match_fee_rate ?? 0) > 0)) && (
+            <p className="text-[11px] text-indigo-500 text-right">
+              빠른매칭 수수료 포함
+            </p>
           )}
-          {partyInfo?.is_leader && (partyInfo?.leader_discount_rate ?? 0) > 0 && (
-            <p className="text-[11px] text-blue-500 text-right">방장 할인 적용</p>
-          )}
+          {partyInfo?.is_leader &&
+            (partyInfo?.leader_discount_rate ?? 0) > 0 && (
+              <p className="text-[11px] text-blue-500 text-right">
+                방장 할인 적용
+              </p>
+            )}
           {partyInfo?.has_referrer_discount && (
-            <p className="text-[11px] text-green-500 text-right">추천인 할인 적용</p>
+            <p className="text-[11px] text-green-500 text-right">
+              추천인 할인 적용
+            </p>
           )}
           {saving != null && (
             <p className="text-[11px] text-emerald-500 text-right font-semibold">

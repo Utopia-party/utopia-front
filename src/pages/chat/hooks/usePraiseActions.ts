@@ -8,7 +8,8 @@ function getErrorStatus(err: unknown) {
     typeof err === 'object' &&
     err !== null &&
     'response' in err &&
-    typeof (err as { response?: { status?: unknown } }).response?.status === 'number'
+    typeof (err as { response?: { status?: unknown } }).response?.status ===
+      'number'
   ) {
     return (err as { response?: { status?: number } }).response?.status;
   }
@@ -31,7 +32,9 @@ export function usePraiseActions({
   onCloseDrawer,
 }: UsePraiseActionsProps) {
   const [showPraiseModal, setShowPraiseModal] = useState(false);
-  const [praiseTarget, setPraiseTarget] = useState<ProfileDrawerUser | null>(null);
+  const [praiseTarget, setPraiseTarget] = useState<ProfileDrawerUser | null>(
+    null,
+  );
 
   const handlePraiseUser = useCallback(
     (drawerUser: ProfileDrawerUser | null) => {

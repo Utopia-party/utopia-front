@@ -43,6 +43,9 @@ export async function updateAdminRole(
   userId: string,
   payload: AdminRoleUpdatePayload,
 ): Promise<AdminRoleRecord> {
-  const { data } = await api.put<AdminRoleRecord>(`/api/admin/roles/${userId}`, payload);
+  const { data } = await api.put<AdminRoleRecord>(
+    `/api/admin/roles/${userId}`,
+    payload,
+  );
   return data;
 }

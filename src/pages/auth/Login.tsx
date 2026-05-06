@@ -188,7 +188,11 @@ export default function Login() {
         </div>
       )}
       {showAppealModal && (
-        <AppealModal banType={banType} banRefId={banRefId} onClose={() => setShowAppealModal(false)} />
+        <AppealModal
+          banType={banType}
+          banRefId={banRefId}
+          onClose={() => setShowAppealModal(false)}
+        />
       )}
       <div className="flex justify-between mb-4">
         <h1 className=" text-2xl font-bold text-gray-800">로그인</h1>

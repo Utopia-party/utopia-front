@@ -34,17 +34,29 @@ export async function fetchAdminParties(params?: {
   date_from?: string;
   date_to?: string;
 }): Promise<AdminPartyRecord[]> {
-  const { data } = await api.get<AdminPartyRecord[]>('/api/admin/parties', { params });
+  const { data } = await api.get<AdminPartyRecord[]>('/api/admin/parties', {
+    params,
+  });
   return data;
 }
 
-export async function forceEndAdminParty(partyId: string, reason?: string): Promise<AdminPartyRecord> {
-  const { data } = await api.post<AdminPartyRecord>(`/api/admin/parties/${partyId}/force-end`, { reason });
+export async function forceEndAdminParty(
+  partyId: string,
+  reason?: string,
+): Promise<AdminPartyRecord> {
+  const { data } = await api.post<AdminPartyRecord>(
+    `/api/admin/parties/${partyId}/force-end`,
+    { reason },
+  );
   return data;
 }
 
-export async function fetchAdminPartyMembers(partyId: string): Promise<AdminPartyMember[]> {
-  const { data } = await api.get<AdminPartyMember[]>(`/api/admin/parties/${partyId}/members`);
+export async function fetchAdminPartyMembers(
+  partyId: string,
+): Promise<AdminPartyMember[]> {
+  const { data } = await api.get<AdminPartyMember[]>(
+    `/api/admin/parties/${partyId}/members`,
+  );
   return data;
 }
 

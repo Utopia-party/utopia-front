@@ -40,9 +40,13 @@ export async function fetchMyAppeals(): Promise<AppealOut[]> {
 }
 
 // 관리자: 이의제기 목록
-export async function fetchAdminAppeals(status?: string): Promise<AdminAppealOut[]> {
+export async function fetchAdminAppeals(
+  status?: string,
+): Promise<AdminAppealOut[]> {
   const params = status ? { status } : {};
-  const { data } = await api.get<AdminAppealOut[]>('/api/admin/appeals', { params });
+  const { data } = await api.get<AdminAppealOut[]>('/api/admin/appeals', {
+    params,
+  });
   return data;
 }
 
@@ -51,6 +55,9 @@ export async function reviewAppeal(
   appealId: string,
   payload: { status: 'APPROVED' | 'REJECTED'; admin_memo?: string },
 ): Promise<AdminAppealOut> {
-  const { data } = await api.patch<AdminAppealOut>(`/api/admin/appeals/${appealId}`, payload);
+  const { data } = await api.patch<AdminAppealOut>(
+    `/api/admin/appeals/${appealId}`,
+    payload,
+  );
   return data;
 }

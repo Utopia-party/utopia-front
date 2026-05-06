@@ -38,6 +38,9 @@ export async function updateAdminService(
   serviceId: string,
   payload: AdminServiceUpdatePayload,
 ): Promise<AdminServiceRecord> {
-  const { data } = await api.patch<AdminServiceRecord>(`/api/admin/services/${serviceId}`, payload);
+  const { data } = await api.patch<AdminServiceRecord>(
+    `/api/admin/services/${serviceId}`,
+    payload,
+  );
   return data;
 }

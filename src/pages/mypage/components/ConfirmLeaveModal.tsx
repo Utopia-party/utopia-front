@@ -9,7 +9,11 @@ interface ConfirmLeaveModalProps {
   onDone: () => void;
 }
 
-export function ConfirmLeaveModal({ partyId, onClose, onDone }: ConfirmLeaveModalProps) {
+export function ConfirmLeaveModal({
+  partyId,
+  onClose,
+  onDone,
+}: ConfirmLeaveModalProps) {
   const queryClient = useQueryClient();
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -19,18 +23,23 @@ export function ConfirmLeaveModal({ partyId, onClose, onDone }: ConfirmLeaveModa
       await queryClient.invalidateQueries({ queryKey: ['my-parties'] });
       onDone();
     },
-    onError: (e) => setErrMsg(errorMessage(e, '탈퇴 처리 중 오류가 발생했습니다.')),
+    onError: (e) =>
+      setErrMsg(errorMessage(e, '탈퇴 처리 중 오류가 발생했습니다.')),
   });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-[420px] rounded-3xl bg-white p-6 shadow-xl">
-        <h3 className="text-[20px] font-extrabold text-slate-900">파티에서 탈퇴하시겠습니까?</h3>
+        <h3 className="text-[20px] font-extrabold text-slate-900">
+          파티에서 탈퇴하시겠습니까?
+        </h3>
         <p className="mt-2 text-sm font-medium text-slate-500">
           탈퇴 후에는 다시 리더의 승인이 있어야 참여할 수 있습니다.
         </p>
 
-        {errMsg && <p className="mt-3 text-sm font-semibold text-red-500">{errMsg}</p>}
+        {errMsg && (
+          <p className="mt-3 text-sm font-semibold text-red-500">{errMsg}</p>
+        )}
 
         <div className="mt-6 flex gap-3">
           <button

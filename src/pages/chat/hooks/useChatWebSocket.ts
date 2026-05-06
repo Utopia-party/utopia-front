@@ -82,7 +82,10 @@ export function useChatWebSocket({
             wsRef.current = null;
             const banType = msg.ban_type ?? 'trust_score';
             const refId = msg.reference_id ?? '';
-            const params = new URLSearchParams({ reason: 'banned', ban_type: banType });
+            const params = new URLSearchParams({
+              reason: 'banned',
+              ban_type: banType,
+            });
             if (refId) params.set('ref_id', refId);
             navigate(`/login?${params.toString()}`);
             logout();
@@ -109,7 +112,10 @@ export function useChatWebSocket({
             setMessages((prev) =>
               prev.map((m) =>
                 m.chat_id && readSet.has(m.chat_id)
-                  ? { ...m, unread_count: Math.max(0, (m.unread_count ?? 0) - 1) }
+                  ? {
+                      ...m,
+                      unread_count: Math.max(0, (m.unread_count ?? 0) - 1),
+                    }
                   : m,
               ),
             );
@@ -148,15 +154,16 @@ export function useChatWebSocket({
     };
   }, [partyId, logout, navigate, currentUserId, onPartyUpdated]);
 
-  const sendMessage = useCallback(
-    (input: string) => {
-      if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-        return;
-      }
-      wsRef.current.send(input.trim());
-    },
-    [],
-  );
+  const sendMessage = useCallback((input: string) => {
+    if (
+      !input.trim() ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    ) {
+      return;
+    }
+    wsRef.current.send(input.trim());
+  }, []);
 
   const initMessages = useCallback((msgs: Message[]) => {
     setMessages(msgs);
