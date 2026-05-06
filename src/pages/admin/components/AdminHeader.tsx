@@ -51,14 +51,14 @@ export default function AdminHeader({
   };
 
   return (
-    // 💡 핵심 수정: z-40을 z-30으로 낮춰서 모바일 사이드바의 어두운 배경(z-40) 아래로 들어가도록 조치!
-    <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 sm:px-6 md:px-8">
-      <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-3 md:gap-4">
-        <div className="order-2 md:order-1 flex w-full md:w-auto flex-1 items-center gap-3">
-          <div className="hidden lg:block shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm">
+    <header className="sticky top-0 z-30 w-full min-w-0 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 md:px-8">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 lg:flex-nowrap lg:gap-4">
+        <div className="order-2 flex w-full min-w-0 flex-1 items-center gap-3 lg:order-1 lg:w-auto">
+          <div className="hidden shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">
             {currentTime}
           </div>
-          <div className="flex flex-1 items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl px-3 py-2 max-w-full md:max-w-[320px] lg:max-w-120 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100 transition-all">
+
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 transition-all focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100 lg:max-w-105 lg:rounded-xl">
             <svg
               width="16"
               height="16"
@@ -71,21 +71,26 @@ export default function AdminHeader({
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
+
             <input
               type="text"
               placeholder={placeholder}
-              onChange={(e) => onSearch?.(e.target.value)}
-              className="w-full border-none bg-transparent outline-none text-xs md:text-sm text-gray-700 placeholder:text-gray-400"
+              onChange={(event) => onSearch?.(event.target.value)}
+              className="w-full min-w-0 border-none bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-400 md:text-sm"
             />
           </div>
         </div>
 
-        <div className="order-1 md:order-2 flex w-full md:w-auto items-center justify-between md:justify-end gap-2 sm:gap-3 shrink-0">
-          <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-            {rightContent}
-          </div>
+        <div className="order-1 flex w-full shrink-0 items-center justify-between gap-2 sm:gap-3 lg:order-2 lg:w-auto lg:justify-end">
+          {rightContent && (
+            <div className="flex min-w-0 items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              {rightContent}
+            </div>
+          )}
+
           <button
-            className="shrink-0 px-3 md:px-4 py-1.5 md:py-2 border border-gray-300 rounded-lg bg-white text-[11px] md:text-sm font-bold text-gray-700 hover:bg-gray-50 active:scale-95 transition"
+            type="button"
+            className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[11px] font-bold text-gray-700 transition hover:bg-gray-50 active:scale-95 md:px-4 md:py-2 md:text-sm"
             onClick={() => void handleLogout()}
           >
             로그아웃
