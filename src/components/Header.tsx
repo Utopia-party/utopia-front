@@ -21,6 +21,7 @@ import { getProfileInitial, formatTrustScore } from './header/headerUtils';
 export default function Header() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
   const { isLoggedIn, loading, logout, user, sessionExpiresAt, extendSession } =
     useAuthStore();
 
@@ -29,6 +30,7 @@ export default function Header() {
   const [profileImageError, setProfileImageError] = useState(false);
   const [ipBannedModal, setIpBannedModal] = useState(false);
   const [sessionTimeLeft, setSessionTimeLeft] = useState<number>(0);
+  const [isExtendingSession, setIsExtendingSession] = useState(false);
 
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -63,10 +65,12 @@ export default function Header() {
     () => notifications.filter((n) => !n.is_read).length,
     [notifications],
   );
+
   const profileInitial = useMemo(
     () => getProfileInitial(user?.nickname),
     [user?.nickname],
   );
+
   const trustScore = useMemo(
     () => formatTrustScore(user?.trust_score ?? null),
     [user?.trust_score],
@@ -84,67 +88,94 @@ export default function Header() {
   };
 
   const handleExtendSession = async () => {
+    if (isExtendingSession) return;
+
     try {
-      if (extendSession) await extendSession();
-    } catch {
-      alert('세션 연장에 실패했습니다. 다시 시도해주세요.');
+      setIsExtendingSession(true);
+      await extendSession();
+    } catch (error) {
+      console.error('세션 연장 실패:', error);
+      alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+      await handleLogout();
+    } finally {
+      setIsExtendingSession(false);
     }
   };
 
-  // 세션 타이머
+  // access token 남은 시간 표시 + 만료 시 자동 refresh
   useEffect(() => {
-    if (!isLoggedIn || !sessionExpiresAt) return;
-    const interval = setInterval(() => {
+    if (!isLoggedIn || !sessionExpiresAt) {
+      setSessionTimeLeft(0);
+      return;
+    }
+
+    const updateTimer = async () => {
       const remaining = Math.max(
         0,
         Math.floor((sessionExpiresAt - Date.now()) / 1000),
       );
+
       setSessionTimeLeft(remaining);
-      if (remaining === 0) {
-        clearInterval(interval);
-        handleLogout();
-        alert('세션이 만료되어 자동으로 로그아웃 되었습니다.');
+
+      if (remaining === 0 && !isExtendingSession) {
+        await handleExtendSession();
       }
+    };
+
+    void updateTimer();
+
+    const interval = window.setInterval(() => {
+      void updateTimer();
     }, 1000);
-    return () => clearInterval(interval);
-  }, [isLoggedIn, sessionExpiresAt]);
+
+    return () => window.clearInterval(interval);
+  }, [isLoggedIn, sessionExpiresAt, isExtendingSession]);
 
   // 알림 소켓
   useEffect(() => {
     if (!isLoggedIn) return;
+
     const unsubscribe = subscribeNotificationSocket(
       (msg: NotificationSocketMessage) => {
         if (msg.type === 'ip_banned') {
           setIpBannedModal(true);
           return;
         }
+
         if (msg.type === 'force_logout') {
           const banType = msg.ban_type ?? 'manual';
           const refId = msg.reference_id ?? '';
+
           const params = new URLSearchParams({
             reason: 'banned',
             ban_type: banType,
           });
+
           if (refId) params.set('ref_id', refId);
+
           navigate(`/login?${params.toString()}`);
           void logout();
           return;
         }
+
         queryClient.setQueryData<NotificationItem[]>(
           notificationKeys.me,
           (prev: NotificationItem[] = []) => {
             const next = applyNotificationSocketMessage(prev, msg);
+
             queryClient.setQueryData(
               notificationKeys.unreadCount,
               msg.unread_count ?? countUnreadNotifications(next),
             );
+
             return next;
           },
         );
       },
     );
+
     return unsubscribe;
-  }, [isLoggedIn, queryClient]);
+  }, [isLoggedIn, queryClient, navigate, logout]);
 
   // 프로필 이미지 에러 초기화
   useEffect(() => {
@@ -154,20 +185,30 @@ export default function Header() {
   // 외부 클릭 / ESC 닫기
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (notificationRef.current && !notificationRef.current.contains(t))
+      const target = e.target as Node;
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(target)
+      ) {
         setIsNotificationOpen(false);
-      if (profileMenuRef.current && !profileMenuRef.current.contains(t))
+      }
+
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
         setIsProfileMenuOpen(false);
+      }
     };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsNotificationOpen(false);
         setIsProfileMenuOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
@@ -199,10 +240,11 @@ export default function Header() {
                   onExtend={handleExtendSession}
                 />
               )}
+
               <NotificationDropdown
                 isOpen={isNotificationOpen}
                 onToggle={() => {
-                  setIsNotificationOpen((p) => !p);
+                  setIsNotificationOpen((prev) => !prev);
                   setIsProfileMenuOpen(false);
                 }}
                 latestNotifications={latestNotifications}
@@ -212,10 +254,11 @@ export default function Header() {
                 nickname={user?.nickname}
                 containerRef={notificationRef}
               />
+
               <ProfileMenu
                 isOpen={isProfileMenuOpen}
                 onToggle={() => {
-                  setIsProfileMenuOpen((p) => !p);
+                  setIsProfileMenuOpen((prev) => !prev);
                   setIsNotificationOpen(false);
                 }}
                 onLogout={handleLogout}
@@ -244,16 +287,19 @@ export default function Header() {
 
       {ipBannedModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl text-center">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-xl">
             <div className="mb-4 text-4xl">🚫</div>
+
             <h2 className="mb-2 text-xl font-bold text-gray-900">
               접속 차단됨
             </h2>
-            <p className="mb-6 text-sm text-gray-600 leading-relaxed">
+
+            <p className="mb-6 text-sm leading-relaxed text-gray-600">
               같은 IP 사용자의 규정 위반으로 인해
               <br />
               해당 IP의 접속이 차단되었습니다.
             </p>
+
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
@@ -261,17 +307,18 @@ export default function Header() {
                   navigate('/login?reason=banned&ban_type=ip_ban');
                   void logout();
                 }}
-                className="w-full rounded-lg bg-gray-800 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition"
+                className="w-full rounded-lg bg-gray-800 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700"
               >
                 이의제기 신청
               </button>
+
               <button
                 onClick={() => {
                   setIpBannedModal(false);
                   navigate('/');
                   void logout();
                 }}
-                className="w-full rounded-lg bg-rose-500 py-2.5 text-sm font-semibold text-white hover:bg-rose-600 transition"
+                className="w-full rounded-lg bg-rose-500 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600"
               >
                 확인
               </button>

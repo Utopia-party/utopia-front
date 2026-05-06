@@ -12,7 +12,7 @@ const SESSION_EXPIRED_MESSAGE = '로그인이 만료되었습니다. 다시 로�
 const NO_REFRESH_RETRY_PATHS = new Set([
   '/api/login',
   '/api/refresh',
-  '/api/me',
+  // '/api/me',
   '/api/users',
   '/api/users/find-id',
   '/api/users/find-password',
