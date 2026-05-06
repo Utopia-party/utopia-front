@@ -1,14 +1,15 @@
-import { useNavigate, Link } from 'react-router';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
-import {
-  findPassword,
-  requestEmailVerification,
-  verifyEmailCode,
-} from '../../apis/auth';
+import { useEffect, useState, type ChangeEvent } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { requestEmailVerification, verifyEmailCode } from '../../apis/auth';
+import { EmailField } from './components/EmailField';
 
 type FindPasswordForm = {
   email: string;
   email_code: string;
+};
+
+const validateEmail = (email: string) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
 export default function FindPassword() {
@@ -19,10 +20,34 @@ export default function FindPassword() {
     email_code: '',
   });
 
-  const [isEmailChecked, setIsEmailChecked] = useState(false);
+  const [isEmailRequesting, setIsEmailRequesting] = useState(false);
+  const [isEmailCodeSent, setIsEmailCodeSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRequested, setIsRequested] = useState(false);
+  const [emailTimer, setEmailTimer] = useState(0);
+
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
+
+  useEffect(() => {
+    if (!isEmailCodeSent || isEmailVerified || emailTimer <= 0) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setEmailTimer((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(timerId);
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [isEmailCodeSent, isEmailVerified, emailTimer]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -31,164 +56,141 @@ export default function FindPassword() {
       ...prev,
       [name]: value,
     }));
+
+    if (name === 'email') {
+      setIsEmailCodeSent(false);
+      setIsEmailVerified(false);
+      setEmailTimer(0);
+      setEmailSuccess('');
+
+      if (!value.trim()) {
+        setEmailError('');
+        return;
+      }
+
+      setEmailError(
+        validateEmail(value.trim())
+          ? ''
+          : '올바른 이메일 형식으로 입력해주세요.',
+      );
+    }
+
+    if (name === 'email_code') {
+      setEmailError('');
+    }
   };
 
   const handleEmailRequest = async () => {
-    if (!form.email.trim()) {
-      alert('이메일을 입력해주세요.');
+    const email = form.email.trim();
+
+    if (!email) {
+      setEmailError('이메일을 입력해주세요.');
+      setEmailSuccess('');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setEmailError('올바른 이메일 형식으로 입력해주세요.');
+      setEmailSuccess('');
       return;
     }
 
     try {
-      await requestEmailVerification(form.email.trim(), 'reset-password');
-      alert('인증 메일이 발송되었습니다. 메일함을 확인해주세요!');
-      setIsEmailChecked(true);
+      setIsEmailRequesting(true);
+      setEmailError('');
+      setEmailSuccess('');
+
+      const response = await requestEmailVerification(email, 'reset-password');
+
+      setIsEmailCodeSent(true);
       setIsEmailVerified(false);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
-        '인증 메일 발송에 실패했습니다.';
-      alert(message);
+      setEmailTimer(response.expires_in);
+      setEmailSuccess('인증 메일이 발송되었습니다. 메일함을 확인해주세요.');
+    } catch (error: unknown) {
+      const e = error as {
+        response?: { data?: { detail?: string; message?: string } };
+      };
+
+      setIsEmailCodeSent(false);
+      setIsEmailVerified(false);
+      setEmailTimer(0);
+      setEmailSuccess('');
+      setEmailError(
+        e.response?.data?.detail ||
+          e.response?.data?.message ||
+          '인증 메일 발송에 실패했습니다.',
+      );
+    } finally {
+      setIsEmailRequesting(false);
     }
   };
 
   const handleEmailVerify = async () => {
-    if (!form.email_code.trim()) {
-      alert('인증번호를 입력해주세요.');
+    const email = form.email.trim();
+    const code = form.email_code.trim();
+
+    if (!email) {
+      setEmailError('이메일을 입력해주세요.');
+      return;
+    }
+
+    if (!code) {
+      setEmailError('인증번호를 입력해주세요.');
       return;
     }
 
     try {
-      const response = await verifyEmailCode(
-        form.email.trim(),
-        form.email_code.trim(),
-      );
+      setEmailError('');
+      setEmailSuccess('');
+
+      const response = await verifyEmailCode(email, code, 'reset-password');
 
       if (response.success) {
-        alert('이메일 인증에 성공했습니다!');
         setIsEmailVerified(true);
+        setEmailTimer(0);
+        setEmailSuccess('이메일 인증이 완료되었습니다.');
+
+        navigate('/reset-password', {
+          state: { email },
+        });
       }
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
-        '인증번호가 틀렸거나 만료되었습니다.';
-      alert(message);
-    }
-  };
+    } catch (error: unknown) {
+      const e = error as {
+        response?: { data?: { detail?: string; message?: string } };
+      };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!form.email.trim()) {
-      alert('이메일을 입력해주세요.');
-      return;
-    }
-
-    if (!isEmailVerified) {
-      alert('이메일 인증을 완료해주세요.');
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      setIsRequested(false);
-
-      const response = await findPassword({
-        email: form.email.trim(),
-      });
-
-      alert(response.message || '비밀번호 재설정 요청이 완료되었습니다.');
-
-      setIsRequested(true);
-      navigate('/reset-password', {
-        state: { email: form.email.trim() },
-      });
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
-        '비밀번호 찾기에 실패했습니다.';
-      alert(message);
-    } finally {
-      setIsSubmitting(false);
+      setIsEmailVerified(false);
+      setEmailSuccess('');
+      setEmailError(
+        e.response?.data?.detail ||
+          e.response?.data?.message ||
+          '인증번호가 틀렸거나 만료되었습니다.',
+      );
     }
   };
 
   return (
-    <div className="mx-auto mt-10 max-w-xl rounded-xl border-2 border-gray-200 bg-white p-10 shadow-lg">
+    <div className="mx-auto mt-10 mb-12 max-w-2xl rounded-xl border border-gray-100 bg-white p-10 shadow-lg">
       <h1 className="mb-2 text-2xl font-bold text-gray-800">비밀번호 찾기</h1>
+
       <p className="mb-8 text-sm text-gray-500">
         가입한 이메일을 입력하고 이메일 인증을 완료해주세요.
       </p>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-600">
-            이메일 <span className="text-red-500">*</span>
-          </label>
-          <div className="flex gap-2">
-            <input
-              name="email"
-              type="email"
-              value={form.email}
-              placeholder="example@email.com"
-              className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-              onChange={handleChange}
-              required
-            />
-            <button
-              type="button"
-              onClick={handleEmailRequest}
-              disabled={isEmailVerified}
-              className="shrink-0 rounded-lg bg-gray-800 px-4 py-2 font-medium text-white hover:bg-gray-700 disabled:bg-gray-300"
-            >
-              인증요청
-            </button>
-          </div>
-        </div>
-
-        {!isEmailVerified && isEmailChecked && (
-          <div className="flex gap-2">
-            <input
-              name="email_code"
-              type="text"
-              value={form.email_code}
-              placeholder="인증번호 6자리"
-              className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
-              onChange={handleChange}
-            />
-            <button
-              type="button"
-              onClick={handleEmailVerify}
-              className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
-            >
-              인증확인
-            </button>
-          </div>
-        )}
-
-        {isEmailVerified && (
-          <p className="ml-1 text-xs font-medium text-green-600">
-            이메일 인증이 완료되었습니다.
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-        >
-          {isSubmitting ? '요청 중...' : '비밀번호 재설정'}
-        </button>
-      </form>
-
-      {isRequested && (
-        <div className="mt-6 rounded-xl border border-green-100 bg-green-50 p-5 text-sm text-green-700">
-          비밀번호 재설정이 완료되었습니다. 다음 단계로 이동합니다.
-        </div>
-      )}
+      <EmailField
+        className="mx-auto max-w-lg"
+        email={form.email}
+        emailCode={form.email_code}
+        isEmailRequesting={isEmailRequesting}
+        isEmailCodeSent={isEmailCodeSent}
+        isEmailVerified={isEmailVerified}
+        emailTimer={emailTimer}
+        emailError={emailError}
+        emailSuccess={emailSuccess}
+        onChange={handleChange}
+        onRequest={handleEmailRequest}
+        onVerify={handleEmailVerify}
+      />
 
       <div className="mt-8 flex justify-center gap-2 text-sm text-gray-500">
         <Link to="/login" className="hover:underline">
