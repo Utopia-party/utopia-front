@@ -10,8 +10,9 @@ import { fetchAdminAppeals } from '../../apis/admin/adminAppeals';
 
 /**
  * 관리자 전용 레이아웃
- * - 기존 AppShell과 별도로, 관리자 사이드바 + 헤더를 사용
  * - /admin 하위 라우트에서만 렌더링
+ * - 모바일/태블릿에서는 본문을 화면 전체 폭으로 사용
+ * - 데스크톱 이상에서만 사이드바 너비만큼 본문을 밀어냄
  */
 export default function AdminShell() {
   const location = useLocation();
@@ -28,7 +29,9 @@ export default function AdminShell() {
       try {
         setLoading(true);
         setError('');
+
         const nextPermissions = await fetchAdminPermissions();
+
         if (alive) {
           setPermissions(nextPermissions);
         }
@@ -44,6 +47,7 @@ export default function AdminShell() {
     };
 
     void loadPermissions();
+
     return () => {
       alive = false;
     };
@@ -61,42 +65,55 @@ export default function AdminShell() {
     if (path === '/admin') {
       return permissions?.canViewDashboard ?? false;
     }
+
     if (path.startsWith('/admin/roles')) {
       return permissions?.canManageAdmins ?? false;
     }
+
     if (path.startsWith('/admin/users')) {
       return permissions?.canManageUsers ?? false;
     }
+
     if (path.startsWith('/admin/services')) {
       return permissions?.canManageServices ?? false;
     }
+
     if (path.startsWith('/admin/parties')) {
       return permissions?.canManageParties ?? false;
     }
+
     if (path.startsWith('/admin/quick-match')) {
       return permissions?.canManageQuickMatch ?? false;
     }
+
     if (path.startsWith('/admin/reports')) {
       return permissions?.canManageReports ?? false;
     }
+
     if (path.startsWith('/admin/settlements')) {
       return permissions?.canApproveSettlements ?? false;
     }
+
     if (path.startsWith('/admin/payments')) {
       return permissions?.canManagePayments ?? false;
     }
+
     if (path.startsWith('/admin/logs')) {
       return permissions?.canViewLogs ?? false;
     }
+
     if (path.startsWith('/admin/moderation')) {
       return permissions?.canManageChatModeration ?? false;
     }
+
     if (path.startsWith('/admin/captcha')) {
       return permissions?.canManageCaptcha ?? false;
     }
+
     if (path.startsWith('/admin/cloud-monitor')) {
       return permissions?.canViewCloudMonitoring ?? false;
     }
+
     if (path.startsWith('/admin/handocr')) {
       return Boolean(
         permissions?.canManageHandOcr ?? permissions?.canManageCaptcha ?? false,
@@ -128,7 +145,7 @@ export default function AdminShell() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f5f5f5] text-foreground">
+    <div className="flex min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f5f5f5] text-foreground">
       <AdminSidebar
         permissions={permissions}
         collapsed={sidebarCollapsed}
@@ -137,11 +154,7 @@ export default function AdminShell() {
       />
 
       <div
-        // 💡 핵심 수정 포인트:
-        // 모바일 환경에서는 `ml-0`을 적용하여 화면을 꽉 채우고,
-        // 데스크탑(`md:`) 환경에서만 사이드바 너비만큼(`ml-18` 또는 `ml-60`)을 밀어냅니다.
-        // `min-w-0`은 자식 요소들이 화면을 찢고 나가는 현상을 완벽히 차단합니다.
-        className={`flex min-w-0 flex-1 flex-col transition-all duration-300 ml-0 ${
+        className={`ml-0 flex w-full min-w-0 flex-1 flex-col overflow-x-hidden transition-all duration-300 ${
           sidebarCollapsed ? 'md:ml-18' : 'md:ml-60'
         }`}
       >
