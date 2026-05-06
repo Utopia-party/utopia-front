@@ -52,11 +52,16 @@ export default function AdminSettlements() {
 
   useEffect(() => {
     void loadSettlements();
-    const timer = setInterval(() => { void loadSettlements(); }, 30_000);
+
+    const timer = setInterval(() => {
+      void loadSettlements();
+    }, 30_000);
+
     return () => clearInterval(timer);
   }, []);
 
   const handleSearch = () => {
+    setPage(1);
     void loadSettlements({
       keyword: search || undefined,
       date_from: dateFrom || undefined,
@@ -68,6 +73,7 @@ export default function AdminSettlements() {
     setSearch('');
     setDateFrom('');
     setDateTo('');
+    setPage(1);
     void loadSettlements();
   };
 
@@ -95,291 +101,523 @@ export default function AdminSettlements() {
   };
 
   const filtered = useMemo(() => {
-    if (activeTab === '전체') return settlements;
-    return settlements.filter((s) => s.status === activeTab);
+    if (activeTab === '전체') {
+      return settlements;
+    }
+
+    return settlements.filter((settlement) => settlement.status === activeTab);
   }, [activeTab, settlements]);
+
   const paginated = filtered.slice((page - 1) * 20, page * 20);
 
+  const handleTabChange = (nextTab: string) => {
+    setActiveTab(nextTab);
+    setPage(1);
+    setExpandedSettlementId(null);
+  };
+
   return (
-    <>
+    <div className="flex w-full min-w-0 flex-1 flex-col overflow-x-hidden">
       <AdminHeader
         placeholder="정산 검색 (party/leader/status)..."
         onSearch={setSearch}
       />
-      <div className="p-8">
-        <h1 className="text-2xl font-bold mb-1">정산 승인 관리</h1>
-        <p className="text-sm text-gray-500 mb-4">
-          파티별 정산 요청, 정산월, 파티장, 총 정산 금액을 한 화면에서 확인하고
-          승인 또는 거절까지 바로 처리할 수 있게 구성했습니다. 운영 이슈가 있는
-          파티는 파티관리 화면과 함께 보고 대응하면 됩니다.
-        </p>
 
-        <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">
-              키워드 (파티명 / 파티장 / 정산월)
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="이름 또는 정산월 검색"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 w-60"
+      <main className="w-full min-w-0 flex-1 overflow-x-hidden bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
+        <div className="mx-auto w-full min-w-0 max-w-7xl space-y-5 md:space-y-6">
+          <section className="min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
+              정산 승인 관리
+            </h1>
+
+            <p className="mt-1 max-w-4xl text-xs leading-relaxed text-gray-500 break-keep md:text-sm">
+              파티별 정산 요청, 정산월, 파티장, 총 정산 금액을 한 화면에서
+              확인하고 승인 또는 거절까지 바로 처리할 수 있게 구성했습니다. 운영
+              이슈가 있는 파티는 파티관리 화면과 함께 보고 대응하면 됩니다.
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end">
+              <label className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  키워드 (파티명 / 파티장 / 정산월)
+                </span>
+
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="이름 또는 정산월 검색"
+                  className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                />
+              </label>
+
+              <label className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  시작일
+                </span>
+
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                />
+              </label>
+
+              <label className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs font-medium text-gray-500">
+                  종료일
+                </span>
+
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-2 md:col-span-2 xl:col-span-1 xl:flex xl:justify-end">
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-95"
+                >
+                  조회
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 active:scale-95"
+                >
+                  초기화
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <div className="w-full min-w-0 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <FilterTabs
+              tabs={FILTER_TABS}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">시작일</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">종료일</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </label>
-          <div className="flex gap-2 pb-0.5">
-            <button
-              onClick={handleSearch}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              조회
-            </button>
-            <button
-              onClick={handleReset}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-            >
-              초기화
-            </button>
           </div>
-        </div>
 
-        <FilterTabs
-          tabs={FILTER_TABS}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
+          {loading && (
+            <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm md:px-5 md:py-4 md:text-sm">
+              정산 목록을 불러오는 중입니다.
+            </div>
+          )}
 
-        {loading && (
-          <div className="mb-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-500 shadow-sm">
-            정산 목록을 불러오는 중입니다.
-          </div>
-        )}
+          {error && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600 shadow-sm md:px-5 md:py-4 md:text-sm">
+              {error}
+            </div>
+          )}
 
-        {error && (
-          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
-            {error}
-          </div>
-        )}
+          <section className="w-full min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="block md:hidden">
+              <div className="divide-y divide-gray-100">
+                {paginated.map((stl) => {
+                  const isExpanded = expandedSettlementId === stl.id;
 
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  생성 시각
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  파티
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  파티장
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  총액
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  멤버 수
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  청구월
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  상태
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
-                  관리
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((stl) => {
-                const isExpanded = expandedSettlementId === stl.id;
+                  return (
+                    <article key={stl.id} className="p-4">
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h2 className="truncate text-sm font-bold text-gray-900">
+                            {stl.partyName}
+                          </h2>
 
-                return (
-                  <Fragment key={stl.id}>
-                    <tr className="border-b border-gray-100 transition hover:bg-gray-50">
-                      <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
-                        {stl.createdAt}
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">{stl.partyName}</td>
-                      <td className="px-4 py-3.5 text-sm">{stl.leaderName}</td>
-                      <td className="px-4 py-3.5 text-sm">
-                        {formatWon(stl.totalAmount)}
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">
-                        {stl.memberCount}명
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">
-                        {stl.billingMonth}
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">
+                          <p className="mt-1 text-xs text-gray-500">
+                            {stl.leaderName} · {stl.billingMonth}
+                          </p>
+                        </div>
+
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[stl.status] ?? ''}`}
+                          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            STATUS_STYLE[stl.status] ?? ''
+                          }`}
                         >
                           {stl.status}
                         </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-sm">
-                        <div className="flex gap-1.5 items-center">
-                          <button
-                            className={`px-3 py-1 rounded-md text-xs border transition ${
-                              isExpanded
-                                ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                            }`}
-                            onClick={() =>
-                              setExpandedSettlementId((prev) =>
-                                prev === stl.id ? null : stl.id,
-                              )
-                            }
-                          >
-                            {isExpanded ? '닫기' : '상세'}
-                          </button>
-                          {stl.status === '대기' && (
-                            <>
-                              <button
-                                className="px-3 py-1 rounded-md text-xs border border-blue-300 text-blue-500 hover:bg-blue-50 cursor-pointer transition"
-                                disabled={busySettlementId === stl.id}
-                                onClick={() =>
-                                  void handleSettlementStatus(stl.id, '승인')
-                                }
-                              >
-                                {busySettlementId === stl.id
-                                  ? '처리 중...'
-                                  : '승인'}
-                              </button>
-                              <button
-                                className="px-3 py-1 rounded-md text-xs border border-red-300 text-red-500 hover:bg-red-50 cursor-pointer transition"
-                                disabled={busySettlementId === stl.id}
-                                onClick={() =>
-                                  void handleSettlementStatus(stl.id, '거절')
-                                }
-                              >
-                                거절
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                      </div>
 
-                    {isExpanded && (
-                      <tr className="border-b border-gray-100 bg-slate-50/70">
-                        <td colSpan={8} className="px-4 py-4">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                              <div>
-                                <h3 className="text-base font-semibold text-slate-900">
-                                  정산 상세
-                                </h3>
-                                <p className="mt-1 text-sm text-slate-500">
-                                  파티 정산 내역을 팝업 없이 펼쳐서 확인하고
-                                  바로 승인 또는 거절할 수 있습니다.
-                                </p>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <div className="rounded-xl bg-slate-50 px-3 py-2">
+                          <div className="text-[11px] text-slate-400">총액</div>
+                          <div className="mt-1 break-all text-sm font-semibold text-slate-900">
+                            {formatWon(stl.totalAmount)}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl bg-slate-50 px-3 py-2">
+                          <div className="text-[11px] text-slate-400">
+                            멤버 수
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-slate-900">
+                            {stl.memberCount}명
+                          </div>
+                        </div>
+
+                        <div className="col-span-2 rounded-xl bg-slate-50 px-3 py-2">
+                          <div className="text-[11px] text-slate-400">
+                            생성 시각
+                          </div>
+                          <div className="mt-1 wrap-break-word text-sm font-semibold text-slate-900">
+                            {stl.createdAt}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <h3 className="text-sm font-semibold text-slate-900">
+                            정산 상세
+                          </h3>
+
+                          <div className="mt-3 grid grid-cols-1 gap-2">
+                            {[
+                              ['정산 ID', stl.id],
+                              ['파티명', stl.partyName],
+                              ['파티장', stl.leaderName],
+                              ['총액', formatWon(stl.totalAmount)],
+                              ['멤버 수', `${stl.memberCount}명`],
+                              ['청구월', stl.billingMonth],
+                              ['상태', stl.status],
+                              ['생성일', stl.createdAt],
+                            ].map(([label, value]) => (
+                              <div
+                                key={label}
+                                className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                              >
+                                <div className="text-[11px] font-medium text-slate-400">
+                                  {label}
+                                </div>
+                                <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                  {value}
+                                </div>
                               </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className={`rounded-md border px-3 py-1.5 text-xs transition ${
+                            isExpanded
+                              ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                          onClick={() =>
+                            setExpandedSettlementId((prev) =>
+                              prev === stl.id ? null : stl.id,
+                            )
+                          }
+                        >
+                          {isExpanded ? '닫기' : '상세'}
+                        </button>
+
+                        {stl.status === '대기' && (
+                          <>
+                            <button
+                              type="button"
+                              className="rounded-md border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={busySettlementId === stl.id}
+                              onClick={() =>
+                                void handleSettlementStatus(stl.id, '승인')
+                              }
+                            >
+                              {busySettlementId === stl.id
+                                ? '처리 중...'
+                                : '승인'}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={busySettlementId === stl.id}
+                              onClick={() =>
+                                void handleSettlementStatus(stl.id, '거절')
+                              }
+                            >
+                              거절
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {paginated.length === 0 && (
+                  <div className="px-4 py-8 text-center text-sm text-gray-400">
+                    검색 결과가 없습니다.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="hidden md:block">
+              <div className="w-full min-w-0 overflow-x-auto">
+                <table className="min-w-96 w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        생성 시각
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        파티
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        파티장
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        총액
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        멤버 수
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        청구월
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        상태
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-500">
+                        관리
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {paginated.map((stl) => {
+                      const isExpanded = expandedSettlementId === stl.id;
+
+                      return (
+                        <Fragment key={stl.id}>
+                          <tr className="border-b border-gray-100 transition hover:bg-gray-50">
+                            <td className="whitespace-nowrap px-4 py-3.5 text-sm text-gray-500">
+                              {stl.createdAt}
+                            </td>
+
+                            <td className="max-w-45 truncate px-4 py-3.5 text-sm text-gray-900">
+                              {stl.partyName}
+                            </td>
+
+                            <td className="max-w-35 truncate px-4 py-3.5 text-sm text-gray-900">
+                              {stl.leaderName}
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-3.5 text-sm text-gray-900">
+                              {formatWon(stl.totalAmount)}
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-3.5 text-sm text-gray-900">
+                              {stl.memberCount}명
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-3.5 text-sm text-gray-900">
+                              {stl.billingMonth}
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-3.5 text-sm">
                               <span
-                                className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[stl.status] ?? ''}`}
+                                className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                  STATUS_STYLE[stl.status] ?? ''
+                                }`}
                               >
                                 {stl.status}
                               </span>
-                            </div>
+                            </td>
 
-                            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                              {[
-                                ['정산 ID', stl.id],
-                                ['파티명', stl.partyName],
-                                ['파티장', stl.leaderName],
-                                ['총액', formatWon(stl.totalAmount)],
-                                ['멤버 수', `${stl.memberCount}명`],
-                                ['청구월', stl.billingMonth],
-                                ['상태', stl.status],
-                                ['생성일', stl.createdAt],
-                              ].map(([label, value]) => (
-                                <div
-                                  key={label}
-                                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                >
-                                  <div className="text-xs font-medium text-slate-400">
-                                    {label}
-                                  </div>
-                                  <div className="mt-1 break-all text-sm font-semibold text-slate-800">
-                                    {value}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            {stl.status === '대기' && (
-                              <div className="mt-5 flex flex-wrap gap-2">
+                            <td className="px-4 py-3.5 text-sm">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
                                 <button
-                                  className="rounded-md border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
-                                  disabled={busySettlementId === stl.id}
+                                  type="button"
+                                  className={`rounded-md border px-3 py-1 text-xs transition ${
+                                    isExpanded
+                                      ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                                      : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                  }`}
                                   onClick={() =>
-                                    void handleSettlementStatus(stl.id, '승인')
+                                    setExpandedSettlementId((prev) =>
+                                      prev === stl.id ? null : stl.id,
+                                    )
                                   }
                                 >
-                                  {busySettlementId === stl.id
-                                    ? '처리 중...'
-                                    : '승인'}
+                                  {isExpanded ? '닫기' : '상세'}
                                 </button>
-                                <button
-                                  className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50"
-                                  disabled={busySettlementId === stl.id}
-                                  onClick={() =>
-                                    void handleSettlementStatus(stl.id, '거절')
-                                  }
-                                >
-                                  거절
-                                </button>
+
+                                {stl.status === '대기' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="cursor-pointer rounded-md border border-blue-300 px-3 py-1 text-xs text-blue-500 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                      disabled={busySettlementId === stl.id}
+                                      onClick={() =>
+                                        void handleSettlementStatus(
+                                          stl.id,
+                                          '승인',
+                                        )
+                                      }
+                                    >
+                                      {busySettlementId === stl.id
+                                        ? '처리 중...'
+                                        : '승인'}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      className="cursor-pointer rounded-md border border-red-300 px-3 py-1 text-xs text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                      disabled={busySettlementId === stl.id}
+                                      onClick={() =>
+                                        void handleSettlementStatus(
+                                          stl.id,
+                                          '거절',
+                                        )
+                                      }
+                                    >
+                                      거절
+                                    </button>
+                                  </>
+                                )}
                               </div>
-                            )}
-                          </div>
+                            </td>
+                          </tr>
+
+                          {isExpanded && (
+                            <tr className="border-b border-gray-100 bg-slate-50/70">
+                              <td colSpan={8} className="px-4 py-4">
+                                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    <div>
+                                      <h3 className="text-base font-semibold text-slate-900">
+                                        정산 상세
+                                      </h3>
+
+                                      <p className="mt-1 text-sm text-slate-500">
+                                        파티 정산 내역을 팝업 없이 펼쳐서
+                                        확인하고 바로 승인 또는 거절할 수
+                                        있습니다.
+                                      </p>
+                                    </div>
+
+                                    <span
+                                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                        STATUS_STYLE[stl.status] ?? ''
+                                      }`}
+                                    >
+                                      {stl.status}
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                    {[
+                                      ['정산 ID', stl.id],
+                                      ['파티명', stl.partyName],
+                                      ['파티장', stl.leaderName],
+                                      ['총액', formatWon(stl.totalAmount)],
+                                      ['멤버 수', `${stl.memberCount}명`],
+                                      ['청구월', stl.billingMonth],
+                                      ['상태', stl.status],
+                                      ['생성일', stl.createdAt],
+                                    ].map(([label, value]) => (
+                                      <div
+                                        key={label}
+                                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                      >
+                                        <div className="text-xs font-medium text-slate-400">
+                                          {label}
+                                        </div>
+
+                                        <div className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                          {value}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {stl.status === '대기' && (
+                                    <div className="mt-5 flex flex-wrap gap-2">
+                                      <button
+                                        type="button"
+                                        className="rounded-md border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled={busySettlementId === stl.id}
+                                        onClick={() =>
+                                          void handleSettlementStatus(
+                                            stl.id,
+                                            '승인',
+                                          )
+                                        }
+                                      >
+                                        {busySettlementId === stl.id
+                                          ? '처리 중...'
+                                          : '승인'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled={busySettlementId === stl.id}
+                                        onClick={() =>
+                                          void handleSettlementStatus(
+                                            stl.id,
+                                            '거절',
+                                          )
+                                        }
+                                      >
+                                        거절
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+
+                    {paginated.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          className="px-4 py-8 text-center text-sm text-gray-400"
+                        >
+                          검색 결과가 없습니다.
                         </td>
                       </tr>
                     )}
-                  </Fragment>
-                );
-              })}
-              {paginated.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="text-center text-gray-400 py-8">
-                    검색 결과가 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <Pagination
-            total={filtered.length}
-            page={page}
-            pageSize={20}
-            onChange={(p) => {
-              setPage(p);
-            }}
-          />
-          <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
-            승인과 거절 버튼은 실제 정산 관리자 API를 호출합니다.
-          </div>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100">
+              <Pagination
+                total={filtered.length}
+                page={page}
+                pageSize={20}
+                onChange={(nextPage) => {
+                  setPage(nextPage);
+                  setExpandedSettlementId(null);
+                }}
+              />
+            </div>
+
+            <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
+              승인과 거절 버튼은 실제 정산 관리자 API를 호출합니다.
+            </div>
+          </section>
         </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
