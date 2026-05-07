@@ -169,7 +169,7 @@ const resolveNotificationSocketUrl = (): string => {
   let base = explicitWsUrl?.trim();
 
   if (!base) {
-    const apiBaseUrl = getApiBaseUrl();
+    const apiBaseUrl = getApiBaseUrl().replace(/\/api\/?$/, '');
 
     if (apiBaseUrl.startsWith('https://')) {
       base = apiBaseUrl.replace(/^https:\/\//, 'wss://');
