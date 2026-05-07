@@ -25,7 +25,6 @@ export const fetchLatestNotifications = async (
   return Array.isArray(data) ? sortNotificationsByCreatedAt(data) : [];
 };
 
-// 개별 읽음
 export const markNotificationAsRead = async (
   notificationId: string,
 ): Promise<{ message?: string }> => {
@@ -139,7 +138,7 @@ export const applyNotificationSocketMessage = (
   }
 };
 
-type NotificationSocketListener = (message: NotificationSocketMessage) => void;
+type NotificationSocketListener = (message: NotificationSocketMessage) => void | Promise<void>;
 
 let notificationSocket: WebSocket | null = null;
 let reconnectTimer: number | null = null;
@@ -190,14 +189,14 @@ const resolveNotificationSocketUrl = (): string => {
   return base ?? '';
 };
 
-const notifySocketListeners = (message: NotificationSocketMessage) => {
-  socketListeners.forEach((listener) => {
+const notifySocketListeners = async (message: NotificationSocketMessage) => {
+  for (const listener of socketListeners) {
     try {
-      listener(message);
+      await listener(message);
     } catch (error) {
       console.error('알림 웹소켓 리스너 처리 실패:', error);
     }
-  });
+  }
 };
 
 const clearReconnectTimer = () => {
@@ -280,7 +279,7 @@ const ensureNotificationSocketConnection = async () => {
 
     socket.onopen = () => {
       if (notificationSocket !== socket) return;
-      notifySocketListeners({
+      void notifySocketListeners({
         type: 'connected',
         timestamp: new Date().toISOString(),
       });
@@ -290,7 +289,7 @@ const ensureNotificationSocketConnection = async () => {
       if (notificationSocket !== socket) return;
       try {
         const parsed = JSON.parse(event.data) as NotificationSocketMessage;
-        notifySocketListeners(parsed);
+        void notifySocketListeners(parsed);
       } catch (error) {
         console.error('알림 웹소켓 메시지 파싱 실패:', error);
       }
