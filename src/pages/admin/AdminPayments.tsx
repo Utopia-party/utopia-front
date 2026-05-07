@@ -40,10 +40,36 @@ function fmtDate(iso: string | null) {
 }
 
 function getCommissionLabel(payment: AdminPaymentRecord) {
-  if (payment.discountReason?.includes('방장 할인')) {
-    return '(5%)';
+  if (
+    payment.pricingType === 'quick_match' &&
+    (payment.quickMatchFeeRate ?? 0) > 0
+  ) {
+    return `(빠른매칭 +${Math.round(payment.quickMatchFeeRate * 100)}%)`;
   }
   return `(${Math.round(payment.commissionRate * 100)}%)`;
+}
+
+function getDiscountBadges(payment: AdminPaymentRecord) {
+  const badges: Array<{ label: string; className: string }> = [];
+
+  if (payment.discountReason) {
+    badges.push({
+      label: payment.discountReason,
+      className: 'border-sky-200 bg-sky-50 text-sky-700',
+    });
+  }
+
+  if (
+    payment.pricingType === 'quick_match' &&
+    (payment.quickMatchFeeRate ?? 0) > 0
+  ) {
+    badges.push({
+      label: `빠른매칭 수수료 ${Math.round(payment.quickMatchFeeRate * 100)}%`,
+      className: 'border-amber-200 bg-amber-50 text-amber-700',
+    });
+  }
+
+  return badges;
 }
 
 export default function AdminPayments() {
@@ -388,10 +414,17 @@ export default function AdminPayments() {
                             {fmt(p.amount)}
                           </td>
                           <td className="px-3 md:px-4 py-3">
-                            {p.discountReason ? (
-                              <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-medium text-sky-700 whitespace-nowrap">
-                                {p.discountReason}
-                              </span>
+                            {getDiscountBadges(p).length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {getDiscountBadges(p).map((badge) => (
+                                  <span
+                                    key={badge.label}
+                                    className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-medium whitespace-nowrap ${badge.className}`}
+                                  >
+                                    {badge.label}
+                                  </span>
+                                ))}
+                              </div>
                             ) : (
                               <span className="text-[10px] md:text-xs text-gray-300">
                                 -

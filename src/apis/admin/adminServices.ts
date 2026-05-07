@@ -16,6 +16,7 @@ export type AdminServiceRecord = {
   commissionRate: number;
   leaderDiscountRate: number;
   referralDiscountRate: number;
+  quickMatchFeeRate: number;
 };
 
 export type AdminServiceUpdatePayload = {
@@ -27,6 +28,7 @@ export type AdminServiceUpdatePayload = {
   commissionRate: number;
   leaderDiscountRate: number;
   referralDiscountRate: number;
+  quickMatchFeeRate: number;
 };
 
 export async function fetchAdminServices(): Promise<AdminServiceRecord[]> {

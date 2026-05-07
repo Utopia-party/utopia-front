@@ -77,6 +77,7 @@ const draftFromService = (
   commissionRate: service.commissionRate,
   leaderDiscountRate: service.leaderDiscountRate,
   referralDiscountRate: service.referralDiscountRate,
+  quickMatchFeeRate: service.quickMatchFeeRate,
 });
 
 export default function AdminServices() {
@@ -344,6 +345,9 @@ export default function AdminServices() {
                       추천 할인
                     </th>
                     <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                      빠른매칭 수수료
+                    </th>
+                    <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
                       상태
                     </th>
                     <th className="px-3 md:px-4 py-3 md:py-3.5 text-left text-[11px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
@@ -413,6 +417,9 @@ export default function AdminServices() {
                                 service.referralDiscountRate,
                               )}
                             />
+                          </td>
+                          <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm text-gray-600 whitespace-nowrap">
+                            {formatRate(service.quickMatchFeeRate)}
                           </td>
                           <td className="px-3 md:px-4 py-3.5 text-sm">
                             <span
@@ -607,6 +614,26 @@ export default function AdminServices() {
                                     </label>
                                     <label className="flex flex-col gap-1.5 md:gap-2">
                                       <span className="text-xs md:text-sm font-bold text-slate-700">
+                                        빠른매칭 수수료율
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={1}
+                                        step="0.01"
+                                        value={draft.quickMatchFeeRate}
+                                        onChange={(event) =>
+                                          handleDraftChange(
+                                            service.id,
+                                            'quickMatchFeeRate',
+                                            Number(event.target.value),
+                                          )
+                                        }
+                                        className="rounded-lg md:rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                      />
+                                    </label>
+                                    <label className="flex flex-col gap-1.5 md:gap-2">
+                                      <span className="text-xs md:text-sm font-bold text-slate-700">
                                         활성 상태
                                       </span>
                                       <button
@@ -695,6 +722,14 @@ export default function AdminServices() {
                                           {formatRate(service.commissionRate)}
                                         </dd>
                                       </div>
+                                      <div className="flex items-center justify-between gap-4">
+                                        <dt>현재 빠른매칭 수수료율</dt>
+                                        <dd className="font-bold text-slate-900">
+                                          {formatRate(
+                                            service.quickMatchFeeRate,
+                                          )}
+                                        </dd>
+                                      </div>
                                     </dl>
                                   </div>
 
@@ -730,7 +765,7 @@ export default function AdminServices() {
                   {!loading && filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-4 py-12 md:py-16 text-center text-xs md:text-sm text-gray-400"
                       >
                         검색 결과가 없습니다.
