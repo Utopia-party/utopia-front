@@ -41,14 +41,6 @@ export default function Sidebar() {
   const isMypageMenuOpen = isMypageOpen;
 
   useEffect(() => {
-    if (isMypageRoute) {
-      setIsMypageOpen(true);
-    } else {
-      setIsMypageOpen(false);
-    }
-  }, [location.pathname, isMypageRoute]);
-
-  useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
         setIsSidebarOpen(true);
@@ -77,9 +69,17 @@ export default function Sidebar() {
     setIsMypageOpen((prev) => !prev);
   };
 
+  const handleMypageSubMenuClick = () => {
+    setIsMypageOpen(true);
+
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  };
+
   const getMainLinkClass = (isActive: boolean) =>
     [
-      'flex w-full items-center rounded-xl py-2.5 text-sm font-semibold transition',
+      'flex w-full items-center rounded-xl py-2.5 text-sm font-semibold transition whitespace-nowrap',
       isActive
         ? 'bg-blue-50 text-primary'
         : 'text-slate-800 hover:bg-slate-100',
@@ -88,7 +88,7 @@ export default function Sidebar() {
 
   const getSubLinkClass = (isActive: boolean) =>
     [
-      'block rounded-xl px-3 py-2.5 text-sm font-medium transition',
+      'block rounded-xl px-3 py-2.5 text-sm font-medium transition whitespace-nowrap',
       isActive
         ? 'bg-blue-50 text-primary'
         : 'text-slate-700 hover:bg-slate-100',
@@ -141,7 +141,7 @@ export default function Sidebar() {
               className="h-8 w-8 shrink-0 object-contain"
             />
             {isSidebarOpen && (
-              <span className="text-[20px] font-extrabold tracking-tight text-slate-900">
+              <span className="whitespace-nowrap text-[20px] font-extrabold tracking-tight text-slate-900">
                 Party-Up
               </span>
             )}
@@ -190,7 +190,7 @@ export default function Sidebar() {
 
               {isSidebarOpen && (
                 <ChevronDown
-                  className={`h-4 w-4 text-slate-500 transition-transform ${
+                  className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
                     isMypageMenuOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -203,7 +203,7 @@ export default function Sidebar() {
                   <NavLink
                     key={menu.to}
                     to={menu.to}
-                    onClick={handleMenuClick}
+                    onClick={handleMypageSubMenuClick}
                     className={({ isActive }) => getSubLinkClass(isActive)}
                   >
                     {menu.label}
