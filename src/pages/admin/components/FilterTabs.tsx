@@ -2,12 +2,14 @@ interface FilterTabsProps {
   tabs: string[];
   activeTab: string;
   onTabChange: (tab: string) => void;
+  labels?: Record<string, string>;
 }
 
 export default function FilterTabs({
   tabs,
   activeTab,
   onTabChange,
+  labels,
 }: FilterTabsProps) {
   return (
     <div className="mb-5 flex flex-wrap gap-2">
@@ -21,7 +23,7 @@ export default function FilterTabs({
           }`}
           onClick={() => onTabChange(tab)}
         >
-          {tab}
+          {labels?.[tab] ?? tab}
         </button>
       ))}
     </div>
