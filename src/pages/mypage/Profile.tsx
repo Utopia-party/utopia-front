@@ -66,11 +66,17 @@ function formatDate(value?: string | null) {
 function formatActionLabel(action?: string | null) {
   if (!action) return '활동';
 
-  return action
-    .split('_')
-    .filter(Boolean)
-    .map((word) => word[0]?.toUpperCase() + word.slice(1))
-    .join(' ');
+  const legacyMap: Record<string, string> = {
+    admin_access: '관리자 접근',
+    TRUST_SCORE_UPDATED: '신뢰도 점수 변경',
+    STATUS_정상: '상태 변경 · 정상',
+    STATUS_주의: '상태 변경 · 주의',
+    STATUS_정지: '상태 변경 · 정지',
+    REFERRER_UPDATED: '추천인 수정',
+    admin_service_updated: '서비스 정보 수정',
+  };
+
+  return legacyMap[action] ?? action;
 }
 
 function getActivityScore(activity: RecentActivityItem) {
