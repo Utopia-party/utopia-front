@@ -7,7 +7,13 @@ import {
   type AdminAppealOut,
 } from '../../apis/admin/adminAppeals';
 
-const FILTER_TABS = ['전체', 'PENDING', 'APPROVED', 'REJECTED'];
+const FILTER_TABS = ['전체', '검토 대기', '승인', '거부'];
+
+const TAB_TO_STATUS: Record<string, string> = {
+  '검토 대기': 'PENDING',
+  '승인': 'APPROVED',
+  '거부': 'REJECTED',
+};
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: '검토 대기',
@@ -58,7 +64,7 @@ export default function AdminAppeals() {
   const load = async () => {
     setLoading(true);
     try {
-      const statusParam = tab === '전체' ? '' : tab;
+      const statusParam = tab === '전체' ? '' : (TAB_TO_STATUS[tab] ?? tab);
       const data = await fetchAdminAppeals(statusParam);
       setAppeals(data);
     } finally {

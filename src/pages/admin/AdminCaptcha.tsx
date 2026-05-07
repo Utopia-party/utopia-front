@@ -1707,7 +1707,7 @@ export default function AdminCaptcha() {
                                         : 'bg-rose-100 text-rose-700'
                                   }`}
                                 >
-                                  {session.status.toUpperCase()}
+                                  {({'pass': '통과', 'challenge': '챌린지', 'block': '차단', 'challenge_pass': '챌린지 통과'})[session.status] ?? session.status.toUpperCase()}
                                 </span>
                               </td>
                             </tr>
