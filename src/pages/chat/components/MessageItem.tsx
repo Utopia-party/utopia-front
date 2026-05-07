@@ -1,6 +1,5 @@
-import type { Message } from '../../../types/chat';
+import type { Message, ProfileDrawerUser } from '../../../types/chat';
 import { Avatar } from './ChatComponents';
-import type { ProfileDrawerUser } from '../../../types/chat';
 
 interface MessageItemProps {
   msg: Message;
@@ -17,20 +16,29 @@ interface MessageItemProps {
     profile_image: string | null;
   };
   onAvatarClick: (
-    e: React.MouseEvent<HTMLElement>,
+    event: React.MouseEvent<HTMLElement>,
     user: ProfileDrawerUser,
   ) => void;
 }
 
 function formatMessageTime(createdAt?: string): string {
   if (!createdAt) return '';
+
   const raw =
     createdAt.endsWith('Z') || createdAt.includes('+')
       ? createdAt
       : createdAt.replace(' ', 'T') + 'Z';
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+  const date = new Date(raw);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function MessageItem({
@@ -44,8 +52,8 @@ export function MessageItem({
 }: MessageItemProps) {
   if (msg.type === 'system') {
     return (
-      <div key={index} className="flex justify-center">
-        <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+      <div key={index} className="flex justify-center px-2">
+        <span className="max-w-full wrap-break-word rounded-full bg-muted px-3 py-1 text-center text-xs text-muted-foreground">
           {msg.content}
         </span>
       </div>
@@ -54,8 +62,8 @@ export function MessageItem({
 
   if (msg.type === 'system_info') {
     return (
-      <div key={index} className="flex justify-center">
-        <span className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+      <div key={index} className="flex justify-center px-2">
+        <span className="max-w-full wrap-break-word rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-center text-xs text-blue-600">
           {msg.content}
         </span>
       </div>
@@ -64,13 +72,14 @@ export function MessageItem({
 
   if (msg.type === 'warning' || msg.type === 'error') {
     const isError = msg.type === 'error';
+
     return (
-      <div key={index} className="flex justify-center">
+      <div key={index} className="flex justify-center px-2">
         <span
-          className={`text-xs border px-3 py-1.5 rounded-xl ${
+          className={`max-w-full wrap-break-word rounded-xl border px-3 py-1.5 text-center text-xs ${
             isError
-              ? 'text-red-600 bg-red-50 border-red-200'
-              : 'text-orange-600 bg-orange-50 border-orange-200'
+              ? 'border-red-200 bg-red-50 text-red-600'
+              : 'border-orange-200 bg-orange-50 text-orange-600'
           }`}
         >
           {msg.content}
@@ -81,9 +90,11 @@ export function MessageItem({
 
   const isMe = msg.user_id === currentUserId;
   const memberMeta = getMemberMeta(msg.user_id);
+
   const senderImage = isMe
     ? myProfileImage
     : (msg.profile_image ?? memberMeta.profile_image ?? null);
+
   const unreadCount = msg.chat_id
     ? (unreadCounts[msg.chat_id] ?? msg.unread_count ?? 0)
     : (msg.unread_count ?? 0);
@@ -91,16 +102,18 @@ export function MessageItem({
   return (
     <div
       key={index}
-      className={`flex ${isMe ? 'justify-end' : 'justify-start gap-2'}`}
+      className={`flex w-full min-w-0 ${
+        isMe ? 'justify-end' : 'justify-start gap-2'
+      }`}
     >
       {!isMe && (
-        <div className="shrink-0 mt-1">
+        <div className="mt-1 shrink-0">
           <Avatar
             nickname={msg.nickname}
             profileImage={senderImage}
             size="sm"
-            onClick={(e) =>
-              onAvatarClick(e, {
+            onClick={(event) =>
+              onAvatarClick(event, {
                 user_id: msg.user_id,
                 nickname: msg.nickname,
                 profile_image: senderImage,
@@ -116,40 +129,43 @@ export function MessageItem({
       )}
 
       <div
-        className={`flex flex-col gap-0.5 max-w-xs ${
+        className={`flex min-w-0 max-w-[min(78vw,460px)] flex-col gap-0.5 sm:max-w-[min(68vw,520px)] ${
           isMe ? 'items-end' : 'items-start'
         }`}
       >
         {!isMe && (
-          <p className="text-xs text-muted-foreground px-1">
+          <p className="max-w-full truncate px-1 text-xs text-muted-foreground">
             {msg.nickname ?? '익명'}
           </p>
         )}
 
         <div
-          className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+          className={`flex max-w-full items-end gap-1 ${
+            isMe ? 'flex-row-reverse' : 'flex-row'
+          }`}
         >
           <div
-            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+            className={`max-w-full wrap-anywhere rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
               isMe
-                ? 'bg-primary text-primary-foreground rounded-br-sm'
-                : 'bg-card border border-border text-foreground rounded-bl-sm'
+                ? 'rounded-br-sm bg-primary text-primary-foreground'
+                : 'rounded-bl-sm border border-border bg-card text-foreground'
             }`}
           >
             {msg.content}
           </div>
 
           <div
-            className={`flex flex-col shrink-0 gap-0.5 ${
+            className={`flex shrink-0 flex-col gap-0.5 ${
               isMe ? 'items-end' : 'items-start'
             }`}
           >
             {unreadCount > 0 && (
-              <span className="text-[10px] font-bold text-primary leading-none">
+              <span className="text-[10px] font-bold leading-none text-primary">
                 {unreadCount}
               </span>
             )}
-            <p className="text-[10px] text-muted-foreground">
+
+            <p className="whitespace-nowrap text-[10px] text-muted-foreground">
               {formatMessageTime(msg.created_at)}
             </p>
           </div>

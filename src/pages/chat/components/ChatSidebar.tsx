@@ -1,5 +1,5 @@
-import type { PartyInfo } from '../../../types/chat';
-import type { ProfileDrawerUser } from '../../../types/chat';
+import type { MouseEvent } from 'react';
+import type { PartyInfo, ProfileDrawerUser } from '../../../types/chat';
 import { MemberItem, DetailRow } from './ChatComponents';
 import {
   CATEGORY_COLOR,
@@ -15,24 +15,30 @@ interface ChatSidebarProps {
     quick_match_fee_rate: number;
   } | null;
   onMemberClick: (
-    e: React.MouseEvent<HTMLElement>,
+    event: MouseEvent<HTMLElement>,
     user: ProfileDrawerUser,
   ) => void;
+  className?: string;
+  onClose?: () => void;
 }
 
 export function ChatSidebar({
   partyInfo,
   paymentPreview,
   onMemberClick,
+  className = '',
+  onClose,
 }: ChatSidebarProps) {
   const originalPerPerson =
     partyInfo?.monthly_price != null && (partyInfo?.max_members ?? 0) > 0
       ? Math.round(partyInfo.monthly_price / partyInfo.max_members!)
       : null;
+
   const perPerson =
     paymentPreview != null
       ? paymentPreview.amount
       : partyInfo?.monthly_per_person;
+
   const saving =
     originalPerPerson != null &&
     perPerson != null &&
@@ -41,18 +47,33 @@ export function ChatSidebar({
       : null;
 
   return (
-    <div className="w-80 shrink-0 border-l border-border bg-card flex flex-col overflow-y-auto">
-      {/* 멤버 목록 */}
-      <div className="p-5 border-b border-border">
-        <p className="text-sm font-bold text-foreground mb-3">파티 멤버</p>
+    <aside
+      className={`min-h-0 min-w-0 flex-col overflow-y-auto bg-card ${className}`}
+    >
+      {onClose && (
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
+          <p className="text-sm font-extrabold text-foreground">파티 정보</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-3 py-1.5 text-sm font-bold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            닫기
+          </button>
+        </div>
+      )}
+
+      <section className="border-b border-border p-4 sm:p-5">
+        <p className="mb-3 text-sm font-bold text-foreground">파티 멤버</p>
+
         {Array.isArray(partyInfo?.members) && partyInfo.members.length > 0 ? (
           <div className="flex flex-col gap-2">
             {partyInfo.members.map((member) => (
               <MemberItem
                 key={member.user_id}
                 member={member}
-                onClick={(e) =>
-                  onMemberClick(e, {
+                onClick={(event) =>
+                  onMemberClick(event, {
                     user_id: member.user_id,
                     nickname: member.nickname,
                     profile_image: member.profile_image ?? null,
@@ -71,14 +92,13 @@ export function ChatSidebar({
             참여 중인 멤버 정보가 없습니다.
           </p>
         )}
-      </div>
+      </section>
 
-      {/* 파티 정보 */}
-      <div className="p-5">
+      <section className="p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {partyInfo?.category_name && (
             <span
-              className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+              className={`max-w-full truncate rounded-full px-2.5 py-1 text-xs font-bold ${
                 CATEGORY_COLOR[partyInfo.category_name] ??
                 'bg-slate-100 text-slate-600'
               }`}
@@ -86,6 +106,7 @@ export function ChatSidebar({
               {partyInfo.category_name}
             </span>
           )}
+
           {partyInfo?.status && (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
               {PARTY_STATUS_LABEL[partyInfo.status] ?? partyInfo.status}
@@ -93,7 +114,7 @@ export function ChatSidebar({
           )}
         </div>
 
-        <p className="text-sm font-bold text-foreground mb-3">파티 정보</p>
+        <p className="mb-3 text-sm font-bold text-foreground">파티 정보</p>
 
         <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
           <DetailRow label="서비스명" value={partyInfo?.service_name ?? '-'} />
@@ -107,35 +128,42 @@ export function ChatSidebar({
             value={formatCurrency(perPerson)}
             emphasized
           />
+
           {(paymentPreview?.is_quick_match ||
             (paymentPreview == null &&
               (partyInfo?.quick_match_fee_rate ?? 0) > 0)) && (
-            <p className="text-[11px] text-indigo-500 text-right">
+            <p className="text-right text-[11px] text-indigo-500">
               빠른매칭 수수료 포함
             </p>
           )}
+
           {partyInfo?.is_leader &&
             (partyInfo?.leader_discount_rate ?? 0) > 0 && (
-              <p className="text-[11px] text-blue-500 text-right">
+              <p className="text-right text-[11px] text-blue-500">
                 방장 할인 적용
               </p>
             )}
+
           {partyInfo?.has_referrer_discount && (
-            <p className="text-[11px] text-green-500 text-right">
+            <p className="text-right text-[11px] text-green-500">
               추천인 할인 적용
             </p>
           )}
+
           {saving != null && (
-            <p className="text-[11px] text-emerald-500 text-right font-semibold">
+            <p className="text-right text-[11px] font-semibold text-emerald-500">
               월 {saving.toLocaleString()}원 절약
             </p>
           )}
+
           <DetailRow
             label="인원"
-            value={`${partyInfo?.member_count ?? '-'} / ${partyInfo?.max_members ?? '-'}`}
+            value={`${partyInfo?.member_count ?? '-'} / ${
+              partyInfo?.max_members ?? '-'
+            }`}
           />
         </div>
-      </div>
-    </div>
+      </section>
+    </aside>
   );
 }

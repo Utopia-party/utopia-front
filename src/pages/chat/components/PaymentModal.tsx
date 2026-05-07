@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../../apis/api';
 import type { PaymentStep } from '../../../types/chat';
 import {
@@ -6,6 +6,19 @@ import {
   PORTONE_CHANNEL_KEY,
   BANK_INFO,
 } from '../ChatConstants';
+
+declare global {
+  interface Window {
+    PortOne?: {
+      requestPayment: (params: object) => Promise<{
+        code?: string;
+        message?: string;
+        paymentId?: string;
+        transactionType?: string;
+      }>;
+    };
+  }
+}
 
 interface PaymentModalProps {
   onClose: () => void;
@@ -42,23 +55,9 @@ export function PaymentModal({
   const [done, setDone] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
 
-  const base = monthlyPerPerson ?? 0;
-  if (!base) return null;
-
-  const hasLeaderDiscount =
-    isLeader && !!leaderDiscountRate && leaderDiscountRate > 0;
-  const hasDiscount = hasLeaderDiscount || hasReferrerDiscount;
-
-  let discountRate = 0;
-  if (hasLeaderDiscount) discountRate += leaderDiscountRate ?? 0;
-  if (hasReferrerDiscount) discountRate += referralDiscountRate ?? 0;
-  discountRate = Math.min(discountRate, 1);
-
-  const payAmount =
-    paymentPreviewAmount ?? Math.round(base * (1 - discountRate));
-
   useEffect(() => {
     if (document.getElementById('portone-sdk')) return;
+
     const script = document.createElement('script');
     script.id = 'portone-sdk';
     script.src = 'https://cdn.portone.io/v2/browser-sdk.js';
@@ -66,13 +65,43 @@ export function PaymentModal({
     document.head.appendChild(script);
   }, []);
 
+  const base = monthlyPerPerson ?? 0;
+
+  if (!base) {
+    return null;
+  }
+
+  const hasLeaderDiscount =
+    isLeader && !!leaderDiscountRate && leaderDiscountRate > 0;
+  const hasDiscount = hasLeaderDiscount || hasReferrerDiscount;
+
+  let discountRate = 0;
+
+  if (hasLeaderDiscount) {
+    discountRate += leaderDiscountRate ?? 0;
+  }
+
+  if (hasReferrerDiscount) {
+    discountRate += referralDiscountRate ?? 0;
+  }
+
+  discountRate = Math.min(discountRate, 1);
+
+  const payAmount =
+    paymentPreviewAmount ?? Math.round(base * (1 - discountRate));
+
   const handleCardPayment = async () => {
     if (!window.PortOne) {
       alert('결제 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
+
     setIsLoading(true);
-    const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const orderId = `order-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
     try {
       const response = await window.PortOne.requestPayment({
         storeId: PORTONE_STORE_ID,
@@ -89,14 +118,15 @@ export function PaymentModal({
         alert('결제가 취소되었습니다.');
         return;
       }
-      if (response?.code) {
+
+      if (response.code) {
         alert(`결제 실패: ${response.message ?? '알 수 없는 오류'}`);
         return;
       }
 
       await api.post('/api/payments/card/confirm', {
         party_id: partyId,
-        pg_transaction_id: response?.paymentId ?? orderId,
+        pg_transaction_id: response.paymentId ?? orderId,
         amount: payAmount,
       });
 
@@ -109,6 +139,7 @@ export function PaymentModal({
           ? (err as { response?: { data?: { detail?: string } } }).response
               ?.data?.detail
           : undefined;
+
       alert(detail ?? '결제 처리 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -117,11 +148,13 @@ export function PaymentModal({
 
   const handleTransferRegister = async () => {
     setIsLoading(true);
+
     try {
       await api.post('/api/payments/transfer/register', {
         party_id: partyId,
         amount: payAmount,
       });
+
       setDoneMessage(
         '입금 정보가 등록되었습니다.\n관리자 확인 후 승인으로 변경됩니다.',
       );
@@ -133,6 +166,7 @@ export function PaymentModal({
           ? (err as { response?: { data?: { detail?: string } } }).response
               ?.data?.detail
           : undefined;
+
       alert(detail ?? '등록 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -142,34 +176,35 @@ export function PaymentModal({
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(BANK_INFO.account).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      window.setTimeout(() => setCopied(false), 2000);
     });
   };
 
   const DiscountSummary = () => (
-    <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5 rounded-xl border border-green-200 bg-green-50 p-3">
       {hasLeaderDiscount && (
-        <div className="flex justify-between text-sm">
+        <div className="flex min-w-0 justify-between gap-3 text-sm">
           <span className="text-green-700 font-medium">방장 할인</span>
-          <span className="text-green-700 font-bold">
+          <span className="shrink-0 font-bold text-green-700">
             -{Math.round((leaderDiscountRate ?? 0) * 100)}%
           </span>
         </div>
       )}
+
       {hasReferrerDiscount && (
-        <div className="flex justify-between text-sm">
+        <div className="flex min-w-0 justify-between gap-3 text-sm">
           <span className="text-green-700 font-medium">추천인 할인</span>
-          <span className="text-green-700 font-bold">
+          <span className="shrink-0 font-bold text-green-700">
             -{Math.round((referralDiscountRate ?? 0) * 100)}%
           </span>
         </div>
       )}
-      <div className="flex justify-between text-xs text-green-600 border-t border-green-200 pt-1.5 mt-0.5">
-        <span>총 할인</span>
-        <span className="font-bold">
+
+      <div className="mt-0.5 flex min-w-0 justify-between gap-3 border-t border-green-200 pt-1.5 text-xs text-green-600">
+        <span className="shrink-0">총 할인</span>
+        <span className="min-w-0 wrap-break-word text-right font-bold">
           -{Math.round(discountRate * 100)}% (
-          {Math.max(base - payAmount, 0).toLocaleString()}
-          원 절약)
+          {Math.max(base - payAmount, 0).toLocaleString()}원 절약)
         </span>
       </div>
     </div>
@@ -177,32 +212,40 @@ export function PaymentModal({
 
   if (done) {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-          <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+      <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4">
+        <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div className="flex shrink-0 items-center justify-between bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
             <h2 className="text-base font-extrabold text-white">결제 완료</h2>
+
             <button
+              type="button"
               onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors text-xl font-light"
+              className="text-xl font-light text-slate-400 transition-colors hover:text-white"
+              aria-label="닫기"
             >
               ✕
             </button>
           </div>
-          <div className="p-8 flex flex-col items-center text-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">
+
+          <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto p-6 text-center sm:p-8">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-green-100 text-3xl">
               ✅
             </div>
-            <div>
+
+            <div className="min-w-0">
               <p className="text-lg font-extrabold text-slate-900">
                 처리 완료!
               </p>
-              <p className="mt-2 text-sm text-slate-500 leading-relaxed whitespace-pre-line">
+
+              <p className="mt-2 whitespace-pre-line break-keep text-sm leading-relaxed text-slate-500">
                 {doneMessage}
               </p>
             </div>
+
             <button
+              type="button"
               onClick={onClose}
-              className="mt-2 w-full py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-slate-800"
+              className="mt-2 w-full rounded-2xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
             >
               확인
             </button>
@@ -213,73 +256,93 @@ export function PaymentModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 z-80 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
+      onClick={onClose}
+    >
       <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[calc(100dvh-24px)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
-          <div>
+        <div className="flex shrink-0 items-center justify-between gap-4 bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold text-white">결제</h2>
-            <p className="text-xs text-slate-400 mt-0.5">{partyTitle}</p>
+
+            <p className="mt-0.5 truncate text-xs text-slate-400">
+              {partyTitle}
+            </p>
           </div>
+
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors text-xl font-light"
+            className="shrink-0 text-xl font-light text-slate-400 transition-colors hover:text-white"
+            aria-label="닫기"
           >
             ✕
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {step === 'select' && (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-slate-600 font-medium">
+              <p className="text-sm font-medium text-slate-600">
                 결제 수단을 선택해주세요
               </p>
+
               {hasDiscount && <DiscountSummary />}
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
+                  type="button"
                   onClick={() => setStep('card')}
-                  className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
+                  className="group flex min-w-0 items-center gap-3 rounded-2xl border-2 border-slate-200 p-4 text-left transition-all hover:border-primary hover:bg-primary/5 sm:flex-col sm:p-5 sm:text-center"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 group-hover:bg-primary/10">
                     <span className="text-2xl">💳</span>
                   </div>
-                  <div className="text-center">
+
+                  <div className="min-w-0">
                     <p className="text-sm font-bold text-slate-800">
                       카드 결제
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">즉시 승인</p>
+                    <p className="mt-0.5 text-xs text-slate-400">즉시 승인</p>
                   </div>
                 </button>
+
                 <button
+                  type="button"
                   onClick={() => setStep('transfer')}
-                  className="flex flex-col items-center gap-3 p-5 border-2 border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
+                  className="group flex min-w-0 items-center gap-3 rounded-2xl border-2 border-slate-200 p-4 text-left transition-all hover:border-primary hover:bg-primary/5 sm:flex-col sm:p-5 sm:text-center"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-primary/10 flex items-center justify-center">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 group-hover:bg-primary/10">
                     <span className="text-2xl">🏦</span>
                   </div>
-                  <div className="text-center">
+
+                  <div className="min-w-0">
                     <p className="text-sm font-bold text-slate-800">
                       계좌 입금
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">관리자 승인</p>
+                    <p className="mt-0.5 text-xs text-slate-400">관리자 승인</p>
                   </div>
                 </button>
               </div>
-              <div className="bg-slate-50 rounded-xl px-4 py-3 flex justify-between text-sm">
+
+              <div className="flex min-w-0 flex-col gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-slate-500">이번 달 결제 금액</span>
-                <div className="flex items-center gap-2">
+
+                <div className="flex min-w-0 items-end justify-between gap-2 sm:justify-end">
                   {hasDiscount && (
-                    <span className="text-xs text-slate-400 line-through">
+                    <span className="shrink-0 text-xs text-slate-400 line-through">
                       {base.toLocaleString()}원
                     </span>
                   )}
-                  <div className="flex flex-col items-end">
-                    <span className="font-extrabold text-slate-900">
+
+                  <div className="min-w-0 text-right">
+                    <span className="block wrap-break-word font-extrabold text-slate-900">
                       {payAmount.toLocaleString()}원
                     </span>
+
                     {isQuickMatchPrice && (
                       <p className="text-[11px] text-indigo-500">
                         빠른매칭 수수료 포함
@@ -293,53 +356,44 @@ export function PaymentModal({
 
           {step === 'card' && (
             <div className="flex flex-col gap-4">
-              <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">파티명</span>
-                  <span className="font-semibold text-slate-800">
-                    {partyTitle}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">결제자</span>
-                  <span className="font-semibold text-slate-800">
-                    {nickname}
-                  </span>
-                </div>
+              <div className="flex flex-col gap-2 rounded-xl bg-slate-50 p-4">
+                <InfoRow label="파티명" value={partyTitle} />
+                <InfoRow label="결제자" value={nickname} />
+
                 {hasDiscount && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">정가</span>
-                    <span className="text-slate-400 line-through">
-                      {base.toLocaleString()}원
-                    </span>
-                  </div>
+                  <InfoRow
+                    label="정가"
+                    value={`${base.toLocaleString()}원`}
+                    valueClassName="text-slate-400 line-through"
+                  />
                 )}
+
                 {hasLeaderDiscount && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600 font-medium">
-                      방장 할인
-                    </span>
-                    <span className="text-green-600 font-bold">
-                      -{Math.round((leaderDiscountRate ?? 0) * 100)}%
-                    </span>
-                  </div>
+                  <InfoRow
+                    label="방장 할인"
+                    value={`-${Math.round((leaderDiscountRate ?? 0) * 100)}%`}
+                    labelClassName="text-green-600 font-medium"
+                    valueClassName="text-green-600 font-bold"
+                  />
                 )}
+
                 {hasReferrerDiscount && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600 font-medium">
-                      추천인 할인
-                    </span>
-                    <span className="text-green-600 font-bold">
-                      -{Math.round((referralDiscountRate ?? 0) * 100)}%
-                    </span>
-                  </div>
+                  <InfoRow
+                    label="추천인 할인"
+                    value={`-${Math.round((referralDiscountRate ?? 0) * 100)}%`}
+                    labelClassName="text-green-600 font-medium"
+                    valueClassName="text-green-600 font-bold"
+                  />
                 )}
-                <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
-                  <span className="text-slate-500">결제 금액</span>
-                  <div className="flex flex-col items-end">
-                    <span className="font-extrabold text-primary text-base">
+
+                <div className="mt-1 flex min-w-0 justify-between gap-3 border-t border-slate-200 pt-2 text-sm">
+                  <span className="shrink-0 text-slate-500">결제 금액</span>
+
+                  <div className="min-w-0 text-right">
+                    <span className="block wrap-break-word text-base font-extrabold text-primary">
                       {payAmount.toLocaleString()}원
                     </span>
+
                     {isQuickMatchPrice && (
                       <p className="text-[11px] text-indigo-500">
                         빠른매칭 수수료 포함
@@ -348,29 +402,34 @@ export function PaymentModal({
                   </div>
                 </div>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p className="text-xs text-blue-700 font-medium">
+
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs font-medium text-blue-700">
                   💳 카드 결제 후 즉시 승인
                 </p>
-                <p className="text-xs text-blue-600 mt-0.5">
+                <p className="mt-0.5 text-xs text-blue-600">
                   결제 완료 시 자동으로 승인 처리됩니다.
                 </p>
               </div>
-              <div className="flex gap-3">
+
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
+                  type="button"
                   onClick={() => setStep('select')}
-                  className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  className="rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   이전
                 </button>
+
                 <button
+                  type="button"
                   onClick={handleCardPayment}
                   disabled={isLoading}
-                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                       처리중...
                     </>
                   ) : (
@@ -383,96 +442,100 @@ export function PaymentModal({
 
           {step === 'transfer' && (
             <div className="flex flex-col gap-4">
-              <div className="bg-slate-50 rounded-xl p-4 flex flex-col gap-3">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <div className="flex flex-col gap-3 rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   입금 계좌 정보
                 </p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">은행</span>
-                  <span className="font-semibold">{BANK_INFO.bank}</span>
-                </div>
-                <div className="flex justify-between text-sm items-center">
-                  <span className="text-slate-500">계좌번호</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-slate-800">
+
+                <InfoRow label="은행" value={BANK_INFO.bank} />
+                <InfoRow label="예금주" value={BANK_INFO.holder} />
+
+                <div className="flex min-w-0 flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span className="shrink-0 text-slate-500">계좌번호</span>
+
+                  <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end">
+                    <span className="min-w-0 break-all font-mono font-bold text-slate-800">
                       {BANK_INFO.account}
                     </span>
+
                     <button
+                      type="button"
                       onClick={handleCopyAccount}
-                      className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20"
+                      className="shrink-0 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary transition hover:bg-primary/20"
                     >
                       {copied ? '복사됨 ✓' : '복사'}
                     </button>
                   </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">예금주</span>
-                  <span className="font-semibold">{BANK_INFO.holder}</span>
-                </div>
+
                 {hasLeaderDiscount && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600 font-medium">
-                      방장 할인
-                    </span>
-                    <span className="text-green-600 font-bold">
-                      -{Math.round((leaderDiscountRate ?? 0) * 100)}%
-                    </span>
-                  </div>
+                  <InfoRow
+                    label="방장 할인"
+                    value={`-${Math.round((leaderDiscountRate ?? 0) * 100)}%`}
+                    labelClassName="text-green-600 font-medium"
+                    valueClassName="text-green-600 font-bold"
+                  />
                 )}
+
                 {hasReferrerDiscount && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600 font-medium">
-                      추천인 할인
-                    </span>
-                    <span className="text-green-600 font-bold">
-                      -{Math.round((referralDiscountRate ?? 0) * 100)}%
-                    </span>
-                  </div>
+                  <InfoRow
+                    label="추천인 할인"
+                    value={`-${Math.round((referralDiscountRate ?? 0) * 100)}%`}
+                    labelClassName="text-green-600 font-medium"
+                    valueClassName="text-green-600 font-bold"
+                  />
                 )}
-                <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-1">
-                  <span className="text-slate-500">입금 금액</span>
-                  <div className="flex items-center gap-2">
+
+                <div className="mt-1 flex min-w-0 justify-between gap-3 border-t border-slate-200 pt-2 text-sm">
+                  <span className="shrink-0 text-slate-500">입금 금액</span>
+
+                  <div className="min-w-0 text-right">
                     {hasDiscount && (
-                      <span className="text-xs text-slate-400 line-through">
+                      <span className="mr-2 text-xs text-slate-400 line-through">
                         {base.toLocaleString()}원
                       </span>
                     )}
-                    <div className="flex flex-col items-end">
-                      <span className="font-extrabold text-slate-900">
-                        {payAmount.toLocaleString()}원
-                      </span>
-                      {isQuickMatchPrice && (
-                        <p className="text-[11px] text-indigo-500">
-                          빠른매칭 수수료 포함
-                        </p>
-                      )}
-                    </div>
+
+                    <span className="wrap-break-word font-extrabold text-slate-900">
+                      {payAmount.toLocaleString()}원
+                    </span>
+
+                    {isQuickMatchPrice && (
+                      <p className="text-[11px] text-indigo-500">
+                        빠른매칭 수수료 포함
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="text-xs text-amber-700 font-medium">
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs font-medium text-amber-700">
                   ⏳ 관리자 확인 후 승인
                 </p>
-                <p className="text-xs text-amber-600 mt-0.5">
+                <p className="mt-0.5 text-xs text-amber-600">
                   입금 후 아래 버튼을 누르면 관리자가 확인 후 승인 처리합니다.
                 </p>
               </div>
-              <div className="flex gap-3">
+
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
+                  type="button"
                   onClick={() => setStep('select')}
-                  className="flex-1 py-3 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  className="rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   이전
                 </button>
+
                 <button
+                  type="button"
                   onClick={handleTransferRegister}
                   disabled={isLoading}
-                  className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                       처리중...
                     </>
                   ) : (
@@ -484,6 +547,27 @@ export function PaymentModal({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  labelClassName = 'text-slate-500',
+  valueClassName = 'font-semibold text-slate-800',
+}: {
+  label: string;
+  value: string;
+  labelClassName?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="flex min-w-0 justify-between gap-3 text-sm">
+      <span className={`shrink-0 ${labelClassName}`}>{label}</span>
+      <span className={`min-w-0 wrap-break-word text-right ${valueClassName}`}>
+        {value}
+      </span>
     </div>
   );
 }
