@@ -41,6 +41,7 @@ export default function Header() {
   const isExtendingSessionRef = useRef(false);
   const hasLoggedOutBySessionExpiredRef = useRef(false);
   const lastAutoExtendedLocationRef = useRef<string | null>(null);
+  const isForcedLogoutInProgressRef = useRef(false);
 
   const {
     data: notifications = [],
@@ -170,7 +171,7 @@ export default function Header() {
 
       setSessionTimeLeft(remaining);
 
-      if (remaining === 0 && !hasLoggedOutBySessionExpiredRef.current) {
+      if (remaining === 0 && !hasLoggedOutBySessionExpiredRef.current && !isForcedLogoutInProgressRef.current) {
         hasLoggedOutBySessionExpiredRef.current = true;
         await handleLogout();
       }
@@ -199,6 +200,7 @@ export default function Header() {
           const banType = msg.ban_type ?? null;
           const refId = msg.reference_id ?? '';
 
+          isForcedLogoutInProgressRef.current = true;
           await logout();
 
           if (!banType) {
