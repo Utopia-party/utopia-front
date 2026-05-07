@@ -128,6 +128,8 @@ export default function Header() {
 
       if (sessionExpiresAt <= now) return;
 
+      if (sessionExpiresAt - now > SESSION_WARNING_SECONDS * 1000) return;
+
       if (lastAutoExtendedLocationRef.current === locationSignature) return;
 
       lastAutoExtendedLocationRef.current = locationSignature;
