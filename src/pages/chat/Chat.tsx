@@ -55,11 +55,13 @@ export default function Chat() {
   const [alreadyPaid, setAlreadyPaid] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isPartyInfoOpen, setIsPartyInfoOpen] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadPartyInfo = useCallback(async () => {
     if (!partyId) return;
+
     try {
       const { data } = await api.get(`/api/chat/parties/${partyId}/info`);
       setPartyInfo(data);
@@ -71,13 +73,14 @@ export default function Chat() {
 
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
+
     try {
       const { data } = await api.get(
         `/api/payments/status?party_id=${partyId}`,
       );
       setAlreadyPaid(data.paid);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
     }
   }, [partyId]);
 
@@ -92,7 +95,6 @@ export default function Chat() {
     openProfileDrawer,
     closeProfileDrawer,
     handleProfileInfo,
-    setProfileDrawer: _setProfileDrawer,
     setProfileInfoUser,
     markPraised,
   } = useProfileDrawer({ currentUserId, partyId });
@@ -103,6 +105,7 @@ export default function Chat() {
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
+
     setReportTarget(profileDrawer.user);
     closeProfileDrawer();
     setShowReportModal(true);
@@ -125,10 +128,14 @@ export default function Chat() {
 
   const handleKickUser = useCallback(async () => {
     if (!profileDrawer?.user.user_id || !partyId) return;
+
     const targetUserId = String(profileDrawer.user.user_id);
     const targetNickname = profileDrawer.user.nickname ?? '해당 멤버';
-    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`))
+
+    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`)) {
       return;
+    }
+
     try {
       await api.delete(`/api/parties/${partyId}/members/${targetUserId}`);
       closeProfileDrawer();
@@ -143,8 +150,9 @@ export default function Chat() {
   const getMemberMeta = useCallback(
     (targetUserId?: string) => {
       const member = partyInfo?.members?.find(
-        (m) => m.user_id === targetUserId,
+        (item) => item.user_id === targetUserId,
       );
+
       if (!member) {
         return {
           role: undefined,
@@ -155,6 +163,7 @@ export default function Chat() {
           profile_image: null as string | null,
         };
       }
+
       return {
         role: member.role,
         status: member.status,
@@ -169,6 +178,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!partyId) return;
+
     api
       .get(`/api/chat/parties/${partyId}/messages`)
       .then(({ data }) => initMessages(Array.isArray(data) ? data : []))
@@ -176,7 +186,15 @@ export default function Chat() {
         console.error('메시지 로딩 실패:', err);
         initMessages([]);
       });
-    void loadPartyInfo();
+
+    api
+      .get(`/api/chat/parties/${partyId}/info`)
+      .then(({ data }) => setPartyInfo(data))
+      .catch((err) => {
+        console.error('파티 정보 로딩 실패:', err);
+        setPartyInfo(null);
+      });
+
     api
       .get(`/api/payments/preview?party_id=${partyId}`)
       .then(({ data }) => setPaymentPreview(data))
@@ -184,8 +202,10 @@ export default function Chat() {
         console.error('빠른매칭 정산 금액 로딩 실패:', err);
         setPaymentPreview(null);
       });
-    const t = window.setTimeout(() => void checkPaymentStatus(), 0);
-    return () => window.clearTimeout(t);
+
+    const timer = window.setTimeout(() => void checkPaymentStatus(), 0);
+
+    return () => window.clearTimeout(timer);
   }, [partyId, checkPaymentStatus, loadPartyInfo, initMessages]);
 
   useEffect(() => {
@@ -194,12 +214,13 @@ export default function Chat() {
 
   const handleSend = useCallback(() => {
     if (!input.trim()) return;
+
     sendMessage(input);
     setInput('');
   }, [input, sendMessage]);
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="flex h-dvh min-w-0 flex-col overflow-hidden bg-background">
       {showPaymentModal && (
         <PaymentModal
           onClose={() => setShowPaymentModal(false)}
@@ -278,34 +299,46 @@ export default function Chat() {
         />
       )}
 
-      <div className="bg-card border-b border-border px-6 py-3 flex items-center gap-3 shrink-0">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-3 sm:px-5 md:px-6">
         <button
+          type="button"
           onClick={() => navigate(-1)}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:text-sm"
         >
-          ← 파티 목록
+          ← 목록
         </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-base font-extrabold text-foreground truncate">
+
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-sm font-extrabold text-foreground sm:text-base">
             {partyInfo?.title ?? '채팅방'}
           </h1>
-          <p className="text-xs text-muted-foreground">정산요청 · 채팅 신고</p>
+          <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
+            정산요청 · 채팅 신고
+          </p>
         </div>
-      </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="px-5 pt-4 pb-1">
+        <button
+          type="button"
+          onClick={() => setIsPartyInfoOpen(true)}
+          className="shrink-0 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted lg:hidden"
+        >
+          파티 정보
+        </button>
+      </header>
+
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="shrink-0 px-3 pt-3 pb-1 sm:px-5">
             <p className="text-sm font-bold text-foreground">메시지</p>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-3 border border-border rounded-xl mx-5 mb-3 bg-white min-h-0">
+          <div className="mx-3 mb-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-xl border border-border bg-white px-3 py-3 sm:mx-5 sm:px-5">
             {messages.length > 0 ? (
-              messages.map((msg, i) => (
+              messages.map((msg, index) => (
                 <MessageItem
-                  key={i}
+                  key={index}
                   msg={msg}
-                  index={i}
+                  index={index}
                   currentUserId={currentUserId}
                   myProfileImage={myProfileImage}
                   unreadCounts={unreadCounts}
@@ -318,6 +351,7 @@ export default function Chat() {
                 [시스템] 채팅방이 생성되었습니다.
               </p>
             )}
+
             <div ref={bottomRef} />
           </div>
 
@@ -329,14 +363,36 @@ export default function Chat() {
             onSend={handleSend}
             onPaymentClick={() => setShowPaymentModal(true)}
           />
-        </div>
+        </main>
 
-        <ChatSidebar
-          partyInfo={partyInfo}
-          paymentPreview={paymentPreview}
-          onMemberClick={openProfileDrawer}
-        />
+        <div className="hidden w-80 shrink-0 border-l border-border lg:flex">
+          <ChatSidebar
+            partyInfo={partyInfo}
+            paymentPreview={paymentPreview}
+            onMemberClick={openProfileDrawer}
+          />
+        </div>
       </div>
+
+      {isPartyInfoOpen && (
+        <div
+          className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setIsPartyInfoOpen(false)}
+        >
+          <div
+            className="absolute inset-y-0 right-0 flex w-[min(88vw,360px)] max-w-full flex-col bg-card shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex w-full flex-1">
+              <ChatSidebar
+                partyInfo={partyInfo}
+                paymentPreview={paymentPreview}
+                onMemberClick={openProfileDrawer}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

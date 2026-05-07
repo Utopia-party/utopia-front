@@ -212,31 +212,39 @@ export default function ReportModal({
     }
   };
 
+  if (!targetUser) {
+    return null;
+  }
+
   return (
-    <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-80 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
+      onClick={handleClose}
+    >
       <div
-        className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[calc(100dvh-24px)] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between bg-slate-900 px-6 py-5">
-          <div>
+        <div className="flex shrink-0 items-center justify-between gap-4 bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold text-white">사용자 신고</h2>
-            <p className="mt-0.5 text-xs text-slate-400">
-              대상: {targetUser?.nickname ?? '알 수 없음'}
+            <p className="mt-0.5 truncate text-xs text-slate-400">
+              대상: {targetUser.nickname ?? '알 수 없음'}
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleClose}
-            className="text-xl font-light text-slate-400 transition hover:text-white"
+            className="shrink-0 text-xl font-light text-slate-400 transition hover:text-white"
+            aria-label="닫기"
           >
             ✕
           </button>
         </div>
 
-        <div className="max-h-[calc(100vh-140px)] overflow-y-auto">
-          <div className="space-y-5 p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="space-y-5 p-4 sm:p-6">
             <div className="space-y-2">
               <label
                 htmlFor="report-category"
@@ -244,10 +252,13 @@ export default function ReportModal({
               >
                 신고 유형
               </label>
+
               <select
                 id="report-category"
                 value={category}
-                onChange={(e) => setCategory(e.target.value as ReportCategory)}
+                onChange={(event) =>
+                  setCategory(event.target.value as ReportCategory)
+                }
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
               >
                 <option value="PROFANITY">욕설 / 비방</option>
@@ -263,10 +274,11 @@ export default function ReportModal({
               >
                 상세 설명
               </label>
+
               <textarea
                 id="report-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(event) => setDescription(event.target.value)}
                 rows={5}
                 placeholder="신고 사유를 자세히 적어주세요."
                 className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-primary"
@@ -274,12 +286,12 @@ export default function ReportModal({
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-end justify-between gap-3">
-                <div>
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
                   <label className="text-sm font-bold text-slate-800">
                     증빙 파일 첨부
                   </label>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 break-keep text-xs text-slate-400">
                     이미지 또는 PDF, 최대 {MAX_FILE_COUNT}개, 파일당 5MB 이하
                   </p>
                 </div>
@@ -288,7 +300,7 @@ export default function ReportModal({
                   <button
                     type="button"
                     onClick={clearFiles}
-                    className="text-xs font-semibold text-slate-500 transition hover:text-red-600"
+                    className="self-start text-xs font-semibold text-slate-500 transition hover:text-red-600 sm:self-auto"
                   >
                     전체 삭제
                   </button>
@@ -302,7 +314,7 @@ export default function ReportModal({
                 <span className="mt-3 text-sm font-semibold text-slate-700">
                   파일 선택
                 </span>
-                <span className="mt-1 text-xs text-slate-400">
+                <span className="mt-1 break-keep text-xs text-slate-400">
                   캡처 이미지, 대화 내역 PDF 등을 첨부할 수 있습니다.
                 </span>
                 <input
@@ -316,13 +328,13 @@ export default function ReportModal({
               </label>
 
               {filePreviews.length > 0 && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {filePreviews.map((preview) => (
                     <div
                       key={preview.id}
                       className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                     >
-                      <div className="flex h-32 items-center justify-center bg-slate-50">
+                      <div className="flex h-36 items-center justify-center bg-slate-50 sm:h-32">
                         {preview.isImage && preview.url ? (
                           <img
                             src={preview.url}
@@ -334,7 +346,7 @@ export default function ReportModal({
                             <div className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
                               PDF
                             </div>
-                            <p className="mt-2 line-clamp-2 text-xs font-medium text-slate-600">
+                            <p className="mt-2 line-clamp-2 break-all text-xs font-medium text-slate-600">
                               {preview.file.name}
                             </p>
                           </div>
@@ -363,26 +375,27 @@ export default function ReportModal({
                 </div>
               )}
             </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex-1 rounded-2xl bg-red-600 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSubmitting ? '접수 중...' : '신고 접수'}
-              </button>
-            </div>
           </div>
+        </div>
+
+        <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+16px)] sm:px-6">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            취소
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="rounded-2xl bg-red-600 py-3 text-sm font-bold text-white transition hover:bg-red-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSubmitting ? '접수 중...' : '신고 접수'}
+          </button>
         </div>
       </div>
     </div>

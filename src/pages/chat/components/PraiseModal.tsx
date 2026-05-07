@@ -56,13 +56,16 @@ export default function PraiseModal({
     return !!selectedType && !submitting;
   }, [selectedType, submitting]);
 
-  if (!targetUser) return null;
+  if (!targetUser) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     if (!selectedType || submitting) return;
 
     try {
       setSubmitting(true);
+
       await onSubmit({
         praise_type: selectedType,
         message: message.trim() || null,
@@ -74,20 +77,20 @@ export default function PraiseModal({
 
   return (
     <div
-      className="fixed inset-0 z-90 flex items-center justify-center bg-slate-950/40 px-4"
+      className="fixed inset-0 z-90 flex items-center justify-center bg-slate-950/40 p-3 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-110 overflow-hidden rounded-[28px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.25)]"
-        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[calc(100dvh-24px)] w-full max-w-110 flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.25)]"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between px-6 pt-6">
-          <div>
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-50 text-pink-500">
+        <div className="flex shrink-0 items-start justify-between gap-4 px-5 pt-5 sm:px-6 sm:pt-6">
+          <div className="min-w-0">
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-pink-50 text-pink-500 sm:h-12 sm:w-12">
               <Heart size={24} fill="currentColor" />
             </div>
 
-            <h2 className="text-xl font-extrabold text-slate-900">
+            <h2 className="break-keep text-lg font-extrabold text-slate-900 sm:text-xl">
               {targetUser.nickname ?? '상대방'}님 칭찬하기
             </h2>
           </div>
@@ -95,14 +98,14 @@ export default function PraiseModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="shrink-0 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             aria-label="닫기"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
           <p className="mb-3 text-sm font-bold text-slate-800">
             어떤 점을 칭찬할까요?
           </p>
@@ -116,7 +119,7 @@ export default function PraiseModal({
                   key={option.type}
                   type="button"
                   onClick={() => setSelectedType(option.type)}
-                  className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                  className={`flex min-w-0 items-start gap-3 rounded-2xl border px-4 py-3 text-left transition active:scale-[0.99] ${
                     active
                       ? 'border-pink-300 bg-pink-50'
                       : 'border-slate-200 bg-white hover:bg-slate-50'
@@ -125,19 +128,22 @@ export default function PraiseModal({
                   <Sparkles
                     size={17}
                     className={
-                      active ? 'mt-0.5 text-pink-500' : 'mt-0.5 text-slate-400'
+                      active
+                        ? 'mt-0.5 shrink-0 text-pink-500'
+                        : 'mt-0.5 shrink-0 text-slate-400'
                     }
                   />
 
-                  <span>
+                  <span className="min-w-0">
                     <span
-                      className={`block text-sm font-bold ${
+                      className={`block break-keep text-sm font-bold ${
                         active ? 'text-pink-700' : 'text-slate-800'
                       }`}
                     >
                       {option.label}
                     </span>
-                    <span className="mt-0.5 block text-xs text-slate-500">
+
+                    <span className="mt-0.5 block break-keep text-xs text-slate-500">
                       {option.description}
                     </span>
                   </span>
@@ -154,7 +160,7 @@ export default function PraiseModal({
 
             <textarea
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(event) => setMessage(event.target.value)}
               maxLength={120}
               placeholder="따뜻한 한마디를 남겨보세요."
               className="h-24 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-pink-300 focus:bg-white"
@@ -166,11 +172,11 @@ export default function PraiseModal({
           </div>
         </div>
 
-        <div className="flex gap-2 border-t border-slate-100 px-6 py-4">
+        <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+16px)] sm:px-6">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+            className="rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-95"
           >
             취소
           </button>
@@ -179,7 +185,7 @@ export default function PraiseModal({
             type="button"
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="flex-1 rounded-2xl bg-pink-500 py-3 text-sm font-bold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-2xl bg-pink-500 py-3 text-sm font-bold text-white transition hover:bg-pink-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting ? '보내는 중...' : '칭찬 보내기'}
           </button>
