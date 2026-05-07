@@ -46,12 +46,12 @@ export default function Login() {
 
   const DEMO_ACCOUNTS = {
     user: {
-      email: 'dixk3458@naver.com',
-      password: 'dixk3458@',
+      email: 'test_user@partyup.kr',
+      password: 'test',
     },
     admin: {
-      email: 'partyup1234@utopia.com',
-      password: 'rhksflwk1234',
+      email: 'test_admin@partyup.kr',
+      password: 'test',
     },
   } as const;
 
