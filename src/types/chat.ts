@@ -1,5 +1,5 @@
 export interface Message {
-  type: 'message' | 'system' | 'warning' | 'error' | 'message_deleted';
+  type: 'message' | 'system' | 'system_info' | 'warning' | 'error' | 'message_deleted';
   chat_id?: string;
   chat_ids?: string[];
   party_id?: string;
