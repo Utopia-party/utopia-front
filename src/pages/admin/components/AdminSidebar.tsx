@@ -119,7 +119,7 @@ const menuSections: MenuSection[] = [
       },
       {
         path: '/admin/handocr',
-        label: 'HandOCR CAPTCHA',
+        label: 'HandOCR 캡챠',
         icon: ScanText,
         visibleIf: (permissions) =>
           Boolean(
