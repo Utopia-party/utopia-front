@@ -11,10 +11,8 @@ let failedQueue: any[] = [];
 const SESSION_EXPIRED_MESSAGE = '로그인이 만료되었습니다. 다시 로그인해주세요.';
 const NO_REFRESH_RETRY_PATHS = new Set([
   '/api/login',
-  '/api/logout',
   '/api/refresh',
   // '/api/me',
-  '/api/appeals',
   '/api/users',
   '/api/users/find-id',
   '/api/users/find-password',
