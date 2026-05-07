@@ -40,6 +40,7 @@ export type AdminPaymentRecord = {
   status: string;
   billingMonth: string;
   pricingType: string | null;
+  quickMatchFeeRate: number;
   paidAt: string | null;
   createdAt: string;
 };
