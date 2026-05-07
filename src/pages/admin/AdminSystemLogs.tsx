@@ -35,7 +35,7 @@ function getDisplayLogKind(log: SystemLogRecord) {
 
   if (
     /^(GET|POST|PATCH|PUT|DELETE)\s+\/api\/admin/.test(log.message) ||
-    log.actionType === '관리자 접근'
+    log.actorType === 'admin'
   ) {
     return '액티비티 로그';
   }
@@ -65,10 +65,7 @@ function getNormalizedActorType(log: SystemLogRecord) {
   }
 
   if (log.type === 'ADMIN_ACTION') {
-    if (
-      /^(GET|POST|PATCH|PUT|DELETE)\s+\/api\/admin/.test(log.message) ||
-      log.actionType === '관리자 접근'
-    ) {
+    if (/^(GET|POST|PATCH|PUT|DELETE)\s+\/api\/admin/.test(log.message)) {
       return 'admin';
     }
 
