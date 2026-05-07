@@ -340,25 +340,6 @@ export default function AdminRoles() {
     return data;
   }, [activeTab, roles, search]);
 
-  const summary = useMemo(
-    () => [
-      { label: '전체 관리자', value: `${roles.length}` },
-      {
-        label: '권한 관리 가능',
-        value: `${roles.filter((role) => role.canManageAdmins).length}`,
-      },
-      {
-        label: '정산 승인 가능',
-        value: `${roles.filter((role) => role.canApproveSettlements).length}`,
-      },
-      {
-        label: '로그 조회 가능',
-        value: `${roles.filter((role) => role.canViewLogs).length}`,
-      },
-    ],
-    [roles],
-  );
-
   return (
     <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
@@ -394,23 +375,6 @@ export default function AdminRoles() {
               열어 최소 권한 원칙으로 운영할 수 있습니다.
             </p>
           </section>
-
-          {/* 💡 요약 카드: 모바일에서는 2단 그리드로 컴팩트하게 */}
-          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-            {summary.map((item) => (
-              <div
-                key={item.label}
-                className="rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm"
-              >
-                <p className="text-[11px] md:text-sm font-medium text-gray-500 truncate">
-                  {item.label}
-                </p>
-                <p className="mt-1 md:mt-2 text-xl md:text-2xl font-bold text-gray-900">
-                  {item.value}
-                </p>
-              </div>
-            ))}
-          </div>
 
           <FilterTabs
             tabs={FILTER_TABS}
