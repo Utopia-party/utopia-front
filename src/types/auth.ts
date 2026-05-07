@@ -157,12 +157,12 @@ export interface AuthUser {
 export interface MeResponse {
   is_logged_in: boolean;
   user: AuthUser | null;
-  access_token_expires_in: number;
+  access_token_expires_in?: number | null;
 }
 
 export interface ExtendSessionResponse {
   message: string;
-  access_token_expires_in: number;
+  access_token_expires_in?: number | null;
 }
 
 export interface RandomNicknameResponse {

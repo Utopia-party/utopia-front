@@ -70,14 +70,16 @@ export const useAuthStore = create<AuthState>((set) => ({
           loading: false,
           sessionExpiresAt: getSessionExpiresAt(res.access_token_expires_in),
         });
-      } else {
-        set({
-          user: null,
-          isLoggedIn: false,
-          loading: false,
-          sessionExpiresAt: null,
-        });
+
+        return;
       }
+
+      set({
+        user: null,
+        isLoggedIn: false,
+        loading: false,
+        sessionExpiresAt: null,
+      });
     } catch {
       set({
         user: null,
@@ -121,13 +123,50 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   extendSession: async () => {
     try {
-      const res = await extendUserSession();
+      console.log('[session] refresh 요청 시작');
+
+      const refreshRes = await extendUserSession();
+
+      console.log('[session] refresh 응답:', refreshRes);
+
+      /**
+       * 중요:
+       * refresh API가 200이어도 실제 쿠키/인증이 갱신됐는지는
+       * getMe를 다시 호출해봐야 확실합니다.
+       */
+      const meRes = await getMe();
+
+      console.log('[session] refresh 이후 getMe 확인:', meRes);
+
+      if (!meRes.is_logged_in || !meRes.user) {
+        throw new Error('refresh 이후 인증 상태가 유효하지 않습니다.');
+      }
+
+      const nextExpiresAt = getSessionExpiresAt(
+        refreshRes.access_token_expires_in ?? meRes.access_token_expires_in,
+      );
+
+      console.log(
+        '[session] 세션 연장 완료:',
+        new Date(nextExpiresAt).toLocaleString(),
+      );
 
       set({
-        sessionExpiresAt: getSessionExpiresAt(res.access_token_expires_in),
+        user: meRes.user,
+        isLoggedIn: true,
+        loading: false,
+        sessionExpiresAt: nextExpiresAt,
       });
     } catch (error) {
-      console.error('세션 연장 실패:', error);
+      console.error('[session] 세션 연장 실패:', error);
+
+      set({
+        user: null,
+        isLoggedIn: false,
+        loading: false,
+        sessionExpiresAt: null,
+      });
+
       throw error;
     }
   },
