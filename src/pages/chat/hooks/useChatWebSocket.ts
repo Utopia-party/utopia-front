@@ -65,7 +65,7 @@ export function useChatWebSocket({
 
       ws.onclose = () => setConnected(false);
 
-      ws.onmessage = (e) => {
+      ws.onmessage = async (e) => {
         try {
           const msg = JSON.parse(e.data);
 
@@ -82,16 +82,16 @@ export function useChatWebSocket({
             const banType = msg.ban_type ?? null;
             const refId = msg.reference_id ?? '';
 
+            await logout();
+
             if (!banType) {
               navigate('/login?reason=duplicate');
-              logout();
               return;
             }
 
             const params = new URLSearchParams({ reason: 'banned', ban_type: banType });
             if (refId) params.set('ref_id', refId);
             navigate(`/login?${params.toString()}`);
-            logout();
             return;
           }
 
