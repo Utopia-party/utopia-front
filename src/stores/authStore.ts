@@ -2,13 +2,15 @@ import { create } from 'zustand';
 import { extendUserSession, getMe, logout as logoutApi } from '../apis/auth';
 import type { AuthUser } from '../types/auth';
 
-const DEFAULT_SESSION_DURATION_MS = 60 * 60 * 1000;
+const SESSION_DURATION_MS = 30 * 60 * 1000; // 30분
 
 const getSessionExpiresAt = (accessTokenExpiresIn?: number | null) => {
-  const expiresInMs =
+  const serverExpiresInMs =
     typeof accessTokenExpiresIn === 'number' && accessTokenExpiresIn > 0
       ? accessTokenExpiresIn * 1000
-      : DEFAULT_SESSION_DURATION_MS;
+      : SESSION_DURATION_MS;
+
+  const expiresInMs = Math.min(serverExpiresInMs, SESSION_DURATION_MS);
 
   return Date.now() + expiresInMs;
 };
