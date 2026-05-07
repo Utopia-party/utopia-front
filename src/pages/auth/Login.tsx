@@ -30,6 +30,7 @@ export default function Login() {
   const isBanned = searchParams.get('reason') === 'banned';
   const banType = searchParams.get('ban_type') ?? 'manual';
   const banRefId = searchParams.get('ref_id') ?? undefined;
+  const isDuplicateLogin = searchParams.get('reason') === 'duplicate';
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -219,6 +220,14 @@ export default function Login() {
 
   return (
     <div className="mx-auto mt-10 mb-12 max-w-xl rounded-xl border-2 border-gray-200 bg-white p-10 shadow-lg">
+      {isDuplicateLogin && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <p className="font-bold">중복 로그인이 감지되어 로그아웃 되었습니다.</p>
+          <p className="mt-1 text-amber-600">
+            다른 기기에서 동일한 계정으로 로그인하여 현재 세션이 종료되었습니다.
+          </p>
+        </div>
+      )}
       {isBanned && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-bold">계정이 정지되었습니다.</p>
