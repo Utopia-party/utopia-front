@@ -211,6 +211,55 @@ function OperationLogCard({ log }: { log: AdminOperationLog }) {
   );
 }
 
+function TrustHistoryCard({
+  history,
+}: {
+  history: AdminUserDetail['trustHistories'][number];
+}) {
+  const scoreChangePrefix = history.scoreChange > 0 ? '+' : '';
+  const scoreChangeTone =
+    history.scoreChange > 0
+      ? 'text-emerald-600'
+      : history.scoreChange < 0
+        ? 'text-red-600'
+        : 'text-slate-500';
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:px-4 md:py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
+        <div>
+          <div className="text-xs md:text-sm font-semibold text-slate-800">
+            {history.title}
+          </div>
+          <div className="mt-1 text-[11px] md:text-xs text-slate-400">
+            {formatAdminDateTime(history.createdAt)}
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className={`text-xs md:text-sm font-bold ${scoreChangeTone}`}>
+            {scoreChangePrefix}
+            {history.scoreChange.toFixed(1)}
+          </div>
+          <div className="mt-1 text-[11px] md:text-xs text-slate-500">
+            누적 신뢰도 {history.trustScoreAfter.toFixed(1)}
+          </div>
+        </div>
+      </div>
+
+      {history.detail && (
+        <p className="mt-2.5 text-xs md:text-sm text-slate-700 break-keep">
+          {history.detail}
+        </p>
+      )}
+
+      <div className="mt-2.5 text-[11px] md:text-xs text-slate-500">
+        변경자: {history.changedBy}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminUsers() {
   const currentUserId = useAuthStore((state) => state.user?.user_id);
 
@@ -1148,42 +1197,76 @@ export default function AdminUsers() {
 
                                   {/* --- 3. 이력 탭 --- */}
                                   {activeDetailTab === '이력' && (
-                                    <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
-                                      <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <div>
-                                          <h3 className="text-sm md:text-base font-bold text-slate-900">
-                                            운영 이력
-                                          </h3>
-                                          <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
-                                            상태 변경, 신고, 제재, 신뢰도 변경,
-                                            추천인 변경을 시간순으로 확인합니다.
-                                          </p>
+                                    <div className="space-y-4 md:space-y-5">
+                                      <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                          <div>
+                                            <h3 className="text-sm md:text-base font-bold text-slate-900">
+                                              신뢰도 이력
+                                            </h3>
+                                            <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
+                                              신뢰도 변경 내역과 변경 사유를
+                                              시간순으로 확인합니다.
+                                            </p>
+                                          </div>
                                         </div>
-                                      </div>
 
-                                      {operationLogsLoading === user.id && (
-                                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs md:text-sm text-slate-400">
-                                          운영 이력을 불러오는 중입니다...
-                                        </div>
-                                      )}
-
-                                      {operationLogsLoading !== user.id &&
-                                        (operationLogsMap[user.id] ?? [])
-                                          .length === 0 && (
+                                        {detail.trustHistories.length === 0 && (
                                           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs md:text-sm text-slate-400">
-                                            운영 이력이 없습니다.
+                                            신뢰도 이력이 없습니다.
                                           </div>
                                         )}
 
-                                      <div className="mt-4 space-y-2.5 md:space-y-3">
-                                        {(operationLogsMap[user.id] ?? []).map(
-                                          (log) => (
+                                        <div className="mt-4 space-y-2.5 md:space-y-3">
+                                          {detail.trustHistories.map(
+                                            (history) => (
+                                              <TrustHistoryCard
+                                                key={history.id}
+                                                history={history}
+                                              />
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                          <div>
+                                            <h3 className="text-sm md:text-base font-bold text-slate-900">
+                                              운영 이력
+                                            </h3>
+                                            <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
+                                              상태 변경, 신고, 제재, 신뢰도
+                                              변경, 추천인 변경을 시간순으로
+                                              확인합니다.
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        {operationLogsLoading === user.id && (
+                                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs md:text-sm text-slate-400">
+                                            운영 이력을 불러오는 중입니다...
+                                          </div>
+                                        )}
+
+                                        {operationLogsLoading !== user.id &&
+                                          (operationLogsMap[user.id] ?? [])
+                                            .length === 0 && (
+                                            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs md:text-sm text-slate-400">
+                                              운영 이력이 없습니다.
+                                            </div>
+                                          )}
+
+                                        <div className="mt-4 space-y-2.5 md:space-y-3">
+                                          {(
+                                            operationLogsMap[user.id] ?? []
+                                          ).map((log) => (
                                             <OperationLogCard
                                               key={`${log.type}-${log.id}`}
                                               log={log}
                                             />
-                                          ),
-                                        )}
+                                          ))}
+                                        </div>
                                       </div>
                                     </div>
                                   )}
