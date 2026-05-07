@@ -145,7 +145,7 @@ export default function Header() {
           const refId = msg.reference_id ?? '';
 
           if (!banType) {
-            navigate('/login');
+            navigate('/login?reason=duplicate');
             void logout();
             return;
           }
