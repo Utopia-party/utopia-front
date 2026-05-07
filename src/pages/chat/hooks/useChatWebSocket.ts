@@ -83,7 +83,7 @@ export function useChatWebSocket({
             const refId = msg.reference_id ?? '';
 
             if (!banType) {
-              navigate('/login');
+              navigate('/login?reason=duplicate');
               logout();
               return;
             }
