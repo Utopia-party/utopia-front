@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
 import {
@@ -18,8 +18,11 @@ import { ProfileMenu } from './header/ProfileMenu';
 import { SessionTimer } from './header/SessionTimer';
 import { getProfileInitial, formatTrustScore } from './header/headerUtils';
 
+const SESSION_WARNING_SECONDS = 60;
+
 export default function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
 
   const { isLoggedIn, loading, logout, user, sessionExpiresAt, extendSession } =
@@ -34,6 +37,10 @@ export default function Header() {
 
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const isExtendingSessionRef = useRef(false);
+  const hasLoggedOutBySessionExpiredRef = useRef(false);
+  const lastAutoExtendedLocationRef = useRef<string | null>(null);
 
   const {
     data: notifications = [],
@@ -76,7 +83,12 @@ export default function Header() {
     [user?.trust_score],
   );
 
-  const handleLogout = async () => {
+  const isSessionWarningOpen =
+    isLoggedIn &&
+    sessionTimeLeft > 0 &&
+    sessionTimeLeft < SESSION_WARNING_SECONDS;
+
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
     } catch (e) {
@@ -85,23 +97,70 @@ export default function Header() {
       setIsProfileMenuOpen(false);
       navigate('/home', { replace: true });
     }
-  };
+  }, [logout, navigate]);
 
-  const handleExtendSession = async () => {
-    if (isExtendingSession) return;
+  const handleExtendSession = useCallback(async () => {
+    if (isExtendingSessionRef.current) return;
 
     try {
+      isExtendingSessionRef.current = true;
       setIsExtendingSession(true);
+
       await extendSession();
+
+      hasLoggedOutBySessionExpiredRef.current = false;
     } catch (error) {
       console.error('세션 연장 실패:', error);
       alert('세션이 만료되었습니다. 다시 로그인해주세요.');
       await handleLogout();
     } finally {
+      isExtendingSessionRef.current = false;
       setIsExtendingSession(false);
     }
-  };
+  }, [extendSession, handleLogout]);
 
+  const requestAutoExtendSession = useCallback(
+    (locationSignature: string) => {
+      if (!isLoggedIn || !sessionExpiresAt) return;
+
+      const now = Date.now();
+
+      // 이미 만료된 세션은 자동 연장하지 않고 타이머 effect에서 로그아웃 처리
+      if (sessionExpiresAt <= now) return;
+
+      // React StrictMode 또는 sessionExpiresAt 갱신으로 같은 location에서 중복 호출되는 것 방지
+      if (lastAutoExtendedLocationRef.current === locationSignature) return;
+
+      lastAutoExtendedLocationRef.current = locationSignature;
+      void handleExtendSession();
+    },
+    [isLoggedIn, sessionExpiresAt, handleExtendSession],
+  );
+
+  // 새로고침 후 Header 마운트 시 자동 연장 + React Router 페이지 이동 시 자동 연장
+  useEffect(() => {
+    const locationSignature = [
+      location.key,
+      location.pathname,
+      location.search,
+      location.hash,
+    ].join('|');
+
+    requestAutoExtendSession(locationSignature);
+  }, [
+    location.key,
+    location.pathname,
+    location.search,
+    location.hash,
+    requestAutoExtendSession,
+  ]);
+
+  // sessionExpiresAt이 바뀌면 만료 로그아웃 플래그 초기화
+  useEffect(() => {
+    hasLoggedOutBySessionExpiredRef.current = false;
+  }, [sessionExpiresAt]);
+
+  // access token 남은 시간 표시 + 만료 시 자동 로그아웃
   useEffect(() => {
     if (!isLoggedIn || !sessionExpiresAt) {
       setSessionTimeLeft(0);
@@ -116,8 +175,9 @@ export default function Header() {
 
       setSessionTimeLeft(remaining);
 
-      if (remaining === 0 && !isExtendingSession) {
-        await handleExtendSession();
+      if (remaining === 0 && !hasLoggedOutBySessionExpiredRef.current) {
+        hasLoggedOutBySessionExpiredRef.current = true;
+        await handleLogout();
       }
     };
 
@@ -128,8 +188,9 @@ export default function Header() {
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [isLoggedIn, sessionExpiresAt, isExtendingSession]);
+  }, [isLoggedIn, sessionExpiresAt, handleLogout]);
 
+  // 알림 소켓
   useEffect(() => {
     if (!isLoggedIn) return;
 
@@ -181,10 +242,12 @@ export default function Header() {
     return unsubscribe;
   }, [isLoggedIn, queryClient, navigate, logout]);
 
+  // 프로필 이미지 에러 초기화
   useEffect(() => {
     setProfileImageError(false);
   }, [user?.profile_image]);
 
+  // 외부 클릭 / ESC 닫기
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -222,7 +285,7 @@ export default function Header() {
   return (
     <>
       <header className="flex h-16 items-center border-b border-gray-200 bg-card px-6">
-        <div className="min-w-[120px]">
+        <div className="min-w-30">
           {isLoggedIn && user?.role?.toLowerCase() === 'admin' && (
             <Link
               to="/admin"
@@ -287,8 +350,45 @@ export default function Header() {
         </div>
       </header>
 
+      {isSessionWarningOpen && (
+        <div className="fixed inset-0 z-9998 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-xl">
+            <div className="mb-4 text-4xl">⏰</div>
+
+            <h2 className="mb-2 text-xl font-bold text-gray-900">
+              자동 로그아웃 예정
+            </h2>
+
+            <p className="mb-6 text-sm leading-relaxed text-gray-600">
+              보안을 위해 약 {sessionTimeLeft}초 뒤 자동 로그아웃됩니다.
+              <br />
+              계속 이용하시려면 세션을 연장해주세요.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleExtendSession}
+                disabled={isExtendingSession}
+                className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              >
+                {isExtendingSession ? '연장 중...' : '계속 이용하기'}
+              </button>
+
+              <button
+                onClick={() => {
+                  void handleLogout();
+                }}
+                className="w-full rounded-lg bg-gray-100 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200"
+              >
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {ipBannedModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/60">
           <div className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-xl">
             <div className="mb-4 text-4xl">🚫</div>
 
