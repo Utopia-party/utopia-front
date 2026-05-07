@@ -36,6 +36,22 @@ const CANDIDATE_STATUS_STYLE: Record<CandidateStatus, string> = {
   FAILED: 'bg-amber-50 text-amber-600 border-amber-100',
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  전체: '전체',
+  REQUESTED: '요청',
+  MATCHED: '매칭 완료',
+  FAILED: '실패',
+  EXPIRED: '만료',
+  REMATCHING: '재매칭 중',
+};
+
+const CANDIDATE_STATUS_LABEL: Record<string, string> = {
+  SELECTED: '선택됨',
+  PENDING: '대기',
+  REJECTED: '거절됨',
+  FAILED: '실패',
+};
+
 const FAILURE_REASON_LABELS: Record<string, string> = {
   NO_CANDIDATE: '조건 통과 후보 없음',
   NO_RECRUITING_PARTY: '모집중 파티 없음',
@@ -391,6 +407,7 @@ export default function AdminQuickMatch() {
                         status: tab as QuickMatchStatus | '전체',
                       });
                     }}
+                    labels={STATUS_LABEL}
                   />
 
                   <div className="mb-4 mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -527,7 +544,7 @@ export default function AdminQuickMatch() {
                             <span
                               className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${STATUS_STYLE[row.status]}`}
                             >
-                              {row.status}
+                              {STATUS_LABEL[row.status] ?? row.status}
                             </span>
                           </td>
                           <td className="px-3 md:px-4 py-3 text-[11px] md:text-sm text-slate-600 truncate max-w-25 md:max-w-37.5">
@@ -602,7 +619,7 @@ export default function AdminQuickMatch() {
                       <span
                         className={`inline-flex self-start md:self-auto rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${STATUS_STYLE[selected.status]}`}
                       >
-                        {selected.status}
+                        {STATUS_LABEL[selected.status] ?? selected.status}
                       </span>
                     </div>
 
@@ -771,7 +788,7 @@ export default function AdminQuickMatch() {
                                 <span
                                   className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${CANDIDATE_STATUS_STYLE[candidate.status]}`}
                                 >
-                                  {candidate.status}
+                                  {CANDIDATE_STATUS_LABEL[candidate.status] ?? candidate.status}
                                 </span>
                                 <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold text-indigo-600">
                                   Final {candidate.finalScore.toFixed(3)}
