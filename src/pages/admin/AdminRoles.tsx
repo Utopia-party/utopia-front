@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import {
+  deleteAdminRole,
   fetchAdminRoles,
   getAdminErrorMessage,
   updateAdminRole,
@@ -289,6 +290,31 @@ export default function AdminRoles() {
     }
   };
 
+  const handleRoleDelete = async (role: AdminRoleRecord) => {
+    const confirmed = window.confirm(
+      `${role.adminId} 계정의 관리자 권한을 해제할까요?\n회원 정보는 삭제되지 않습니다.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setBusyUserId(role.userId);
+      setError('');
+      await deleteAdminRole(role.userId);
+      if (draftUserId === role.userId) {
+        setIsEditorOpen(false);
+        setDraftUserId('');
+        setDraftPermissions(clonePermissions(DEFAULT_ADMIN_PERMISSIONS));
+      }
+      await reloadRoles();
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
   const filtered = useMemo(() => {
     let data = roles;
 
@@ -561,15 +587,26 @@ export default function AdminRoles() {
                             {role.updatedBy}
                           </td>
                           <td className="px-4 py-3.5">
-                            <button
-                              className="shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] md:text-xs font-bold text-gray-700 transition hover:bg-gray-50 active:scale-95"
-                              disabled={busyUserId === role.userId}
-                              onClick={() => openRoleEditor(role)}
-                            >
-                              {busyUserId === role.userId
-                                ? '처리 중...'
-                                : '권한 편집'}
-                            </button>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                className="shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] md:text-xs font-bold text-gray-700 transition hover:bg-gray-50 active:scale-95"
+                                disabled={busyUserId === role.userId}
+                                onClick={() => openRoleEditor(role)}
+                              >
+                                {busyUserId === role.userId
+                                  ? '처리 중...'
+                                  : '권한 편집'}
+                              </button>
+                              <button
+                                className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] md:text-xs font-bold text-red-600 transition hover:bg-red-100 active:scale-95"
+                                disabled={busyUserId === role.userId}
+                                onClick={() => void handleRoleDelete(role)}
+                              >
+                                {busyUserId === role.userId
+                                  ? '처리 중...'
+                                  : '관리자 해제'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

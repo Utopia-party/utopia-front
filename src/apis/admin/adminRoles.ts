@@ -49,3 +49,12 @@ export async function updateAdminRole(
   );
   return data;
 }
+
+export async function deleteAdminRole(
+  userId: string,
+): Promise<{ message: string }> {
+  const { data } = await api.delete<{ message: string }>(
+    `/api/admin/roles/${userId}`,
+  );
+  return data;
+}
