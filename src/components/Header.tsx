@@ -102,7 +102,6 @@ export default function Header() {
     }
   };
 
-  // access token 남은 시간 표시 + 만료 시 자동 refresh
   useEffect(() => {
     if (!isLoggedIn || !sessionExpiresAt) {
       setSessionTimeLeft(0);
@@ -131,7 +130,6 @@ export default function Header() {
     return () => window.clearInterval(interval);
   }, [isLoggedIn, sessionExpiresAt, isExtendingSession]);
 
-  // 알림 소켓
   useEffect(() => {
     if (!isLoggedIn) return;
 
@@ -143,8 +141,14 @@ export default function Header() {
         }
 
         if (msg.type === 'force_logout') {
-          const banType = msg.ban_type ?? 'manual';
+          const banType = msg.ban_type ?? null;
           const refId = msg.reference_id ?? '';
+
+          if (!banType) {
+            navigate('/login');
+            void logout();
+            return;
+          }
 
           const params = new URLSearchParams({
             reason: 'banned',
@@ -177,12 +181,10 @@ export default function Header() {
     return unsubscribe;
   }, [isLoggedIn, queryClient, navigate, logout]);
 
-  // 프로필 이미지 에러 초기화
   useEffect(() => {
     setProfileImageError(false);
   }, [user?.profile_image]);
 
-  // 외부 클릭 / ESC 닫기
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
