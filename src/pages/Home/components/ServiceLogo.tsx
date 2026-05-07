@@ -5,20 +5,28 @@ export default function ServiceLogo({
   logoUrl,
   serviceName,
   fallbackName,
+  className = 'h-12 w-12 rounded-2xl',
+  imageClassName = 'p-1.5',
+  iconSize = 18,
 }: {
   logoUrl: string | null;
   serviceName: string | null;
   fallbackName: string | null;
+  className?: string;
+  imageClassName?: string;
+  iconSize?: number;
 }) {
   const [imgError, setImgError] = useState(false);
 
   if (logoUrl && !imgError) {
     return (
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+      <div
+        className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ring-1 ring-slate-200 ${className}`}
+      >
         <img
           src={logoUrl}
           alt={serviceName ?? '서비스 로고'}
-          className="h-full w-full object-contain p-1.5"
+          className={`h-full w-full object-contain ${imageClassName}`}
           onError={() => setImgError(true)}
         />
       </div>
@@ -28,8 +36,8 @@ export default function ServiceLogo({
   return (
     <CategoryIconBadge
       name={fallbackName}
-      iconSize={18}
-      className="h-12 w-12 shrink-0 rounded-2xl"
+      iconSize={iconSize}
+      className={`shrink-0 ${className}`}
     />
   );
 }
