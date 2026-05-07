@@ -52,6 +52,16 @@ export function MessageItem({
     );
   }
 
+  if (msg.type === 'system_info') {
+    return (
+      <div key={index} className="flex justify-center">
+        <span className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+          {msg.content}
+        </span>
+      </div>
+    );
+  }
+
   if (msg.type === 'warning' || msg.type === 'error') {
     const isError = msg.type === 'error';
     return (
