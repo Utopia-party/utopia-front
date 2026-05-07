@@ -26,7 +26,6 @@ export function useChatWebSocket({
   const wsRef = useRef<WebSocket | null>(null);
   const userReadyRef = useRef(false);
 
-  // nickname sync
   useEffect(() => {
     const unsubscribe = useAuthStore.subscribe((state) => {
       if (state.user?.nickname) nicknameRef.current = state.user.nickname;
@@ -80,12 +79,16 @@ export function useChatWebSocket({
           if (msg.type === 'force_logout') {
             wsRef.current?.close();
             wsRef.current = null;
-            const banType = msg.ban_type ?? 'trust_score';
+            const banType = msg.ban_type ?? null;
             const refId = msg.reference_id ?? '';
-            const params = new URLSearchParams({
-              reason: 'banned',
-              ban_type: banType,
-            });
+
+            if (!banType) {
+              navigate('/login');
+              logout();
+              return;
+            }
+
+            const params = new URLSearchParams({ reason: 'banned', ban_type: banType });
             if (refId) params.set('ref_id', refId);
             navigate(`/login?${params.toString()}`);
             logout();
