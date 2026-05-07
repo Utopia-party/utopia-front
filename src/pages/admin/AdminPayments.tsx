@@ -10,12 +10,20 @@ const STATUS_LABEL: Record<string, string> = {
   approved: '승인',
   pending: '대기',
   rejected: '거절',
+  completed: '완료',
+  failed: '실패',
+  cancelled: '취소',
+  refunded: '환불',
 };
 
 const STATUS_CLASS: Record<string, string> = {
   approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   pending: 'bg-amber-50 text-amber-700 border-amber-200',
   rejected: 'bg-rose-50 text-rose-700 border-rose-200',
+  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  failed: 'bg-rose-50 text-rose-700 border-rose-200',
+  cancelled: 'bg-gray-50 text-gray-500 border-gray-200',
+  refunded: 'bg-purple-50 text-purple-600 border-purple-200',
 };
 
 const METHOD_LABEL: Record<string, string> = {
@@ -234,6 +242,7 @@ export default function AdminPayments() {
                   <option value="approved">승인</option>
                   <option value="pending">대기</option>
                   <option value="rejected">거절</option>
+                  <option value="completed">완료</option>
                 </select>
               </label>
 
