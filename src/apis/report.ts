@@ -1,6 +1,6 @@
 import { api } from './api';
 
-export type ReportCategory = 'PROFANITY' | 'SCAM' | 'SPAM';
+export type ReportCategory = 'PROFANITY' | 'SCAM' | 'SPAM' | 'NO_SHOW';
 export type ReportStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
 
 export interface ReportEvidence {
