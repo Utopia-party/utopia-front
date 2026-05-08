@@ -32,7 +32,7 @@ export default function CaptchaCheckbox({
               ? '인증 완료'
               : phase === 'verifying'
                 ? '확인 중...'
-                : '로봇이 아닙니다';
+                : '캡챠를 완료해주세요';
 
   return (
     <div

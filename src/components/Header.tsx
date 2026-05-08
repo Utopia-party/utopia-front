@@ -53,7 +53,7 @@ export default function Header() {
     enabled: isLoggedIn,
     staleTime: 1000 * 15,
     gcTime: 1000 * 60 * 30,
-    refetchInterval: 1000 * 30,
+    refetchInterval: 1000 * 10,
     refetchOnWindowFocus: true,
   });
 
@@ -173,7 +173,11 @@ export default function Header() {
 
       setSessionTimeLeft(remaining);
 
-      if (remaining === 0 && !hasLoggedOutBySessionExpiredRef.current && !isForcedLogoutInProgressRef.current) {
+      if (
+        remaining === 0 &&
+        !hasLoggedOutBySessionExpiredRef.current &&
+        !isForcedLogoutInProgressRef.current
+      ) {
         hasLoggedOutBySessionExpiredRef.current = true;
         await handleLogout();
       }

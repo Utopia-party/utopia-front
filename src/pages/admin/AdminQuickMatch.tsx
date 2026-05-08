@@ -395,9 +395,9 @@ export default function AdminQuickMatch() {
           </div>
 
           {activeMainTab === '요청 관리' && (
-            <div className="grid min-w-0 gap-5 md:gap-6 2xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
+            <div className="grid min-w-0 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
               {/* --- 1. 요청 목록 테이블 영역 --- */}
-              <section className="rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <section className="min-w-0 rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                 <div className="border-b border-slate-100 px-4 md:px-5 pt-3 md:pt-4">
                   <FilterTabs
                     tabs={STATUS_FILTER_TABS}
@@ -491,7 +491,7 @@ export default function AdminQuickMatch() {
 
                 {/* 💡 테이블 가로 스크롤 허용 */}
                 <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                  <table className="min-w-175 md:min-w-200 w-full border-collapse">
+                  <table className="min-w-[760px] w-full border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         {[
@@ -560,9 +560,11 @@ export default function AdminQuickMatch() {
                         <tr>
                           <td
                             colSpan={7}
-                            className="px-4 py-10 text-center text-xs md:text-sm text-slate-400"
+                            className="px-6 py-12 text-center text-xs md:text-sm text-slate-400 whitespace-normal break-keep leading-relaxed"
                           >
-                            조건에 맞는 빠른매칭 요청이 없습니다.
+                            <div className="mx-auto flex min-h-20 max-w-sm items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5">
+                              조건에 맞는 빠른매칭 요청이 없습니다.
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -571,9 +573,11 @@ export default function AdminQuickMatch() {
                         <tr>
                           <td
                             colSpan={7}
-                            className="px-4 py-10 text-center text-xs md:text-sm text-slate-400"
+                            className="px-6 py-12 text-center text-xs md:text-sm text-slate-400 whitespace-normal break-keep leading-relaxed"
                           >
-                            요청 목록을 불러오는 중입니다.
+                            <div className="mx-auto flex min-h-20 max-w-sm items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5">
+                              요청 목록을 불러오는 중입니다.
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -594,15 +598,24 @@ export default function AdminQuickMatch() {
               </section>
 
               {/* --- 2. 요청 상세 패널 영역 --- */}
-              <section className="rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
+              <section className="min-w-0 rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
                 {!selected ? (
-                  <div className="p-8 text-center text-xs md:text-sm text-slate-400 my-auto">
-                    선택된 요청이 없습니다.
-                    <br className="md:hidden" />
-                    목록에서 항목을 선택해주세요.
+                  <div className="flex min-h-80 flex-1 items-center justify-center p-5 md:p-8">
+                    <div className="w-full max-w-xs rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
+                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm">
+                        🔎
+                      </div>
+                      <p className="mt-4 text-sm font-bold text-slate-600 break-keep">
+                        선택된 요청이 없습니다.
+                      </p>
+                      <p className="mt-1.5 text-xs leading-relaxed text-slate-400 break-keep">
+                        왼쪽 요청 목록에서 항목을 선택하면 상세 정보와 후보
+                        결과를 확인할 수 있습니다.
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="p-4 md:p-5">
+                  <div className="min-w-0 p-4 md:p-5">
                     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                       <div>
                         <div className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -788,7 +801,8 @@ export default function AdminQuickMatch() {
                                 <span
                                   className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${CANDIDATE_STATUS_STYLE[candidate.status]}`}
                                 >
-                                  {CANDIDATE_STATUS_LABEL[candidate.status] ?? candidate.status}
+                                  {CANDIDATE_STATUS_LABEL[candidate.status] ??
+                                    candidate.status}
                                 </span>
                                 <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold text-indigo-600">
                                   Final {candidate.finalScore.toFixed(3)}

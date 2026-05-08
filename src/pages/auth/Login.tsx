@@ -147,7 +147,8 @@ export default function Login() {
         '로그인에 실패했습니다.';
 
       if (status === 403) {
-        const banType = message === '이용이 제한된 계정입니다.' ? 'ip_ban' : 'manual';
+        const banType =
+          message === '이용이 제한된 계정입니다.' ? 'ip_ban' : 'manual';
         navigate(`/login?reason=banned&ban_type=${banType}`, { replace: true });
       } else {
         alert(message);
@@ -222,7 +223,9 @@ export default function Login() {
     <div className="mx-auto mt-10 mb-12 max-w-xl rounded-xl border-2 border-gray-200 bg-white p-10 shadow-lg">
       {isDuplicateLogin && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          <p className="font-bold">중복 로그인이 감지되어 로그아웃 되었습니다.</p>
+          <p className="font-bold">
+            중복 로그인이 감지되어 로그아웃 되었습니다.
+          </p>
           <p className="mt-1 text-amber-600">
             다른 기기에서 동일한 계정으로 로그인하여 현재 세션이 종료되었습니다.
           </p>
@@ -368,11 +371,7 @@ export default function Login() {
           disabled={isSubmitting || !captchaToken}
           className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          {isSubmitting
-            ? '로그인 중...'
-            : !captchaToken
-              ? '캡챠 인증 필요'
-              : '로그인'}
+          {isSubmitting ? '로그인 중...' : !captchaToken ? '로그인' : '로그인'}
         </button>
 
         <div className="space-y-3 pt-2">
@@ -382,7 +381,7 @@ export default function Login() {
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-300 py-3 text-sm font-medium transition hover:bg-gray-50"
           >
             <FcGoogle className="text-lg" />
-            <span>구글 로그인</span>
+            <span>구글로 계속하기</span>
           </button>
 
           <button
