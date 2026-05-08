@@ -18,9 +18,12 @@ import {
   rotateSecretKey,
   resetKeyUsage,
   updateSaasKey,
+  fetchPlanInquiries,
+  updatePlanInquiryStatus,
   type ApiKeyItem,
   type UsageStats,
   type UsageLogItem,
+  type PlanInquiryItem,
 } from '../../apis/admin';
 
 // ── 유틸 ────────────────────────────────────────────────
@@ -99,7 +102,7 @@ function CreateKeyModal({
 }) {
   const [clientName, setClientName] = useState('');
   const [domains, setDomains] = useState('');
-  const [monthlyLimit, setMonthlyLimit] = useState(10000);
+  const [monthlyLimit, setMonthlyLimit] = useState(1000);
   const [plan, setPlan] = useState('free');
   const [loading, setLoading] = useState(false);
 
@@ -633,6 +636,36 @@ export default function AdminSaas() {
     }
   };
 
+  // 플랜 문의 관리
+  const [inquiries, setInquiries] = useState<PlanInquiryItem[]>([]);
+  const [inquiryLoading, setInquiryLoading] = useState(false);
+
+  const loadInquiries = useCallback(async () => {
+    setInquiryLoading(true);
+    try {
+      const res = await fetchPlanInquiries({ size: 50 });
+      setInquiries(res.items);
+    } catch {
+      /* ignore */
+    } finally {
+      setInquiryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadInquiries();
+  }, [loadInquiries]);
+
+  const handleCompleteInquiry = async (id: string) => {
+    if (!confirm('이 문의를 처리 완료로 변경하시겠습니까?')) return;
+    try {
+      await updatePlanInquiryStatus(id, 'completed');
+      void loadInquiries();
+    } catch {
+      alert('상태 변경에 실패했습니다.');
+    }
+  };
+
   const handleToggleActive = async (item: ApiKeyItem) => {
     const action = item.is_active ? '비활성화' : '활성화';
     if (!confirm(`${item.client_name}를 ${action}하시겠습니까?`)) return;
@@ -930,6 +963,88 @@ export default function AdminSaas() {
       </div>
 
       {/* 모달들 */}
+      {/* 플랜 문의 목록 */}
+      <div className="mt-8 rounded-xl bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">
+            플랜 업그레이드 문의
+            {inquiries.filter((i) => i.status === 'pending').length > 0 && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                {inquiries.filter((i) => i.status === 'pending').length}건 대기
+              </span>
+            )}
+          </h2>
+          <button
+            onClick={() => void loadInquiries()}
+            className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200"
+          >
+            <RefreshCw size={12} />
+            새로고침
+          </button>
+        </div>
+        {inquiryLoading ? (
+          <p className="text-sm text-gray-400">로딩 중...</p>
+        ) : inquiries.length === 0 ? (
+          <p className="text-sm text-gray-400">접수된 문의가 없습니다.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs text-gray-500">
+                <th className="pb-2">사용자</th>
+                <th className="pb-2">희망 플랜</th>
+                <th className="pb-2">메시지</th>
+                <th className="pb-2">상태</th>
+                <th className="pb-2">일시</th>
+                <th className="pb-2">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inquiries.map((inq) => (
+                <tr key={inq.id} className="border-b last:border-0">
+                  <td className="py-3 text-gray-700">
+                    {inq.user_email || inq.user_id.slice(0, 8)}
+                  </td>
+                  <td className="py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${planColor(inq.desired_plan)}`}
+                    >
+                      {planLabel(inq.desired_plan)}
+                    </span>
+                  </td>
+                  <td className="max-w-[200px] truncate py-3 text-gray-500">
+                    {inq.message || '-'}
+                  </td>
+                  <td className="py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        inq.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}
+                    >
+                      {inq.status === 'pending' ? '대기' : '완료'}
+                    </span>
+                  </td>
+                  <td className="py-3 text-gray-500">
+                    {inq.created_at?.slice(0, 10) || '-'}
+                  </td>
+                  <td className="py-3">
+                    {inq.status === 'pending' && (
+                      <button
+                        onClick={() => handleCompleteInquiry(inq.id)}
+                        className="rounded bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700"
+                      >
+                        처리 완료
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
       {showCreate && (
         <CreateKeyModal
           onClose={() => setShowCreate(false)}
