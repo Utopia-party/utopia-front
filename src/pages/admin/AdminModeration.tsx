@@ -389,7 +389,7 @@ export default function AdminModeration() {
                             <span className="text-[10px] font-semibold text-slate-500 sm:text-center">채팅 메시지</span>
                           </div>
 
-                          {STAGES.map((stage, idx) => (
+                          {STAGES.map((stage) => (
                             <div key={stage.key} className="flex sm:flex-row flex-col items-center flex-1 min-w-0">
                               {/* 화살표 */}
                               <div className="flex items-center justify-center w-8 shrink-0">
