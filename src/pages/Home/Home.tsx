@@ -381,7 +381,10 @@ export default function Home() {
                       key={party.id}
                       party={party}
                       onDetail={setDetailTarget}
-                      onApply={setApplyTarget}
+                      onApply={(p) => {
+                        if (!isLoggedIn) { navigate('/login'); return; }
+                        setApplyTarget(p);
+                      }}
                     />
                   ))}
                 </div>
@@ -396,6 +399,7 @@ export default function Home() {
           party={detailTarget}
           onClose={() => setDetailTarget(null)}
           onApply={(p) => {
+            if (!isLoggedIn) { navigate('/login'); return; }
             setDetailTarget(null);
             setApplyTarget(p);
           }}
