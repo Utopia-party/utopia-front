@@ -179,33 +179,32 @@ export default function AdminSidebar({
   collapsed,
   onToggleCollapsed,
   appealPendingCount = 0,
+  reportUnhandledCount = 0,
 }: {
   permissions: AdminPermissions | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   appealPendingCount?: number;
+  reportUnhandledCount?: number;
 }) {
-  // 💡 모바일 상태 관리를 위한 State 추가
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
 
-  // 화면 크기에 따라 데스크탑 여부 감지
   useEffect(() => {
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 768);
+
       if (window.innerWidth >= 768) {
-        setIsMobileOpen(false); // PC 사이즈로 넘어가면 모바일 메뉴는 닫기
+        setIsMobileOpen(false);
       }
     };
 
-    // 초기 로드시 1회 실행
     handleResize();
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 💡 모바일에서는 항상 확장된 뷰(글자까지 모두 보이는 상태)로 표시되도록 보정
   const displayCollapsed = isDesktop ? collapsed : false;
 
   const visibleSections = menuSections
@@ -218,16 +217,30 @@ export default function AdminSidebar({
     }))
     .filter((section) => section.items.length > 0);
 
-  // 💡 링크 클릭 시 모바일 환경이라면 사이드바 자동 닫기
   const handleLinkClick = () => {
     if (!isDesktop) {
       setIsMobileOpen(false);
     }
   };
 
+  const getBadgeCount = (path: string) => {
+    if (path === '/admin/appeals') {
+      return appealPendingCount;
+    }
+
+    if (path === '/admin/reports') {
+      return reportUnhandledCount;
+    }
+
+    return 0;
+  };
+
+  const formatBadgeCount = (count: number) => {
+    return count > 99 ? '99+' : String(count);
+  };
+
   return (
     <>
-      {/* 💡 모바일 햄버거 플로팅 버튼 (사이드바 닫혀있을 때 표시) */}
       {!isMobileOpen && (
         <button
           type="button"
@@ -239,7 +252,6 @@ export default function AdminSidebar({
         </button>
       )}
 
-      {/* 💡 모바일 사이드바 배경 백드롭 (열려있을 때 딤처리) */}
       {isMobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity md:hidden"
@@ -248,7 +260,6 @@ export default function AdminSidebar({
       )}
 
       <aside
-        // 💡 핵심: 모바일은 화면 밖에 숨겨두고(`-translate-x-full`), PC는 `md:translate-x-0`으로 항상 고정
         className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white py-6 transition-all duration-300 
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} 
           md:translate-x-0 w-60 ${displayCollapsed ? 'md:w-18' : 'md:w-60'}`}
@@ -271,9 +282,7 @@ export default function AdminSidebar({
             <img
               src={logoImage}
               alt="Party-Up"
-              className={`shrink-0 object-contain ${
-                displayCollapsed ? 'h-8 w-8' : 'h-8 w-8'
-              }`}
+              className="h-8 w-8 shrink-0 object-contain"
             />
             {!displayCollapsed && <span>Party-Up</span>}
           </Link>
@@ -282,9 +291,9 @@ export default function AdminSidebar({
             type="button"
             onClick={() => {
               if (!isDesktop) {
-                setIsMobileOpen(false); // 모바일에서는 닫기 버튼으로 동작
+                setIsMobileOpen(false);
               } else {
-                onToggleCollapsed(); // 데스크탑에서는 접기/펴기 버튼으로 동작
+                onToggleCollapsed();
               }
             }}
             aria-label={displayCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
@@ -295,7 +304,6 @@ export default function AdminSidebar({
           </button>
         </div>
 
-        {/* 💡 사이드바 메뉴 영역 스크롤바 숨김 */}
         <nav className="flex flex-1 flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           <div className="flex flex-col gap-1">
             {visibleSections.map((section) => (
@@ -314,6 +322,7 @@ export default function AdminSidebar({
                 <div className="flex flex-col gap-1">
                   {section.items.map((item) => {
                     const Icon = item.icon;
+                    const badgeCount = getBadgeCount(item.path);
 
                     return (
                       <NavLink
@@ -334,16 +343,25 @@ export default function AdminSidebar({
                           }`
                         }
                       >
-                        <Icon size={20} strokeWidth={2} className="shrink-0" />
+                        <div className="relative shrink-0">
+                          <Icon size={20} strokeWidth={2} />
+
+                          {displayCollapsed && badgeCount > 0 && (
+                            <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                              {formatBadgeCount(badgeCount)}
+                            </span>
+                          )}
+                        </div>
+
                         {!displayCollapsed && (
                           <span className="flex flex-1 items-center justify-between">
                             {item.label}
-                            {item.path === '/admin/appeals' &&
-                              appealPendingCount > 0 && (
-                                <span className="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                                  {appealPendingCount}
-                                </span>
-                              )}
+
+                            {badgeCount > 0 && (
+                              <span className="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                                {formatBadgeCount(badgeCount)}
+                              </span>
+                            )}
                           </span>
                         )}
                       </NavLink>
