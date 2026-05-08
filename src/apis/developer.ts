@@ -105,3 +105,37 @@ export async function fetchMyUsageSummary(): Promise<UsageSummary> {
   const { data } = await api.get('/api/developer/usage-summary');
   return data;
 }
+
+// ── 플랜 문의 ─────────────────────────────────────────
+
+export type PlanInquiry = {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  desired_plan: string;
+  message: string | null;
+  status: string;
+  created_at: string | null;
+};
+
+export type PlanInquiryListResponse = {
+  total: number;
+  items: PlanInquiry[];
+};
+
+export type PlanInquiryCreatePayload = {
+  desired_plan: string;
+  message?: string;
+};
+
+export async function createPlanInquiry(
+  payload: PlanInquiryCreatePayload,
+): Promise<PlanInquiry> {
+  const { data } = await api.post('/api/developer/plan-inquiry', payload);
+  return data;
+}
+
+export async function fetchMyPlanInquiries(): Promise<PlanInquiryListResponse> {
+  const { data } = await api.get('/api/developer/plan-inquiries');
+  return data;
+}

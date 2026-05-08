@@ -8,9 +8,12 @@ import {
   rotateMySecret,
   fetchMyUsageLogs,
   fetchMyUsageSummary,
+  createPlanInquiry,
+  fetchMyPlanInquiries,
   type MyApiKey,
   type UsageLogItem,
   type UsageSummary,
+  type PlanInquiry,
 } from '../../apis/developer';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
@@ -225,6 +228,49 @@ export default function MyDeveloper() {
     alert(`${label}가 복사되었습니다.`);
   }, []);
 
+  // 플랜 문의
+  const [inquiryModal, setInquiryModal] = useState(false);
+  const [inquiryPlan, setInquiryPlan] = useState('starter');
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [myInquiries, setMyInquiries] = useState<PlanInquiry[]>([]);
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+
+  const loadInquiries = useCallback(async () => {
+    try {
+      const data = await fetchMyPlanInquiries();
+      setMyInquiries(data.items);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    loadInquiries();
+  }, [loadInquiries]);
+
+  const handleSubmitInquiry = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setInquirySubmitting(true);
+      try {
+        await createPlanInquiry({
+          desired_plan: inquiryPlan,
+          message: inquiryMessage || undefined,
+        });
+        setInquiryModal(false);
+        setInquiryMessage('');
+        alert('문의가 접수되었습니다. 관리자 확인 후 플랜이 변경됩니다.');
+        await loadInquiries();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : '문의 접수 실패';
+        setError(msg);
+      } finally {
+        setInquirySubmitting(false);
+      }
+    },
+    [inquiryPlan, inquiryMessage, loadInquiries],
+  );
+
   const hasKeys = keys.length > 0;
 
   return (
@@ -343,6 +389,152 @@ export default function MyDeveloper() {
               </div>
             </div>
           )}
+
+          {/* 요금제 */}
+          <div
+            style={{
+              marginBottom: '24px',
+              padding: '20px',
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '14px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                요금제
+              </h3>
+              <div
+                style={{ display: 'flex', gap: '8px', alignItems: 'center' }}
+              >
+                {myInquiries.some((i) => i.status === 'pending') && (
+                  <span
+                    style={{
+                      padding: '3px 10px',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                    }}
+                  >
+                    문의 대기 중
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setInquiryModal(true)}
+                  disabled={myInquiries.some((i) => i.status === 'pending')}
+                  style={{
+                    padding: '6px 14px',
+                    backgroundColor: myInquiries.some(
+                      (i) => i.status === 'pending',
+                    )
+                      ? '#d1d5db'
+                      : '#333',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: myInquiries.some((i) => i.status === 'pending')
+                      ? 'not-allowed'
+                      : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                  }}
+                >
+                  플랜 업그레이드 문의
+                </button>
+              </div>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '10px',
+              }}
+            >
+              {[
+                {
+                  name: 'Free',
+                  price: '무료',
+                  limit: '월 1,000건',
+                  color: '#6b7280',
+                },
+                {
+                  name: 'Starter',
+                  price: '₩10,000/월',
+                  limit: '월 5,000건',
+                  color: '#2563eb',
+                },
+                {
+                  name: 'Pro',
+                  price: '₩30,000/월',
+                  limit: '월 30,000건',
+                  color: '#7c3aed',
+                },
+                {
+                  name: 'Enterprise',
+                  price: '₩300,000/월',
+                  limit: '월 1,000,000건',
+                  color: '#dc2626',
+                },
+              ].map((p) => (
+                <div
+                  key={p.name}
+                  style={{
+                    padding: '14px',
+                    backgroundColor: '#fff',
+                    borderRadius: '8px',
+                    border: `2px solid ${
+                      keys[0]?.plan?.toLowerCase() === p.name.toLowerCase()
+                        ? p.color
+                        : '#e5e7eb'
+                    }`,
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: p.color,
+                      marginBottom: '3px',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      marginBottom: '3px',
+                    }}
+                  >
+                    {p.price}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                    {p.limit}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: '#9ca3af',
+                      marginTop: '3px',
+                    }}
+                  >
+                    Rate Limit: 10 req/s
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* "새 API 키 발급" 버튼 + 데모 사이트 링크 */}
           <div
@@ -1381,6 +1573,140 @@ export default function MyDeveloper() {
                   }}
                 >
                   저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* 플랜 문의 모달 */}
+      {inquiryModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setInquiryModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '30px',
+              borderRadius: '12px',
+              width: '480px',
+              maxWidth: '90vw',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              style={{
+                margin: '0 0 20px 0',
+                fontSize: '18px',
+                fontWeight: '600',
+              }}
+            >
+              플랜 업그레이드 문의
+            </h3>
+            <form onSubmit={handleSubmitInquiry}>
+              <div style={{ marginBottom: '16px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                  }}
+                >
+                  희망 플랜
+                </label>
+                <select
+                  value={inquiryPlan}
+                  onChange={(e) => setInquiryPlan(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="starter">
+                    Starter (₩10,000/월 · 월 5,000건)
+                  </option>
+                  <option value="pro">Pro (₩30,000/월 · 월 30,000건)</option>
+                  <option value="enterprise">
+                    Enterprise (₩300,000/월 · 월 1,000,000건)
+                  </option>
+                </select>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                  }}
+                >
+                  메시지 (선택)
+                </label>
+                <textarea
+                  value={inquiryMessage}
+                  onChange={(e) => setInquiryMessage(e.target.value)}
+                  placeholder="문의 사항이 있으시면 작성해주세요."
+                  maxLength={500}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  justifyContent: 'flex-end',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setInquiryModal(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#f5f5f5',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={inquirySubmitting}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: inquirySubmitting ? '#9ca3af' : '#333',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: inquirySubmitting ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  {inquirySubmitting ? '접수 중...' : '문의 접수'}
                 </button>
               </div>
             </form>

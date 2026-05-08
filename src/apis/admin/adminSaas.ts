@@ -126,3 +126,42 @@ export async function fetchSaasStats(): Promise<UsageStats> {
   const { data } = await api.get('/api/admin/saas/stats');
   return data;
 }
+
+// ── 플랜 문의 관리 ────────────────────────────────────
+
+export type PlanInquiryItem = {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  desired_plan: string;
+  message: string | null;
+  status: string;
+  created_at: string | null;
+};
+
+export type PlanInquiryListResponse = {
+  total: number;
+  items: PlanInquiryItem[];
+};
+
+export async function fetchPlanInquiries(params?: {
+  status?: string;
+  page?: number;
+  size?: number;
+}): Promise<PlanInquiryListResponse> {
+  const { data } = await api.get('/api/admin/saas/plan-inquiries', { params });
+  return data;
+}
+
+export async function updatePlanInquiryStatus(
+  inquiryId: string,
+  status: string,
+): Promise<PlanInquiryItem> {
+  const { data } = await api.put(
+    `/api/admin/saas/plan-inquiries/${inquiryId}`,
+    {
+      status,
+    },
+  );
+  return data;
+}
