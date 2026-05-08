@@ -12,3 +12,4 @@ export * from './admin/adminLogs';
 export * from './admin/adminModeration';
 export * from './admin/adminCaptcha';
 export * from './admin/adminError';
+export * from './admin/adminSaas';
