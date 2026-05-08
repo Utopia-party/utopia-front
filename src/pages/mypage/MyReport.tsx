@@ -24,6 +24,7 @@ const categoryLabelMap: Record<ApiReportCategory, string> = {
   PROFANITY: '비매너/욕설',
   SCAM: '사기/금전요구',
   SPAM: '스팸/홍보',
+  NO_SHOW: '노쇼',
 };
 
 const uiToApiStatusMap: Record<ReportStatus, ApiReportStatus> = {
