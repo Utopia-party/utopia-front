@@ -34,8 +34,12 @@ export type AdminPaymentRecord = {
   basePrice: number;
   amount: number;
   discountReason: string | null;
+  baseCommissionRate: number;
   commissionRate: number;
+  effectiveCommissionRate: number;
   commissionAmount: number;
+  appliedLeaderDiscountRate: number;
+  appliedReferralDiscountRate: number;
   paymentMethod: string | null;
   status: string;
   billingMonth: string;

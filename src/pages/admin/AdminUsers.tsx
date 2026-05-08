@@ -290,6 +290,7 @@ export default function AdminUsers() {
   const [error, setError] = useState('');
   const [detailError, setDetailError] = useState('');
   const [page, setPage] = useState(1);
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
 
   const buildUserParams = (status?: string) => ({
     keyword: search || undefined,
@@ -683,6 +684,106 @@ export default function AdminUsers() {
                 </button>
               </div>
             </div>
+          </section>
+
+          <section className="rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div>
+                <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                  사용자관리 메뉴얼
+                </div>
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    사용자관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    사용자관리 페이지는 회원 상태, 신뢰도, 추천인, 운영 이력을
+                    한 화면에서 확인하고 수정할 수 있는 운영 도구입니다.
+                    검색으로 대상을 찾은 뒤 `관리` 버튼을 열어 상세 정보를
+                    확인하고, 필요한 조치를 바로 반영할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 키워드, 기간, 상태 탭으로 사용자를 검색하고 필요한
+                        대상을 빠르게 찾을 수 있습니다.
+                      </p>
+                      <p>
+                        2. 사용자 상태를 `정상`, `주의`, `정지`로 변경하고 변경
+                        사유를 함께 남길 수 있습니다.
+                      </p>
+                      <p>
+                        3. 신뢰도를 직접 조정하고, 왜 변경했는지 운영 사유를
+                        기록할 수 있습니다.
+                      </p>
+                      <p>
+                        4. 추천인 정보를 수정하거나 해제하고, 반영된 내용을 바로
+                        상세 정보에서 확인할 수 있습니다.
+                      </p>
+                      <p>
+                        5. 신뢰도 이력, 운영 로그, 최근 활동 기록까지 한 번에
+                        확인할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 상단 필터에서 상태나 기간을 먼저 좁힌 뒤 조회
+                        버튼으로 목록을 정리합니다.
+                      </p>
+                      <p>
+                        2. 목록 오른쪽 `관리` 버튼을 눌러 상세 패널을 열고 현재
+                        사용자 상태와 신뢰도를 확인합니다.
+                      </p>
+                      <p>
+                        3. `수정` 탭에서 상태, 신뢰도, 추천인 정보를 변경하고
+                        저장 후 결과를 반영합니다.
+                      </p>
+                      <p>
+                        4. `이력` 탭에서 방금 변경한 내용이 운영 로그와 신뢰도
+                        이력에 정상 반영되었는지 다시 확인합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      상태 변경과 신뢰도 조정은 운영 기록으로 남기기 때문에,
+                      가능하면 사유를 함께 입력해두는 것이 좋습니다.
+                    </p>
+                    <p>
+                      정지 처리나 추천인 변경처럼 회원 경험에 직접 영향이 있는
+                      작업은 상세 정보를 먼저 확인한 뒤 진행하는 것을
+                      권장합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {loading && (

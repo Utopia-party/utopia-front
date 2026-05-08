@@ -26,6 +26,7 @@ const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 
 export default function AdminParties() {
   const [activeTab, setActiveTab] = useState('전체');
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -209,6 +210,7 @@ export default function AdminParties() {
         kickReason.trim() || undefined,
       );
       await reloadMembers(partyId);
+      await reloadParties();
       setKickConfirmId(null);
       setKickReason('');
     } catch (err) {
@@ -227,6 +229,7 @@ export default function AdminParties() {
       setBusyMemberId(userId);
       await changeAdminPartyMemberRole(partyId, userId, newRole);
       await reloadMembers(partyId);
+      await reloadParties();
     } catch (err) {
       setMemberError(getAdminErrorMessage(err));
     } finally {
@@ -383,6 +386,99 @@ export default function AdminParties() {
                 </button>
               </div>
             </div>
+          </section>
+
+          <section className="rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                파티관리 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    파티관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    파티관리 페이지는 파티 상태, 신고 수, 멤버 구성, 정산 메모를
+                    함께 보고 운영 이슈가 있는 파티를 빠르게 대응하는
+                    화면입니다. 멤버 관리, 파티장 변경, 강퇴, 강제 종료까지
+                    이곳에서 처리할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 파티명, 서비스, 리더, 카테고리, 상태 기준으로 파티를
+                        검색하고 위험 파티를 골라 볼 수 있습니다.
+                      </p>
+                      <p>
+                        2. 파티 상세에서 생성 시각, 멤버 수, 신고 수, 월 결제
+                        상태를 함께 확인할 수 있습니다.
+                      </p>
+                      <p>
+                        3. 멤버관리에서 파티장 임명, 멤버 강퇴, 현재 구성원
+                        상태를 운영할 수 있습니다.
+                      </p>
+                      <p>
+                        4. 운영 정책 위반이나 리스크가 큰 파티는 강제 종료로
+                        바로 종료 처리할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 상단 필터에서 상태와 카테고리를 좁혀 필요한 파티만
+                        먼저 조회합니다.
+                      </p>
+                      <p>
+                        2. 목록에서 `상세`를 눌러 파티 기본 정보와 신고/정산
+                        상태를 확인합니다.
+                      </p>
+                      <p>
+                        3. 멤버 구성이 문제면 `멤버관리`를 열어 파티장 변경이나
+                        강퇴를 진행합니다.
+                      </p>
+                      <p>
+                        4. 정상 운영이 어렵다고 판단되면 종료 사유를 입력하고
+                        강제 종료를 반영합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      파티장 강퇴 시에는 다음 활성 멤버에게 자동으로 리더 권한이
+                      승계되므로, 현재 멤버 구성을 먼저 확인하는 것이 좋습니다.
+                    </p>
+                    <p>
+                      강제 종료는 참여 중인 멤버 전체에게 영향이 가는
+                      작업이라서, 종료 사유를 명확히 남겨두는 것을 권장합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {loading && (
