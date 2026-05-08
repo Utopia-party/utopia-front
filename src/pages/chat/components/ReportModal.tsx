@@ -264,6 +264,7 @@ export default function ReportModal({
                 <option value="PROFANITY">욕설 / 비방</option>
                 <option value="SCAM">사기 / 의심 거래</option>
                 <option value="SPAM">도배 / 스팸</option>
+                <option value="NO_SHOW">노쇼</option>
               </select>
             </div>
 
