@@ -13,11 +13,11 @@ type CompareMode = 'previous_period' | 'year_over_year';
 type ChartTabId = 'sales' | 'members' | 'reports' | 'settlements';
 
 const CARD_ACCENTS: Record<string, string> = {
-  members: 'from-[#61e4c5] via-[#52d4d4] to-[#54a8ff]',
-  sales: 'from-[#7bc7ff] via-[#5f9dff] to-[#4f6fff]',
-  commission: 'from-[#f9a84d] via-[#f97316] to-[#ea580c]',
-  reports: 'from-[#8898ff] via-[#8f8ae7] to-[#a48ce9]',
-  settlements: 'from-[#8fe3ff] via-[#61c2ff] to-[#4f8bff]',
+  members: 'bg-emerald-400',
+  sales: 'bg-blue-400',
+  commission: 'bg-orange-400',
+  reports: 'bg-violet-400',
+  settlements: 'bg-cyan-400',
 };
 
 function formatWon(value: number) {
@@ -94,7 +94,7 @@ function DashboardLineChart({
   const pathCurrent = buildLinePath(currentValues, width, height);
 
   return (
-    <div className="w-full min-w-0 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(36,54,94,0.08)] md:p-6">
+    <div className="w-full min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm md:rounded-2xl md:p-6">
       <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-500">
@@ -204,10 +204,8 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
   const accent = CARD_ACCENTS[metric.id] ?? CARD_ACCENTS.members;
 
   return (
-    <article className="relative min-w-0 overflow-hidden rounded-3xl border border-white/50 bg-white p-5 shadow-[0_20px_50px_rgba(39,64,120,0.10)] transition-transform hover:-translate-y-1 md:rounded-[28px] md:p-6">
-      <div
-        className={`absolute inset-x-0 top-0 h-1 bg-linear-to-r ${accent}`}
-      />
+    <article className="relative min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition md:rounded-2xl md:p-6">
+      <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} />
 
       <div className="flex min-w-0 items-start justify-between gap-4">
         <div className="min-w-0">
@@ -238,7 +236,7 @@ function SummaryPanel({
   rows: { label: string; value: string }[];
 }) {
   return (
-    <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(39,64,120,0.08)] md:rounded-[28px] md:p-6">
+    <section className="w-full min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm md:rounded-2xl md:p-6">
       <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400 md:text-xs">
         {title}
       </p>
@@ -251,7 +249,7 @@ function SummaryPanel({
         {rows.map((row) => (
           <div
             key={row.label}
-            className="flex min-w-0 flex-col gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:rounded-2xl"
+            className="flex min-w-0 flex-col gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <span className="text-xs text-slate-600 md:text-sm">
               {row.label}
@@ -278,15 +276,15 @@ function CompactStatCard({
 }) {
   return (
     <div
-      className={`flex min-w-0 flex-col justify-center rounded-[20px] border p-4 shadow-[0_14px_30px_rgba(39,64,120,0.06)] md:rounded-3xl md:p-5 ${
+      className={`flex min-w-0 flex-col justify-center rounded-xl border p-4 shadow-sm md:rounded-2xl md:p-5 ${
         tone === 'accent'
-          ? 'border-cyan-100 bg-linear-to-r from-[#61e4c5] to-[#54a8ff] text-white'
+          ? 'border-cyan-100 bg-cyan-50 text-cyan-900'
           : 'border-slate-200 bg-white text-slate-900'
       }`}
     >
       <div
         className={`text-[10px] font-semibold uppercase tracking-[0.22em] md:text-xs ${
-          tone === 'accent' ? 'text-white/75' : 'text-slate-400'
+          tone === 'accent' ? 'text-cyan-700' : 'text-slate-400'
         }`}
       >
         {label}
@@ -427,113 +425,87 @@ export default function AdminDashboard() {
       <AdminHeader
         placeholder="관리자 검색..."
         rightContent={
-          <span className="hidden rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 sm:inline-block">
-            비교형 분석 대시보드
+          <span className="hidden rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-xs md:text-sm font-medium text-slate-600 sm:inline-block">
+            통계 대시보드
           </span>
         }
       />
 
       <div className="w-full min-w-0 flex-1 overflow-x-hidden bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
         <div className="mx-auto w-full min-w-0 max-w-7xl space-y-5 md:space-y-6">
-          <section className="w-full min-w-0 overflow-hidden rounded-2xl border border-white/70 bg-white/80 shadow-[0_35px_90px_rgba(39,64,120,0.12)] backdrop-blur md:rounded-4xl">
-            <div className="grid w-full min-w-0 grid-cols-1 gap-0 2xl:grid-cols-[260px_minmax(0,1fr)]">
-              <div className="min-w-0 border-b border-slate-200/80 bg-white/90 p-5 md:p-6 2xl:border-b-0 2xl:border-r">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400 md:text-xs">
-                  Dashboard
-                </p>
+          <section>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-keep">
+              통계대시보드
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 break-keep">
+              날짜 범위를 기준으로 회원, 매출, 신고, 정산 흐름을 한 화면에서
+              확인합니다.
+            </p>
+          </section>
 
-                <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 break-keep md:mt-4 md:text-3xl">
-                  통계 대시보드
-                </h1>
+          <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:rounded-2xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                  시작일
+                </span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 md:rounded-xl"
+                />
+              </label>
 
-                <p className="mt-2 text-xs leading-relaxed text-slate-500 break-keep md:mt-3 md:text-sm">
-                  날짜 범위를 선택하면 해당 기간 실적과 변화 흐름을 바로 확인할
-                  수 있습니다.
-                </p>
+              <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <span className="text-[11px] md:text-xs font-medium text-gray-500">
+                  종료일
+                </span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 md:rounded-xl"
+                />
+              </label>
 
-                <div className="mt-5 rounded-2xl bg-slate-50 p-4 md:mt-8 md:rounded-3xl">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 md:text-xs">
-                    Period
-                  </p>
-
-                  <p className="mt-1 wrap-break-word text-base font-semibold text-slate-900 md:mt-2 md:text-lg">
-                    {dashboard?.periodLabel ?? '-'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="min-w-0 p-4 md:p-6">
-                <div className="rounded-2xl bg-linear-to-r from-[#63e3c4] via-[#58c6e8] to-[#6faeff] p-px md:rounded-[28px]">
-                  <div className="rounded-[15px] bg-white p-4 md:rounded-[27px] md:px-5 md:py-4">
-                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                      <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row">
-                        <label className="flex min-w-0 flex-1 flex-col gap-1">
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 md:text-xs">
-                            Start Date
-                          </span>
-
-                          <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(event) =>
-                              setDateFrom(event.target.value)
-                            }
-                            className="w-full min-w-0 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-sky-400 md:rounded-2xl md:px-4 md:py-3"
-                          />
-                        </label>
-
-                        <label className="flex min-w-0 flex-1 flex-col gap-1">
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 md:text-xs">
-                            End Date
-                          </span>
-
-                          <input
-                            type="date"
-                            value={dateTo}
-                            onChange={(event) => setDateTo(event.target.value)}
-                            className="w-full min-w-0 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-sky-400 md:rounded-2xl md:px-4 md:py-3"
-                          />
-                        </label>
-                      </div>
-
-                      <div className="flex w-full min-w-0 gap-2 sm:ml-auto sm:w-auto">
-                        <button
-                          type="button"
-                          onClick={() => void handleAnalyzeDashboard()}
-                          className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-95 sm:flex-none md:rounded-2xl md:px-5 md:py-3"
-                        >
-                          분석 보기
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => void loadDashboard({})}
-                          className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95 sm:flex-none md:rounded-2xl md:px-5 md:py-3"
-                        >
-                          최신화
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 md:mt-6 md:gap-4 2xl:grid-cols-4">
-                  {(dashboard?.metrics ?? []).map((metric) => (
-                    <MetricCard key={metric.id} metric={metric} />
-                  ))}
-                </div>
+              <div className="mt-1 flex w-full gap-2 sm:ml-auto sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => void handleAnalyzeDashboard()}
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-95 sm:flex-none md:rounded-xl"
+                >
+                  조회
+                </button>
               </div>
             </div>
           </section>
 
+          <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:rounded-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-slate-900">조회 요약</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  현재 기준 기간: {dashboard?.periodLabel ?? '-'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {(dashboard?.metrics ?? []).map((metric) => (
+                <MetricCard key={metric.id} metric={metric} />
+              ))}
+            </div>
+          </section>
+
           {loading && (
-            <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500 shadow-sm md:rounded-[28px] md:px-5 md:py-4 md:text-sm">
+            <section className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-slate-500 shadow-sm md:rounded-2xl md:px-5 md:py-4 md:text-sm">
               관리자 대시보드를 불러오는 중입니다.
             </section>
           )}
 
           {error && (
-            <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600 shadow-sm md:rounded-[28px] md:px-5 md:py-4 md:text-sm">
+            <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600 shadow-sm md:rounded-2xl md:px-5 md:py-4 md:text-sm">
               {error}
             </section>
           )}
@@ -590,13 +562,13 @@ export default function AdminDashboard() {
             </div>
 
             <div className="min-w-0 space-y-5 md:space-y-6">
-              <section className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(39,64,120,0.08)] md:rounded-[28px] md:p-6">
+              <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm md:rounded-2xl md:p-6">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400 md:text-xs">
                   Snapshot
                 </p>
 
                 <div className="mt-4 space-y-3 md:mt-5 md:space-y-4">
-                  <div className="rounded-xl bg-slate-50 p-4 md:rounded-2xl">
+                  <div className="rounded-xl bg-slate-50 p-4">
                     <div className="text-xs text-slate-500 md:text-sm">
                       조회 기간 합계
                     </div>
@@ -609,8 +581,8 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl bg-linear-to-r from-[#61e4c5] to-[#54a8ff] p-4 text-white md:rounded-2xl">
-                    <div className="text-xs text-white/80 break-keep md:text-sm">
+                  <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-4 text-cyan-900">
+                    <div className="text-xs text-cyan-700 break-keep md:text-sm">
                       조회 기간 최고 피크
                     </div>
 
@@ -633,7 +605,7 @@ export default function AdminDashboard() {
           </section>
 
           <section className="grid w-full min-w-0 gap-5 md:gap-6 2xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(39,64,120,0.08)] md:rounded-[28px] md:p-6">
+            <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm md:rounded-2xl md:p-6">
               <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-start md:justify-between md:gap-4">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400 md:text-xs">
@@ -650,7 +622,7 @@ export default function AdminDashboard() {
                 {breakdownRows.map((row) => (
                   <div
                     key={row.label}
-                    className="flex min-w-0 flex-col gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:rounded-2xl"
+                    className="flex min-w-0 flex-col gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <span className="text-xs text-slate-600 md:text-sm">
                       {row.label}
@@ -664,19 +636,19 @@ export default function AdminDashboard() {
               </div>
 
               {breakdownLoading && (
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 md:mt-4 md:rounded-2xl md:text-sm">
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 md:mt-4 md:text-sm">
                   세부 내역을 불러오는 중입니다.
                 </div>
               )}
 
               {breakdownError && (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600 md:mt-4 md:rounded-2xl md:text-sm">
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600 md:mt-4 md:text-sm">
                   {breakdownError}
                 </div>
               )}
             </section>
 
-            <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(39,64,120,0.08)] md:rounded-[28px] md:p-6">
+            <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm md:rounded-2xl md:p-6">
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400 md:text-xs">
                 Recent Activities
               </p>
@@ -689,7 +661,7 @@ export default function AdminDashboard() {
                 {(dashboard?.recentActivities ?? []).map((activity) => (
                   <div
                     key={`${activity.timestamp}-${activity.title}`}
-                    className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 p-4 md:rounded-2xl"
+                    className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 p-4"
                   >
                     <div className="flex min-w-0 items-center justify-between gap-3">
                       <p className="min-w-0 truncate text-sm font-semibold text-slate-900">
@@ -708,7 +680,7 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              <div className="mt-4 rounded-xl bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 break-keep md:mt-5 md:rounded-2xl md:text-sm">
+              <div className="mt-4 rounded-xl bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 break-keep md:mt-5 md:text-sm">
                 {dashboard?.todaySummary ?? '운영 요약을 계산 중입니다.'}
               </div>
             </section>

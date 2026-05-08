@@ -47,23 +47,49 @@ function fmtDate(iso: string | null) {
   });
 }
 
+function formatPercent(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
 function getCommissionLabel(payment: AdminPaymentRecord) {
+  const parts = [`기본 ${formatPercent(payment.baseCommissionRate)}`];
+
   if (
     payment.pricingType === 'quick_match' &&
     (payment.quickMatchFeeRate ?? 0) > 0
   ) {
-    return `(빠른매칭 +${Math.round(payment.quickMatchFeeRate * 100)}%)`;
+    parts.push(`빠른매칭 +${formatPercent(payment.quickMatchFeeRate)}`);
   }
-  return `(${Math.round(payment.commissionRate * 100)}%)`;
+
+  if ((payment.appliedLeaderDiscountRate ?? 0) > 0) {
+    parts.push(
+      `방장 할인 -${formatPercent(payment.appliedLeaderDiscountRate)}`,
+    );
+  }
+
+  if ((payment.appliedReferralDiscountRate ?? 0) > 0) {
+    parts.push(
+      `추천인 할인 -${formatPercent(payment.appliedReferralDiscountRate)}`,
+    );
+  }
+
+  return `(${parts.join(' ')} = ${formatPercent(payment.effectiveCommissionRate)})`;
 }
 
 function getDiscountBadges(payment: AdminPaymentRecord) {
   const badges: Array<{ label: string; className: string }> = [];
 
-  if (payment.discountReason) {
+  if ((payment.appliedLeaderDiscountRate ?? 0) > 0) {
     badges.push({
-      label: payment.discountReason,
+      label: `방장 할인 ${formatPercent(payment.appliedLeaderDiscountRate)}`,
       className: 'border-sky-200 bg-sky-50 text-sky-700',
+    });
+  }
+
+  if ((payment.appliedReferralDiscountRate ?? 0) > 0) {
+    badges.push({
+      label: `추천인 할인 ${formatPercent(payment.appliedReferralDiscountRate)}`,
+      className: 'border-indigo-200 bg-indigo-50 text-indigo-700',
     });
   }
 
@@ -72,8 +98,15 @@ function getDiscountBadges(payment: AdminPaymentRecord) {
     (payment.quickMatchFeeRate ?? 0) > 0
   ) {
     badges.push({
-      label: `빠른매칭 수수료 ${Math.round(payment.quickMatchFeeRate * 100)}%`,
+      label: `빠른매칭 수수료 ${formatPercent(payment.quickMatchFeeRate)}`,
       className: 'border-amber-200 bg-amber-50 text-amber-700',
+    });
+  }
+
+  if (badges.length === 0 && payment.discountReason) {
+    badges.push({
+      label: payment.discountReason,
+      className: 'border-slate-200 bg-slate-50 text-slate-600',
     });
   }
 
@@ -81,6 +114,7 @@ function getDiscountBadges(payment: AdminPaymentRecord) {
 }
 
 export default function AdminPayments() {
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [payments, setPayments] = useState<AdminPaymentRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -287,6 +321,101 @@ export default function AdminPayments() {
               </div>
             </div>
           </div>
+
+          <section className="rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                매출내역 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    매출내역 관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    매출내역 페이지는 결제 건별 실결제 금액, 할인 적용 여부,
+                    수수료 수익, 결제 상태를 확인하는 화면입니다. 빠른매칭 추가
+                    수수료와 방장/추천인 할인까지 포함한 결제 구조를 운영자가
+                    검수할 수 있도록 구성되어 있습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 사용자, 파티명, 서비스명 기준으로 결제 내역을 검색할
+                        수 있습니다.
+                      </p>
+                      <p>
+                        2. 승인, 대기, 거절, 완료 상태별로 결제 건을 나눠서
+                        확인할 수 있습니다.
+                      </p>
+                      <p>
+                        3. 실결제 금액에 방장 할인, 추천인 할인, 빠른매칭
+                        수수료가 어떻게 반영됐는지 확인할 수 있습니다.
+                      </p>
+                      <p>
+                        4. 수수료 칸에서 기본 수수료와 추가/차감 비율을 포함한
+                        최종 수수료율을 검수할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 조회 조건을 설정한 뒤 결제 목록을 불러오고, 필요한
+                        건을 상태 기준으로 먼저 좁힙니다.
+                      </p>
+                      <p>
+                        2. `1인 기준`, `실결제`, `할인`, `수수료` 칸을 같이
+                        보면서 실제 청구 구조가 맞는지 확인합니다.
+                      </p>
+                      <p>
+                        3. 빠른매칭 결제는 추가 수수료가 붙었는지, 방장/추천인
+                        할인은 실결제 금액에 정상 반영됐는지 검토합니다.
+                      </p>
+                      <p>
+                        4. 이상한 건이 보이면 해당 사용자나 파티관리 화면으로
+                        이어서 점검합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      기존 저장 결제 건은 당시 계산값을 그대로 보여주기 때문에,
+                      정책 변경 이후에는 생성 시점과 계산 기준을 함께 확인하는
+                      것이 좋습니다.
+                    </p>
+                    <p>
+                      빠른매칭 수수료와 할인율은 서비스 설정값에 영향을
+                      받으므로, 이상 징후가 있으면 구독 서비스 관리 페이지도
+                      같이 확인해야 합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
 
           {/* 💡 요약 카드: 모바일 3단, 작아지면 1/2단 등 자유롭게 배치되도록 설정 */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
