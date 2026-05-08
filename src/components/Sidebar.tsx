@@ -7,6 +7,7 @@ import {
   UserRound,
   OctagonAlert,
   Book,
+  Code,
 } from 'lucide-react';
 import logoImage from '../assets/logo.png';
 
@@ -17,7 +18,6 @@ const mypageMenus = [
   { label: '칭찬 내역', to: '/mypage/praises' },
   { label: '결제 내역', to: '/mypage/payment' },
   { label: '신고 내역', to: '/mypage/report' },
-  { label: '캡챠 SaaS', to: '/mypage/developer' },
 ];
 
 export default function Sidebar() {
@@ -226,6 +226,21 @@ export default function Sidebar() {
             >
               <OctagonAlert className={iconClass} />
               {isSidebarOpen && <span>신고</span>}
+            </div>
+          </NavLink>
+
+          <NavLink
+            to="/mypage/developer"
+            onClick={handleMenuClick}
+            className={({ isActive }) => getMainLinkClass(isActive)}
+          >
+            <div
+              className={`flex items-center ${
+                isSidebarOpen ? 'gap-3' : 'justify-center'
+              }`}
+            >
+              <Code className={iconClass} />
+              {isSidebarOpen && <span>캡챠 SaaS</span>}
             </div>
           </NavLink>
 
