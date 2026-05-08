@@ -1,19 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuthStore } from '../../../stores/authStore';
-import type { Message } from '../../../types/chat';
+import type { Message, PartyNotice } from '../../../types/chat';
 import { WS_BASE } from '../ChatConstants';
 
 interface UseChatWebSocketProps {
   partyId: string | undefined;
   currentUserId: string;
   onPartyUpdated: () => void;
+  onNoticeUpdated?: (notice: PartyNotice | null) => void;
+  onSettlementApproved?: (settlementId: string) => void;
 }
 
 export function useChatWebSocket({
   partyId,
   currentUserId,
   onPartyUpdated,
+  onNoticeUpdated,
+  onSettlementApproved,
 }: UseChatWebSocketProps) {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
@@ -97,6 +101,21 @@ export function useChatWebSocket({
 
           if (msg.type === 'party_updated') {
             onPartyUpdated();
+            return;
+          }
+
+          if (msg.type === 'notice_updated') {
+            onNoticeUpdated?.(msg.notice ?? null);
+            return;
+          }
+
+          if (msg.type === 'notice_deleted') {
+            onNoticeUpdated?.(null);
+            return;
+          }
+
+          if (msg.type === 'settlement_approved') {
+            onSettlementApproved?.(msg.settlement_id ?? '');
             return;
           }
 
