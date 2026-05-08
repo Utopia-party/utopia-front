@@ -1,5 +1,5 @@
 export interface Message {
-  type: 'message' | 'system' | 'system_info' | 'warning' | 'error' | 'message_deleted';
+  type: 'message' | 'system' | 'system_info' | 'warning' | 'error' | 'message_deleted' | 'notice_updated' | 'notice_deleted' | 'settlement_approved' | 'party_updated';
   chat_id?: string;
   chat_ids?: string[];
   party_id?: string;
@@ -9,6 +9,21 @@ export interface Message {
   content: string;
   created_at: string;
   unread_count?: number;
+  notice?: PartyNotice;
+  settlement_id?: string;
+}
+
+export interface PartyNotice {
+  id: string;
+  content: string;
+  created_by?: string;
+  updated_at: string;
+}
+
+export interface SettlementStatus {
+  status: 'approved' | 'pending' | null;
+  settlement_id: string | null;
+  approved_at?: string | null;
 }
 
 export interface Member {
@@ -42,6 +57,7 @@ export interface PartyInfo {
   category_name?: string | null;
   service_name?: string | null;
   host_nickname?: string | null;
+  payment_deadline?: string | null;
   members: Member[];
 }
 
