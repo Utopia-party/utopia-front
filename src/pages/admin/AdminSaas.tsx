@@ -507,7 +507,17 @@ function EditKeyModal({
               <select
                 className="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                 value={plan}
-                onChange={(e) => setPlan(e.target.value)}
+                onChange={(e) => {
+                  const newPlan = e.target.value;
+                  setPlan(newPlan);
+                  const limits: Record<string, number> = {
+                    free: 1000,
+                    starter: 5000,
+                    pro: 30000,
+                    enterprise: 1000000,
+                  };
+                  if (limits[newPlan]) setMonthlyLimit(limits[newPlan]);
+                }}
               >
                 <option value="free">Free</option>
                 <option value="starter">Starter</option>
@@ -636,6 +646,9 @@ export default function AdminSaas() {
     }
   };
 
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState<'keys' | 'inquiries'>('keys');
+
   // 플랜 문의 관리
   const [inquiries, setInquiries] = useState<PlanInquiryItem[]>([]);
   const [inquiryLoading, setInquiryLoading] = useState(false);
@@ -680,371 +693,426 @@ export default function AdminSaas() {
     }
   };
 
+  const pendingCount = inquiries.filter((i) => i.status === 'pending').length;
+
   return (
     <div className="mx-auto max-w-7xl p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">SaaS API 키 관리</h1>
+          <h1 className="text-2xl font-bold">SaaS API 관리</h1>
           <p className="mt-1 text-sm text-gray-500">
             파트너사 API 키 발급, 관리 및 사용량 모니터링
           </p>
         </div>
+        {activeTab === 'keys' && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+          >
+            <Plus size={16} />새 키 발급
+          </button>
+        )}
+      </div>
+
+      {/* 탭 */}
+      <div className="mb-6 flex border-b">
         <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+          onClick={() => setActiveTab('keys')}
+          className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === 'keys'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
-          <Plus size={16} />새 키 발급
+          API 키 관리
+        </button>
+        <button
+          onClick={() => setActiveTab('inquiries')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === 'inquiries'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          플랜 업그레이드 문의
+          {pendingCount > 0 && (
+            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+              {pendingCount}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* 통계 카드 */}
-      <StatsCards stats={stats} />
+      {activeTab === 'keys' && (
+        <>
+          {/* 통계 카드 */}
+          <StatsCards stats={stats} />
 
-      {/* 검색 */}
-      <div className="mb-4 flex gap-2">
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:border-blue-400 focus:outline-none"
-            placeholder="파트너사명 또는 API 키로 검색..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-        </div>
-        <button
-          onClick={handleSearch}
-          className="rounded-lg border bg-white px-4 py-2 text-sm hover:bg-gray-50"
-        >
-          검색
-        </button>
-        <button
-          onClick={() => {
-            void loadKeys();
-            void loadStats();
-          }}
-          className="rounded-lg border bg-white px-3 py-2 text-gray-500 hover:bg-gray-50"
-          title="새로고침"
-        >
-          <RefreshCw size={16} />
-        </button>
-      </div>
-
-      {/* 키 목록 테이블 */}
-      <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
-        {loading ? (
-          <div className="p-12 text-center text-sm text-gray-400">
-            로딩 중...
+          {/* 검색 */}
+          <div className="mb-4 flex gap-2">
+            <div className="relative flex-1">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:border-blue-400 focus:outline-none"
+                placeholder="파트너사명 또는 API 키로 검색..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              className="rounded-lg border bg-white px-4 py-2 text-sm hover:bg-gray-50"
+            >
+              검색
+            </button>
+            <button
+              onClick={() => {
+                void loadKeys();
+                void loadStats();
+              }}
+              className="rounded-lg border bg-white px-3 py-2 text-gray-500 hover:bg-gray-50"
+              title="새로고침"
+            >
+              <RefreshCw size={16} />
+            </button>
           </div>
-        ) : keys.length === 0 ? (
-          <div className="p-12 text-center text-sm text-gray-400">
-            등록된 API 키가 없습니다.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b bg-gray-50 text-xs text-gray-500">
-                <tr>
-                  <th className="px-4 py-3">파트너사</th>
-                  <th className="px-4 py-3">Site Key</th>
-                  <th className="px-4 py-3">Secret Key</th>
-                  <th className="px-4 py-3">플랜</th>
-                  <th className="px-4 py-3">사용량</th>
-                  <th className="px-4 py-3">상태</th>
-                  <th className="px-4 py-3">생성일</th>
-                  <th className="px-4 py-3">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {keys.map((item) => {
-                  const usagePercent =
-                    item.monthly_limit > 0
-                      ? Math.round(
-                          (item.current_month_usage / item.monthly_limit) * 100,
-                        )
-                      : 0;
-                  const secretVisible = showSecrets[item.id];
 
-                  return (
-                    <tr
-                      key={item.id}
-                      className="border-b last:border-0 hover:bg-gray-50"
-                    >
-                      <td className="px-4 py-3 font-medium">
-                        {item.client_name}
-                        {item.allowed_domains &&
-                          item.allowed_domains.length > 0 && (
-                            <p className="mt-0.5 text-xs text-gray-400">
-                              {item.allowed_domains.join(', ')}
-                            </p>
-                          )}
-                      </td>
+          {/* 키 목록 테이블 */}
+          <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+            {loading ? (
+              <div className="p-12 text-center text-sm text-gray-400">
+                로딩 중...
+              </div>
+            ) : keys.length === 0 ? (
+              <div className="p-12 text-center text-sm text-gray-400">
+                등록된 API 키가 없습니다.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b bg-gray-50 text-xs text-gray-500">
+                    <tr>
+                      <th className="px-4 py-3">파트너사</th>
+                      <th className="px-4 py-3">Site Key</th>
+                      <th className="px-4 py-3">Secret Key</th>
+                      <th className="px-4 py-3">플랜</th>
+                      <th className="px-4 py-3">사용량</th>
+                      <th className="px-4 py-3">상태</th>
+                      <th className="px-4 py-3">생성일</th>
+                      <th className="px-4 py-3">관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {keys.map((item) => {
+                      const usagePercent =
+                        item.monthly_limit > 0
+                          ? Math.round(
+                              (item.current_month_usage / item.monthly_limit) *
+                                100,
+                            )
+                          : 0;
+                      const secretVisible = showSecrets[item.id];
 
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <code className="text-xs">
-                            {maskKey(item.api_key)}
-                          </code>
-                          <button
-                            onClick={() => copyToClipboard(item.api_key)}
-                            className="text-gray-400 hover:text-blue-600"
-                            title="복사"
-                          >
-                            <Copy size={14} />
-                          </button>
-                        </div>
-                      </td>
+                      return (
+                        <tr
+                          key={item.id}
+                          className="border-b last:border-0 hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-3 font-medium">
+                            {item.client_name}
+                            {item.allowed_domains &&
+                              item.allowed_domains.length > 0 && (
+                                <p className="mt-0.5 text-xs text-gray-400">
+                                  {item.allowed_domains.join(', ')}
+                                </p>
+                              )}
+                          </td>
 
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <code className="text-xs">
-                            {secretVisible
-                              ? item.secret_key
-                              : maskKey(item.secret_key)}
-                          </code>
-                          <button
-                            onClick={() =>
-                              setShowSecrets((prev) => ({
-                                ...prev,
-                                [item.id]: !prev[item.id],
-                              }))
-                            }
-                            className="text-gray-400 hover:text-gray-600"
-                            title={secretVisible ? '숨기기' : '보기'}
-                          >
-                            {secretVisible ? (
-                              <EyeOff size={14} />
-                            ) : (
-                              <Eye size={14} />
-                            )}
-                          </button>
-                          {secretVisible && (
-                            <button
-                              onClick={() => copyToClipboard(item.secret_key)}
-                              className="text-gray-400 hover:text-blue-600"
-                              title="복사"
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <code className="text-xs">
+                                {maskKey(item.api_key)}
+                              </code>
+                              <button
+                                onClick={() => copyToClipboard(item.api_key)}
+                                className="text-gray-400 hover:text-blue-600"
+                                title="복사"
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <code className="text-xs">
+                                {secretVisible
+                                  ? item.secret_key
+                                  : maskKey(item.secret_key)}
+                              </code>
+                              <button
+                                onClick={() =>
+                                  setShowSecrets((prev) => ({
+                                    ...prev,
+                                    [item.id]: !prev[item.id],
+                                  }))
+                                }
+                                className="text-gray-400 hover:text-gray-600"
+                                title={secretVisible ? '숨기기' : '보기'}
+                              >
+                                {secretVisible ? (
+                                  <EyeOff size={14} />
+                                ) : (
+                                  <Eye size={14} />
+                                )}
+                              </button>
+                              {secretVisible && (
+                                <button
+                                  onClick={() =>
+                                    copyToClipboard(item.secret_key)
+                                  }
+                                  className="text-gray-400 hover:text-blue-600"
+                                  title="복사"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${planColor(item.plan)}`}
                             >
-                              <Copy size={14} />
+                              {planLabel(item.plan)}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <div className="w-28">
+                              <div className="flex justify-between text-xs">
+                                <span>
+                                  {item.current_month_usage.toLocaleString()}
+                                </span>
+                                <span className="text-gray-400">
+                                  / {item.monthly_limit.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+                                <div
+                                  className={`h-1.5 rounded-full transition-all ${
+                                    usagePercent >= 90
+                                      ? 'bg-red-500'
+                                      : usagePercent >= 70
+                                        ? 'bg-amber-400'
+                                        : 'bg-green-500'
+                                  }`}
+                                  style={{
+                                    width: `${Math.min(usagePercent, 100)}%`,
+                                  }}
+                                />
+                              </div>
+                              <p className="mt-0.5 text-right text-xs text-gray-400">
+                                {usagePercent}%
+                              </p>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleToggleActive(item)}
+                              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                item.is_active
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                            >
+                              {item.is_active ? '활성' : '비활성'}
+                            </button>
+                          </td>
+
+                          <td className="px-4 py-3 text-xs text-gray-500">
+                            {item.created_at?.split(' ')[0] ?? '-'}
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setEditKey(item)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
+                                title="수정"
+                              >
+                                <Key size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleRotateSecret(item)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-amber-600"
+                                title="Secret 재발급"
+                              >
+                                <RotateCcw size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleResetUsage(item)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-purple-600"
+                                title="사용량 초기화"
+                              >
+                                <RefreshCw size={14} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setLogKey({
+                                    id: item.id,
+                                    name: item.client_name,
+                                  })
+                                }
+                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-green-600"
+                                title="사용 로그"
+                              >
+                                <Search size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* 페이징 */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <p className="text-xs text-gray-500">
+                  총 {total}건 중 {(page - 1) * 20 + 1}–
+                  {Math.min(page * 20, total)}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded border px-3 py-1 text-xs disabled:opacity-40"
+                  >
+                    이전
+                  </button>
+                  <span className="text-xs text-gray-500">
+                    {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="rounded border px-3 py-1 text-xs disabled:opacity-40"
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* 플랜 문의 탭 */}
+      {activeTab === 'inquiries' && (
+        <>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">
+              플랜 업그레이드 문의
+              {pendingCount > 0 && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                  {pendingCount}건 대기
+                </span>
+              )}
+            </h2>
+            <button
+              onClick={() => void loadInquiries()}
+              className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200"
+            >
+              <RefreshCw size={12} />
+              새로고침
+            </button>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+            {inquiryLoading ? (
+              <div className="p-12 text-center text-sm text-gray-400">
+                로딩 중...
+              </div>
+            ) : inquiries.length === 0 ? (
+              <div className="p-12 text-center text-sm text-gray-400">
+                접수된 문의가 없습니다.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b bg-gray-50 text-xs text-gray-500">
+                    <tr>
+                      <th className="px-4 py-3">사용자</th>
+                      <th className="px-4 py-3">희망 플랜</th>
+                      <th className="px-4 py-3">메시지</th>
+                      <th className="px-4 py-3">상태</th>
+                      <th className="px-4 py-3">일시</th>
+                      <th className="px-4 py-3">액션</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inquiries.map((inq) => (
+                      <tr
+                        key={inq.id}
+                        className="border-b last:border-0 hover:bg-gray-50"
+                      >
+                        <td className="px-4 py-4 font-medium text-gray-700">
+                          {inq.user_email || inq.user_id.slice(0, 8)}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${planColor(inq.desired_plan)}`}
+                          >
+                            {planLabel(inq.desired_plan)}
+                          </span>
+                        </td>
+                        <td className="max-w-[300px] truncate px-4 py-4 text-gray-500">
+                          {inq.message || '-'}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              inq.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-green-100 text-green-700'
+                            }`}
+                          >
+                            {inq.status === 'pending' ? '대기' : '완료'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-gray-500">
+                          {inq.created_at?.slice(0, 10) || '-'}
+                        </td>
+                        <td className="px-4 py-4">
+                          {inq.status === 'pending' && (
+                            <button
+                              onClick={() => handleCompleteInquiry(inq.id)}
+                              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                            >
+                              처리 완료
                             </button>
                           )}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${planColor(item.plan)}`}
-                        >
-                          {planLabel(item.plan)}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <div className="w-28">
-                          <div className="flex justify-between text-xs">
-                            <span>
-                              {item.current_month_usage.toLocaleString()}
-                            </span>
-                            <span className="text-gray-400">
-                              / {item.monthly_limit.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
-                            <div
-                              className={`h-1.5 rounded-full transition-all ${
-                                usagePercent >= 90
-                                  ? 'bg-red-500'
-                                  : usagePercent >= 70
-                                    ? 'bg-amber-400'
-                                    : 'bg-green-500'
-                              }`}
-                              style={{
-                                width: `${Math.min(usagePercent, 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="mt-0.5 text-right text-xs text-gray-400">
-                            {usagePercent}%
-                          </p>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleToggleActive(item)}
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            item.is_active
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                        >
-                          {item.is_active ? '활성' : '비활성'}
-                        </button>
-                      </td>
-
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {item.created_at?.split(' ')[0] ?? '-'}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setEditKey(item)}
-                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
-                            title="수정"
-                          >
-                            <Key size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleRotateSecret(item)}
-                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-amber-600"
-                            title="Secret 재발급"
-                          >
-                            <RotateCcw size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleResetUsage(item)}
-                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-purple-600"
-                            title="사용량 초기화"
-                          >
-                            <RefreshCw size={14} />
-                          </button>
-                          <button
-                            onClick={() =>
-                              setLogKey({
-                                id: item.id,
-                                name: item.client_name,
-                              })
-                            }
-                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-green-600"
-                            title="사용 로그"
-                          >
-                            <Search size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* 페이징 */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-4 py-3">
-            <p className="text-xs text-gray-500">
-              총 {total}건 중 {(page - 1) * 20 + 1}–{Math.min(page * 20, total)}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded border px-3 py-1 text-xs disabled:opacity-40"
-              >
-                이전
-              </button>
-              <span className="text-xs text-gray-500">
-                {page} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="rounded border px-3 py-1 text-xs disabled:opacity-40"
-              >
-                다음
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* 모달들 */}
-      {/* 플랜 문의 목록 */}
-      <div className="mt-8 rounded-xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
-            플랜 업그레이드 문의
-            {inquiries.filter((i) => i.status === 'pending').length > 0 && (
-              <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
-                {inquiries.filter((i) => i.status === 'pending').length}건 대기
-              </span>
-            )}
-          </h2>
-          <button
-            onClick={() => void loadInquiries()}
-            className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200"
-          >
-            <RefreshCw size={12} />
-            새로고침
-          </button>
-        </div>
-        {inquiryLoading ? (
-          <p className="text-sm text-gray-400">로딩 중...</p>
-        ) : inquiries.length === 0 ? (
-          <p className="text-sm text-gray-400">접수된 문의가 없습니다.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs text-gray-500">
-                <th className="pb-2">사용자</th>
-                <th className="pb-2">희망 플랜</th>
-                <th className="pb-2">메시지</th>
-                <th className="pb-2">상태</th>
-                <th className="pb-2">일시</th>
-                <th className="pb-2">액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inquiries.map((inq) => (
-                <tr key={inq.id} className="border-b last:border-0">
-                  <td className="py-3 text-gray-700">
-                    {inq.user_email || inq.user_id.slice(0, 8)}
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${planColor(inq.desired_plan)}`}
-                    >
-                      {planLabel(inq.desired_plan)}
-                    </span>
-                  </td>
-                  <td className="max-w-[200px] truncate py-3 text-gray-500">
-                    {inq.message || '-'}
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        inq.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {inq.status === 'pending' ? '대기' : '완료'}
-                    </span>
-                  </td>
-                  <td className="py-3 text-gray-500">
-                    {inq.created_at?.slice(0, 10) || '-'}
-                  </td>
-                  <td className="py-3">
-                    {inq.status === 'pending' && (
-                      <button
-                        onClick={() => handleCompleteInquiry(inq.id)}
-                        className="rounded bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700"
-                      >
-                        처리 완료
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
       {showCreate && (
         <CreateKeyModal
           onClose={() => setShowCreate(false)}
