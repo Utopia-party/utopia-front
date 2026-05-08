@@ -32,6 +32,7 @@ export default function Header() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
   const [ipBannedModal, setIpBannedModal] = useState(false);
+  const [sessionExpiredModal, setSessionExpiredModal] = useState(false);
   const [sessionTimeLeft, setSessionTimeLeft] = useState<number>(0);
   const [isExtendingSession, setIsExtendingSession] = useState(false);
 
@@ -53,7 +54,7 @@ export default function Header() {
     enabled: isLoggedIn,
     staleTime: 1000 * 15,
     gcTime: 1000 * 60 * 30,
-    refetchInterval: 1000 * 10,
+    refetchInterval: 1000 * 30,
     refetchOnWindowFocus: true,
   });
 
@@ -86,6 +87,7 @@ export default function Header() {
 
   const isSessionWarningOpen =
     isLoggedIn &&
+    !sessionExpiredModal &&
     sessionTimeLeft > 0 &&
     sessionTimeLeft < SESSION_WARNING_SECONDS;
 
@@ -96,9 +98,28 @@ export default function Header() {
       console.error('로그아웃 실패', e);
     } finally {
       setIsProfileMenuOpen(false);
+      setSessionExpiredModal(false);
       navigate('/home', { replace: true });
     }
   }, [logout, navigate]);
+
+  const handleSessionExpiredLogout = useCallback(async () => {
+    if (hasLoggedOutBySessionExpiredRef.current) {
+      setSessionExpiredModal(true);
+      return;
+    }
+
+    try {
+      hasLoggedOutBySessionExpiredRef.current = true;
+      setSessionExpiredModal(true);
+      setIsProfileMenuOpen(false);
+      setIsNotificationOpen(false);
+
+      await logout();
+    } catch (error) {
+      console.error('세션 만료 로그아웃 실패:', error);
+    }
+  }, [logout]);
 
   const handleExtendSession = useCallback(async () => {
     if (isExtendingSessionRef.current) return;
@@ -110,15 +131,15 @@ export default function Header() {
       await extendSession();
 
       hasLoggedOutBySessionExpiredRef.current = false;
+      setSessionExpiredModal(false);
     } catch (error) {
       console.error('세션 연장 실패:', error);
-      alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-      await handleLogout();
+      await handleSessionExpiredLogout();
     } finally {
       isExtendingSessionRef.current = false;
       setIsExtendingSession(false);
     }
-  }, [extendSession, handleLogout]);
+  }, [extendSession, handleSessionExpiredLogout]);
 
   const requestAutoExtendSession = useCallback(
     (locationSignature: string) => {
@@ -156,8 +177,11 @@ export default function Header() {
   ]);
 
   useEffect(() => {
-    hasLoggedOutBySessionExpiredRef.current = false;
-  }, [sessionExpiresAt]);
+    if (isLoggedIn && sessionExpiresAt) {
+      hasLoggedOutBySessionExpiredRef.current = false;
+      setSessionExpiredModal(false);
+    }
+  }, [isLoggedIn, sessionExpiresAt]);
 
   useEffect(() => {
     if (!isLoggedIn || !sessionExpiresAt) {
@@ -178,8 +202,7 @@ export default function Header() {
         !hasLoggedOutBySessionExpiredRef.current &&
         !isForcedLogoutInProgressRef.current
       ) {
-        hasLoggedOutBySessionExpiredRef.current = true;
-        await handleLogout();
+        await handleSessionExpiredLogout();
       }
     };
 
@@ -190,7 +213,7 @@ export default function Header() {
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [isLoggedIn, sessionExpiresAt, handleLogout]);
+  }, [isLoggedIn, sessionExpiresAt, handleSessionExpiredLogout]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -383,6 +406,34 @@ export default function Header() {
                 로그아웃
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {sessionExpiredModal && (
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-xl">
+            <div className="mb-4 text-4xl">🔒</div>
+
+            <h2 className="mb-2 text-xl font-bold text-gray-900">
+              로그인 시간이 만료되었습니다
+            </h2>
+
+            <p className="mb-6 text-sm leading-relaxed text-gray-600">
+              로그인 유지 시간이 지나 안전한 이용을 위해
+              <br />
+              다시 로그인이 필요합니다.
+            </p>
+
+            <button
+              onClick={() => {
+                setSessionExpiredModal(false);
+                navigate('/login', { replace: true });
+              }}
+              className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              다시 로그인하기
+            </button>
           </div>
         </div>
       )}
