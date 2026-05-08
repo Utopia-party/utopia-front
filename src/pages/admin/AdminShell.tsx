@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import AdminSidebar from './components/AdminSidebar';
 import {
@@ -8,6 +8,8 @@ import {
 } from '../../apis/admin';
 import { fetchAdminAppeals } from '../../apis/admin/adminAppeals';
 import { fetchAdminReportUnhandledCount } from '../../apis/admin-report';
+
+const ADMIN_REPORT_COUNT_CHANGED_EVENT = 'admin-report-count-changed';
 
 /**
  * 관리자 전용 레이아웃
@@ -80,30 +82,50 @@ export default function AdminShell() {
     };
   }, [location.pathname, permissions?.canManageUsers]);
 
-  useEffect(() => {
+  const loadReportUnhandledCount = useCallback(async () => {
     if (!permissions?.canManageReports) {
       setReportUnhandledCount(0);
       return;
     }
 
-    let alive = true;
+    try {
+      const count = await fetchAdminReportUnhandledCount();
+      setReportUnhandledCount(count);
+    } catch {
+      setReportUnhandledCount(0);
+    }
+  }, [permissions?.canManageReports]);
 
-    fetchAdminReportUnhandledCount()
-      .then((count) => {
-        if (alive) {
-          setReportUnhandledCount(count);
-        }
-      })
-      .catch(() => {
-        if (alive) {
-          setReportUnhandledCount(0);
-        }
-      });
+  useEffect(() => {
+    void loadReportUnhandledCount();
+  }, [location.pathname, loadReportUnhandledCount]);
+
+  useEffect(() => {
+    const handleReportCountChanged = (event: Event) => {
+      const customEvent = event as CustomEvent<{ delta?: number }>;
+      const delta = customEvent.detail?.delta;
+
+      // 처리 성공 직후 화면 숫자를 먼저 즉시 반영
+      if (typeof delta === 'number') {
+        setReportUnhandledCount((prev) => Math.max(0, prev + delta));
+      }
+
+      // 이후 서버 기준 count로 다시 동기화
+      void loadReportUnhandledCount();
+    };
+
+    window.addEventListener(
+      ADMIN_REPORT_COUNT_CHANGED_EVENT,
+      handleReportCountChanged,
+    );
 
     return () => {
-      alive = false;
+      window.removeEventListener(
+        ADMIN_REPORT_COUNT_CHANGED_EVENT,
+        handleReportCountChanged,
+      );
     };
-  }, [location.pathname, permissions?.canManageReports]);
+  }, [loadReportUnhandledCount]);
 
   const allowedByPath = useMemo(() => {
     const path = location.pathname;

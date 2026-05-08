@@ -10,6 +10,8 @@ import {
   type ReportRecord,
 } from '../../apis/admin-report';
 
+const ADMIN_REPORT_COUNT_CHANGED_EVENT = 'admin-report-count-changed';
+
 const STATUS_STYLE: Record<string, string> = {
   접수: 'text-amber-500 bg-amber-50',
   검토중: 'text-violet-500 bg-violet-50',
@@ -72,7 +74,6 @@ function EvidencePreview({
 
   return (
     <div className="overflow-hidden rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50">
-      {/* 💡 모바일에서는 이미지 프리뷰 높이를 살짝 줄여 공간 확보 */}
       <div className="flex h-36 md:h-44 items-center justify-center bg-slate-100">
         {isImage && hasUrl ? (
           <a
@@ -191,9 +192,26 @@ export default function AdminReports() {
   };
 
   const handleReportStatus = async (reportId: string, status: string) => {
+    const currentReport = reports.find((report) => report.id === reportId);
+
+    const wasUnhandled =
+      currentReport?.status === '접수' || currentReport?.status === '검토중';
+
+    const willBeHandled = status === '처리' || status === '기각';
+
     try {
       setBusyReportId(reportId);
+
       await updateAdminReportStatus(reportId, status);
+
+      if (wasUnhandled && willBeHandled) {
+        window.dispatchEvent(
+          new CustomEvent(ADMIN_REPORT_COUNT_CHANGED_EVENT, {
+            detail: { delta: -1 },
+          }),
+        );
+      }
+
       await reloadReports();
     } catch (err) {
       setError(getAdminErrorMessage(err));
@@ -210,14 +228,12 @@ export default function AdminReports() {
   const paginated = filtered.slice((page - 1) * 20, page * 20);
 
   return (
-    // 💡 최상위 wrapper: flex 추가하여 축소 방지
     <div className="flex w-full min-w-0 flex-1 flex-col">
       <AdminHeader
         placeholder="신고 검색 (대상/사유/상태)..."
         onSearch={setSearch}
       />
 
-      {/* 💡 전반적인 패딩 최적화 */}
       <div className="flex-1 bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-7xl space-y-5 md:space-y-6">
           <section>
@@ -230,7 +246,6 @@ export default function AdminReports() {
             </p>
           </section>
 
-          {/* 💡 검색 폼 영역 모바일 최적화 (flex-col 기반 유연한 배치) */}
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end rounded-xl md:rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <label className="flex w-full sm:w-auto flex-col gap-1.5">
               <span className="text-[11px] md:text-xs font-medium text-gray-500">
@@ -310,7 +325,6 @@ export default function AdminReports() {
           )}
 
           <section className="overflow-hidden rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm">
-            {/* 💡 테이블 가로 스크롤 설정 */}
             <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               <table className="min-w-200 w-full border-collapse">
                 <thead>
@@ -431,7 +445,6 @@ export default function AdminReports() {
                           </td>
                         </tr>
 
-                        {/* 💡 확장 상세 패널 */}
                         {isExpanded && (
                           <tr className="border-b border-gray-100 bg-slate-50/70">
                             <td colSpan={8} className="p-3 md:px-4 md:py-4">
@@ -521,7 +534,6 @@ export default function AdminReports() {
                                       첨부된 증빙 파일이 없습니다.
                                     </div>
                                   ) : (
-                                    // 💡 이미지 썸네일 그리드: 모바일은 1열, 태블릿 이상은 다열 구조 적용
                                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                       {report.evidences.map((evidence) => (
                                         <EvidencePreview
