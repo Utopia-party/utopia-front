@@ -40,6 +40,7 @@ const REPORT_CATEGORIES: { label: string; value: ReportCategory }[] = [
   { label: '욕설/비방', value: 'PROFANITY' },
   { label: '사기/불이행', value: 'SCAM' },
   { label: '스팸/도배', value: 'SPAM' },
+  { label: '노쇼', value: 'NO_SHOW' },
 ];
 
 const MAX_FILE_COUNT = 5;
