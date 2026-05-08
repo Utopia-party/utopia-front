@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Party } from '../../../types/party';
+import { Crown, MailCheck, UsersRound, WalletCards } from 'lucide-react';
 import { useState } from 'react';
+import type { Party } from '../../../types/party';
 import { applyParty, partyKeys } from '../../../libs/partyapi';
 import type { ApiError } from '../../../types/error';
 
@@ -33,25 +34,29 @@ export default function ApplyModal({
       onClick={onClose}
     >
       <div
-        // 모바일에서는 모서리 둥글기와 패딩을 약간 컴팩트하게 조절
-        className="w-full max-w-md rounded-2xl sm:rounded-3xl border border-white/30 bg-white p-5 sm:p-7 shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-white/30 bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-7"
         onClick={(e) => e.stopPropagation()}
       >
         {done ? (
-          <div className="py-2 sm:py-4 text-center">
-            <div className="mb-3 text-4xl sm:mb-4 sm:text-5xl">📨</div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900">
+          <div className="py-2 text-center sm:py-4">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 sm:mb-4 sm:h-16 sm:w-16">
+              <MailCheck className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={2.25} />
+            </div>
+
+            <h3 className="text-lg font-black text-slate-900 sm:text-xl">
               신청 완료!
             </h3>
-            <p className="mt-2 break-keep text-xs sm:text-sm leading-relaxed sm:leading-6 text-slate-500">
+
+            <p className="mt-2 break-keep text-xs leading-relaxed text-slate-500 sm:text-sm sm:leading-6">
               참여 신청이 접수되었습니다.
               <br />
               파티 리더의 승인을 기다려주세요.
             </p>
+
             <button
+              type="button"
               onClick={onClose}
-              // 터치 반응 추가 (active:scale-95)
-              className="mt-6 w-full rounded-xl sm:rounded-2xl bg-slate-900 py-3 sm:py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-95"
+              className="mt-6 w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-95 sm:rounded-2xl sm:py-3.5"
             >
               확인
             </button>
@@ -59,28 +64,31 @@ export default function ApplyModal({
         ) : (
           <>
             <div className="mb-4 sm:mb-5">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-indigo-500">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-500 sm:text-xs">
                 Join party
               </p>
-              <h3 className="mt-1 text-lg sm:mt-2 sm:text-xl font-black text-slate-900">
+
+              <h3 className="mt-1 text-lg font-black text-slate-900 sm:mt-2 sm:text-xl">
                 파티 참여 신청
               </h3>
-              <p className="mt-1.5 break-keep text-xs sm:mt-2 sm:text-sm leading-relaxed sm:leading-6 text-slate-500">
+
+              <p className="mt-1.5 break-keep text-xs leading-relaxed text-slate-500 sm:mt-2 sm:text-sm sm:leading-6">
                 아래 내용을 확인한 뒤 참여를 진행해주세요.
               </p>
             </div>
 
-            <div className="rounded-xl sm:rounded-2xl bg-slate-50 p-3 sm:p-4 ring-1 ring-slate-100">
-              {/* 제목이 길 경우를 대비해 break-keep 및 leading 조정 */}
-              <p className="break-keep text-sm sm:text-base font-bold leading-snug text-slate-900">
+            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:rounded-2xl sm:p-4">
+              <p className="break-keep text-sm font-bold leading-snug text-slate-900 sm:text-base">
                 <span className="text-indigo-600">[{party.service_name}]</span>{' '}
                 {party.title}
               </p>
 
-              <div className="mt-2.5 sm:mt-3 flex flex-col gap-1.5 text-[11px] sm:text-xs text-slate-500">
-                {/* 텍스트와 이모지를 깔끔하게 정렬하기 위해 flex 컨테이너 사용 */}
+              <div className="mt-2.5 flex flex-col gap-1.5 text-[11px] text-slate-500 sm:mt-3 sm:text-xs">
                 <p className="flex items-center gap-1.5">
-                  <span className="shrink-0 text-sm">👥</span>
+                  <UsersRound
+                    className="h-4 w-4 shrink-0 text-slate-400"
+                    strokeWidth={2.25}
+                  />
                   <span>
                     현재{' '}
                     <strong className="text-slate-700">
@@ -89,9 +97,12 @@ export default function ApplyModal({
                     명 참여 중
                   </span>
                 </p>
+
                 <p className="flex items-center gap-1.5">
-                  <span className="shrink-0 text-sm">👤</span>
-                  {/* 호스트 닉네임이 길 경우 줄바꿈 방지 */}
+                  <Crown
+                    className="h-4 w-4 shrink-0 text-slate-400"
+                    strokeWidth={2.25}
+                  />
                   <span className="truncate">
                     호스트:{' '}
                     <strong className="text-slate-700">
@@ -99,9 +110,13 @@ export default function ApplyModal({
                     </strong>
                   </span>
                 </p>
+
                 {party.monthly_price != null && party.monthly_price > 0 ? (
                   <p className="flex items-center gap-1.5">
-                    <span className="shrink-0 text-sm">💰</span>
+                    <WalletCards
+                      className="h-4 w-4 shrink-0 text-slate-400"
+                      strokeWidth={2.25}
+                    />
                     <span>
                       월{' '}
                       <strong className="text-indigo-600">
@@ -113,17 +128,20 @@ export default function ApplyModal({
               </div>
             </div>
 
-            <div className="mt-5 sm:mt-6 flex gap-2">
+            <div className="mt-5 flex gap-2 sm:mt-6">
               <button
+                type="button"
                 onClick={onClose}
-                className="flex-1 rounded-xl sm:rounded-2xl border border-slate-200 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-95"
+                className="flex-1 rounded-xl border border-slate-200 py-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-95 sm:rounded-2xl sm:py-3.5 sm:text-sm"
               >
                 취소
               </button>
+
               <button
+                type="button"
                 onClick={() => mutation.mutate()}
                 disabled={mutation.isPending}
-                className="flex-1 rounded-xl sm:rounded-2xl bg-slate-900 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-50 active:scale-95"
+                className="flex-1 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white transition hover:bg-slate-800 disabled:opacity-50 active:scale-95 sm:rounded-2xl sm:py-3.5 sm:text-sm"
               >
                 {mutation.isPending ? '처리 중...' : '신청하기'}
               </button>
