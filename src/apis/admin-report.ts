@@ -187,6 +187,14 @@ export async function fetchAdminReports(params?: {
   return data.map(mapReport);
 }
 
+export async function fetchAdminReportUnhandledCount(): Promise<number> {
+  const { data } = await api.get<{ count: number }>(
+    '/api/admin/reports/unhandled-count',
+  );
+
+  return data.count ?? 0;
+}
+
 export async function updateAdminReportStatus(
   reportId: string,
   status: string,

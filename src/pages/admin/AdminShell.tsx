@@ -7,6 +7,7 @@ import {
   type AdminPermissions,
 } from '../../apis/admin';
 import { fetchAdminAppeals } from '../../apis/admin/adminAppeals';
+import { fetchAdminReportUnhandledCount } from '../../apis/admin-report';
 
 /**
  * 관리자 전용 레이아웃
@@ -21,6 +22,7 @@ export default function AdminShell() {
   const [error, setError] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [appealPendingCount, setAppealPendingCount] = useState(0);
+  const [reportUnhandledCount, setReportUnhandledCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -54,10 +56,54 @@ export default function AdminShell() {
   }, []);
 
   useEffect(() => {
+    if (!permissions?.canManageUsers) {
+      setAppealPendingCount(0);
+      return;
+    }
+
+    let alive = true;
+
     fetchAdminAppeals('PENDING')
-      .then((data) => setAppealPendingCount(data.length))
-      .catch(() => {});
-  }, [location.pathname]);
+      .then((data) => {
+        if (alive) {
+          setAppealPendingCount(data.length);
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setAppealPendingCount(0);
+        }
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [location.pathname, permissions?.canManageUsers]);
+
+  useEffect(() => {
+    if (!permissions?.canManageReports) {
+      setReportUnhandledCount(0);
+      return;
+    }
+
+    let alive = true;
+
+    fetchAdminReportUnhandledCount()
+      .then((count) => {
+        if (alive) {
+          setReportUnhandledCount(count);
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setReportUnhandledCount(0);
+        }
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [location.pathname, permissions?.canManageReports]);
 
   const allowedByPath = useMemo(() => {
     const path = location.pathname;
@@ -119,6 +165,7 @@ export default function AdminShell() {
         permissions?.canManageHandOcr ?? permissions?.canManageCaptcha ?? false,
       );
     }
+
     if (path.startsWith('/admin/appeals')) {
       return permissions?.canManageUsers ?? false;
     }
@@ -155,6 +202,7 @@ export default function AdminShell() {
         collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed((prev) => !prev)}
         appealPendingCount={appealPendingCount}
+        reportUnhandledCount={reportUnhandledCount}
       />
 
       <div
