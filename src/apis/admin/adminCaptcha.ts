@@ -330,3 +330,14 @@ export async function getGenerateStatus(): Promise<{
   const { data } = await api.get('/api/admin/captcha/generate/status');
   return data;
 }
+
+export async function syncMinioImages(): Promise<{
+  message: string;
+  emoji_new: number;
+  emoji_skip: number;
+  photo_new: number;
+  photo_skip: number;
+}> {
+  const { data } = await api.post('/api/admin/captcha/sync-images');
+  return data;
+}

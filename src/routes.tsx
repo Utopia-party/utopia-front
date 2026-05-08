@@ -33,6 +33,7 @@ import MyReport from './pages/mypage/MyReport';
 import MyPayment from './pages/mypage/MyPayment';
 import MyTrustHistory from './pages/mypage/MyTrustHistory';
 import MyPraises from './pages/mypage/MyPraises';
+import MyDeveloper from './pages/mypage/MyDeveloper';
 
 // 관리자 페이지
 import AdminShell from './pages/admin/AdminShell';
@@ -51,6 +52,7 @@ import AdminHandOCR from './pages/admin/AdminHandOCR';
 import AdminCaptcha from './pages/admin/AdminCaptcha';
 import AdminQuickMatch from './pages/admin/AdminQuickMatch';
 import AdminAppeals from './pages/admin/AdminAppeals';
+import AdminSaas from './pages/admin/AdminSaas';
 import ManualPage from './pages/manual/ManualPage';
 
 const router = createBrowserRouter([
@@ -178,6 +180,10 @@ const router = createBrowserRouter([
             path: 'praises',
             element: <MyPraises />,
           },
+          {
+            path: 'developer',
+            element: <MyDeveloper />,
+          },
         ],
       },
     ],
@@ -250,6 +256,10 @@ const router = createBrowserRouter([
       {
         path: 'appeals',
         Component: AdminAppeals,
+      },
+      {
+        path: 'saas',
+        Component: AdminSaas,
       },
     ],
   },

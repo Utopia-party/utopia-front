@@ -17,6 +17,7 @@ const mypageMenus = [
   { label: '칭찬 내역', to: '/mypage/praises' },
   { label: '결제 내역', to: '/mypage/payment' },
   { label: '신고 내역', to: '/mypage/report' },
+  { label: '캡챠 SaaS', to: '/mypage/developer' },
 ];
 
 export default function Sidebar() {

@@ -5,6 +5,7 @@ import {
   CloudCog,
   CreditCard,
   FileText,
+  Globe,
   Home,
   LayoutDashboard,
   Menu,
@@ -127,6 +128,12 @@ const menuSections: MenuSection[] = [
             permissions?.canManageCaptcha ??
             false,
           ),
+      },
+      {
+        path: '/admin/saas',
+        label: 'SaaS API 관리',
+        icon: Globe,
+        visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
       },
     ],
   },

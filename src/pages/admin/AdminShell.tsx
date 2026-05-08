@@ -123,6 +123,10 @@ export default function AdminShell() {
       return permissions?.canManageUsers ?? false;
     }
 
+    if (path.startsWith('/admin/saas')) {
+      return permissions?.canManageCaptcha ?? false;
+    }
+
     return true;
   }, [location.pathname, permissions]);
 
