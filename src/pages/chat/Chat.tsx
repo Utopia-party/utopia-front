@@ -100,11 +100,31 @@ export default function Chat() {
     }
   }, [partyId]);
 
+  const loadSettlementStatus = useCallback(async () => {
+    if (!partyId) return;
+    try {
+      const { data } = await api.get(
+        `/api/settlement/parties/${partyId}/status`,
+      );
+      setSettlementStatus(data);
+    } catch {
+      setSettlementStatus(null);
+    }
+  }, [partyId]);
+
+  const refreshPartyContext = useCallback(async () => {
+    await Promise.all([
+      loadPartyInfo(),
+      checkPaymentStatus(),
+      loadSettlementStatus(),
+    ]);
+  }, [loadPartyInfo, checkPaymentStatus, loadSettlementStatus]);
+
   const { messages, unreadCounts, connected, sendMessage, initMessages } =
     useChatWebSocket({
       partyId,
       currentUserId,
-      onPartyUpdated: loadPartyInfo,
+      onPartyUpdated: refreshPartyContext,
       onNoticeUpdated: (n) => setNotice(n),
       onSettlementApproved: (settlementId) => {
         setSettlementStatus({
@@ -306,7 +326,13 @@ export default function Chat() {
 
     const timer = window.setTimeout(() => void checkPaymentStatus(), 0);
     return () => window.clearTimeout(timer);
-  }, [partyId, checkPaymentStatus, loadPartyInfo, initMessages]);
+  }, [
+    partyId,
+    checkPaymentStatus,
+    loadPartyInfo,
+    loadSettlementStatus,
+    initMessages,
+  ]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

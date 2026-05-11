@@ -223,6 +223,15 @@ function PaymentCard({
         결제일 {fmtDate(payment.paidAt ?? payment.createdAt)}
       </div>
 
+      {payment.cancelReason && (
+        <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-3">
+          <div className="text-[10px] font-medium text-rose-500">취소 사유</div>
+          <div className="mt-1 text-xs leading-relaxed text-rose-700">
+            {payment.cancelReason}
+          </div>
+        </div>
+      )}
+
       {(payment.status === 'pending' || payment.status === 'approved') && (
         <div className="mt-4 flex gap-2">
           {payment.status === 'pending' && (
@@ -373,9 +382,23 @@ export default function AdminPayments() {
     );
     if (!confirmed) return;
 
+    let reason: string | undefined;
+    if (nextStatus === 'cancelled') {
+      const input = window.prompt(
+        `${payment.userNickname}님의 결제 취소 사유를 입력하세요.`,
+        payment.cancelReason ?? '',
+      );
+      if (input === null) return;
+      reason = input.trim();
+      if (!reason) {
+        window.alert('취소 사유를 입력해주세요.');
+        return;
+      }
+    }
+
     try {
       setActionPaymentId(payment.id);
-      await updateAdminPaymentStatus(payment.id, nextStatus);
+      await updateAdminPaymentStatus(payment.id, nextStatus, reason);
       await load({
         keyword: appliedKeyword,
         status: appliedStatus,
@@ -847,6 +870,11 @@ export default function AdminPayments() {
                             >
                               {STATUS_LABEL[p.status] ?? p.status}
                             </span>
+                            {p.cancelReason && (
+                              <p className="mt-1 max-w-44 break-words text-[10px] leading-relaxed text-rose-600">
+                                사유: {p.cancelReason}
+                              </p>
+                            )}
                           </td>
                           <td className="px-3 md:px-4 py-3 whitespace-nowrap">
                             {p.status === 'pending' ||
