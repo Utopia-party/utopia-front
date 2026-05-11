@@ -139,6 +139,13 @@ export default function Login() {
       const { checkAuth } = useAuthStore.getState();
       await checkAuth();
 
+      // checkAuth는 실패해도 throw하지 않으므로 직접 상태를 확인
+      const { isLoggedIn } = useAuthStore.getState();
+      if (!isLoggedIn) {
+        alert('로그인에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
+
       navigate('/home', { replace: true });
     } catch (error: unknown) {
       const apiError = error as {
