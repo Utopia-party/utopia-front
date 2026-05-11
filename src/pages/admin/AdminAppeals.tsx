@@ -190,6 +190,22 @@ export default function AdminAppeals() {
                     )}
                   </div>
 
+                  {/* 신청자 정보 */}
+                  <div className="mb-3 rounded-lg bg-blue-50 p-3">
+                    <p className="mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      신청자 정보
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      닉네임: <span className="font-medium">{appeal.user_nickname}</span>
+                    </p>
+                    <p className="mt-0.5 text-sm text-gray-700">
+                      이메일: <span className="font-medium">{appeal.user_email}</span>
+                    </p>
+                    <p className="mt-0.5 text-sm text-gray-700">
+                      신청 IP: <span className="font-mono font-medium">{appeal.ip_address ?? '-'}</span>
+                    </p>
+                  </div>
+
                   {/* 이의제기 사유 */}
                   <div className="mb-3">
                     <p className="mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">

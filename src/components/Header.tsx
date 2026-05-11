@@ -25,7 +25,7 @@ export default function Header() {
   const location = useLocation();
   const queryClient = useQueryClient();
 
-  const { isLoggedIn, loading, logout, user, sessionExpiresAt, extendSession } =
+  const { isLoggedIn, loading, logout, clearUser, user, sessionExpiresAt, extendSession } =
     useAuthStore();
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -230,12 +230,18 @@ export default function Header() {
           const refId = msg.reference_id ?? '';
 
           isForcedLogoutInProgressRef.current = true;
-          await logout();
 
           if (!banType) {
+            // 중복 로그인 등 일반 force_logout — refresh token revoke 필요
+            await logout();
             navigate('/login?reason=duplicate');
             return;
           }
+
+          // 제재로 인한 force_logout — logout() 호출 금지
+          // logout()은 서버에서 access token 쿠키를 삭제하므로
+          // 이의제기(/api/appeals)에 필요한 토큰이 사라져 401 발생
+          clearUser();
 
           const params = new URLSearchParams({
             reason: 'banned',

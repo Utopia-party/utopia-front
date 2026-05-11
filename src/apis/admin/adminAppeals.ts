@@ -21,6 +21,7 @@ export type AdminAppealOut = AppealOut & {
   ban_detail: string | null;
   ban_score_change: number | null;
   ban_created_at: string | null;
+  ip_address: string | null;
 };
 
 // 유저: 이의제기 신청
