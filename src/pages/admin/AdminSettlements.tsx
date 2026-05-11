@@ -32,6 +32,7 @@ export default function AdminSettlements() {
   const [error, setError] = useState('');
   const [busySettlementId, setBusySettlementId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const loadSettlements = async (params?: {
     keyword?: string;
@@ -197,6 +198,100 @@ export default function AdminSettlements() {
                 </button>
               </div>
             </div>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm md:rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] font-semibold text-slate-500 md:text-xs">
+                정산승인 관리 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] text-slate-600 md:text-xs">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    정산승인 관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    정산승인 관리 페이지는 파티별 정산 요청을 확인하고, 정산월,
+                    파티장, 멤버 수, 총 정산 금액을 검토한 뒤 승인 또는 거절로
+                    처리하는 운영 화면입니다. 대기 건을 우선 확인하고 문제가
+                    있는 파티는 파티관리 화면과 함께 점검할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 파티명, 파티장, 정산월 키워드와 기간 조건으로 정산
+                        요청을 검색할 수 있습니다.
+                      </p>
+                      <p>
+                        2. 전체, 대기, 승인, 거절 상태별로 정산 건을 나눠서
+                        확인할 수 있습니다.
+                      </p>
+                      <p>
+                        3. 정산 상세에서 정산 ID, 파티 정보, 총액, 멤버 수,
+                        생성일을 한 번에 검토할 수 있습니다.
+                      </p>
+                      <p>
+                        4. 대기 상태인 정산 요청을 승인하거나 거절해 실제 정산
+                        상태를 변경할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 상단 조회 조건에서 정산월이나 파티장 이름을 입력하고
+                        필요한 기간을 지정한 뒤 조회합니다.
+                      </p>
+                      <p>
+                        2. `대기` 탭에서 아직 처리되지 않은 정산 요청을 먼저
+                        확인합니다.
+                      </p>
+                      <p>
+                        3. 목록의 `상세`를 열어 총액, 멤버 수, 파티장, 생성일이
+                        정산 기준과 맞는지 검토합니다.
+                      </p>
+                      <p>
+                        4. 이상이 없으면 `승인`, 운영 이슈나 금액 오류가 있으면
+                        `거절`을 눌러 상태를 반영합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      승인과 거절은 실제 정산 관리자 API를 호출하므로, 처리 전
+                      파티장과 정산월이 맞는지 먼저 확인하는 것이 좋습니다.
+                    </p>
+                    <p>
+                      총액이나 멤버 수가 예상과 다르면 승인 전에 파티관리
+                      화면에서 멤버 구성과 운영 상태를 함께 확인하는 것을
+                      권장합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           <div className="w-full min-w-0 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
