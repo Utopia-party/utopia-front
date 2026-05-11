@@ -1,5 +1,16 @@
+export type QuickMatchRequestStatus =
+  | 'requested'
+  | 'matched'
+  | 'failed'
+  | 'expired';
+
+export interface QuickMatchCreateResponse {
+  message: string;
+  request_id: string;
+  status: QuickMatchRequestStatus;
+}
+
 export type QuickMatchPreferredConditions = {
-  price_range?: string;
   duration_preference?: 'under_1_month' | '1_3_months' | 'over_3_months';
 };
 
@@ -8,20 +19,13 @@ export interface QuickMatchCreatePayload {
   preferred_conditions?: QuickMatchPreferredConditions;
 }
 
-export interface QuickMatchCreateResponse {
-  message: string;
-  request_id: string;
-  status: string;
-}
-
 export interface QuickMatchCandidate {
   id: string;
   request_id: string;
   party_id: string;
   rule_score: number;
-  vector_score: number;
-  llm_score: number;
-  ai_score: number;
+  probability_score: number;
+  final_score: number;
   rank?: number | null;
   filter_reasons?: Record<string, unknown> | null;
   status: string;
@@ -38,8 +42,7 @@ export interface QuickMatchResultResponse {
   candidate_snapshot?: Record<string, unknown> | null;
   final_scores?: {
     rule_score?: number;
-    vector_score?: number;
-    llm_score?: number;
+    probability_score?: number;
     final_score?: number;
   } | null;
   decision_reason?: string | null;
@@ -55,11 +58,10 @@ export interface QuickMatchRequestResponse {
   preferred_conditions?: QuickMatchPreferredConditions | null;
   matched_party_id?: string | null;
   fail_reason?: string | null;
-  ai_profile_snapshot?: Record<string, unknown> | null;
+  request_profile_snapshot?: Record<string, unknown> | null;
   requested_at: string;
   matched_at?: string | null;
   expired_at?: string | null;
-  cancelled_at?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

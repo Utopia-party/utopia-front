@@ -1,10 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import {
-  generateQuickMatchCandidates,
-  joinQuickMatchParty,
-  requestQuickMatch,
-  selectQuickMatchParty,
-} from '../apis/quickMatchApi';
+import { joinQuickMatchParty, requestQuickMatch } from '../apis/quickMatchApi';
 import { useAuthStore } from '../stores/authStore';
 import type { QuickMatchCreatePayload } from '../types/quickMatch';
 
@@ -28,28 +23,6 @@ export const useQuickMatchRequest = () => {
     mutationFn: async (payload: QuickMatchCreatePayload) => {
       assertQuickMatchAvailable(isLoggedIn, loading);
       return requestQuickMatch(payload);
-    },
-  });
-};
-
-export const useQuickMatchCandidates = () => {
-  const { isLoggedIn, loading } = useAuthStore();
-
-  return useMutation({
-    mutationFn: async (requestId: string) => {
-      assertQuickMatchAvailable(isLoggedIn, loading);
-      return generateQuickMatchCandidates(requestId);
-    },
-  });
-};
-
-export const useQuickMatchSelect = () => {
-  const { isLoggedIn, loading } = useAuthStore();
-
-  return useMutation({
-    mutationFn: async (requestId: string) => {
-      assertQuickMatchAvailable(isLoggedIn, loading);
-      return selectQuickMatchParty(requestId);
     },
   });
 };

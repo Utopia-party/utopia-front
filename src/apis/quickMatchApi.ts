@@ -2,8 +2,6 @@ import { api } from './api';
 import type {
   QuickMatchCreatePayload,
   QuickMatchCreateResponse,
-  QuickMatchCandidate,
-  QuickMatchResultResponse,
   QuickMatchDetailResponse,
   PaymentPreviewResponse,
 } from '../types/quickMatch';
@@ -12,20 +10,6 @@ export const requestQuickMatch = async (
   payload: QuickMatchCreatePayload,
 ): Promise<QuickMatchCreateResponse> => {
   const { data } = await api.post('/api/quick-match', payload);
-  return data;
-};
-
-export const generateQuickMatchCandidates = async (
-  requestId: string,
-): Promise<QuickMatchCandidate[]> => {
-  const { data } = await api.post(`/api/quick-match/${requestId}/candidates`);
-  return data;
-};
-
-export const selectQuickMatchParty = async (
-  requestId: string,
-): Promise<QuickMatchResultResponse> => {
-  const { data } = await api.post(`/api/quick-match/${requestId}/select`);
   return data;
 };
 
@@ -50,7 +34,6 @@ export const getQuickMatchDetail = async (
   return data;
 };
 
-// 빠른매칭 수수료 포함 표시
 export const getPaymentPreview = async (
   partyId: string,
 ): Promise<PaymentPreviewResponse> => {
