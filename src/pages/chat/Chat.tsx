@@ -436,7 +436,7 @@ export default function Chat() {
         </div>
 
         {/* 방장 전용: 정산 승인 요청 버튼 */}
-        {partyInfo?.is_leader && settlementStatus?.status !== 'approved' && (
+        {partyInfo?.is_leader && settlementStatus?.status == null && (
           <button
             type="button"
             onClick={handleRequestSettlement}
@@ -444,6 +444,26 @@ export default function Chat() {
             className="shrink-0 rounded-full border border-primary bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/20 disabled:opacity-50"
           >
             {isRequestingSettlement ? '처리중...' : '정산 승인 요청'}
+          </button>
+        )}
+
+        {partyInfo?.is_leader && settlementStatus?.status === 'pending' && (
+          <button
+            type="button"
+            disabled
+            className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 opacity-90"
+          >
+            정산 요청 완료
+          </button>
+        )}
+
+        {partyInfo?.is_leader && settlementStatus?.status === 'rejected' && (
+          <button
+            type="button"
+            disabled
+            className="shrink-0 rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 opacity-90"
+          >
+            정산 거절됨
           </button>
         )}
 

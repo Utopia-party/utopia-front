@@ -123,7 +123,7 @@ function PaymentCard({
   actionLoading: boolean;
   onChangeStatus: (
     payment: AdminPaymentRecord,
-    nextStatus: 'approved' | 'rejected',
+    nextStatus: 'approved' | 'rejected' | 'cancelled',
   ) => void;
 }) {
   return (
@@ -223,23 +223,35 @@ function PaymentCard({
         결제일 {fmtDate(payment.paidAt ?? payment.createdAt)}
       </div>
 
-      {payment.status === 'pending' && (
+      {(payment.status === 'pending' || payment.status === 'approved') && (
         <div className="mt-4 flex gap-2">
+          {payment.status === 'pending' && (
+            <>
+              <button
+                type="button"
+                onClick={() => onChangeStatus(payment, 'approved')}
+                disabled={actionLoading}
+                className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              >
+                {actionLoading ? '처리 중...' : '승인'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeStatus(payment, 'rejected')}
+                disabled={actionLoading}
+                className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-rose-100 disabled:bg-rose-50 disabled:text-rose-300"
+              >
+                거절
+              </button>
+            </>
+          )}
           <button
             type="button"
-            onClick={() => onChangeStatus(payment, 'approved')}
+            onClick={() => onChangeStatus(payment, 'cancelled')}
             disabled={actionLoading}
-            className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-300"
           >
-            {actionLoading ? '처리 중...' : '승인'}
-          </button>
-          <button
-            type="button"
-            onClick={() => onChangeStatus(payment, 'rejected')}
-            disabled={actionLoading}
-            className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-rose-100 disabled:bg-rose-50 disabled:text-rose-300"
-          >
-            거절
+            취소
           </button>
         </div>
       )}
@@ -348,9 +360,14 @@ export default function AdminPayments() {
 
   const handlePaymentStatusChange = async (
     payment: AdminPaymentRecord,
-    nextStatus: 'approved' | 'rejected',
+    nextStatus: 'approved' | 'rejected' | 'cancelled',
   ) => {
-    const label = nextStatus === 'approved' ? '승인' : '거절';
+    const label =
+      nextStatus === 'approved'
+        ? '승인'
+        : nextStatus === 'rejected'
+          ? '거절'
+          : '취소';
     const confirmed = window.confirm(
       `${payment.userNickname}님의 결제를 ${label} 처리할까요?`,
     );
@@ -438,6 +455,7 @@ export default function AdminPayments() {
                   <option value="approved">승인</option>
                   <option value="pending">대기</option>
                   <option value="rejected">거절</option>
+                  <option value="cancelled">취소</option>
                   <option value="completed">완료</option>
                 </select>
               </label>
@@ -831,29 +849,44 @@ export default function AdminPayments() {
                             </span>
                           </td>
                           <td className="px-3 md:px-4 py-3 whitespace-nowrap">
-                            {p.status === 'pending' ? (
+                            {p.status === 'pending' ||
+                            p.status === 'approved' ? (
                               <div className="flex items-center gap-2">
+                                {p.status === 'pending' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handlePaymentStatusChange(p, 'approved')
+                                      }
+                                      disabled={actionPaymentId === p.id}
+                                      className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                                    >
+                                      {actionPaymentId === p.id
+                                        ? '처리 중...'
+                                        : '승인'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handlePaymentStatusChange(p, 'rejected')
+                                      }
+                                      disabled={actionPaymentId === p.id}
+                                      className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-rose-100 disabled:bg-rose-50 disabled:text-rose-300"
+                                    >
+                                      거절
+                                    </button>
+                                  </>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    handlePaymentStatusChange(p, 'approved')
+                                    handlePaymentStatusChange(p, 'cancelled')
                                   }
                                   disabled={actionPaymentId === p.id}
-                                  className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-300"
                                 >
-                                  {actionPaymentId === p.id
-                                    ? '처리 중...'
-                                    : '승인'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handlePaymentStatusChange(p, 'rejected')
-                                  }
-                                  disabled={actionPaymentId === p.id}
-                                  className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-rose-100 disabled:bg-rose-50 disabled:text-rose-300"
-                                >
-                                  거절
+                                  취소
                                 </button>
                               </div>
                             ) : (

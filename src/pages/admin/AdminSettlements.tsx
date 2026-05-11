@@ -400,6 +400,37 @@ export default function AdminSettlements() {
                               </div>
                             ))}
                           </div>
+
+                          <div className="mt-4 rounded-xl border border-slate-200 bg-white px-3 py-3">
+                            <div className="text-[11px] font-medium text-slate-400">
+                              참여자 결제 상태
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {stl.participantPayments.length > 0 ? (
+                                stl.participantPayments.map((participant) => (
+                                  <span
+                                    key={participant.userId}
+                                    className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                      participant.paymentStatus === '승인'
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                        : participant.paymentStatus === '취소'
+                                          ? 'border-slate-200 bg-slate-50 text-slate-600'
+                                          : participant.paymentStatus === '거절'
+                                            ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                            : 'border-amber-200 bg-amber-50 text-amber-700'
+                                    }`}
+                                  >
+                                    {participant.nickname} ·{' '}
+                                    {participant.paymentStatus}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-slate-300">
+                                  -
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -638,6 +669,42 @@ export default function AdminSettlements() {
                                         </div>
                                       </div>
                                     ))}
+                                  </div>
+
+                                  <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                    <div className="text-xs font-medium text-slate-400">
+                                      참여자 결제 상태
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      {stl.participantPayments.length > 0 ? (
+                                        stl.participantPayments.map(
+                                          (participant) => (
+                                            <span
+                                              key={participant.userId}
+                                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                                participant.paymentStatus ===
+                                                '승인'
+                                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                  : participant.paymentStatus ===
+                                                      '취소'
+                                                    ? 'border-slate-200 bg-slate-50 text-slate-600'
+                                                    : participant.paymentStatus ===
+                                                        '거절'
+                                                      ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                                      : 'border-amber-200 bg-amber-50 text-amber-700'
+                                              }`}
+                                            >
+                                              {participant.nickname} ·{' '}
+                                              {participant.paymentStatus}
+                                            </span>
+                                          ),
+                                        )
+                                      ) : (
+                                        <span className="text-xs text-slate-300">
+                                          참여자 결제 정보가 없습니다.
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
 
                                   {stl.status === '대기' && (
