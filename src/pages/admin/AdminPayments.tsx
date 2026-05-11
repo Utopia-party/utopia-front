@@ -113,6 +113,107 @@ function getDiscountBadges(payment: AdminPaymentRecord) {
   return badges;
 }
 
+function PaymentCard({ payment }: { payment: AdminPaymentRecord }) {
+  return (
+    <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-gray-900">
+            {payment.userNickname}
+          </p>
+          {payment.userName && (
+            <p className="mt-0.5 truncate text-xs text-gray-400">
+              {payment.userName}
+            </p>
+          )}
+        </div>
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+            STATUS_CLASS[payment.status] ??
+            'bg-gray-50 text-gray-600 border-gray-200'
+          }`}
+        >
+          {STATUS_LABEL[payment.status] ?? payment.status}
+        </span>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
+        <p className="truncate text-sm font-bold text-slate-900">
+          {payment.partyTitle}
+        </p>
+        {payment.serviceName && (
+          <p className="mt-0.5 text-xs text-slate-500">{payment.serviceName}</p>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold border ${
+            payment.role === '방장'
+              ? 'bg-purple-50 text-purple-700 border-purple-200'
+              : 'bg-gray-50 text-gray-600 border-gray-200'
+          }`}
+        >
+          {payment.role}
+        </span>
+        <span className="text-xs text-slate-500">
+          {METHOD_LABEL[payment.paymentMethod ?? ''] ??
+            payment.paymentMethod ??
+            '-'}
+        </span>
+        <span className="text-xs text-slate-400">{payment.billingMonth}</span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-slate-50 px-3 py-3">
+          <div className="text-[10px] font-medium text-slate-400">1인 기준</div>
+          <div className="mt-1 text-sm font-semibold text-slate-700">
+            {fmt(payment.basePrice)}
+          </div>
+        </div>
+        <div className="rounded-xl bg-slate-50 px-3 py-3">
+          <div className="text-[10px] font-medium text-slate-400">실결제</div>
+          <div className="mt-1 text-sm font-bold text-slate-900">
+            {fmt(payment.amount)}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="text-[10px] font-medium text-slate-400">할인/추가</div>
+        {getDiscountBadges(payment).length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {getDiscountBadges(payment).map((badge) => (
+              <span
+                key={badge.label}
+                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${badge.className}`}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-1.5 text-xs text-slate-300">-</div>
+        )}
+      </div>
+
+      <div className="mt-3 rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-3">
+        <div className="text-[10px] font-medium text-orange-400">수수료</div>
+        <div className="mt-1 text-sm font-bold text-orange-600">
+          {fmt(payment.commissionAmount)}
+        </div>
+        <div className="mt-1 text-[10px] leading-relaxed text-slate-500">
+          {getCommissionLabel(payment)}
+        </div>
+      </div>
+
+      <div className="mt-3 text-[11px] text-slate-400">
+        결제일 {fmtDate(payment.paidAt ?? payment.createdAt)}
+      </div>
+    </article>
+  );
+}
+
 export default function AdminPayments() {
   const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [payments, setPayments] = useState<AdminPaymentRecord[]>([]);
@@ -446,7 +547,78 @@ export default function AdminPayments() {
           </div>
 
           {/* 💡 테이블 가로 스크롤 허용 */}
-          <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="space-y-3 md:hidden">
+            {loading ? (
+              <div className="rounded-xl border border-gray-200 bg-white py-12 text-center text-xs font-bold text-gray-400 shadow-sm">
+                불러오는 중...
+              </div>
+            ) : error ? (
+              <div className="rounded-xl border border-gray-200 bg-white py-12 text-center text-xs font-bold text-rose-500 shadow-sm">
+                {error}
+              </div>
+            ) : payments.length === 0 ? (
+              <div className="rounded-xl border border-gray-200 bg-white py-12 text-center text-xs font-bold text-gray-400 shadow-sm">
+                결제 내역이 없습니다.
+              </div>
+            ) : (
+              payments.map((payment) => (
+                <PaymentCard key={payment.id} payment={payment} />
+              ))
+            )}
+
+            {!loading && !error && payments.length > 0 && (
+              <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                <p className="text-[11px] font-medium text-gray-400">
+                  총 {total.toLocaleString()}건 · {page} / {totalPages} 페이지
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={page === 1}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-30 active:scale-95 transition"
+                  >
+                    «
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page === 1}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-30 active:scale-95 transition"
+                  >
+                    ‹
+                  </button>
+                  {pageRange().map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-bold transition active:scale-95 ${
+                        p === page
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page === totalPages}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-30 active:scale-95 transition"
+                  >
+                    ›
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={page === totalPages}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-30 active:scale-95 transition"
+                  >
+                    »
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="hidden overflow-hidden rounded-xl md:block md:rounded-2xl border border-gray-200 bg-white shadow-sm">
             {loading ? (
               <div className="py-12 md:py-16 text-center text-xs md:text-sm font-bold text-gray-400">
                 불러오는 중...
