@@ -166,6 +166,11 @@ export default function Home() {
     return [];
   }, [partyData]);
 
+  const visibleParties = useMemo(
+    () => parties.filter((party) => party.status === 'recruiting'),
+    [parties],
+  );
+
   const titleText = useMemo(() => {
     if (search) return `'${search}' 검색 결과`;
     if (category) return `${category} 파티`;
@@ -173,9 +178,9 @@ export default function Home() {
   }, [category, search]);
 
   const subtitleText = useMemo(() => {
-    if (search) return '검색어와 관련된 파티를 모아봤어요.';
+    if (search) return '검색어와 관련된 모집 중인 파티를 모아봤어요.';
     if (category) return '선택한 카테고리의 모집 중인 파티를 확인해보세요.';
-    return '지금 바로 참여할 수 있는 파티를 한눈에 확인해보세요.';
+    return '지금 바로 참여할 수 있는 모집 중인 파티를 한눈에 확인해보세요.';
   }, [category, search]);
 
   const matchedParty = useMemo<MatchedParty | undefined>(() => {
@@ -328,10 +333,11 @@ export default function Home() {
                       </>
                     )}
                   </button>
+
                   <div className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl sm:rounded-2xl bg-slate-100 px-3 py-3 sm:py-2 text-sm font-semibold text-slate-700">
                     <span className="text-slate-400">총</span>
                     <span className="text-base font-black text-slate-900">
-                      {partyData?.total ?? 0}
+                      {visibleParties.length}
                     </span>
                     <span className="text-slate-400">개</span>
                   </div>
@@ -347,13 +353,13 @@ export default function Home() {
                     />
                   ))}
                 </div>
-              ) : parties.length === 0 ? (
+              ) : visibleParties.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 bg-white px-4 py-16 sm:px-6 sm:py-20 text-center shadow-sm">
                   <div className="mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-slate-100 text-2xl sm:text-3xl">
                     🔎
                   </div>
                   <h3 className="text-base sm:text-lg font-extrabold text-slate-900">
-                    조건에 맞는 파티가 아직 없어요
+                    조건에 맞는 모집 중인 파티가 아직 없어요
                   </h3>
                   <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
                     검색어를 바꿔보거나, 직접 새 파티를 만들어 멤버를
@@ -376,13 +382,16 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {parties.map((party) => (
+                  {visibleParties.map((party) => (
                     <PartyCard
                       key={party.id}
                       party={party}
                       onDetail={setDetailTarget}
                       onApply={(p) => {
-                        if (!isLoggedIn) { navigate('/login'); return; }
+                        if (!isLoggedIn) {
+                          navigate('/login');
+                          return;
+                        }
                         setApplyTarget(p);
                       }}
                     />
@@ -399,12 +408,16 @@ export default function Home() {
           party={detailTarget}
           onClose={() => setDetailTarget(null)}
           onApply={(p) => {
-            if (!isLoggedIn) { navigate('/login'); return; }
+            if (!isLoggedIn) {
+              navigate('/login');
+              return;
+            }
             setDetailTarget(null);
             setApplyTarget(p);
           }}
         />
       )}
+
       {applyTarget && (
         <ApplyModal party={applyTarget} onClose={() => setApplyTarget(null)} />
       )}
