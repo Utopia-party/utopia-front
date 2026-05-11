@@ -714,6 +714,120 @@ export default function AdminSaas() {
         )}
       </div>
 
+      {/* 매뉴얼 */}
+      <details className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
+        <summary className="cursor-pointer select-none px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          📖 SaaS API 관리 매뉴얼
+        </summary>
+        <div className="space-y-4 border-t px-5 py-4 text-sm text-gray-600">
+          <details className="rounded border border-gray-100 bg-gray-50">
+            <summary className="cursor-pointer px-4 py-2 font-medium text-gray-700 hover:bg-gray-100">
+              🔑 API 키 발급 방법
+            </summary>
+            <div className="px-4 py-3">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  <strong>새 키 발급</strong> 버튼을 클릭하여 파트너사 정보를
+                  입력합니다.
+                </li>
+                <li>
+                  <strong>파트너명</strong>: 회사 또는 서비스 이름을 입력합니다.
+                </li>
+                <li>
+                  <strong>플랜 선택</strong>: Free / Basic / Pro / Enterprise 중
+                  선택합니다.
+                </li>
+                <li>
+                  발급 완료 시 <strong>API Key</strong>와{' '}
+                  <strong>Secret Key</strong>가 생성됩니다.
+                </li>
+              </ul>
+            </div>
+          </details>
+
+          <details className="rounded border border-gray-100 bg-gray-50">
+            <summary className="cursor-pointer px-4 py-2 font-medium text-gray-700 hover:bg-gray-100">
+              ⚙️ API 키 관리
+            </summary>
+            <div className="px-4 py-3">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  <strong>해당 키 관리(🔑)</strong>: 키 버튼을 클릭시 회사명,
+                  도메인, 플랜, 활성 상태을 변경 할 수 있습니다.
+                </li>
+                <li>
+                  <strong>Secret Key 재발급(↩️)</strong>: 키 유출 시 Secret
+                  Key만 재발급할 수 있습니다. 기존 Secret Key는 즉시
+                  무효화됩니다.
+                </li>
+                <li>
+                  <strong>사용량 초기화(🔄)</strong>: 사용량을 초기화 합니다.
+                </li>
+                <li>
+                  <strong>로그 확인(🔍)</strong>: 로그를 확인할 수 있습니다.
+                </li>
+              </ul>
+            </div>
+          </details>
+
+          <details className="rounded border border-gray-100 bg-gray-50">
+            <summary className="cursor-pointer px-4 py-2 font-medium text-gray-700 hover:bg-gray-100">
+              📊 플랜별 한도
+            </summary>
+            <div className="px-4 py-3">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  <strong>Free</strong>: 일 1,000회 / 월 10,000회 — 테스트 및
+                  개발용
+                </li>
+                <li>
+                  <strong>Basic</strong>: 일 10,000회 / 월 100,000회 — 소규모
+                  서비스
+                </li>
+                <li>
+                  <strong>Pro</strong>: 일 100,000회 / 월 1,000,000회 — 중규모
+                  서비스
+                </li>
+                <li>
+                  <strong>Enterprise</strong>: 무제한 — 대규모 서비스 (별도
+                  협의)
+                </li>
+                <li>
+                  한도 초과 시 API 응답에{' '}
+                  <code className="rounded bg-gray-200 px-1">
+                    429 Too Many Requests
+                  </code>
+                  가 반환됩니다.
+                </li>
+              </ul>
+            </div>
+          </details>
+
+          <details className="rounded border border-gray-100 bg-gray-50">
+            <summary className="cursor-pointer px-4 py-2 font-medium text-gray-700 hover:bg-gray-100">
+              📬 플랜 업그레이드 문의 관리
+            </summary>
+            <div className="px-4 py-3">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  <strong>플랜 업그레이드 문의</strong> 탭에서 파트너사의 SaaS
+                  플랜 업그레이드 문의를 확인할 수 있습니다.
+                </li>
+                <li>
+                  문의 상태: <strong>대기중</strong>(pending) →{' '}
+                  <strong>검토중</strong>(reviewing) → <strong>완료</strong>
+                  (resolved)
+                </li>
+                <li>상태 변경 시 해당 파트너사에 이메일 알림이 발송됩니다.</li>
+                <li>
+                  문의 내용을 검토한 후 적절한 플랜의 API 키를 발급해 주세요.
+                </li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </details>
+
       {/* 탭 */}
       <div className="mb-6 flex border-b">
         <button
