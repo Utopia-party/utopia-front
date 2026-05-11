@@ -4,6 +4,7 @@ import {
   fetchAdminPayments,
   getAdminErrorMessage,
   type AdminPaymentRecord,
+  updateAdminPaymentStatus,
 } from '../../apis/admin';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -113,7 +114,18 @@ function getDiscountBadges(payment: AdminPaymentRecord) {
   return badges;
 }
 
-function PaymentCard({ payment }: { payment: AdminPaymentRecord }) {
+function PaymentCard({
+  payment,
+  actionLoading,
+  onChangeStatus,
+}: {
+  payment: AdminPaymentRecord;
+  actionLoading: boolean;
+  onChangeStatus: (
+    payment: AdminPaymentRecord,
+    nextStatus: 'approved' | 'rejected',
+  ) => void;
+}) {
   return (
     <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -210,6 +222,27 @@ function PaymentCard({ payment }: { payment: AdminPaymentRecord }) {
       <div className="mt-3 text-[11px] text-slate-400">
         결제일 {fmtDate(payment.paidAt ?? payment.createdAt)}
       </div>
+
+      {payment.status === 'pending' && (
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => onChangeStatus(payment, 'approved')}
+            disabled={actionLoading}
+            className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          >
+            {actionLoading ? '처리 중...' : '승인'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeStatus(payment, 'rejected')}
+            disabled={actionLoading}
+            className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-rose-100 disabled:bg-rose-50 disabled:text-rose-300"
+          >
+            거절
+          </button>
+        </div>
+      )}
     </article>
   );
 }
@@ -222,6 +255,7 @@ export default function AdminPayments() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [actionPaymentId, setActionPaymentId] = useState<string | null>(null);
 
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -310,6 +344,33 @@ export default function AdminPayments() {
       date_to: appliedDateTo,
       page: next,
     });
+  };
+
+  const handlePaymentStatusChange = async (
+    payment: AdminPaymentRecord,
+    nextStatus: 'approved' | 'rejected',
+  ) => {
+    const label = nextStatus === 'approved' ? '승인' : '거절';
+    const confirmed = window.confirm(
+      `${payment.userNickname}님의 결제를 ${label} 처리할까요?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setActionPaymentId(payment.id);
+      await updateAdminPaymentStatus(payment.id, nextStatus);
+      await load({
+        keyword: appliedKeyword,
+        status: appliedStatus,
+        date_from: appliedDateFrom,
+        date_to: appliedDateTo,
+        page,
+      });
+    } catch (err) {
+      window.alert(getAdminErrorMessage(err));
+    } finally {
+      setActionPaymentId(null);
+    }
   };
 
   // 승인된 결제만 매출/수수료 합계에 반영한다.
@@ -562,7 +623,12 @@ export default function AdminPayments() {
               </div>
             ) : (
               payments.map((payment) => (
-                <PaymentCard key={payment.id} payment={payment} />
+                <PaymentCard
+                  key={payment.id}
+                  payment={payment}
+                  actionLoading={actionPaymentId === payment.id}
+                  onChangeStatus={handlePaymentStatusChange}
+                />
               ))
             )}
 
@@ -633,8 +699,12 @@ export default function AdminPayments() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                  <table className="min-w-max w-full text-xs md:text-sm border-collapse">
+                <div className="border-b border-gray-100 bg-slate-50/70 px-4 py-2 text-[11px] font-medium text-slate-500">
+                  좌우로 스크롤해서 전체 열과 상태 처리 버튼을 확인할 수
+                  있습니다.
+                </div>
+                <div className="overflow-x-auto px-3 pb-2 md:px-4">
+                  <table className="min-w-[1360px] w-full text-xs md:text-sm border-collapse">
                     <thead>
                       <tr className="border-b border-gray-100 bg-gray-50 text-left font-semibold text-gray-500">
                         <th className="px-3 md:px-4 py-3 whitespace-nowrap">
@@ -666,6 +736,9 @@ export default function AdminPayments() {
                         </th>
                         <th className="px-3 md:px-4 py-3 whitespace-nowrap">
                           상태
+                        </th>
+                        <th className="px-3 md:px-4 py-3 whitespace-nowrap">
+                          처리
                         </th>
                         <th className="px-3 md:px-4 py-3 whitespace-nowrap">
                           결제일
@@ -756,6 +829,38 @@ export default function AdminPayments() {
                             >
                               {STATUS_LABEL[p.status] ?? p.status}
                             </span>
+                          </td>
+                          <td className="px-3 md:px-4 py-3 whitespace-nowrap">
+                            {p.status === 'pending' ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handlePaymentStatusChange(p, 'approved')
+                                  }
+                                  disabled={actionPaymentId === p.id}
+                                  className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                                >
+                                  {actionPaymentId === p.id
+                                    ? '처리 중...'
+                                    : '승인'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handlePaymentStatusChange(p, 'rejected')
+                                  }
+                                  disabled={actionPaymentId === p.id}
+                                  className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-rose-100 disabled:bg-rose-50 disabled:text-rose-300"
+                                >
+                                  거절
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-gray-300">
+                                -
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 md:px-4 py-3 text-[10px] md:text-xs text-gray-500 whitespace-nowrap">
                             {fmtDate(p.paidAt ?? p.createdAt)}

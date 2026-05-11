@@ -28,7 +28,6 @@ import {
   type CaptchaImagesResponse,
   type CaptchaImageDetail,
   type CaptchaSetInfo,
-  syncMinioImages,
 } from '../../apis/admin';
 
 function formatTtl(seconds: number): string {
@@ -402,7 +401,6 @@ export default function AdminCaptcha() {
   const [activeTab, setActiveTab] = useState<'stats' | 'settings' | 'images'>(
     'stats',
   );
-  const [syncing, setSyncing] = useState(false);
 
   const loadSessions = useCallback(
     async (page: number = 1, status?: string) => {
@@ -1270,30 +1268,7 @@ export default function AdminCaptcha() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={async () => {
-                      if (
-                        !confirm(
-                          'MinIO 버킷의 기존 이미지를 DB에 동기화합니다.\n진행하시겠습니까?',
-                        )
-                      )
-                        return;
-                      setSyncing(true);
-                      try {
-                        const result = await syncMinioImages();
-                        alert(result.message);
-                        void loadImages(imgTab, imgCategory, 1);
-                      } catch {
-                        alert('동기화 실패');
-                      } finally {
-                        setSyncing(false);
-                      }
-                    }}
-                    disabled={syncing}
-                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 md:py-1.5 text-[11px] md:text-xs font-bold text-blue-600 hover:bg-blue-100 transition disabled:opacity-50 active:scale-95"
-                  >
-                    {syncing ? '동기화 중...' : 'MinIO 동기화'}
-                  </button>
+                  {/* MinIO 동기화 버튼 제거됨 */}
                 </div>
 
                 {/* 이모지 자동 생성 스태킹 */}
