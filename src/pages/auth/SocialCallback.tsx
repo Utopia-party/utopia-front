@@ -98,6 +98,13 @@ export default function SocialCallback() {
           return;
         }
 
+        // 정지 유저: 이의제기 토큰이 쿠키에 세팅된 상태로 BANNED 반환
+        if (data.status === 'BANNED') {
+          localStorage.removeItem(storageKey);
+          navigate('/login?reason=banned&ban_type=manual', { replace: true });
+          return;
+        }
+
         localStorage.removeItem(storageKey);
 
         const { checkAuth } = useAuthStore.getState();

@@ -120,13 +120,19 @@ export default function Login() {
     try {
       setIsSubmitting(true);
 
-      await login(
+      const result = await login(
         {
           email: form.email.trim(),
           password: form.password,
         },
         captchaToken,
       );
+
+      // 정지 유저: 이의제기 토큰이 쿠키에 세팅된 상태로 BANNED 반환
+      if (result.status === 'BANNED') {
+        navigate('/login?reason=banned&ban_type=manual', { replace: true });
+        return;
+      }
 
       const { checkAuth } = useAuthStore.getState();
       await checkAuth();
