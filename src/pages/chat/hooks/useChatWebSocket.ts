@@ -14,13 +14,13 @@ interface UseChatWebSocketProps {
 
 export function useChatWebSocket({
   partyId,
-  currentUserId,
+  currentUserId, 
   onPartyUpdated,
   onNoticeUpdated,
   onSettlementApproved,
 }: UseChatWebSocketProps) {
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { logout, clearUser } = useAuthStore();
   const nicknameRef = useRef(useAuthStore.getState().user?.nickname ?? '익명');
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -86,12 +86,17 @@ export function useChatWebSocket({
             const banType = msg.ban_type ?? null;
             const refId = msg.reference_id ?? '';
 
-            await logout();
-
             if (!banType) {
+              // 중복 로그인 등 일반 force_logout — 서버 logout 호출 (refresh token revoke)
+              await logout();
               navigate('/login?reason=duplicate');
               return;
             }
+
+            // 제재로 인한 force_logout — 서버 logout 호출 없이 클라이언트 상태만 초기화
+            // 이유: logout()은 서버에서 refresh token을 revoke하므로
+            //       이의제기(/api/appeals)에 필요한 토큰이 사라져 401 발생
+            clearUser();
 
             const params = new URLSearchParams({ reason: 'banned', ban_type: banType });
             if (refId) params.set('ref_id', refId);
@@ -174,7 +179,7 @@ export function useChatWebSocket({
         wsRef.current = null;
       }
     };
-  }, [partyId, logout, navigate, currentUserId, onPartyUpdated]);
+  }, [partyId, logout, clearUser, navigate, currentUserId, onPartyUpdated]);
 
   const sendMessage = useCallback((input: string) => {
     if (
