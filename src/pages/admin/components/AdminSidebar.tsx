@@ -148,7 +148,7 @@ const menuSections: MenuSection[] = [
     items: [
       {
         path: '/admin/settlements',
-        label: '정산 승인',
+        label: '파티 정산 관리',
         icon: BadgeCheck,
         visibleIf: (permissions) => Boolean(permissions?.canApproveSettlements),
       },

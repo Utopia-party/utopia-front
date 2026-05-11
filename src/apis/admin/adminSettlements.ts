@@ -117,3 +117,14 @@ export async function fetchAdminPayments(params?: {
   );
   return data;
 }
+
+export async function updateAdminPaymentStatus(
+  paymentId: string,
+  status: 'pending' | 'approved' | 'rejected',
+): Promise<AdminPaymentRecord> {
+  const { data } = await api.patch<AdminPaymentRecord>(
+    `/api/admin/payments/${paymentId}`,
+    { status },
+  );
+  return data;
+}
