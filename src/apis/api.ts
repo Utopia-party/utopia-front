@@ -20,8 +20,6 @@ const NO_REFRESH_RETRY_PATHS = new Set([
   '/api/users/check-nickname',
   '/api/email-request',
   '/api/email-verify',
-  '/api/appeals',
-  '/api/appeals/my',
 ]);
 
 const BAN_DETAILS = new Set(['비활성화된 계정입니다.', '이용이 제한된 계정입니다.']);
