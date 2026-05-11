@@ -101,18 +101,32 @@ const draftFromService = (
   quickMatchFeeRate: service.quickMatchFeeRate,
 });
 
-const createEmptyDraft = (category = 'OTT'): AdminServiceCreatePayload => ({
+type AdminServiceCreateForm = {
+  name: string;
+  category: string;
+  maxMembers: string;
+  monthlyPrice: string;
+  originalPrice: string;
+  logoImageKey: string;
+  isActive: boolean;
+  commissionRate: string;
+  leaderDiscountRate: string;
+  referralDiscountRate: string;
+  quickMatchFeeRate: string;
+};
+
+const createEmptyDraftForm = (category = 'OTT'): AdminServiceCreateForm => ({
   name: '',
   category,
-  maxMembers: 4,
-  monthlyPrice: 0,
-  originalPrice: 0,
+  maxMembers: '4',
+  monthlyPrice: '0',
+  originalPrice: '0',
   logoImageKey: '',
   isActive: true,
-  commissionRate: 0.3,
-  leaderDiscountRate: 0.05,
-  referralDiscountRate: 0.05,
-  quickMatchFeeRate: 0.05,
+  commissionRate: '0.3',
+  leaderDiscountRate: '0.05',
+  referralDiscountRate: '0.05',
+  quickMatchFeeRate: '0.05',
 });
 
 export default function AdminServices() {
@@ -120,8 +134,9 @@ export default function AdminServices() {
   const [activeTab, setActiveTab] = useState('전체');
   const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [services, setServices] = useState<AdminServiceRecord[]>([]);
-  const [createDraft, setCreateDraft] =
-    useState<AdminServiceCreatePayload>(createEmptyDraft());
+  const [createDraft, setCreateDraft] = useState<AdminServiceCreateForm>(
+    createEmptyDraftForm(),
+  );
   const [createLogoPreview, setCreateLogoPreview] = useState<string | null>(
     null,
   );
@@ -171,7 +186,7 @@ export default function AdminServices() {
 
   useEffect(() => {
     if (!isCreatePanelOpen) {
-      setCreateDraft(createEmptyDraft(categories[0] ?? 'OTT'));
+      setCreateDraft(createEmptyDraftForm(categories[0] ?? 'OTT'));
       setCreateLogoPreview(null);
     }
   }, [categories, isCreatePanelOpen]);
@@ -267,8 +282,8 @@ export default function AdminServices() {
   };
 
   const handleCreateDraftChange = (
-    key: keyof AdminServiceCreatePayload,
-    value: string | number | boolean,
+    key: keyof AdminServiceCreateForm,
+    value: string | boolean,
   ) => {
     setCreateDraft((prev) => {
       const nextDraft = {
@@ -277,10 +292,19 @@ export default function AdminServices() {
       };
 
       if (key === 'originalPrice' || key === 'commissionRate') {
-        nextDraft.monthlyPrice = getSellingPrice(
-          Number(nextDraft.originalPrice),
-          Number(nextDraft.commissionRate),
-        );
+        if (
+          nextDraft.originalPrice.trim() === '' ||
+          nextDraft.commissionRate.trim() === ''
+        ) {
+          nextDraft.monthlyPrice = '';
+        } else {
+          nextDraft.monthlyPrice = String(
+            getSellingPrice(
+              Number(nextDraft.originalPrice),
+              Number(nextDraft.commissionRate),
+            ),
+          );
+        }
       }
 
       return nextDraft;
@@ -288,7 +312,21 @@ export default function AdminServices() {
   };
 
   const handleCreateService = async () => {
-    const validationMessage = validateCreateDraft(createDraft);
+    const payload: AdminServiceCreatePayload = {
+      name: createDraft.name,
+      category: createDraft.category,
+      maxMembers: Number(createDraft.maxMembers),
+      monthlyPrice: Number(createDraft.monthlyPrice),
+      originalPrice: Number(createDraft.originalPrice),
+      logoImageKey: createDraft.logoImageKey,
+      isActive: createDraft.isActive,
+      commissionRate: Number(createDraft.commissionRate),
+      leaderDiscountRate: Number(createDraft.leaderDiscountRate),
+      referralDiscountRate: Number(createDraft.referralDiscountRate),
+      quickMatchFeeRate: Number(createDraft.quickMatchFeeRate),
+    };
+
+    const validationMessage = validateCreateDraft(payload);
     if (validationMessage) {
       setError(validationMessage);
       return;
@@ -298,15 +336,15 @@ export default function AdminServices() {
       setBusyServiceId('create');
       setError('');
       await createAdminService({
-        ...createDraft,
+        ...payload,
         name: createDraft.name.trim(),
         category: createDraft.category.trim(),
-        logoImageKey: createDraft.logoImageKey?.trim() || null,
+        logoImageKey: createDraft.logoImageKey.trim() || null,
       });
       await reloadServices();
       setActiveTab('전체');
       setIsCreatePanelOpen(false);
-      setCreateDraft(createEmptyDraft(categories[0] ?? 'OTT'));
+      setCreateDraft(createEmptyDraftForm(categories[0] ?? 'OTT'));
       setCreateLogoPreview(null);
     } catch (err) {
       setError(getAdminErrorMessage(err));
@@ -434,7 +472,9 @@ export default function AdminServices() {
                   type="button"
                   onClick={() => {
                     setIsCreatePanelOpen(false);
-                    setCreateDraft(createEmptyDraft(categories[0] ?? 'OTT'));
+                    setCreateDraft(
+                      createEmptyDraftForm(categories[0] ?? 'OTT'),
+                    );
                     setCreateLogoPreview(null);
                   }}
                   className="self-start rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 active:scale-95"
@@ -493,10 +533,7 @@ export default function AdminServices() {
                     min={1}
                     value={createDraft.maxMembers}
                     onChange={(event) =>
-                      handleCreateDraftChange(
-                        'maxMembers',
-                        Number(event.target.value),
-                      )
+                      handleCreateDraftChange('maxMembers', event.target.value)
                     }
                     className="rounded-lg md:rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm text-slate-700 outline-none transition focus:border-blue-400"
                   />
@@ -513,7 +550,7 @@ export default function AdminServices() {
                     onChange={(event) =>
                       handleCreateDraftChange(
                         'originalPrice',
-                        Number(event.target.value),
+                        event.target.value,
                       )
                     }
                     className="rounded-lg md:rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm text-slate-700 outline-none transition focus:border-blue-400"
@@ -543,7 +580,7 @@ export default function AdminServices() {
                     onChange={(event) =>
                       handleCreateDraftChange(
                         'commissionRate',
-                        Number(event.target.value),
+                        event.target.value,
                       )
                     }
                     className="rounded-lg md:rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm text-slate-700 outline-none transition focus:border-blue-400"
@@ -562,7 +599,7 @@ export default function AdminServices() {
                     onChange={(event) =>
                       handleCreateDraftChange(
                         'leaderDiscountRate',
-                        Number(event.target.value),
+                        event.target.value,
                       )
                     }
                     className="rounded-lg md:rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm text-slate-700 outline-none transition focus:border-blue-400"
@@ -581,7 +618,7 @@ export default function AdminServices() {
                     onChange={(event) =>
                       handleCreateDraftChange(
                         'referralDiscountRate',
-                        Number(event.target.value),
+                        event.target.value,
                       )
                     }
                     className="rounded-lg md:rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm text-slate-700 outline-none transition focus:border-blue-400"
@@ -600,7 +637,7 @@ export default function AdminServices() {
                     onChange={(event) =>
                       handleCreateDraftChange(
                         'quickMatchFeeRate',
-                        Number(event.target.value),
+                        event.target.value,
                       )
                     }
                     className="rounded-lg md:rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:px-4 md:py-3 text-xs md:text-sm text-slate-700 outline-none transition focus:border-blue-400"
@@ -652,7 +689,9 @@ export default function AdminServices() {
                 <button
                   type="button"
                   onClick={() => {
-                    setCreateDraft(createEmptyDraft(categories[0] ?? 'OTT'));
+                    setCreateDraft(
+                      createEmptyDraftForm(categories[0] ?? 'OTT'),
+                    );
                     setCreateLogoPreview(null);
                   }}
                   className="w-full sm:w-auto rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 active:scale-95"
