@@ -20,7 +20,6 @@ const FILTER_TABS = ['전체', '대기', '승인', '거절'];
 const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 
 export default function AdminSettlements() {
-  const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -33,6 +32,7 @@ export default function AdminSettlements() {
   const [error, setError] = useState('');
   const [busySettlementId, setBusySettlementId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const loadSettlements = async (params?: {
     keyword?: string;
