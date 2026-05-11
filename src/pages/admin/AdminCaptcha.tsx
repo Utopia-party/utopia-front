@@ -28,7 +28,6 @@ import {
   type CaptchaImagesResponse,
   type CaptchaImageDetail,
   type CaptchaSetInfo,
-  syncMinioImages,
 } from '../../apis/admin';
 
 function formatTtl(seconds: number): string {
@@ -402,7 +401,6 @@ export default function AdminCaptcha() {
   const [activeTab, setActiveTab] = useState<'stats' | 'settings' | 'images'>(
     'stats',
   );
-  const [syncing, setSyncing] = useState(false);
 
   const loadSessions = useCallback(
     async (page: number = 1, status?: string) => {
