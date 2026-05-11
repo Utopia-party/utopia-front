@@ -186,7 +186,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'developer',
-            element: <MyDeveloper />,
+            loader: () => redirect('/saas/l1'),
           },
           {
             path: 'developer/guide',
@@ -194,10 +194,40 @@ const router = createBrowserRouter([
           },
           {
             path: 'developer-l2',
-            element: <MyDeveloperL2 />,
+            loader: () => redirect('/saas/l2'),
           },
           {
             path: 'developer-chat',
+            loader: () => redirect('/saas/chat'),
+          },
+        ],
+      },
+      {
+        path: 'saas',
+        element: (
+          <ProtectedRoute>
+            <Outlet />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            index: true,
+            loader: () => redirect('/saas/l1'),
+          },
+          {
+            path: 'l1',
+            element: <MyDeveloper />,
+          },
+          {
+            path: 'l1/guide',
+            element: <SaasGuide />,
+          },
+          {
+            path: 'l2',
+            element: <MyDeveloperL2 />,
+          },
+          {
+            path: 'chat',
             element: <MyDeveloperChat />,
           },
         ],
@@ -278,8 +308,12 @@ const router = createBrowserRouter([
         Component: AdminSaas,
       },
       {
-        path: 'saas-v2',
-        Component: AdminSaasV2,
+        path: 'saas-l2',
+        element: <AdminSaasV2 defaultTab="captcha_l2" />,
+      },
+      {
+        path: 'saas-chat',
+        element: <AdminSaasV2 defaultTab="chat_filter" />,
       },
     ],
   },
