@@ -41,6 +41,12 @@ type MatchedParty = NonNullable<
 const COOLDOWN_SECONDS = 600;
 const STORAGE_KEY = 'party_refresh_until';
 
+const VISIBLE_PARTY_STATUSES: Array<Party['status']> = [
+  'recruiting',
+  'completed',
+  null,
+];
+
 export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -89,6 +95,7 @@ export default function Home() {
 
   const handleSearchAction = (keyword: string) => {
     setSearch(keyword);
+
     if (keyword.trim()) {
       recordSearchKeyword(keyword.trim()).catch((err) =>
         console.warn('검색어 기록 실패:', err),
@@ -96,9 +103,9 @@ export default function Home() {
     }
   };
 
-  // 쿨다운 타이머
   useEffect(() => {
     if (cooldown <= 0) return;
+
     const timer = setInterval(() => {
       setCooldown((c) => {
         if (c <= 1) {
@@ -106,9 +113,11 @@ export default function Home() {
           localStorage.removeItem(STORAGE_KEY);
           return 0;
         }
+
         return c - 1;
       });
     }, 1000);
+
     return () => clearInterval(timer);
   }, [cooldown]);
 
@@ -117,15 +126,19 @@ export default function Home() {
 
   const handleRefresh = () => {
     if (cooldown > 0) return;
+
     setRefreshKeys((prev) => {
       const next = { ...prev, [cacheKey]: (prev[cacheKey] ?? 0) + 1 };
+
       try {
         sessionStorage.setItem('party_refresh_keys', JSON.stringify(next));
       } catch {
         /* ignore */
       }
+
       return next;
     });
+
     const until = Date.now() + COOLDOWN_SECONDS * 1000;
     localStorage.setItem(STORAGE_KEY, String(until));
     setCooldown(COOLDOWN_SECONDS);
@@ -138,6 +151,7 @@ export default function Home() {
       );
       return;
     }
+
     setShowQuickMatch(true);
   };
 
@@ -145,6 +159,7 @@ export default function Home() {
     queryKey: categoryKeys.all,
     queryFn: fetchCategories,
   });
+
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : [];
 
   const { data: partyData, isLoading } = useQuery({
@@ -161,13 +176,16 @@ export default function Home() {
   });
 
   const parties = useMemo<PartyWithDetails[]>(() => {
-    if (partyData && Array.isArray(partyData.parties))
+    if (partyData && Array.isArray(partyData.parties)) {
       return partyData.parties as PartyWithDetails[];
+    }
+
     return [];
   }, [partyData]);
 
   const visibleParties = useMemo(
-    () => parties.filter((party) => party.status === 'recruiting'),
+    () =>
+      parties.filter((party) => VISIBLE_PARTY_STATUSES.includes(party.status)),
     [parties],
   );
 
@@ -178,16 +196,19 @@ export default function Home() {
   }, [category, search]);
 
   const subtitleText = useMemo(() => {
-    if (search) return '검색어와 관련된 모집 중인 파티를 모아봤어요.';
-    if (category) return '선택한 카테고리의 모집 중인 파티를 확인해보세요.';
-    return '지금 바로 참여할 수 있는 모집 중인 파티를 한눈에 확인해보세요.';
+    if (search) return '검색어와 관련된 파티를 모아봤어요.';
+    if (category) return '선택한 카테고리의 파티를 확인해보세요.';
+    return '지금 바로 참여할 수 있는 파티를 한눈에 확인해보세요.';
   }, [category, search]);
 
   const matchedParty = useMemo<MatchedParty | undefined>(() => {
     if (!matchResult) return undefined;
+
     const targetId = matchResult.party_id ?? matchResult.id;
     if (!targetId) return undefined;
+
     const found = parties.find((p) => String(p.id) === String(targetId));
+
     const foundNormalized = found
       ? {
           ...found,
@@ -211,9 +232,11 @@ export default function Home() {
           leader_discount_rate: found.leader_discount_rate ?? undefined,
         }
       : undefined;
+
     const base: JoinResult = foundNormalized
       ? { ...foundNormalized, ...matchResult, id: found!.id }
       : { ...matchResult, id: targetId };
+
     return {
       ...base,
       title:
@@ -246,19 +269,23 @@ export default function Home() {
     <div className="flex w-full min-w-0 flex-1 flex-col bg-slate-50">
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#4f46e5_0%,#6366f1_42%,#0ea5e9_100%)] px-4 sm:px-6 py-8 sm:py-10 text-center">
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(15,23,42,0.08))]" />
+
         <div className="relative mx-auto max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 backdrop-blur-sm">
             <span>✨</span>
             <span>함께 쓰면 더 저렴한 구독 생활</span>
           </div>
+
           <h1 className="relative mt-4 text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white">
             같이 구독하고,
             <br className="hidden sm:block" />
             부담은 더 가볍게
           </h1>
+
           <p className="relative mx-auto mt-3 max-w-xl text-sm leading-6 text-white/80 sm:text-base">
             구독 서비스부터 공동구매까지, 원하는 파티를 찾고 바로 참여해보세요.
           </p>
+
           <div className="relative mt-6">
             <SearchBar onSearch={handleSearchAction} />
             <KeywordChips
@@ -284,6 +311,7 @@ export default function Home() {
             <section className="min-w-0 flex-1">
               <div className="mb-5 flex flex-col gap-4 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
                 <SectionTitle title={titleText} subtitle={subtitleText} />
+
                 <div className="flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
                   <button
                     onClick={handleRefresh}
@@ -309,6 +337,7 @@ export default function Home() {
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
+
                         <span className="tabular-nums font-bold text-indigo-500">
                           {Math.floor(cooldown / 60)}:
                           {String(cooldown % 60).padStart(2, '0')}
@@ -358,13 +387,16 @@ export default function Home() {
                   <div className="mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-slate-100 text-2xl sm:text-3xl">
                     🔎
                   </div>
+
                   <h3 className="text-base sm:text-lg font-extrabold text-slate-900">
-                    조건에 맞는 모집 중인 파티가 아직 없어요
+                    조건에 맞는 파티가 아직 없어요
                   </h3>
+
                   <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
                     검색어를 바꿔보거나, 직접 새 파티를 만들어 멤버를
                     모집해보세요.
                   </p>
+
                   <div className="mt-6 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <button
                       onClick={() => navigate('/handcaptcha')}
@@ -372,6 +404,7 @@ export default function Home() {
                     >
                       파티 생성하기
                     </button>
+
                     <button
                       onClick={handleQuickMatchOpen}
                       className="w-full sm:w-auto rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
@@ -392,6 +425,7 @@ export default function Home() {
                           navigate('/login');
                           return;
                         }
+
                         setApplyTarget(p);
                       }}
                     />
@@ -412,6 +446,7 @@ export default function Home() {
               navigate('/login');
               return;
             }
+
             setDetailTarget(null);
             setApplyTarget(p);
           }}
@@ -428,13 +463,16 @@ export default function Home() {
         onSubmit={handleQuickMatchSubmit}
         isSubmitting={isMatching}
       />
+
       <MatchingLoadingModal open={isMatching} message={currentStepTitle} />
+
       <MatchingErrorModal
         open={!!matchError}
         message={matchError ?? ''}
         errorCode={matchErrorCode ?? undefined}
         onClose={clearError}
       />
+
       <MatchingSuccessModal
         open={!!matchResult && !isMatching && !matchError}
         matchedParty={matchedParty}
