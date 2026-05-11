@@ -12,6 +12,8 @@ import {
 
 type PermissionKey = keyof AdminRoleUpdatePayload;
 
+const NEUTRAL_PERMISSION_TONE = 'bg-slate-100 text-slate-600 border-slate-200';
+
 const PERMISSION_OPTIONS: Array<{
   key: PermissionKey;
   label: string;
@@ -22,85 +24,85 @@ const PERMISSION_OPTIONS: Array<{
     key: 'canViewDashboard',
     label: '통계 대시보드',
     description: '관리자 통계 대시보드와 요약 지표 조회',
-    tone: 'bg-sky-50 text-sky-600 border-sky-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageUsers',
     label: '사용자 관리',
     description: '계정 조회, 상태 변경, 사용자 운영 관리',
-    tone: 'bg-blue-50 text-blue-600 border-blue-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageServices',
     label: '구독 서비스',
     description: '구독 서비스 목록, 요금, 할인 정책 관리',
-    tone: 'bg-violet-50 text-violet-600 border-violet-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageParties',
     label: '파티 관리',
     description: '파티 조회, 강제 종료, 운영 상태 관리',
-    tone: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageQuickMatch',
     label: '빠른매칭 관리',
     description: '빠른매칭 요청, 후보, 정책과 상태 관리',
-    tone: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageReports',
     label: '신고 관리',
     description: '신고 검토, 처리 상태 변경, 운영 대응',
-    tone: 'bg-amber-50 text-amber-600 border-amber-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageChatModeration',
     label: '채팅 모더레이션 관리',
     description: '채팅 제재 상태 변경과 실시간 운영 개입',
-    tone: 'bg-rose-50 text-rose-600 border-rose-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageCaptcha',
     label: '캡챠 관리',
     description: '캡챠 운영 상태와 제재 정책 관리',
-    tone: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageHandOcr',
     label: 'HandOCR CAPTCHA',
     description: 'HandOCR 검증 이력과 차단 세션 관리',
-    tone: 'bg-cyan-50 text-cyan-600 border-cyan-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canApproveSettlements',
     label: '정산 승인',
     description: '정산 검토와 승인/거절 처리',
-    tone: 'bg-green-50 text-green-600 border-green-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManagePayments',
     label: '수익내역 관리',
     description: '결제 내역과 플랫폼 수수료 수익 조회',
-    tone: 'bg-orange-50 text-orange-600 border-orange-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canViewLogs',
     label: '시스템 로그',
     description: '시스템 로그와 관리자 작업 이력 조회',
-    tone: 'bg-slate-100 text-slate-600 border-slate-200',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canViewCloudMonitoring',
     label: '클라우드 모니터링',
     description: '클라우드 자원 지표와 운영 상태 모니터링',
-    tone: 'bg-teal-50 text-teal-600 border-teal-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
   {
     key: 'canManageAdmins',
     label: '관리자 권한',
     description: '관리자 추가와 권한 변경',
-    tone: 'bg-red-50 text-red-600 border-red-100',
+    tone: NEUTRAL_PERMISSION_TONE,
   },
 ];
 

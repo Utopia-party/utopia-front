@@ -1,5 +1,15 @@
 export interface Message {
-  type: 'message' | 'system' | 'system_info' | 'warning' | 'error' | 'message_deleted' | 'notice_updated' | 'notice_deleted' | 'settlement_approved' | 'party_updated';
+  type:
+    | 'message'
+    | 'system'
+    | 'system_info'
+    | 'warning'
+    | 'error'
+    | 'message_deleted'
+    | 'notice_updated'
+    | 'notice_deleted'
+    | 'settlement_approved'
+    | 'party_updated';
   chat_id?: string;
   chat_ids?: string[];
   party_id?: string;
@@ -43,6 +53,7 @@ export interface PartyInfo {
   party_id: string;
   title: string;
   status?: string;
+  min_trust_score?: number | null;
   max_members?: number | null;
   member_count?: number | null;
   monthly_price?: number | null;

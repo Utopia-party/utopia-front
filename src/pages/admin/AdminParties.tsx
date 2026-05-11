@@ -14,13 +14,14 @@ import {
 } from '../../apis/admin';
 
 const STATUS_STYLE: Record<string, string> = {
+  대기: 'bg-amber-50 text-amber-600 border-amber-100',
   운영중: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   모집중: 'bg-blue-50 text-blue-600 border-blue-100',
   위험: 'bg-amber-50 text-amber-600 border-amber-100',
   종료됨: 'bg-red-50 text-red-600 border-red-100',
 };
 
-const FILTER_TABS = ['전체', '운영중', '모집중', '위험', '종료됨'];
+const FILTER_TABS = ['전체', '대기', '운영중', '모집중', '위험', '종료됨'];
 
 const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 
@@ -244,16 +245,16 @@ export default function AdminParties() {
     () => [
       { label: '전체 파티', value: `${parties.length}` },
       {
+        label: '정산 대기',
+        value: `${parties.filter((party) => party.lastPayment === '정산 대기').length}`,
+      },
+      {
         label: '운영중',
         value: `${parties.filter((party) => party.status === '운영중').length}`,
       },
       {
         label: '위험',
         value: `${parties.filter((party) => party.status === '위험').length}`,
-      },
-      {
-        label: '종료됨',
-        value: `${parties.filter((party) => party.status === '종료됨').length}`,
       },
     ],
     [parties],
