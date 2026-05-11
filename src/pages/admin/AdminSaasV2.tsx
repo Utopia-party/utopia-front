@@ -36,8 +36,8 @@ function planColor(plan: string) {
   return map[plan] ?? 'bg-gray-100 text-gray-700';
 }
 
-export default function AdminSaasV2({ defaultTab = 'captcha_l2' }: { defaultTab?: Tab }) {
-  const [tab, setTab] = useState<Tab>(defaultTab);
+export default function AdminSaasV2() {
+  const [tab, setTab] = useState<Tab>('captcha_l2');
   const [keys, setKeys] = useState<SaasKeyItem[]>([]);
   const [stats, setStats] = useState<SaasStats | null>(null);
   const [logs, setLogs] = useState<UsageLogItem[]>([]);

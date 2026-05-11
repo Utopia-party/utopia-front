@@ -35,6 +35,8 @@ import MyTrustHistory from './pages/mypage/MyTrustHistory';
 import MyPraises from './pages/mypage/MyPraises';
 import MyDeveloper from './pages/mypage/MyDeveloper';
 import SaasGuide from './pages/mypage/SaasGuide';
+import SaasGuideL2 from './pages/mypage/SaasGuideL2';
+import SaasGuideChat from './pages/mypage/SaasGuideChat';
 import MyDeveloperL2 from './pages/mypage/MyDeveloperL2';
 import MyDeveloperChat from './pages/mypage/MyDeveloperChat';
 
@@ -227,8 +229,16 @@ const router = createBrowserRouter([
             element: <MyDeveloperL2 />,
           },
           {
+            path: 'l2/guide',
+            element: <SaasGuideL2 />,
+          },
+          {
             path: 'chat',
             element: <MyDeveloperChat />,
+          },
+          {
+            path: 'chat/guide',
+            element: <SaasGuideChat />,
           },
         ],
       },
@@ -308,12 +318,8 @@ const router = createBrowserRouter([
         Component: AdminSaas,
       },
       {
-        path: 'saas-l2',
-        element: <AdminSaasV2 defaultTab="captcha_l2" />,
-      },
-      {
-        path: 'saas-chat',
-        element: <AdminSaasV2 defaultTab="chat_filter" />,
+        path: 'saas-v2',
+        Component: AdminSaasV2,
       },
     ],
   },
