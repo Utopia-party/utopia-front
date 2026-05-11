@@ -20,6 +20,12 @@ export type SettlementRecord = {
   billingMonth: string;
   status: string;
   createdAt: string;
+  participantPayments: Array<{
+    userId: string;
+    nickname: string;
+    role: string;
+    paymentStatus: string;
+  }>;
 };
 
 export type AdminPaymentRecord = {
@@ -120,7 +126,7 @@ export async function fetchAdminPayments(params?: {
 
 export async function updateAdminPaymentStatus(
   paymentId: string,
-  status: 'pending' | 'approved' | 'rejected',
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled',
 ): Promise<AdminPaymentRecord> {
   const { data } = await api.patch<AdminPaymentRecord>(
     `/api/admin/payments/${paymentId}`,

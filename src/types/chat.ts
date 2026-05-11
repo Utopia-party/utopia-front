@@ -31,7 +31,7 @@ export interface PartyNotice {
 }
 
 export interface SettlementStatus {
-  status: 'approved' | 'pending' | null;
+  status: 'approved' | 'pending' | 'rejected' | null;
   settlement_id: string | null;
   approved_at?: string | null;
 }
