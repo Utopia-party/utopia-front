@@ -40,6 +40,7 @@ export type AdminPaymentRecord = {
   basePrice: number;
   amount: number;
   discountReason: string | null;
+  cancelReason: string | null;
   baseCommissionRate: number;
   commissionRate: number;
   effectiveCommissionRate: number;
@@ -127,10 +128,11 @@ export async function fetchAdminPayments(params?: {
 export async function updateAdminPaymentStatus(
   paymentId: string,
   status: 'pending' | 'approved' | 'rejected' | 'cancelled',
+  reason?: string,
 ): Promise<AdminPaymentRecord> {
   const { data } = await api.patch<AdminPaymentRecord>(
     `/api/admin/payments/${paymentId}`,
-    { status },
+    { status, reason },
   );
   return data;
 }
