@@ -281,6 +281,26 @@ export default function MyDeveloperChat() {
               새 API 키 발급
             </button>
             <a
+              href="https://zeroh00n.github.io/partyup-demo/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#d1fae5',
+                color: '#065f46',
+                border: '1px solid #6ee7b7',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              API SaaS 테스트 ↗
+            </a>
+            <a
               href="/saas/chat/guide"
               style={{
                 padding: '10px 20px',
