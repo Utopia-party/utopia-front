@@ -584,6 +584,25 @@ export default function MyDeveloper() {
             >
               API SaaS 테스트 ↗
             </a>
+            <a
+              href="/mypage/developer/guide"
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#f3e8ff',
+                color: '#7c3aed',
+                border: '1px solid #c4b5fd',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              연동 가이드 📖
+            </a>
             {keys.length >= 3 && (
               <span style={{ fontSize: '13px', color: '#999' }}>
                 최대 3개까지 발급 가능합니다.

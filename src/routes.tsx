@@ -34,6 +34,7 @@ import MyPayment from './pages/mypage/MyPayment';
 import MyTrustHistory from './pages/mypage/MyTrustHistory';
 import MyPraises from './pages/mypage/MyPraises';
 import MyDeveloper from './pages/mypage/MyDeveloper';
+import SaasGuide from './pages/mypage/SaasGuide';
 
 // 관리자 페이지
 import AdminShell from './pages/admin/AdminShell';
@@ -183,6 +184,10 @@ const router = createBrowserRouter([
           {
             path: 'developer',
             element: <MyDeveloper />,
+          },
+          {
+            path: 'developer/guide',
+            element: <SaasGuide />,
           },
         ],
       },
