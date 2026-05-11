@@ -473,15 +473,17 @@ export default function Chat() {
           </button>
         )}
 
-        {partyInfo?.is_leader && settlementStatus?.status === 'pending' && (
-          <button
-            type="button"
-            disabled
-            className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 opacity-90"
-          >
-            정산 요청 완료
-          </button>
-        )}
+        {partyInfo?.is_leader &&
+          settlementStatus?.status === 'pending' &&
+          alreadyPaid && (
+            <button
+              type="button"
+              disabled
+              className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 opacity-90"
+            >
+              정산 요청 완료
+            </button>
+          )}
 
         {partyInfo?.is_leader && settlementStatus?.status === 'rejected' && (
           <button
