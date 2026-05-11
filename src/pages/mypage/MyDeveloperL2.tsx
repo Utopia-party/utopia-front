@@ -281,6 +281,26 @@ export default function MyDeveloperL2() {
               새 API 키 발급
             </button>
             <a
+              href="https://zeroh00n.github.io/partyup-demo/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#ede9fe',
+                color: '#5b21b6',
+                border: '1px solid #c4b5fd',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              API SaaS 테스트 ↗
+            </a>
+            <a
               href="/saas/l2/guide"
               style={{
                 padding: '10px 20px',
