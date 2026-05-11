@@ -223,11 +223,13 @@ function PaymentCard({
         결제일 {fmtDate(payment.paidAt ?? payment.createdAt)}
       </div>
 
-      {payment.cancelReason && (
+      {payment.statusReason && (
         <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-3">
-          <div className="text-[10px] font-medium text-rose-500">취소 사유</div>
+          <div className="text-[10px] font-medium text-rose-500">
+            {payment.status === 'cancelled' ? '취소 사유' : '거절 사유'}
+          </div>
           <div className="mt-1 text-xs leading-relaxed text-rose-700">
-            {payment.cancelReason}
+            {payment.statusReason}
           </div>
         </div>
       )}
@@ -386,12 +388,23 @@ export default function AdminPayments() {
     if (nextStatus === 'cancelled') {
       const input = window.prompt(
         `${payment.userNickname}님의 결제 취소 사유를 입력하세요.`,
-        payment.cancelReason ?? '',
+        payment.statusReason ?? '',
       );
       if (input === null) return;
       reason = input.trim();
       if (!reason) {
         window.alert('취소 사유를 입력해주세요.');
+        return;
+      }
+    } else if (nextStatus === 'rejected') {
+      const input = window.prompt(
+        `${payment.userNickname}님의 결제 거절 사유를 입력하세요.`,
+        payment.statusReason ?? '',
+      );
+      if (input === null) return;
+      reason = input.trim();
+      if (!reason) {
+        window.alert('거절 사유를 입력해주세요.');
         return;
       }
     }
@@ -870,9 +883,9 @@ export default function AdminPayments() {
                             >
                               {STATUS_LABEL[p.status] ?? p.status}
                             </span>
-                            {p.cancelReason && (
+                            {p.statusReason && (
                               <p className="mt-1 max-w-44 break-words text-[10px] leading-relaxed text-rose-600">
-                                사유: {p.cancelReason}
+                                사유: {p.statusReason}
                               </p>
                             )}
                           </td>
