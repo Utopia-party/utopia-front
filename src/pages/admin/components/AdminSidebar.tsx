@@ -136,8 +136,14 @@ const menuSections: MenuSection[] = [
         visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
       },
       {
-        path: '/admin/saas-v2',
-        label: 'SaaS API (L2/Chat)',
+        path: '/admin/saas-l2',
+        label: 'SaaS API (L2)',
+        icon: Globe,
+        visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
+      },
+      {
+        path: '/admin/saas-chat',
+        label: 'SaaS API (Chat)',
         icon: Globe,
         visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
       },

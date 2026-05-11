@@ -585,7 +585,7 @@ export default function MyDeveloper() {
               API SaaS 테스트 ↗
             </a>
             <a
-              href="/mypage/developer/guide"
+              href="/saas/l1/guide"
               style={{
                 padding: '10px 20px',
                 backgroundColor: '#f3e8ff',
