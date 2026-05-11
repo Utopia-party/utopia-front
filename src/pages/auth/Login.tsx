@@ -155,19 +155,12 @@ export default function Login() {
         };
       };
 
-      const status = apiError.response?.status;
       const message =
         apiError.response?.data?.detail ||
         apiError.response?.data?.message ||
         '로그인에 실패했습니다.';
 
-      if (status === 403) {
-        const banType =
-          message === '이용이 제한된 계정입니다.' ? 'ip_ban' : 'manual';
-        navigate(`/login?reason=banned&ban_type=${banType}`, { replace: true });
-      } else {
-        alert(message);
-      }
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }

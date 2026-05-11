@@ -77,6 +77,7 @@ export interface LoginPayload {
 export interface LoginResponse {
   message: string;
   status?: 'BANNED';
+  ban_type?: string;
 }
 
 export interface AuthErrorResponse {
