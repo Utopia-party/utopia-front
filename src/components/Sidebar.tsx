@@ -7,7 +7,7 @@ import {
   UserRound,
   OctagonAlert,
   Book,
-  Code,
+  Code2,
 } from 'lucide-react';
 import logoImage from '../assets/logo.png';
 
@@ -20,6 +20,12 @@ const mypageMenus = [
   { label: '신고 내역', to: '/mypage/report' },
 ];
 
+const saasMenus = [
+  { label: '캡챠 SaaS (L1)', to: '/saas/l1' },
+  { label: '캡챠 SaaS (L2)', to: '/saas/l2' },
+  { label: '채팅 AI SaaS', to: '/saas/chat' },
+];
+
 export default function Sidebar() {
   const location = useLocation();
 
@@ -30,7 +36,13 @@ export default function Sidebar() {
     [location.pathname],
   );
 
+  const isSaasRoute = useMemo(
+    () => location.pathname.startsWith('/saas/'),
+    [location.pathname],
+  );
+
   const [isMypageOpen, setIsMypageOpen] = useState(isMypageRoute);
+  const [isSaasOpen, setIsSaasOpen] = useState(isSaasRoute);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -56,6 +68,7 @@ export default function Sidebar() {
 
   const handleMenuClick = () => {
     setIsMypageOpen(false);
+    setIsSaasOpen(false);
 
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
@@ -68,6 +81,14 @@ export default function Sidebar() {
     }
 
     setIsMypageOpen((prev) => !prev);
+  };
+
+  const handleSaasClick = () => {
+    if (!isSidebarOpen) {
+      setIsSidebarOpen(true);
+    }
+
+    setIsSaasOpen((prev) => !prev);
   };
 
   const handleMypageSubMenuClick = () => {
@@ -214,6 +235,46 @@ export default function Sidebar() {
             )}
           </div>
 
+          <div className="mt-1">
+            <button
+              type="button"
+              onClick={handleSaasClick}
+              className={getMainLinkClass(isSaasRoute)}
+            >
+              <div
+                className={`flex items-center ${
+                  isSidebarOpen ? 'gap-3' : 'justify-center'
+                }`}
+              >
+                <Code2 className={iconClass} />
+                {isSidebarOpen && <span>SaaS</span>}
+              </div>
+
+              {isSidebarOpen && (
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
+                    isSaasOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              )}
+            </button>
+
+            {isSidebarOpen && isSaasOpen && (
+              <div className="mt-2 flex flex-col gap-1 pl-2">
+                {saasMenus.map((menu) => (
+                  <NavLink
+                    key={menu.to}
+                    to={menu.to}
+                    onClick={handleMypageSubMenuClick}
+                    className={({ isActive }) => getSubLinkClass(isActive)}
+                  >
+                    {menu.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+
           <NavLink
             to="/report"
             onClick={handleMenuClick}
@@ -226,21 +287,6 @@ export default function Sidebar() {
             >
               <OctagonAlert className={iconClass} />
               {isSidebarOpen && <span>신고</span>}
-            </div>
-          </NavLink>
-
-          <NavLink
-            to="/mypage/developer"
-            onClick={handleMenuClick}
-            className={({ isActive }) => getMainLinkClass(isActive)}
-          >
-            <div
-              className={`flex items-center ${
-                isSidebarOpen ? 'gap-3' : 'justify-center'
-              }`}
-            >
-              <Code className={iconClass} />
-              {isSidebarOpen && <span>캡챠 SaaS</span>}
             </div>
           </NavLink>
 

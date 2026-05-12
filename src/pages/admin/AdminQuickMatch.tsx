@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import Pagination from './components/Pagination';
@@ -6,11 +6,15 @@ import { useAdminQuickMatch } from '../../hooks/admin/useAdminQuickMatch';
 import type {
   CandidateStatus,
   MainTab,
+  QuickMatchRequestRow,
   QuickMatchStatus,
   TuningPolicy,
 } from '../../types/admin/adminQuickMatch.ts';
 
 const MAIN_TABS: MainTab[] = ['요청 관리', '튜닝 설정'];
+const DETAIL_TABS = ['요약', '후보 분석', '운영 액션'] as const;
+type DetailTab = (typeof DETAIL_TABS)[number];
+type CandidateFilter = CandidateStatus | '전체';
 
 const STATUS_FILTER_TABS: Array<QuickMatchStatus | '전체'> = [
   '전체',
@@ -188,19 +192,21 @@ export default function AdminQuickMatch() {
   const [partyBackfillRequested, setPartyBackfillRequested] = useState(false);
   const [userBackfillRequested, setUserBackfillRequested] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [expandedRequestId, setExpandedRequestId] = useState('');
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('요약');
+  const [candidateFilter, setCandidateFilter] =
+    useState<CandidateFilter>('전체');
 
   const {
     rows,
     summary,
     total,
     policy,
-    selected,
     loading,
     policyLoading,
     error,
     params,
-    selectedRequestId,
-    setSelectedRequestId,
     updateParams,
     resetParams,
     savePolicy,
@@ -228,13 +234,6 @@ export default function AdminQuickMatch() {
   const pageSize = params.pageSize ?? 20;
   const selectedPolicy = policyDraft ?? policy ?? DEFAULT_POLICY;
 
-  const rejectedCount =
-    selected?.candidates.filter((candidate) => candidate.status === 'REJECTED')
-      .length ?? 0;
-  const failedCandidates =
-    selected?.candidates.filter((candidate) => candidate.status === 'FAILED') ??
-    [];
-
   const ruleWeightSum =
     selectedPolicy.trustWeight +
     selectedPolicy.capacityWeight +
@@ -256,6 +255,9 @@ export default function AdminQuickMatch() {
   };
 
   const handleResetFilter = () => {
+    setExpandedRequestId('');
+    setActiveDetailTab('요약');
+    setCandidateFilter('전체');
     resetParams();
   };
 
@@ -313,6 +315,360 @@ export default function AdminQuickMatch() {
     }
   };
 
+  const renderRequestDetail = (request: QuickMatchRequestRow) => {
+    const rejectedCandidateCount = request.candidates.filter(
+      (candidate) => candidate.status === 'REJECTED',
+    ).length;
+    const failedRequestCandidates = request.candidates.filter(
+      (candidate) => candidate.status === 'FAILED',
+    );
+    const visibleCandidates =
+      candidateFilter === '전체'
+        ? request.candidates
+        : request.candidates.filter(
+            (candidate) => candidate.status === candidateFilter,
+          );
+
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:rounded-2xl md:p-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 md:text-xs">
+              요청 상세
+            </div>
+            <h2 className="mt-1 break-all text-sm font-bold text-slate-900 md:text-lg">
+              {request.requestId}
+            </h2>
+            <p className="mt-1 text-[11px] text-slate-500 break-keep md:text-sm">
+              {request.userNickname} · {request.serviceName} ·{' '}
+              {request.requestedAt}
+            </p>
+          </div>
+          <span
+            className={`inline-flex self-start rounded-full border px-2 py-0.5 text-[10px] font-bold md:self-auto md:px-2.5 md:py-1 md:text-xs ${STATUS_STYLE[request.status]}`}
+          >
+            {STATUS_LABEL[request.status] ?? request.status}
+          </span>
+        </div>
+
+        <div className="mt-3 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+          {DETAIL_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveDetailTab(tab)}
+              className={`shrink-0 rounded-lg px-3 py-1 text-[11px] font-bold transition md:px-4 md:text-xs ${
+                activeDetailTab === tab
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-slate-500 hover:bg-white/70 hover:text-slate-800'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {activeDetailTab === '요약' && (
+          <div className="mt-3 space-y-4 md:mt-4">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-2 xl:grid-cols-4">
+              {[
+                ['사용자 ID', request.userId],
+                ['최종 결과', formatOptional(request.matchedPartyName)],
+                ['실패 사유', labelFailureReason(request.failReason)],
+                ['후보 수', `${request.candidates.length}개`],
+                ['제외 후보 수', `${rejectedCandidateCount}개`],
+                ['재시도 횟수', `${request.retryCount}회`],
+                ['총 소요 시간', formatSeconds(request.totalMatchSeconds)],
+                ['가입 실패 후보', `${failedRequestCandidates.length}개`],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:rounded-xl md:px-3 md:py-2"
+                >
+                  <div className="truncate text-[10px] font-medium text-slate-400 md:text-xs">
+                    {label}
+                  </div>
+                  <div className="mt-0.5 truncate text-xs font-bold text-slate-800 md:mt-1 md:text-sm">
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 md:text-sm">
+                  단계별 소요 시간
+                </h3>
+                <div className="mt-2 grid grid-cols-2 gap-2 md:mt-2 md:grid-cols-3">
+                  {[
+                    ['요청 검증', request.stepTimings.validationMs],
+                    ['프로필/임베딩', request.stepTimings.profileEmbeddingMs],
+                    ['하드 필터링', request.stepTimings.hardFilterMs],
+                    ['Rule 점수', request.stepTimings.ruleScoringMs],
+                    ['Vector 점수', request.stepTimings.vectorScoringMs],
+                    ['join_party()', request.stepTimings.joinPartyMs],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:rounded-xl md:py-2"
+                    >
+                      <div className="truncate text-[9px] font-bold uppercase tracking-wide text-slate-400 md:text-[11px]">
+                        {label}
+                      </div>
+                      <div className="mt-0.5 text-xs font-bold text-slate-800 md:mt-1 md:text-sm">
+                        {formatMs(Number(value))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 md:text-sm">
+                  사용자 프로필 스냅샷
+                </h3>
+                <div className="mt-2 grid gap-2 md:mt-3 md:gap-2">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 md:rounded-xl md:px-3 md:py-2">
+                    <div className="text-[10px] font-medium text-slate-400 md:text-xs">
+                      요청 조건
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-700 break-keep md:text-sm">
+                      카테고리{' '}
+                      {formatOptional(
+                        request.aiProfileSnapshot.preferredConditions.category,
+                      )}{' '}
+                      · 플랫폼{' '}
+                      {formatOptional(
+                        request.aiProfileSnapshot.preferredConditions.platform,
+                      )}{' '}
+                      · 선호기간{' '}
+                      {formatOptional(
+                        request.aiProfileSnapshot.preferredConditions
+                          .durationPreference,
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 md:gap-2">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 md:rounded-xl md:px-3 md:py-2">
+                      <div className="text-[10px] font-medium text-slate-400 md:text-xs">
+                        활동 요약
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-700 break-keep md:text-sm">
+                        총{' '}
+                        {
+                          request.aiProfileSnapshot.activitySummary
+                            .totalPartyJoinCount
+                        }
+                        회 · 서비스{' '}
+                        {
+                          request.aiProfileSnapshot.activitySummary
+                            .servicePartyJoinCount
+                        }
+                        회 · 활성{' '}
+                        {
+                          request.aiProfileSnapshot.activitySummary
+                            .activePartyCount
+                        }
+                        개
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 md:rounded-xl md:px-3 md:py-2">
+                      <div className="text-[10px] font-medium text-slate-400 md:text-xs">
+                        리스크 / 신뢰도
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-700 break-keep md:text-sm">
+                        신뢰도 {request.aiProfileSnapshot.trustScore.toFixed(1)}{' '}
+                        · 신고{' '}
+                        {request.aiProfileSnapshot.riskSummary.reportCount}회 ·
+                        이탈 {request.aiProfileSnapshot.riskSummary.leaveCount}
+                        회
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeDetailTab === '후보 분석' && (
+          <div className="mt-3 md:mt-4">
+            <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 md:text-sm">
+                  후보 / 결과 상세
+                </h3>
+                <p className="mt-1 text-[10px] text-slate-400 md:text-xs">
+                  후보 {visibleCandidates.length}개 표시 · rule / vector / final
+                  점수 비교
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 md:text-xs">
+                상태
+                <select
+                  value={candidateFilter}
+                  onChange={(event) =>
+                    setCandidateFilter(event.target.value as CandidateFilter)
+                  }
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-300 md:text-xs"
+                >
+                  {['전체', 'SELECTED', 'PENDING', 'REJECTED', 'FAILED'].map(
+                    (status) => (
+                      <option key={status} value={status}>
+                        {status === '전체'
+                          ? '전체'
+                          : CANDIDATE_STATUS_LABEL[status]}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+            </div>
+
+            <div className="grid max-h-100 gap-2 overflow-y-auto pr-1 md:gap-2 xl:grid-cols-2">
+              {visibleCandidates.map((candidate) => (
+                <details
+                  key={candidate.candidateId}
+                  className="group rounded-xl border border-slate-200 bg-white p-2.5 md:rounded-2xl md:p-3"
+                >
+                  <summary className="flex cursor-pointer list-none flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="break-all text-xs font-bold text-slate-900 md:text-sm">
+                        #{candidate.rank ?? '-'} {candidate.partyName}
+                      </div>
+                      <div className="mt-0.5 max-w-50 truncate text-[10px] text-slate-400 md:mt-1 md:max-w-none md:text-xs">
+                        {candidate.partyId}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold md:px-2.5 md:py-1 md:text-xs ${CANDIDATE_STATUS_STYLE[candidate.status]}`}
+                      >
+                        {CANDIDATE_STATUS_LABEL[candidate.status] ??
+                          candidate.status}
+                      </span>
+                      <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600 md:px-2.5 md:py-1 md:text-xs">
+                        Final {candidate.finalScore.toFixed(3)}
+                      </span>
+                    </div>
+                  </summary>
+
+                  <div className="mt-2.5 grid grid-cols-3 gap-1.5 md:mt-3 md:gap-2">
+                    {[
+                      ['Rule', candidate.ruleScore.toFixed(3)],
+                      ['Vector', candidate.vectorScore.toFixed(3)],
+                      ['Final', candidate.finalScore.toFixed(3)],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-center md:rounded-xl md:px-3 md:py-2 sm:text-left"
+                      >
+                        <div className="text-[9px] font-bold uppercase tracking-wide text-slate-400 md:text-[11px]">
+                          {label}
+                        </div>
+                        <div className="mt-0.5 text-[11px] font-bold text-slate-800 md:mt-1 md:text-sm">
+                          {value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:mt-2.5 md:rounded-xl md:py-2.5">
+                    <div className="mb-1.5 text-[10px] font-medium text-slate-400 md:text-xs">
+                      필터 / 점수 근거
+                    </div>
+                    <pre className="max-h-37.5 overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed text-slate-600 md:text-xs">
+                      {JSON.stringify(candidate.filterReasons, null, 2)}
+                    </pre>
+                  </div>
+                </details>
+              ))}
+
+              {visibleCandidates.length === 0 && (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-xs text-slate-400 md:text-sm">
+                  선택한 상태의 후보 데이터가 없습니다.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeDetailTab === '운영 액션' && (
+          <div className="mt-3 space-y-2.5 md:mt-4">
+            <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5 text-[11px] leading-relaxed text-amber-800 md:text-xs">
+              실패 요청 재시도와 임베딩 재생성은 실제 관리자 API를 호출합니다.
+              요청 ID와 사용자/파티 정보를 확인한 뒤 실행하세요.
+            </div>
+            <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+              <button
+                disabled={actionLoading !== null}
+                onClick={() =>
+                  handleAction(`retry-${request.requestId}`, () =>
+                    retryRequest(request.requestId),
+                  )
+                }
+                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-left text-[11px] font-bold text-amber-700 transition hover:bg-amber-100 active:scale-95 disabled:opacity-50 md:text-sm"
+              >
+                <span className="block">실패 요청 재시도</span>
+                <span className="mt-1 block text-[10px] font-medium leading-relaxed text-amber-700/75 md:text-xs">
+                  일시 실패 또는 후보 재평가가 필요할 때 사용합니다.
+                </span>
+              </button>
+              <button
+                disabled={actionLoading !== null}
+                onClick={() =>
+                  handleAction(`user-embedding-${request.userId}`, () =>
+                    regenerateUserEmbedding(request.userId),
+                  )
+                }
+                className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100 active:scale-95 disabled:opacity-50 md:text-sm"
+              >
+                <span className="block">사용자 임베딩 재생성</span>
+                <span className="mt-1 block text-[10px] font-medium leading-relaxed text-emerald-700/75 md:text-xs">
+                  사용자 프로필 변경 또는 임베딩 누락이 의심될 때 사용합니다.
+                </span>
+              </button>
+              <button
+                disabled={actionLoading !== null || !request.matchedPartyId}
+                onClick={() => {
+                  if (!request.matchedPartyId) return;
+                  handleAction(
+                    `party-embedding-${request.matchedPartyId}`,
+                    () =>
+                      regeneratePartyEmbedding(
+                        request.matchedPartyId as string,
+                      ),
+                  );
+                }}
+                className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-left text-[11px] font-bold text-indigo-700 transition hover:bg-indigo-100 active:scale-95 disabled:opacity-50 md:text-sm"
+              >
+                <span className="block">파티 임베딩 재생성</span>
+                <span className="mt-1 block text-[10px] font-medium leading-relaxed text-indigo-700/75 md:text-xs">
+                  매칭된 파티 임베딩이 오래됐거나 누락됐을 때 사용합니다.
+                </span>
+              </button>
+              <button
+                disabled={actionLoading !== null}
+                onClick={() =>
+                  handleAction(`force-fail-${request.requestId}`, () =>
+                    forceFailRequest(request.requestId),
+                  )
+                }
+                className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-left text-[11px] font-bold text-rose-700 transition hover:bg-rose-100 active:scale-95 disabled:opacity-50 md:text-sm"
+              >
+                <span className="block">요청 강제 실패</span>
+                <span className="mt-1 block text-[10px] font-medium leading-relaxed text-rose-700/75 md:text-xs">
+                  운영자가 요청을 더 진행하지 않기로 판단한 경우 사용합니다.
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     // 💡 최상위 Wrapper에 플렉스 속성을 줘서 좌우 찌그러짐 방지
     <div className="flex w-full min-w-0 flex-1 flex-col overflow-x-hidden">
@@ -350,7 +706,7 @@ export default function AdminQuickMatch() {
             </div>
           )}
 
-          <div className="mb-5 md:mb-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             <SummaryCard
               title="총 요청 수"
               value={(summary?.total ?? 0).toLocaleString()}
@@ -377,189 +733,377 @@ export default function AdminQuickMatch() {
             />
           </div>
 
-          {/* 💡 탭 버튼 모바일 가로 스크롤 허용 */}
-          <div className="mb-5 md:mb-6 flex gap-2 md:gap-1 border-b border-gray-200 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-            {MAIN_TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveMainTab(tab)}
-                className={`shrink-0 border-b-2 px-4 py-2 md:px-5 md:py-2.5 text-xs md:text-sm font-bold transition-all ${
-                  activeMainTab === tab
-                    ? 'border-indigo-600 text-indigo-700'
-                    : 'border-transparent text-gray-400 hover:text-gray-700'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm md:rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] font-semibold text-slate-500 md:text-xs">
+                빠른매칭 관리 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] text-slate-600 md:text-xs">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    빠른매칭 관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    빠른매칭 관리 페이지는 빠른매칭 요청 상태, 후보 산출 결과,
+                    실패 사유, 단계별 처리 시간을 확인하고 운영자가 필요한
+                    재시도나 임베딩 재생성을 수행하는 화면입니다. 요청 상세는
+                    `요약`, `후보 분석`, `운영 액션` 탭으로 나뉘어 있어 원인
+                    확인과 조치를 순서대로 진행할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 요청 ID, 사용자, 서비스, 기간, 상태 기준으로 빠른매칭
+                        요청을 검색하고 필터링할 수 있습니다.
+                      </p>
+                      <p>
+                        2. 선택한 요청의 최종 결과, 실패 사유, 후보 수, 제외
+                        후보 수, 단계별 소요 시간을 `요약` 탭에서 확인할 수
+                        있습니다.
+                      </p>
+                      <p>
+                        3. `후보 분석` 탭에서 후보 상태를 드롭다운으로
+                        필터링하고 후보별 Rule, Vector, Final 점수와 필터 근거를
+                        펼쳐볼 수 있습니다.
+                      </p>
+                      <p>
+                        4. `운영 액션` 탭에서 실패 요청 재시도, 사용자/파티
+                        임베딩 재생성, 요청 강제 실패 처리를 수행할 수 있습니다.
+                      </p>
+                      <p>
+                        5. 튜닝 설정에서 빠른매칭 사용 여부, 추천 개수, 점수
+                        가중치, Redis Lock TTL, 임베딩 백필을 관리할 수
+                        있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 상단 요약 카드에서 요청량, 성공률, 평균 매칭 시간을
+                        먼저 확인해 전체 상태를 파악합니다.
+                      </p>
+                      <p>
+                        2. `요청 관리` 탭에서 상태 필터와 검색 조건으로 점검할
+                        요청을 좁힌 뒤 목록에서 `상세` 버튼을 눌러 펼칩니다.
+                      </p>
+                      <p>
+                        3. `요약` 탭에서 실패 사유와 처리 시간을 먼저 보고,
+                        `후보 분석` 탭에서 후보 점수와 필터 근거를 확인합니다.
+                      </p>
+                      <p>
+                        4. 임베딩 누락이나 일시 실패가 의심되면 `운영 액션`
+                        탭에서 필요한 조치를 실행합니다.
+                      </p>
+                      <p>
+                        5. `튜닝 설정` 탭에서는 정책 값을 변경한 뒤 Rule 가중치
+                        합계가 1.00인지 확인하고 `튜닝값 저장`을 누릅니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      가중치와 최소 매칭 점수는 매칭 품질에 직접 영향을 주므로,
+                      실패 로그를 확인한 뒤 한 번에 큰 폭으로 변경하지 않는 것을
+                      권장합니다.
+                    </p>
+                    <p>
+                      임베딩 백필은 비용과 처리 시간이 발생할 수 있으므로, 파티
+                      로직 변경이나 임베딩 누락이 확인된 경우에만 실행하는 것이
+                      좋습니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-sm md:rounded-2xl md:flex-row md:items-center md:justify-between md:px-4">
+            <div className="flex min-w-0 gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              {MAIN_TABS.map((tab) => {
+                const isActive = activeMainTab === tab;
+
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveMainTab(tab)}
+                    className={`shrink-0 rounded-lg border px-3.5 py-2 text-xs font-bold transition active:scale-95 md:rounded-xl md:px-4 md:text-sm ${
+                      isActive
+                        ? 'border-blue-200 bg-blue-600 text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-[11px] font-medium text-slate-400 md:text-xs">
+              {activeMainTab === '요청 관리'
+                ? `요청 ${total.toLocaleString()}건`
+                : policyLoading
+                  ? '튜닝 정책 불러오는 중'
+                  : '튜닝 정책 조정'}
+            </div>
+          </section>
 
           {activeMainTab === '요청 관리' && (
-            <div className="grid min-w-0 gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
-              {/* --- 1. 요청 목록 테이블 영역 --- */}
-              <section className="min-w-0 rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="border-b border-slate-100 px-4 md:px-5 pt-3 md:pt-4">
+            <div className="grid min-w-0 gap-5 md:gap-6">
+              <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end">
+                  <label className="flex min-w-0 flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      키워드
+                    </span>
+                    <input
+                      type="text"
+                      value={params.keyword ?? ''}
+                      onChange={(e) => {
+                        setExpandedRequestId('');
+                        updateParams({ keyword: e.target.value });
+                      }}
+                      placeholder="요청ID / 유저 / 서비스"
+                      className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </label>
+
+                  <label className="flex min-w-0 flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      카테고리
+                    </span>
+                    <select
+                      value={params.serviceName ?? '전체'}
+                      onChange={(e) => {
+                        setExpandedRequestId('');
+                        updateParams({ serviceName: e.target.value });
+                      }}
+                      className="w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-300"
+                    >
+                      {services.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="flex min-w-0 flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      시작일
+                    </span>
+                    <input
+                      type="date"
+                      value={params.dateFrom ?? ''}
+                      onChange={(e) => {
+                        setExpandedRequestId('');
+                        updateParams({ dateFrom: e.target.value });
+                      }}
+                      className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </label>
+
+                  <label className="flex min-w-0 flex-col gap-1">
+                    <span className="text-xs font-medium text-gray-500">
+                      종료일
+                    </span>
+                    <input
+                      type="date"
+                      value={params.dateTo ?? ''}
+                      onChange={(e) => {
+                        setExpandedRequestId('');
+                        updateParams({ dateTo: e.target.value });
+                      }}
+                      className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-2 md:col-span-2 xl:col-span-1 xl:flex xl:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpandedRequestId('');
+                        updateParams({ page: 1 });
+                      }}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-95"
+                    >
+                      조회
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetFilter}
+                      className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 active:scale-95"
+                    >
+                      초기화
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <div className="flex w-full min-w-0 items-center justify-between gap-3">
+                <div className="min-w-0 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <FilterTabs
                     tabs={STATUS_FILTER_TABS}
                     activeTab={params.status ?? '전체'}
                     onTabChange={(tab: string) => {
+                      setExpandedRequestId('');
                       updateParams({
                         status: tab as QuickMatchStatus | '전체',
                       });
                     }}
                     labels={STATUS_LABEL}
                   />
-
-                  <div className="mb-4 mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                    <label className="flex flex-col gap-1 w-full sm:w-auto">
-                      <span className="text-[11px] md:text-xs font-medium text-gray-500">
-                        키워드
-                      </span>
-                      <input
-                        type="text"
-                        value={params.keyword ?? ''}
-                        onChange={(e) => {
-                          updateParams({ keyword: e.target.value });
-                        }}
-                        placeholder="요청ID / 유저 / 서비스"
-                        className="w-full sm:w-44 rounded-lg border border-gray-200 px-3 py-2.5 md:py-2 text-sm outline-none focus:border-blue-400"
-                      />
-                    </label>
-
-                    <label className="flex flex-col gap-1 w-full sm:w-auto">
-                      <span className="text-[11px] md:text-xs font-medium text-gray-500">
-                        서비스
-                      </span>
-                      <select
-                        value={params.serviceName ?? '전체'}
-                        onChange={(e) => {
-                          updateParams({ serviceName: e.target.value });
-                        }}
-                        className="w-full sm:w-auto rounded-lg border border-slate-200 px-3 py-2.5 md:py-2 text-sm text-slate-700 outline-none focus:border-indigo-300 bg-white"
-                      >
-                        {services.map((item) => (
-                          <option key={item} value={item}>
-                            {item}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <div className="flex w-full sm:w-auto gap-2">
-                      <label className="flex flex-1 sm:flex-none flex-col gap-1">
-                        <span className="text-[11px] md:text-xs font-medium text-gray-500">
-                          시작일
-                        </span>
-                        <input
-                          type="date"
-                          value={params.dateFrom ?? ''}
-                          onChange={(e) => {
-                            updateParams({ dateFrom: e.target.value });
-                          }}
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 md:py-2 text-[11px] md:text-sm outline-none focus:border-blue-400"
-                        />
-                      </label>
-
-                      <label className="flex flex-1 sm:flex-none flex-col gap-1">
-                        <span className="text-[11px] md:text-xs font-medium text-gray-500">
-                          종료일
-                        </span>
-                        <input
-                          type="date"
-                          value={params.dateTo ?? ''}
-                          onChange={(e) => {
-                            updateParams({ dateTo: e.target.value });
-                          }}
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 md:py-2 text-[11px] md:text-sm outline-none focus:border-blue-400"
-                        />
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full sm:w-auto sm:ml-auto gap-3">
-                      <button
-                        onClick={handleResetFilter}
-                        className="flex-1 sm:flex-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 md:py-2 text-xs md:text-sm font-bold text-gray-600 transition hover:bg-gray-50 active:scale-95"
-                      >
-                        초기화
-                      </button>
-                      <div className="text-[11px] md:text-xs font-medium text-slate-400">
-                        총 {total.toLocaleString()}건
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
+                <div className="shrink-0 text-[11px] font-medium text-slate-400 md:text-xs">
+                  총 {total.toLocaleString()}건
+                </div>
+              </div>
+
+              {/* --- 1. 요청 목록 테이블 영역 --- */}
+              <section className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm md:rounded-2xl">
                 {/* 💡 테이블 가로 스크롤 허용 */}
                 <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                  <table className="min-w-[760px] w-full border-collapse">
+                  <table className="min-w-[760px] w-full table-fixed border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        {[
-                          '요청 시각',
-                          '요청 ID',
-                          '사용자',
-                          '서비스',
-                          '상태',
-                          '선택 파티',
-                          '소요 시간',
-                        ].map((head) => (
-                          <th
-                            key={head}
-                            className="px-3 md:px-4 py-3 text-left text-[11px] md:text-xs font-semibold text-slate-500 whitespace-nowrap"
-                          >
-                            {head}
-                          </th>
-                        ))}
+                        {['요청 시각', '사용자', '서비스', '상태', '관리'].map(
+                          (head) => (
+                            <th
+                              key={head}
+                              className={`px-3 py-2.5 text-[11px] font-semibold whitespace-nowrap text-slate-500 md:px-4 md:text-xs ${
+                                head === '요청 시각'
+                                  ? 'w-40 text-left'
+                                  : head === '사용자'
+                                    ? 'w-32 text-left'
+                                    : head === '서비스'
+                                      ? 'w-28 text-center'
+                                      : head === '상태'
+                                        ? 'w-24 text-center'
+                                        : head === '관리'
+                                          ? 'w-52 text-center'
+                                          : ''
+                              }`}
+                            >
+                              {head}
+                            </th>
+                          ),
+                        )}
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map((row) => (
-                        <tr
-                          key={row.requestId}
-                          onClick={() => setSelectedRequestId(row.requestId)}
-                          className={`cursor-pointer border-b border-slate-100 transition hover:bg-indigo-50/40 ${
-                            selectedRequestId === row.requestId
-                              ? 'bg-indigo-50/80'
-                              : 'bg-white'
-                          }`}
-                        >
-                          <td className="whitespace-nowrap px-3 md:px-4 py-3 text-[11px] md:text-sm text-slate-500">
-                            {row.requestedAt}
-                          </td>
-                          <td className="px-3 md:px-4 py-3 text-xs md:text-sm font-bold text-slate-900 truncate max-w-20 md:max-w-none">
-                            {row.requestId}
-                          </td>
-                          <td className="px-3 md:px-4 py-3">
-                            <div className="text-xs md:text-sm font-bold text-slate-800 break-keep">
-                              {row.userNickname}
-                            </div>
-                            <div className="text-[10px] md:text-xs text-slate-400 truncate max-w-20 md:max-w-none">
-                              {row.userId}
-                            </div>
-                          </td>
-                          <td className="px-3 md:px-4 py-3 text-[11px] md:text-sm text-slate-600 whitespace-nowrap">
-                            {row.serviceName}
-                          </td>
-                          <td className="px-3 md:px-4 py-3">
-                            <span
-                              className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${STATUS_STYLE[row.status]}`}
+                      {rows.map((row) => {
+                        const isExpanded = expandedRequestId === row.requestId;
+
+                        return (
+                          <Fragment key={row.requestId}>
+                            <tr
+                              className={`border-b border-slate-100 transition hover:bg-indigo-50/40 ${
+                                isExpanded ? 'bg-indigo-50/80' : 'bg-white'
+                              }`}
                             >
-                              {STATUS_LABEL[row.status] ?? row.status}
-                            </span>
-                          </td>
-                          <td className="px-3 md:px-4 py-3 text-[11px] md:text-sm text-slate-600 truncate max-w-25 md:max-w-37.5">
-                            {formatOptional(row.matchedPartyName)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 md:px-4 py-3 text-[11px] md:text-sm text-slate-600">
-                            {formatSeconds(row.totalMatchSeconds)}
-                          </td>
-                        </tr>
-                      ))}
+                              <td className="whitespace-nowrap px-3 py-2.5 text-[11px] text-slate-500 md:px-4 md:text-sm">
+                                {row.requestedAt}
+                              </td>
+                              <td className="px-3 py-2.5 md:px-4">
+                                <div className="text-xs md:text-sm font-bold text-slate-800 break-keep">
+                                  {row.userNickname}
+                                </div>
+                              </td>
+                              <td className="truncate px-3 py-2.5 text-center text-[11px] text-slate-600 md:px-4 md:text-sm">
+                                {row.serviceName}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2.5 text-center md:px-4">
+                                <span
+                                  className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-bold md:px-2.5 md:py-1 md:text-xs ${STATUS_STYLE[row.status]}`}
+                                >
+                                  {STATUS_LABEL[row.status] ?? row.status}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2.5 text-sm md:px-4">
+                                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                                  {DETAIL_TABS.map((tab) => {
+                                    const isActiveDetail =
+                                      isExpanded && activeDetailTab === tab;
+                                    return (
+                                      <button
+                                        key={tab}
+                                        type="button"
+                                        className={`inline-flex whitespace-nowrap rounded-lg border px-2.5 py-1 text-[10px] font-bold transition active:scale-95 md:text-xs ${
+                                          isActiveDetail
+                                            ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                        onClick={() => {
+                                          setExpandedRequestId(row.requestId);
+                                          setActiveDetailTab(tab);
+                                          setCandidateFilter('전체');
+                                        }}
+                                      >
+                                        {tab === '후보 분석'
+                                          ? '후보'
+                                          : tab === '운영 액션'
+                                            ? '액션'
+                                            : tab}
+                                      </button>
+                                    );
+                                  })}
+
+                                  {isExpanded && (
+                                    <button
+                                      type="button"
+                                      className="inline-flex whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-500 transition hover:bg-slate-100 active:scale-95 md:text-xs"
+                                      onClick={() => setExpandedRequestId('')}
+                                    >
+                                      닫기
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+
+                            {isExpanded && (
+                              <tr className="border-b border-slate-100 bg-slate-50/70">
+                                <td
+                                  colSpan={5}
+                                  className="p-2.5 md:px-3 md:py-3"
+                                >
+                                  {renderRequestDetail(row)}
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
 
                       {!loading && rows.length === 0 && (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={5}
                             className="px-6 py-12 text-center text-xs md:text-sm text-slate-400 whitespace-normal break-keep leading-relaxed"
                           >
                             <div className="mx-auto flex min-h-20 max-w-sm items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5">
@@ -572,7 +1116,7 @@ export default function AdminQuickMatch() {
                       {loading && rows.length === 0 && (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={5}
                             className="px-6 py-12 text-center text-xs md:text-sm text-slate-400 whitespace-normal break-keep leading-relaxed"
                           >
                             <div className="mx-auto flex min-h-20 max-w-sm items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5">
@@ -585,338 +1129,17 @@ export default function AdminQuickMatch() {
                   </table>
                 </div>
 
-                <div className="border-t border-slate-100 px-4 py-3 md:px-5 md:py-4">
+                <div className="border-t border-slate-100 px-4 py-2.5 md:px-5 md:py-3">
                   <Pagination
                     total={total}
                     page={page}
                     pageSize={pageSize}
                     onChange={(nextPage: number) => {
+                      setExpandedRequestId('');
                       updateParams({ page: nextPage });
                     }}
                   />
                 </div>
-              </section>
-
-              {/* --- 2. 요청 상세 패널 영역 --- */}
-              <section className="min-w-0 rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
-                {!selected ? (
-                  <div className="flex min-h-80 flex-1 items-center justify-center p-5 md:p-8">
-                    <div className="w-full max-w-xs rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
-                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm">
-                        🔎
-                      </div>
-                      <p className="mt-4 text-sm font-bold text-slate-600 break-keep">
-                        선택된 요청이 없습니다.
-                      </p>
-                      <p className="mt-1.5 text-xs leading-relaxed text-slate-400 break-keep">
-                        왼쪽 요청 목록에서 항목을 선택하면 상세 정보와 후보
-                        결과를 확인할 수 있습니다.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="min-w-0 p-4 md:p-5">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <div className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          요청 상세
-                        </div>
-                        <h2 className="mt-1 text-sm md:text-lg font-bold text-slate-900 break-all">
-                          {selected.requestId}
-                        </h2>
-                        <p className="mt-1 text-[11px] md:text-sm text-slate-500 break-keep">
-                          {selected.userNickname} · {selected.serviceName} ·{' '}
-                          {selected.requestedAt}
-                        </p>
-                      </div>
-                      <span
-                        className={`inline-flex self-start md:self-auto rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${STATUS_STYLE[selected.status]}`}
-                      >
-                        {STATUS_LABEL[selected.status] ?? selected.status}
-                      </span>
-                    </div>
-
-                    {/* 상세 지표 그리드 */}
-                    <div className="mt-4 md:mt-5 grid grid-cols-2 gap-2 md:gap-3">
-                      {[
-                        [
-                          '최종 결과',
-                          formatOptional(selected.matchedPartyName),
-                        ],
-                        ['실패 사유', labelFailureReason(selected.failReason)],
-                        ['후보 수', `${selected.candidates.length}개`],
-                        ['제외 후보 수', `${rejectedCount}개`],
-                        ['가입 실패 후보', `${failedCandidates.length}개`],
-                        [
-                          '총 소요 시간',
-                          formatSeconds(selected.totalMatchSeconds),
-                        ],
-                      ].map(([label, value]) => (
-                        <div
-                          key={label}
-                          className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-4 md:py-3"
-                        >
-                          <div className="text-[10px] md:text-xs font-medium text-slate-400 truncate">
-                            {label}
-                          </div>
-                          <div className="mt-0.5 md:mt-1 text-xs md:text-sm font-bold text-slate-800 truncate">
-                            {value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-5 md:mt-6">
-                      <h3 className="text-xs md:text-sm font-bold text-slate-900">
-                        단계별 소요 시간
-                      </h3>
-                      <div className="mt-2 md:mt-3 grid grid-cols-2 gap-2">
-                        {[
-                          ['요청 검증', selected.stepTimings.validationMs],
-                          [
-                            '프로필/임베딩',
-                            selected.stepTimings.profileEmbeddingMs,
-                          ],
-                          ['하드 필터링', selected.stepTimings.hardFilterMs],
-                          ['Rule 점수', selected.stepTimings.ruleScoringMs],
-                          ['Vector 점수', selected.stepTimings.vectorScoringMs],
-                          ['join_party()', selected.stepTimings.joinPartyMs],
-                        ].map(([label, value]) => (
-                          <div
-                            key={label}
-                            className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-3 md:py-2.5"
-                          >
-                            <div className="text-[9px] md:text-[11px] font-bold uppercase tracking-wide text-slate-400 truncate">
-                              {label}
-                            </div>
-                            <div className="mt-0.5 md:mt-1 text-xs md:text-sm font-bold text-slate-800">
-                              {formatMs(Number(value))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="mt-5 md:mt-6">
-                      <h3 className="text-xs md:text-sm font-bold text-slate-900">
-                        사용자 프로필 스냅샷
-                      </h3>
-                      <div className="mt-2 md:mt-3 grid gap-2 md:gap-3">
-                        <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3">
-                          <div className="text-[10px] md:text-xs font-medium text-slate-400">
-                            요청 조건
-                          </div>
-                          <div className="mt-1 text-[11px] md:text-sm text-slate-700 break-keep">
-                            카테고리{' '}
-                            {formatOptional(
-                              selected.aiProfileSnapshot.preferredConditions
-                                .category,
-                            )}{' '}
-                            · 플랫폼{' '}
-                            {formatOptional(
-                              selected.aiProfileSnapshot.preferredConditions
-                                .platform,
-                            )}{' '}
-                            · 선호기간{' '}
-                            {formatOptional(
-                              selected.aiProfileSnapshot.preferredConditions
-                                .durationPreference,
-                            )}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 md:gap-3">
-                          <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3">
-                            <div className="text-[10px] md:text-xs font-medium text-slate-400">
-                              활동 요약
-                            </div>
-                            <div className="mt-1 text-[11px] md:text-sm text-slate-700 break-keep">
-                              총{' '}
-                              {
-                                selected.aiProfileSnapshot.activitySummary
-                                  .totalPartyJoinCount
-                              }
-                              회 · 서비스{' '}
-                              {
-                                selected.aiProfileSnapshot.activitySummary
-                                  .servicePartyJoinCount
-                              }
-                              회 · 활성{' '}
-                              {
-                                selected.aiProfileSnapshot.activitySummary
-                                  .activePartyCount
-                              }
-                              개
-                            </div>
-                          </div>
-                          <div className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3">
-                            <div className="text-[10px] md:text-xs font-medium text-slate-400">
-                              리스크 / 신뢰도
-                            </div>
-                            <div className="mt-1 text-[11px] md:text-sm text-slate-700 break-keep">
-                              신뢰도{' '}
-                              {selected.aiProfileSnapshot.trustScore.toFixed(1)}{' '}
-                              · 신고{' '}
-                              {
-                                selected.aiProfileSnapshot.riskSummary
-                                  .reportCount
-                              }
-                              회 · 이탈{' '}
-                              {
-                                selected.aiProfileSnapshot.riskSummary
-                                  .leaveCount
-                              }
-                              회
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 md:mt-6">
-                      <div className="mb-2.5 md:mb-3 flex flex-wrap items-center justify-between gap-1">
-                        <h3 className="text-xs md:text-sm font-bold text-slate-900">
-                          후보 / 결과 상세
-                        </h3>
-                        <div className="text-[10px] md:text-xs text-slate-400">
-                          rule / vector / final
-                        </div>
-                      </div>
-
-                      <div className="max-h-120 space-y-2.5 md:space-y-3 overflow-y-auto pr-1">
-                        {selected.candidates.map((candidate) => (
-                          <div
-                            key={candidate.candidateId}
-                            className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-3 md:p-4"
-                          >
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <div>
-                                <div className="text-xs md:text-sm font-bold text-slate-900 break-all">
-                                  #{candidate.rank ?? '-'} {candidate.partyName}
-                                </div>
-                                <div className="mt-0.5 md:mt-1 text-[10px] md:text-xs text-slate-400 truncate max-w-50 md:max-w-none">
-                                  {candidate.partyId}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 self-start sm:self-auto">
-                                <span
-                                  className={`inline-flex rounded-full border px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold ${CANDIDATE_STATUS_STYLE[candidate.status]}`}
-                                >
-                                  {CANDIDATE_STATUS_LABEL[candidate.status] ??
-                                    candidate.status}
-                                </span>
-                                <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-bold text-indigo-600">
-                                  Final {candidate.finalScore.toFixed(3)}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="mt-3 md:mt-4 grid grid-cols-3 gap-1.5 md:gap-2">
-                              {[
-                                ['Rule', candidate.ruleScore.toFixed(3)],
-                                ['Vector', candidate.vectorScore.toFixed(3)],
-                                ['Final', candidate.finalScore.toFixed(3)],
-                              ].map(([label, value]) => (
-                                <div
-                                  key={label}
-                                  className="rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 md:px-3 md:py-2.5 text-center sm:text-left"
-                                >
-                                  <div className="text-[9px] md:text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                                    {label}
-                                  </div>
-                                  <div className="mt-0.5 md:mt-1 text-[11px] md:text-sm font-bold text-slate-800">
-                                    {value}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            <div className="mt-2.5 md:mt-3 rounded-lg md:rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:px-3 md:py-3 overflow-hidden">
-                              <div className="text-[10px] md:text-xs font-medium text-slate-400 mb-1.5">
-                                필터 / 점수 근거
-                              </div>
-                              {/* 💡 pre 태그 오버플로우 방어: overflow-x-auto 추가 */}
-                              <pre className="whitespace-pre-wrap break-all text-[10px] md:text-xs leading-relaxed text-slate-600 overflow-x-auto max-h-37.5 overflow-y-auto">
-                                {JSON.stringify(
-                                  candidate.filterReasons,
-                                  null,
-                                  2,
-                                )}
-                              </pre>
-                            </div>
-                          </div>
-                        ))}
-
-                        {selected.candidates.length === 0 && (
-                          <div className="py-4 text-center text-xs md:text-sm text-slate-400">
-                            후보 데이터가 없습니다.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-5 md:mt-6 border-t border-slate-100 pt-4 md:pt-5">
-                      <div className="mb-2 md:mb-3 text-xs md:text-sm font-bold text-slate-900">
-                        운영 액션
-                      </div>
-                      {/* 모바일 1열 스태킹 */}
-                      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
-                        <button
-                          disabled={actionLoading !== null}
-                          onClick={() =>
-                            handleAction(`retry-${selected.requestId}`, () =>
-                              retryRequest(selected.requestId),
-                            )
-                          }
-                          className="w-full sm:w-auto rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 md:py-2 text-[11px] md:text-sm font-bold text-amber-700 transition hover:bg-amber-100 disabled:opacity-50 active:scale-95"
-                        >
-                          실패 요청 재시도
-                        </button>
-                        <button
-                          disabled={actionLoading !== null}
-                          onClick={() =>
-                            handleAction(
-                              `user-embedding-${selected.userId}`,
-                              () => regenerateUserEmbedding(selected.userId),
-                            )
-                          }
-                          className="w-full sm:w-auto rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 md:py-2 text-[11px] md:text-sm font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 active:scale-95"
-                        >
-                          사용자 임베딩 재생성
-                        </button>
-                        <button
-                          disabled={
-                            actionLoading !== null || !selected.matchedPartyId
-                          }
-                          onClick={() => {
-                            if (!selected.matchedPartyId) return;
-                            handleAction(
-                              `party-embedding-${selected.matchedPartyId}`,
-                              () =>
-                                regeneratePartyEmbedding(
-                                  selected.matchedPartyId as string,
-                                ),
-                            );
-                          }}
-                          className="w-full sm:w-auto rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-2.5 md:py-2 text-[11px] md:text-sm font-bold text-indigo-700 transition hover:bg-indigo-100 disabled:opacity-50 active:scale-95"
-                        >
-                          파티 임베딩 재생성
-                        </button>
-                        <button
-                          disabled={actionLoading !== null}
-                          onClick={() =>
-                            handleAction(
-                              `force-fail-${selected.requestId}`,
-                              () => forceFailRequest(selected.requestId),
-                            )
-                          }
-                          className="w-full sm:w-auto rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 md:py-2 text-[11px] md:text-sm font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50 active:scale-95"
-                        >
-                          요청 강제 실패
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </section>
             </div>
           )}

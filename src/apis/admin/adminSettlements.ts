@@ -20,6 +20,12 @@ export type SettlementRecord = {
   billingMonth: string;
   status: string;
   createdAt: string;
+  participantPayments: Array<{
+    userId: string;
+    nickname: string;
+    role: string;
+    paymentStatus: string;
+  }>;
 };
 
 export type AdminPaymentRecord = {
@@ -34,6 +40,7 @@ export type AdminPaymentRecord = {
   basePrice: number;
   amount: number;
   discountReason: string | null;
+  statusReason: string | null;
   baseCommissionRate: number;
   commissionRate: number;
   effectiveCommissionRate: number;
@@ -114,6 +121,18 @@ export async function fetchAdminPayments(params?: {
   const { data } = await api.get<AdminPaymentListResponse>(
     '/api/admin/payments',
     { params },
+  );
+  return data;
+}
+
+export async function updateAdminPaymentStatus(
+  paymentId: string,
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled',
+  reason?: string,
+): Promise<AdminPaymentRecord> {
+  const { data } = await api.patch<AdminPaymentRecord>(
+    `/api/admin/payments/${paymentId}`,
+    { status, reason },
   );
   return data;
 }

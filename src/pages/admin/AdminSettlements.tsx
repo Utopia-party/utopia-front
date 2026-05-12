@@ -32,6 +32,7 @@ export default function AdminSettlements() {
   const [error, setError] = useState('');
   const [busySettlementId, setBusySettlementId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const loadSettlements = async (params?: {
     keyword?: string;
@@ -119,7 +120,7 @@ export default function AdminSettlements() {
   return (
     <div className="flex w-full min-w-0 flex-1 flex-col overflow-x-hidden">
       <AdminHeader
-        placeholder="정산 검색 (party/leader/status)..."
+        placeholder="파티 정산 검색 (party/leader/status)..."
         onSearch={setSearch}
       />
 
@@ -127,13 +128,14 @@ export default function AdminSettlements() {
         <div className="mx-auto w-full min-w-0 max-w-7xl space-y-5 md:space-y-6">
           <section className="min-w-0">
             <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
-              정산 승인 관리
+              파티 정산 관리
             </h1>
 
             <p className="mt-1 max-w-4xl text-xs leading-relaxed text-gray-500 break-keep md:text-sm">
               파티별 정산 요청, 정산월, 파티장, 총 정산 금액을 한 화면에서
-              확인하고 승인 또는 거절까지 바로 처리할 수 있게 구성했습니다. 운영
-              이슈가 있는 파티는 파티관리 화면과 함께 보고 대응하면 됩니다.
+              확인하고 각 파티의 정산 진행 상태를 관리할 수 있게 구성했습니다.
+              매출내역 관리가 전체 결제 흐름을 보는 화면이라면, 이 페이지는 파티
+              단위 정산 건을 처리하는 운영 화면입니다.
             </p>
           </section>
 
@@ -207,6 +209,100 @@ export default function AdminSettlements() {
             />
           </div>
 
+          <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm md:rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] font-semibold text-slate-500 md:text-xs">
+                파티 정산 관리 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] text-slate-600 md:text-xs">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    파티 정산 관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    이 페이지는 파티별 정산 요청을 검토하고 처리하는 운영
+                    화면입니다. 전체 결제 흐름과 수익 확인은 매출내역 관리에서
+                    보고, 실제로 어느 파티의 정산을 승인하거나 보류할지는 여기서
+                    판단하면 됩니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 파티명, 파티장, 청구월 기준으로 정산 대상을 찾아볼 수
+                        있습니다.
+                      </p>
+                      <p>
+                        2. 대기, 승인, 거절 상태별로 파티 정산 요청을 분류해서
+                        볼 수 있습니다.
+                      </p>
+                      <p>
+                        3. 각 파티의 총 정산 금액, 멤버 수, 청구월, 생성 시각을
+                        확인할 수 있습니다.
+                      </p>
+                      <p>
+                        4. 대기 중인 파티 정산 건을 승인 또는 거절로 처리할 수
+                        있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 먼저 파티명이나 파티장 이름으로 정산 대상을 좁혀서
+                        필요한 건만 확인합니다.
+                      </p>
+                      <p>
+                        2. 목록에서 `상세`를 눌러 파티 정산 ID, 총액, 멤버 수,
+                        청구월을 다시 검토합니다.
+                      </p>
+                      <p>
+                        3. 운영 검토가 끝난 건은 `승인`, 문제가 있는 건은
+                        `거절`로 처리합니다.
+                      </p>
+                      <p>
+                        4. 금액 근거나 결제 상태를 더 확인해야 하면 매출내역
+                        관리와 파티관리 화면을 함께 보고 판단합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      매출내역 관리는 전체 결제와 수수료 흐름을 확인하는
+                      화면이고, 파티 정산 관리는 파티 단위 정산 요청을 처리하는
+                      화면입니다.
+                    </p>
+                    <p>
+                      정산 승인 전에는 해당 파티의 결제 상태와 최근 운영 이슈를
+                      함께 확인하는 것이 안전합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
           {loading && (
             <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm md:px-5 md:py-4 md:text-sm">
               정산 목록을 불러오는 중입니다.
@@ -277,7 +373,7 @@ export default function AdminSettlements() {
                       {isExpanded && (
                         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <h3 className="text-sm font-semibold text-slate-900">
-                            정산 상세
+                            파티 정산 상세
                           </h3>
 
                           <div className="mt-3 grid grid-cols-1 gap-2">
@@ -303,6 +399,37 @@ export default function AdminSettlements() {
                                 </div>
                               </div>
                             ))}
+                          </div>
+
+                          <div className="mt-4 rounded-xl border border-slate-200 bg-white px-3 py-3">
+                            <div className="text-[11px] font-medium text-slate-400">
+                              참여자 결제 상태
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {stl.participantPayments.length > 0 ? (
+                                stl.participantPayments.map((participant) => (
+                                  <span
+                                    key={participant.userId}
+                                    className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                      participant.paymentStatus === '승인'
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                        : participant.paymentStatus === '취소'
+                                          ? 'border-slate-200 bg-slate-50 text-slate-600'
+                                          : participant.paymentStatus === '거절'
+                                            ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                            : 'border-amber-200 bg-amber-50 text-amber-700'
+                                    }`}
+                                  >
+                                    {participant.nickname} ·{' '}
+                                    {participant.paymentStatus}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-slate-300">
+                                  -
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -499,13 +626,13 @@ export default function AdminSettlements() {
                                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
                                       <h3 className="text-base font-semibold text-slate-900">
-                                        정산 상세
+                                        파티 정산 상세
                                       </h3>
 
                                       <p className="mt-1 text-sm text-slate-500">
                                         파티 정산 내역을 팝업 없이 펼쳐서
-                                        확인하고 바로 승인 또는 거절할 수
-                                        있습니다.
+                                        확인하고 바로 승인 또는 거절까지 처리할
+                                        수 있습니다.
                                       </p>
                                     </div>
 
@@ -542,6 +669,42 @@ export default function AdminSettlements() {
                                         </div>
                                       </div>
                                     ))}
+                                  </div>
+
+                                  <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                    <div className="text-xs font-medium text-slate-400">
+                                      참여자 결제 상태
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      {stl.participantPayments.length > 0 ? (
+                                        stl.participantPayments.map(
+                                          (participant) => (
+                                            <span
+                                              key={participant.userId}
+                                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                                participant.paymentStatus ===
+                                                '승인'
+                                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                  : participant.paymentStatus ===
+                                                      '취소'
+                                                    ? 'border-slate-200 bg-slate-50 text-slate-600'
+                                                    : participant.paymentStatus ===
+                                                        '거절'
+                                                      ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                                      : 'border-amber-200 bg-amber-50 text-amber-700'
+                                              }`}
+                                            >
+                                              {participant.nickname} ·{' '}
+                                              {participant.paymentStatus}
+                                            </span>
+                                          ),
+                                        )
+                                      ) : (
+                                        <span className="text-xs text-slate-300">
+                                          참여자 결제 정보가 없습니다.
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
 
                                   {stl.status === '대기' && (
@@ -613,7 +776,7 @@ export default function AdminSettlements() {
             </div>
 
             <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
-              승인과 거절 버튼은 실제 정산 관리자 API를 호출합니다.
+              승인과 거절 버튼은 실제 파티 정산 관리자 API를 호출합니다.
             </div>
           </section>
         </div>

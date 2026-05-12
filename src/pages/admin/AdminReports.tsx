@@ -138,6 +138,7 @@ export default function AdminReports() {
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [reports, setReports] = useState<ReportRecord[]>([]);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -312,6 +313,108 @@ export default function AdminReports() {
             }}
           />
 
+          <section className="rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div>
+                <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                  신고관리 메뉴얼
+                </div>
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    신고관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    신고관리 페이지는 접수된 신고의 대상, 사유, 첨부 자료, 처리
+                    상태를 한 번에 확인하고 바로 조치를 진행하는 운영
+                    화면입니다. 목록에서 대상을 찾은 뒤 `상세` 버튼을 열어 신고
+                    맥락과 증빙을 검토하고, 필요하면 즉시 `처리` 또는 `기각`으로
+                    상태를 반영할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 키워드, 기간, 상태 탭으로 신고 대상을 빠르게 조회하고
+                        필요한 건만 추려서 볼 수 있습니다.
+                      </p>
+                      <p>
+                        2. 신고 대상이 사용자, 파티, 채팅 중 무엇인지 구분해
+                        확인하고 운영자가 읽기 쉬운 이름 기준으로 대상을 파악할
+                        수 있습니다.
+                      </p>
+                      <p>
+                        3. 첨부된 이미지나 파일을 바로 열어 증빙 자료를 검토할
+                        수 있습니다.
+                      </p>
+                      <p>
+                        4. 신고 상태를 `처리` 또는 `기각`으로 변경하고 결과를
+                        즉시 반영할 수 있습니다.
+                      </p>
+                      <p>
+                        5. 신고 처리 결과, 검토 시각, 관리자 메모까지 상세
+                        패널에서 함께 확인할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 상단 검색창과 기간 필터로 신고 목록을 먼저 좁힌 뒤
+                        상태 탭으로 접수 건과 처리 완료 건을 구분합니다.
+                      </p>
+                      <p>
+                        2. 목록의 `상세` 버튼을 눌러 신고 내용, 신고자, 대상,
+                        증빙 자료를 확인합니다.
+                      </p>
+                      <p>
+                        3. 증빙과 사유가 충분하면 `처리`, 근거가 부족하거나
+                        오신고라면 `기각`으로 상태를 반영합니다.
+                      </p>
+                      <p>
+                        4. 처리 후에는 상태, 검토일, 처리 결과가 정상적으로
+                        바뀌었는지 다시 확인합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      처리 버튼은 실제 신고 처리 API를 호출하므로, 상태 변경 전
+                      증빙 자료와 신고 내용을 꼭 먼저 확인하는 것이 좋습니다.
+                    </p>
+                    <p>
+                      사용자 신고는 처리 결과에 따라 신뢰도나 이용 상태에 영향이
+                      갈 수 있으므로, 대상과 사유를 한 번 더 확인하고 진행하는
+                      것이 안전합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
           {loading && (
             <div className="rounded-xl md:rounded-2xl border border-gray-200 bg-white px-4 py-3 md:px-5 md:py-4 text-xs md:text-sm text-gray-500 shadow-sm">
               신고 목록을 불러오는 중입니다.
@@ -368,8 +471,15 @@ export default function AdminReports() {
                           <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm whitespace-nowrap">
                             {report.type}
                           </td>
-                          <td className="px-3 md:px-4 py-3.5 text-xs md:text-sm font-bold truncate max-w-25 md:max-w-none">
-                            {report.target}
+                          <td className="px-3 md:px-4 py-3.5 text-xs md:text-sm">
+                            <div className="max-w-30 md:max-w-none truncate font-bold text-slate-900">
+                              {report.target}
+                            </div>
+                            {report.targetId && (
+                              <div className="mt-1 text-[10px] md:text-xs text-slate-400">
+                                {report.targetId}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 md:px-4 py-3.5 text-[11px] md:text-sm truncate max-w-30 md:max-w-none">
                             {report.reason}

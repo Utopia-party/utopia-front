@@ -362,6 +362,13 @@ export function MemberItem({
   member: Member;
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
+  const paymentStatusText =
+    member.payment_status === 'completed' ? '결제 완료' : '결제 미완료';
+  const paymentStatusClass =
+    member.payment_status === 'completed'
+      ? 'bg-emerald-50 text-emerald-600'
+      : 'bg-amber-50 text-amber-600';
+
   return (
     <button
       type="button"
@@ -393,6 +400,12 @@ export function MemberItem({
 
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
               {MEMBER_STATUS_LABEL[member.status] ?? member.status}
+            </span>
+
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${paymentStatusClass}`}
+            >
+              {paymentStatusText}
             </span>
           </div>
         </div>

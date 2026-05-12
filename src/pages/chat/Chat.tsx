@@ -4,7 +4,12 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../apis/api';
 
-import type { PartyInfo, PartyNotice, ProfileDrawerUser, SettlementStatus } from '../../types/chat';
+import type {
+  PartyInfo,
+  PartyNotice,
+  ProfileDrawerUser,
+  SettlementStatus,
+} from '../../types/chat';
 import ReportModal from './components/ReportModal';
 import { PaymentModal } from './components/PaymentModal';
 import { ProfileDrawer, ProfileInfoModal } from './components/ChatComponents';
@@ -60,11 +65,13 @@ export default function Chat() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isPartyInfoOpen, setIsPartyInfoOpen] = useState(false);
+  const [isRenamingPartyTitle, setIsRenamingPartyTitle] = useState(false);
 
   // 공지 & 정산
   const [notice, setNotice] = useState<PartyNotice | null>(null);
   const [showCredentialModal, setShowCredentialModal] = useState(false);
-  const [settlementStatus, setSettlementStatus] = useState<SettlementStatus | null>(null);
+  const [settlementStatus, setSettlementStatus] =
+    useState<SettlementStatus | null>(null);
   const [isRequestingSettlement, setIsRequestingSettlement] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -84,25 +91,52 @@ export default function Chat() {
   const checkPaymentStatus = useCallback(async () => {
     if (!partyId) return;
     try {
-      const { data } = await api.get(`/api/payments/status?party_id=${partyId}`);
+      const { data } = await api.get(
+        `/api/payments/status?party_id=${partyId}`,
+      );
       setAlreadyPaid(data.paid);
     } catch (error) {
       console.error(error);
     }
   }, [partyId]);
 
+  const loadSettlementStatus = useCallback(async () => {
+    if (!partyId) return;
+    try {
+      const { data } = await api.get(
+        `/api/settlement/parties/${partyId}/status`,
+      );
+      setSettlementStatus(data);
+    } catch {
+      setSettlementStatus(null);
+    }
+  }, [partyId]);
+
+  const refreshPartyContext = useCallback(async () => {
+    await Promise.all([
+      loadPartyInfo(),
+      checkPaymentStatus(),
+      loadSettlementStatus(),
+    ]);
+  }, [loadPartyInfo, checkPaymentStatus, loadSettlementStatus]);
+
   const { messages, unreadCounts, connected, sendMessage, initMessages } =
     useChatWebSocket({
       partyId,
       currentUserId,
-      onPartyUpdated: loadPartyInfo,
+      onPartyUpdated: refreshPartyContext,
       onNoticeUpdated: (n) => setNotice(n),
       onSettlementApproved: (settlementId) => {
-        setSettlementStatus({ status: 'approved', settlement_id: settlementId });
+        setSettlementStatus({
+          status: 'approved',
+          settlement_id: settlementId,
+        });
         if (isLeaderRef.current) {
           setShowCredentialModal(true);
         } else {
-          toast.success('정산이 승인되었습니다. 방장이 곧 공유 정보를 올릴 예정이에요.');
+          toast.success(
+            '정산이 승인되었습니다. 방장이 곧 공유 정보를 올릴 예정이에요.',
+          );
         }
       },
     });
@@ -119,7 +153,9 @@ export default function Chat() {
     markPraised,
   } = useProfileDrawer({ currentUserId, partyId });
 
-  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(null);
+  const [reportTarget, setReportTarget] = useState<ProfileDrawerUser | null>(
+    null,
+  );
 
   const handleReportUser = useCallback(() => {
     if (!profileDrawer) return;
@@ -147,7 +183,8 @@ export default function Chat() {
     if (!profileDrawer?.user.user_id || !partyId) return;
     const targetUserId = String(profileDrawer.user.user_id);
     const targetNickname = profileDrawer.user.nickname ?? '해당 멤버';
-    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`)) return;
+    if (!window.confirm(`${targetNickname}님을 파티에서 강퇴하시겠습니까?`))
+      return;
     try {
       await api.delete(`/api/parties/${partyId}/members/${targetUserId}`);
       closeProfileDrawer();
@@ -161,29 +198,68 @@ export default function Chat() {
 
   const handleRequestSettlement = useCallback(async () => {
     if (!partyId) return;
-    if (!window.confirm('정산 승인 요청을 보내시겠습니까?\n모든 멤버 결제 완료 시 자동 승인됩니다.')) return;
+    if (
+      !window.confirm(
+        '정산 승인 요청을 보내시겠습니까?\n모든 멤버 결제 완료 시 자동 승인됩니다.',
+      )
+    )
+      return;
     setIsRequestingSettlement(true);
     try {
-      const { data } = await api.post(`/api/settlement/parties/${partyId}/request`);
+      const { data } = await api.post(
+        `/api/settlement/parties/${partyId}/request`,
+      );
       if (data.status === 'approved') {
-        setSettlementStatus({ status: 'approved', settlement_id: data.settlement_id });
+        setSettlementStatus({
+          status: 'approved',
+          settlement_id: data.settlement_id,
+        });
         toast.success('정산 승인 완료! 아이디/비밀번호를 공유해주세요.');
         setShowCredentialModal(true);
       } else {
-        setSettlementStatus({ status: 'pending', settlement_id: data.settlement_id });
+        setSettlementStatus({
+          status: 'pending',
+          settlement_id: data.settlement_id,
+        });
         toast('미결제 멤버가 있어 관리자 검토 후 처리됩니다.', { icon: '⏳' });
       }
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail;
       toast.error(detail ?? '정산 요청 중 오류가 발생했습니다.');
     } finally {
       setIsRequestingSettlement(false);
     }
   }, [partyId]);
 
+  const handleRenamePartyTitle = useCallback(async () => {
+    if (!partyId || !partyInfo?.is_leader) return;
+
+    const currentTitle = partyInfo.title ?? '';
+    const nextTitle = window
+      .prompt('새 파티명을 입력하세요.', currentTitle)
+      ?.trim();
+    if (!nextTitle || nextTitle === currentTitle) return;
+
+    try {
+      setIsRenamingPartyTitle(true);
+      await api.patch(`/api/parties/${partyId}/title`, { title: nextTitle });
+      await loadPartyInfo();
+      toast.success('파티명을 변경했습니다.');
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail;
+      toast.error(detail ?? '파티명 변경 중 오류가 발생했습니다.');
+    } finally {
+      setIsRenamingPartyTitle(false);
+    }
+  }, [partyId, partyInfo?.is_leader, partyInfo?.title, loadPartyInfo]);
+
   const getMemberMeta = useCallback(
     (targetUserId?: string) => {
-      const member = partyInfo?.members?.find((item) => item.user_id === targetUserId);
+      const member = partyInfo?.members?.find(
+        (item) => item.user_id === targetUserId,
+      );
       if (!member) {
         return {
           role: undefined,
@@ -250,7 +326,13 @@ export default function Chat() {
 
     const timer = window.setTimeout(() => void checkPaymentStatus(), 0);
     return () => window.clearTimeout(timer);
-  }, [partyId, checkPaymentStatus, loadPartyInfo, initMessages]);
+  }, [
+    partyId,
+    checkPaymentStatus,
+    loadPartyInfo,
+    loadSettlementStatus,
+    initMessages,
+  ]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -380,7 +462,7 @@ export default function Chat() {
         </div>
 
         {/* 방장 전용: 정산 승인 요청 버튼 */}
-        {partyInfo?.is_leader && settlementStatus?.status !== 'approved' && (
+        {partyInfo?.is_leader && settlementStatus?.status == null && (
           <button
             type="button"
             onClick={handleRequestSettlement}
@@ -388,6 +470,28 @@ export default function Chat() {
             className="shrink-0 rounded-full border border-primary bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/20 disabled:opacity-50"
           >
             {isRequestingSettlement ? '처리중...' : '정산 승인 요청'}
+          </button>
+        )}
+
+        {partyInfo?.is_leader &&
+          settlementStatus?.status === 'pending' &&
+          alreadyPaid && (
+            <button
+              type="button"
+              disabled
+              className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 opacity-90"
+            >
+              정산 요청 완료
+            </button>
+          )}
+
+        {partyInfo?.is_leader && settlementStatus?.status === 'rejected' && (
+          <button
+            type="button"
+            disabled
+            className="shrink-0 rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 opacity-90"
+          >
+            정산 거절됨
           </button>
         )}
 
@@ -463,6 +567,9 @@ export default function Chat() {
           <ChatSidebar
             partyInfo={partyInfo}
             paymentPreview={paymentPreview}
+            onRenameTitle={
+              isRenamingPartyTitle ? undefined : handleRenamePartyTitle
+            }
             onMemberClick={openProfileDrawer}
           />
         </div>
@@ -481,6 +588,9 @@ export default function Chat() {
               <ChatSidebar
                 partyInfo={partyInfo}
                 paymentPreview={paymentPreview}
+                onRenameTitle={
+                  isRenamingPartyTitle ? undefined : handleRenamePartyTitle
+                }
                 onMemberClick={openProfileDrawer}
               />
             </div>
@@ -490,4 +600,3 @@ export default function Chat() {
     </div>
   );
 }
-

@@ -37,6 +37,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [isEmailFocused, setIsEmailFocused] = useState(false);
+  // 로그인 후 BANNED 응답을 받은 경우에만 true — 이때만 이의제기 버튼 활성화
+  const [isLoginBanned, setIsLoginBanned] = useState(false);
 
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -120,7 +122,7 @@ export default function Login() {
     try {
       setIsSubmitting(true);
 
-      await login(
+      const result = await login(
         {
           email: form.email.trim(),
           password: form.password,
@@ -128,8 +130,21 @@ export default function Login() {
         captchaToken,
       );
 
+      // 정지 유저: 이의제기 토큰이 쿠키에 세팅된 상태로 BANNED 반환
+      if (result.status === 'BANNED') {
+        setIsLoginBanned(true);
+        return;
+      }
+
       const { checkAuth } = useAuthStore.getState();
       await checkAuth();
+
+      // checkAuth는 실패해도 throw하지 않으므로 직접 상태를 확인
+      const { isLoggedIn } = useAuthStore.getState();
+      if (!isLoggedIn) {
+        alert('로그인에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
 
       navigate('/home', { replace: true });
     } catch (error: unknown) {
@@ -140,19 +155,12 @@ export default function Login() {
         };
       };
 
-      const status = apiError.response?.status;
       const message =
         apiError.response?.data?.detail ||
         apiError.response?.data?.message ||
         '로그인에 실패했습니다.';
 
-      if (status === 403) {
-        const banType =
-          message === '이용이 제한된 계정입니다.' ? 'ip_ban' : 'manual';
-        navigate(`/login?reason=banned&ban_type=${banType}`, { replace: true });
-      } else {
-        alert(message);
-      }
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -231,20 +239,27 @@ export default function Login() {
           </p>
         </div>
       )}
-      {isBanned && (
+      {(isBanned || isLoginBanned) && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-bold">계정이 정지되었습니다.</p>
           <p className="mt-1 text-red-600">
             욕설 등 위반 행위로 인해 자동 로그아웃 처리되었습니다. 문의가
             필요하면 고객센터로 연락해주세요.
           </p>
-          <button
-            type="button"
-            onClick={() => setShowAppealModal(true)}
-            className="mt-3 w-full rounded-lg border border-red-300 bg-white py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-          >
-            이의제기 신청
-          </button>
+          {isLoginBanned && (
+            <button
+              type="button"
+              onClick={() => setShowAppealModal(true)}
+              className="mt-3 w-full rounded-lg border border-red-300 bg-white py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            >
+              이의제기 신청
+            </button>
+          )}
+          {!isLoginBanned && (
+            <p className="mt-3 text-xs text-red-500">
+              이의제기를 하려면 먼저 로그인해주세요.
+            </p>
+          )}
         </div>
       )}
 

@@ -34,6 +34,11 @@ import MyPayment from './pages/mypage/MyPayment';
 import MyTrustHistory from './pages/mypage/MyTrustHistory';
 import MyPraises from './pages/mypage/MyPraises';
 import MyDeveloper from './pages/mypage/MyDeveloper';
+import SaasGuide from './pages/mypage/SaasGuide';
+import SaasGuideL2 from './pages/mypage/SaasGuideL2';
+import SaasGuideChat from './pages/mypage/SaasGuideChat';
+import MyDeveloperL2 from './pages/mypage/MyDeveloperL2';
+import MyDeveloperChat from './pages/mypage/MyDeveloperChat';
 
 // 관리자 페이지
 import AdminShell from './pages/admin/AdminShell';
@@ -53,6 +58,7 @@ import AdminCaptcha from './pages/admin/AdminCaptcha';
 import AdminQuickMatch from './pages/admin/AdminQuickMatch';
 import AdminAppeals from './pages/admin/AdminAppeals';
 import AdminSaas from './pages/admin/AdminSaas';
+import AdminSaasV2 from './pages/admin/AdminSaasV2';
 import ManualPage from './pages/manual/ManualPage';
 
 const router = createBrowserRouter([
@@ -182,7 +188,57 @@ const router = createBrowserRouter([
           },
           {
             path: 'developer',
+            loader: () => redirect('/saas/l1'),
+          },
+          {
+            path: 'developer/guide',
+            element: <SaasGuide />,
+          },
+          {
+            path: 'developer-l2',
+            loader: () => redirect('/saas/l2'),
+          },
+          {
+            path: 'developer-chat',
+            loader: () => redirect('/saas/chat'),
+          },
+        ],
+      },
+      {
+        path: 'saas',
+        element: (
+          <ProtectedRoute>
+            <Outlet />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            index: true,
+            loader: () => redirect('/saas/l1'),
+          },
+          {
+            path: 'l1',
             element: <MyDeveloper />,
+          },
+          {
+            path: 'l1/guide',
+            element: <SaasGuide />,
+          },
+          {
+            path: 'l2',
+            element: <MyDeveloperL2 />,
+          },
+          {
+            path: 'l2/guide',
+            element: <SaasGuideL2 />,
+          },
+          {
+            path: 'chat',
+            element: <MyDeveloperChat />,
+          },
+          {
+            path: 'chat/guide',
+            element: <SaasGuideChat />,
           },
         ],
       },
@@ -260,6 +316,10 @@ const router = createBrowserRouter([
       {
         path: 'saas',
         Component: AdminSaas,
+      },
+      {
+        path: 'saas-v2',
+        Component: AdminSaasV2,
       },
     ],
   },

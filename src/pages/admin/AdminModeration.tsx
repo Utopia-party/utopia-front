@@ -6,11 +6,17 @@ import {
   fetchAdminFlaggedChats,
   fetchAdminModerationStats,
   fetchModerationTrend,
+  fetchStageStats,
+  fetchMlHealth,
+  fetchUserViolationPattern,
   getAdminErrorMessage,
   updateAdminChatModerationStatus,
   type AdminChatFlagged,
   type AdminModerationStat,
   type ModerationTrendPoint,
+  type StageStats,
+  type MlHealth,
+  type UserViolationPattern,
 } from '../../apis/admin';
 
 const API = '/api/admin/moderation';
@@ -177,6 +183,11 @@ export default function AdminModeration() {
   const [trendLoading, setTrendLoading] = useState(true);
   const [statsDateFrom, setStatsDateFrom] = useState('');
   const [statsDateTo, setStatsDateTo] = useState('');
+  const [stageStats, setStageStats] = useState<StageStats | null>(null);
+  const [mlHealth, setMlHealth] = useState<MlHealth | null>(null);
+  const [mlHealthLoading, setMlHealthLoading] = useState(false);
+  const [userPattern, setUserPattern] = useState<Record<string, UserViolationPattern>>({});
+  const [patternBusy, setPatternBusy] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -248,9 +259,26 @@ export default function AdminModeration() {
 
   useEffect(() => {
     if (mainTab !== '통계') return;
-    const t = setTimeout(() => { void loadStats(); void loadTrend(trendPeriod); }, 0);
+    const t = setTimeout(() => {
+      void loadStats();
+      void loadTrend(trendPeriod);
+      setMlHealthLoading(true);
+      fetchMlHealth().then(setMlHealth).finally(() => setMlHealthLoading(false));
+      fetchStageStats({ date_from: statsDateFrom || undefined, date_to: statsDateTo || undefined })
+        .then(setStageStats).catch(() => setStageStats(null));
+    }, 0);
     return () => clearTimeout(t);
   }, [mainTab, trendPeriod, loadStats, loadTrend]);
+
+  const loadUserPattern = async (userId: string) => {
+    if (userPattern[userId] || userId === '-') return;
+    setPatternBusy(userId);
+    try {
+      const result = await fetchUserViolationPattern(userId);
+      setUserPattern((prev) => ({ ...prev, [userId]: result }));
+    } catch {}
+    setPatternBusy(null);
+  };
 
   const loadChats = async (params?: { moderation_status?: string; date_from?: string; date_to?: string; keyword?: string }) => {
     setLogLoading(true); setLogError('');
@@ -350,7 +378,6 @@ export default function AdminModeration() {
           {/* ── 설정 탭 ── */}
           {mainTab === '설정' && (
             <div className="space-y-5">
-              {/* 서브 탭 */}
               <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden">
                 {(['파이프라인', '규칙 단어', '프롬프트', '파인튜닝'] as const).map((t) => (
                   <button key={t} onClick={() => setConfigTab(t)}
@@ -364,10 +391,8 @@ export default function AdminModeration() {
                 <SectionCard><p className="text-sm text-slate-400 text-center py-8">불러오는 중...</p></SectionCard>
               ) : config && (
                 <>
-                  {/* ── 파이프라인 탭 ── */}
                   {configTab === '파이프라인' && (
                     <div className="space-y-4">
-                      {/* 파이프라인 플로우 카드 */}
                       <SectionCard>
                         <div className="flex items-center justify-between mb-5">
                           <div>
@@ -378,26 +403,20 @@ export default function AdminModeration() {
                             {STAGES.filter((s) => config[s.key]).length}단계 활성
                           </span>
                         </div>
-
-                        {/* 플로우 다이어그램 */}
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-0">
-                          {/* 메시지 입력 */}
                           <div className="flex sm:flex-col items-center gap-2 sm:gap-1 px-3 py-3 sm:py-0 sm:min-w-[72px]">
                             <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                             </div>
                             <span className="text-[10px] font-semibold text-slate-500 sm:text-center">채팅 메시지</span>
                           </div>
-
                           {STAGES.map((stage) => (
                             <div key={stage.key} className="flex sm:flex-row flex-col items-center flex-1 min-w-0">
-                              {/* 화살표 */}
                               <div className="flex items-center justify-center w-8 shrink-0">
                                 {config[stage.key]
                                   ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                                   : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="3 2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
                               </div>
-                              {/* 스테이지 카드 */}
                               <div className={`flex-1 min-w-0 rounded-xl border-2 p-3 sm:p-4 transition-all ${config[stage.key] ? 'border-slate-200 bg-white shadow-sm' : 'border-dashed border-slate-200 bg-slate-50 opacity-50'}`}>
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                   <div className="flex items-center gap-2 min-w-0">
@@ -418,8 +437,6 @@ export default function AdminModeration() {
                               </div>
                             </div>
                           ))}
-
-                          {/* 결과 */}
                           <div className="flex items-center justify-center w-8 shrink-0">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                           </div>
@@ -433,7 +450,6 @@ export default function AdminModeration() {
                         </div>
                       </SectionCard>
 
-                      {/* 2단계 임계값 */}
                       <SectionCard>
                         <div className="flex items-start justify-between mb-4">
                           <div>
@@ -442,8 +458,6 @@ export default function AdminModeration() {
                           </div>
                           <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">ML 모델</span>
                         </div>
-
-                        {/* 임계값 시각화 바 */}
                         <div className="mb-5 relative h-8 rounded-full overflow-hidden bg-slate-100">
                           <div className="absolute inset-y-0 left-0 bg-emerald-400/80 transition-all duration-300"
                             style={{ width: `${config.stage2_pass_threshold * 100}%` }} />
@@ -457,7 +471,6 @@ export default function AdminModeration() {
                             <span className="text-red-800">차단</span>
                           </div>
                         </div>
-
                         <div className="grid sm:grid-cols-2 gap-4">
                           {([
                             ['stage2_pass_threshold', '통과 임계값', '이상이면 정상으로 즉시 통과', 0.5, 0.99, 'accent-emerald-500'] as [keyof Config, string, string, number, number, string],
@@ -479,7 +492,6 @@ export default function AdminModeration() {
                         </div>
                       </SectionCard>
 
-                      {/* 저장 */}
                       <div className="flex justify-end items-center gap-3">
                         {configMsg && <span className={`text-xs font-semibold ${configMsg.includes('실패') ? 'text-red-600' : 'text-emerald-600'}`}>{configMsg}</span>}
                         <button onClick={() => fetch(`${API}/config/reset`, { method: 'POST' }).then((r) => r.json()).then(setConfig)}
@@ -494,7 +506,6 @@ export default function AdminModeration() {
                     </div>
                   )}
 
-                  {/* ── 규칙 단어 탭 ── */}
                   {configTab === '규칙 단어' && (
                     <div className="grid md:grid-cols-2 gap-4">
                       {([
@@ -531,7 +542,6 @@ export default function AdminModeration() {
                     </div>
                   )}
 
-                  {/* ── 프롬프트 탭 ── */}
                   {configTab === '프롬프트' && (
                     <div className="space-y-4">
                       <SectionCard>
@@ -573,7 +583,6 @@ export default function AdminModeration() {
                     </div>
                   )}
 
-                  {/* ── 파인튜닝 탭 ── */}
                   {configTab === '파인튜닝' && (
                     <div className="space-y-4">
                       <div className="grid sm:grid-cols-3 gap-3">
@@ -588,7 +597,6 @@ export default function AdminModeration() {
                           </SectionCard>
                         ))}
                       </div>
-
                       <SectionCard>
                         <div className="flex justify-between text-xs text-slate-500 mb-2 font-semibold">
                           <span>학습 데이터 진행률</span>
@@ -600,7 +608,6 @@ export default function AdminModeration() {
                         </div>
                         <p className="text-xs text-slate-400 mt-2">라벨별 최소 100건 필요 · 로그 탭에서 오탐지 수집</p>
                       </SectionCard>
-
                       <SectionCard className={`border-l-4 ${ftStats?.ready ? 'border-l-emerald-500' : 'border-l-amber-400'}`}>
                         <div className="flex items-center justify-between gap-3">
                           <div>
@@ -684,6 +691,96 @@ export default function AdminModeration() {
                   : trend.length > 0 ? <BarChart data={trend} period={trendPeriod} />
                     : <div className="h-40 flex items-center justify-center text-sm text-slate-400">데이터가 없습니다.</div>}
               </SectionCard>
+
+              {/* ML 서버 상태 */}
+              <SectionCard>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">ML 서버 상태</p>
+                    <p className="text-xs text-slate-400 mt-0.5">KR-ELECTRA 추론 서버 실시간 연결 확인</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setMlHealthLoading(true);
+                      fetchMlHealth().then(setMlHealth).finally(() => setMlHealthLoading(false));
+                    }}
+                    className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 active:scale-95 transition">
+                    새로고침
+                  </button>
+                </div>
+                {mlHealthLoading ? (
+                  <p className="text-sm text-slate-400">확인 중...</p>
+                ) : mlHealth ? (
+                  <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-semibold text-sm ${mlHealth.status === 'ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                      <span className={`w-2 h-2 rounded-full ${mlHealth.status === 'ok' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                      {mlHealth.status === 'ok' ? '정상' : '연결 불가'}
+                    </div>
+                    {mlHealth.model && (
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg">{mlHealth.model}</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">데이터 없음</p>
+                )}
+              </SectionCard>
+
+              {/* 단계별 탐지 건수 + 신뢰도 분포 */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <SectionCard>
+                  <p className="text-sm font-bold text-slate-800 mb-4">단계별 탐지 건수</p>
+                  <div className="space-y-3">
+                    {[
+                      { stage: 1, label: '1단계 규칙', color: 'bg-emerald-500', textColor: 'text-emerald-700' },
+                      { stage: 2, label: '2단계 ML', color: 'bg-blue-500', textColor: 'text-blue-700' },
+                      { stage: 3, label: '3단계 Ollama', color: 'bg-violet-500', textColor: 'text-violet-700' },
+                    ].map(({ stage, label, color, textColor }) => {
+                      const count = stageStats ? (stage === 1 ? stageStats.stage1 : stage === 2 ? stageStats.stage2 : stageStats.stage3) : 0;
+                      const total = stageStats ? (stageStats.stage1 + stageStats.stage2 + stageStats.stage3) || 1 : 1;
+                      const pct = Math.round((count / total) * 100);
+                      return (
+                        <div key={stage}>
+                          <div className="flex justify-between text-xs font-semibold mb-1">
+                            <span className={textColor}>{label}</span>
+                            <span className="text-slate-600">{count.toLocaleString()}건 ({pct}%)</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
+
+                <SectionCard>
+                  <p className="text-sm font-bold text-slate-800 mb-1">ML 신뢰도 점수 분포</p>
+                  <p className="text-xs text-slate-400 mb-4">2단계 ML 탐지 기준</p>
+                  {stageStats?.confidenceDist ? (
+                    <div className="flex items-end gap-1 h-28">
+                      {stageStats.confidenceDist.map((d, i) => {
+                        const max = Math.max(...stageStats.confidenceDist.map((x) => x.count), 1);
+                        const h = Math.max((d.count / max) * 100, d.count > 0 ? 4 : 0);
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center group relative">
+                            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                              {d.range}<br />{d.count}건
+                            </div>
+                            <div className="w-full rounded-t bg-blue-400 hover:bg-blue-500 transition-colors cursor-pointer" style={{ height: `${h}%` }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 py-8 text-center">데이터 없음</p>
+                  )}
+                  {stageStats?.confidenceDist && (
+                    <div className="flex justify-between text-[9px] text-slate-400 mt-1">
+                      <span>0.50</span><span>0.75</span><span>1.00</span>
+                    </div>
+                  )}
+                </SectionCard>
+              </div>
             </div>
           )}
 
@@ -800,7 +897,7 @@ export default function AdminModeration() {
                                       <div className="text-[10px] text-slate-400 mb-1.5 font-medium">원본 메시지</div>
                                       <p className={`text-sm break-all leading-relaxed ${chat.isDeleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>{chat.message}</p>
                                     </div>
-                                    <div className="flex flex-wrap gap-2 items-center">
+                                    <div className="flex flex-wrap gap-2 items-center mb-4">
                                       <span className="text-xs font-semibold text-slate-500 mr-1">상태 변경:</span>
                                       {(['blocked', 'warned', 'false_positive', 'pending'] as const).map((s) => (
                                         <button key={s} disabled={isBusy || statusKey === s} onClick={() => void handleStatusUpdate(chat.id, s)}
@@ -809,6 +906,71 @@ export default function AdminModeration() {
                                         </button>
                                       ))}
                                     </div>
+
+                                    {/* 유저 위반 패턴 */}
+                                    {chat.senderId && chat.senderId !== '-' && (
+                                      <div className="border-t border-slate-100 pt-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <p className="text-xs font-bold text-slate-700">유저 위반 패턴</p>
+                                          {!userPattern[chat.senderId] && (
+                                            <button
+                                              disabled={patternBusy === chat.senderId}
+                                              onClick={() => void loadUserPattern(chat.senderId)}
+                                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 active:scale-95 transition">
+                                              {patternBusy === chat.senderId ? '조회 중...' : '패턴 분석'}
+                                            </button>
+                                          )}
+                                        </div>
+                                        {userPattern[chat.senderId] && (() => {
+                                          const p = userPattern[chat.senderId];
+                                          const total = p.totalViolations || 1;
+                                          return (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                              <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-center">
+                                                <p className="text-lg font-bold text-slate-800">{p.totalViolations}</p>
+                                                <p className="text-[10px] text-slate-400">총 위반</p>
+                                              </div>
+                                              <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-center">
+                                                <p className="text-lg font-bold text-red-700">{p.statusCounts.blocked}</p>
+                                                <p className="text-[10px] text-red-400">차단</p>
+                                              </div>
+                                              <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2.5 text-center">
+                                                <p className="text-lg font-bold text-amber-700">{p.statusCounts.warned}</p>
+                                                <p className="text-[10px] text-amber-400">경고</p>
+                                              </div>
+                                              <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-center">
+                                                <p className="text-lg font-bold text-slate-700">
+                                                  {p.avgConfidence != null ? `${(p.avgConfidence * 100).toFixed(0)}%` : '—'}
+                                                </p>
+                                                <p className="text-[10px] text-slate-400">평균 신뢰도</p>
+                                              </div>
+                                              <div className="col-span-2 md:col-span-4 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
+                                                <p className="text-[10px] text-slate-400 mb-2 font-semibold">단계별 위반</p>
+                                                <div className="flex gap-3">
+                                                  {([1, 2, 3] as const).map((s) => {
+                                                    const cnt = p.stageCounts[s];
+                                                    const pct = Math.round((cnt / total) * 100);
+                                                    const cls = s === 1 ? 'bg-emerald-500' : s === 2 ? 'bg-blue-500' : 'bg-violet-500';
+                                                    const lbl = s === 1 ? '규칙' : s === 2 ? 'ML' : 'AI';
+                                                    return (
+                                                      <div key={s} className="flex-1">
+                                                        <div className="flex justify-between text-[10px] mb-1">
+                                                          <span className="text-slate-500">{lbl}</span>
+                                                          <span className="font-bold text-slate-700">{cnt}</span>
+                                                        </div>
+                                                        <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                                                          <div className={`h-full rounded-full ${cls}`} style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                               </tr>

@@ -240,6 +240,7 @@ export default function AdminHandOCR() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState('');
   const [busySessionId, setBusySessionId] = useState<string | null>(null);
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
 
   const buildParams = (
     tab = activeTab,
@@ -651,8 +652,117 @@ export default function AdminHandOCR() {
               활성 세션을 한 화면에서 관리할 수 있게 구성했습니다.
             </p>
           </section>
+          <section className="rounded-xl md:rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div>
+                <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                  HandOCR CAPTCHA 관리 메뉴얼
+                </div>
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
 
-          {/* 💡 요약 카드 2단 그리드화 */}
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    HandOCR CAPTCHA 관리 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    HandOCR CAPTCHA 관리 페이지는 손 포즈와 OCR 문자열 기반
+                    인증의 성공/실패 이력, OCR 신뢰도, 포즈 매칭 결과, GPU/모델
+                    상태, 차단 IP, 활성 세션을 한 화면에서 확인하고 운영 조치를
+                    수행하는 관리자 도구입니다. 검증 이력을 조회한 뒤 `상세`
+                    버튼으로 원본 이미지, OCR crop, inspection 데이터를 확인할
+                    수 있습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 전체 검증 수, 성공, 실패, OCR 저신뢰, 포즈 불일치,
+                        GPU/모델 오류 현황을 요약 카드로 확인할 수 있습니다.
+                      </p>
+                      <p>
+                        2. GPU, CUDA, OCR GPU 사용 여부, 포즈 모델 로드 상태,
+                        OCR 로드 상태를 health 정보로 확인할 수 있습니다.
+                      </p>
+                      <p>
+                        3. 상태 탭, 키워드, 에러코드, 손 포즈, 기간 조건으로
+                        HandOCR 검증 이력을 검색할 수 있습니다.
+                      </p>
+                      <p>
+                        4. 검증 이력의 `상세` 버튼을 눌러 기대값, 인식값, 매칭
+                        결과, 원본 이미지, OCR crop, inspection 원문을 확인할 수
+                        있습니다.
+                      </p>
+                      <p>
+                        5. 차단 IP를 해제하거나 실패 카운트를 초기화하고, 활성
+                        세션을 강제로 만료시킬 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 상단의 GPU 상태 배지를 먼저 확인해 현재 OCR/포즈 추론
+                        환경이 정상인지 확인합니다.
+                      </p>
+                      <p>
+                        2. 상태 탭과 검색 조건을 사용해 실패, 저신뢰,
+                        포즈불일치, 문자불일치 같은 특정 케이스만 좁혀서
+                        조회합니다.
+                      </p>
+                      <p>
+                        3. 검증 목록에서 `상세` 버튼을 눌러 실제 업로드 이미지와
+                        OCR 결과, 포즈 판정, AI 에러 메시지를 비교합니다.
+                      </p>
+                      <p>
+                        4. 동일 IP에서 실패가 반복되거나 세션이 비정상적으로
+                        남아 있으면 하단의 차단 IP 관리와 활성 세션 관리
+                        영역에서 운영 조치를 수행합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      GPU 경고 또는 GPU 오류 상태에서는 OCR/포즈 판정 결과가
+                      불안정할 수 있으므로, 먼저 health 상태와 모델 로드 여부를
+                      확인하는 것이 좋습니다.
+                    </p>
+                    <p>
+                      저신뢰, 포즈불일치, 문자불일치 케이스는 단순 실패로만
+                      판단하지 말고 원본 이미지, OCR crop, inspection 원문을
+                      함께 확인해 원인을 분리하는 것을 권장합니다.
+                    </p>
+                    <p>
+                      차단 해제, 실패 카운트 초기화, 세션 만료는 사용자 인증
+                      흐름에 직접 영향을 줄 수 있으므로 IP와 세션 ID를 확인한 뒤
+                      처리하는 것이 안전합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
           <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-3">
             {summaryCards.map((item) => (
               <div

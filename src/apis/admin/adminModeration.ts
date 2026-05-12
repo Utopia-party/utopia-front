@@ -33,6 +33,26 @@ export type ModerationTrendPoint = {
   total: number;
 };
 
+export type StageStats = {
+  stage1: number;
+  stage2: number;
+  stage3: number;
+  confidenceDist: { range: string; count: number }[];
+};
+
+export type MlHealth = {
+  status: 'ok' | 'error';
+  model: string | null;
+  latencyMs: number | null;
+};
+
+export type UserViolationPattern = {
+  totalViolations: number;
+  stageCounts: { 1: number; 2: number; 3: number };
+  statusCounts: { blocked: number; warned: number; false_positive: number };
+  avgConfidence: number | null;
+};
+
 export async function fetchAdminFlaggedChats(params?: {
   party_id?: string;
   moderation_status?: string;
@@ -78,6 +98,29 @@ export async function fetchModerationTrend(params?: {
   const { data } = await api.get<ModerationTrendPoint[]>(
     '/api/admin/moderation/chat-trend',
     { params },
+  );
+  return data;
+}
+
+export async function fetchStageStats(params?: {
+  date_from?: string;
+  date_to?: string;
+}): Promise<StageStats> {
+  const { data } = await api.get<StageStats>(
+    '/api/admin/moderation/stage-stats',
+    { params },
+  );
+  return data;
+}
+
+export async function fetchMlHealth(): Promise<MlHealth> {
+  const { data } = await api.get<MlHealth>('/api/admin/moderation/ml-health');
+  return data;
+}
+
+export async function fetchUserViolationPattern(userId: string): Promise<UserViolationPattern> {
+  const { data } = await api.get<UserViolationPattern>(
+    `/api/admin/moderation/user-pattern/${userId}`,
   );
   return data;
 }

@@ -131,7 +131,13 @@ const menuSections: MenuSection[] = [
       },
       {
         path: '/admin/saas',
-        label: 'SaaS API 관리',
+        label: 'SaaS API (L1)',
+        icon: Globe,
+        visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
+      },
+      {
+        path: '/admin/saas-v2',
+        label: 'SaaS API (L2/Chat)',
         icon: Globe,
         visibleIf: (permissions) => Boolean(permissions?.canManageCaptcha),
       },
@@ -142,7 +148,7 @@ const menuSections: MenuSection[] = [
     items: [
       {
         path: '/admin/settlements',
-        label: '정산 승인',
+        label: '파티 정산 관리',
         icon: BadgeCheck,
         visibleIf: (permissions) => Boolean(permissions?.canApproveSettlements),
       },

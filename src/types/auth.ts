@@ -76,6 +76,8 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   message: string;
+  status?: 'BANNED';
+  ban_type?: string;
 }
 
 export interface AuthErrorResponse {
@@ -110,9 +112,15 @@ export interface SocialLoginSuccessResponse {
   };
 }
 
+export interface SocialLoginBannedResponse {
+  status: 'BANNED';
+  message: string;
+}
+
 export type SocialLoginResponse =
   | SocialLoginNeedNicknameResponse
-  | SocialLoginSuccessResponse;
+  | SocialLoginSuccessResponse
+  | SocialLoginBannedResponse;
 
 export interface SocialSignupPayload {
   oauth: string;

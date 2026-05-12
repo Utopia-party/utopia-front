@@ -28,7 +28,6 @@ import {
   type CaptchaImagesResponse,
   type CaptchaImageDetail,
   type CaptchaSetInfo,
-  syncMinioImages,
 } from '../../apis/admin';
 
 function formatTtl(seconds: number): string {
@@ -402,7 +401,6 @@ export default function AdminCaptcha() {
   const [activeTab, setActiveTab] = useState<'stats' | 'settings' | 'images'>(
     'stats',
   );
-  const [syncing, setSyncing] = useState(false);
 
   const loadSessions = useCallback(
     async (page: number = 1, status?: string) => {
@@ -448,6 +446,123 @@ export default function AdminCaptcha() {
               캡챠 시스템 설정, 모니터링, 세션 관리
             </p>
           </div>
+
+          {/* ── 매뉴얼 아코디언 ── */}
+          <details className="group rounded-xl border border-blue-200 bg-blue-50/50">
+            <summary className="flex cursor-pointer items-center justify-between px-5 py-3 text-sm font-semibold text-blue-700 select-none">
+              <span>📖 캡챠 관리 매뉴얼</span>
+              <svg
+                className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </summary>
+            <div className="border-t border-blue-200 px-5 py-4 text-sm text-slate-700 space-y-4">
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1">
+                  1. 통계 카드 해석
+                </h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs leading-relaxed">
+                  <li>
+                    <strong>Pass</strong> — 모든 검증을 통과한 정상 사용자. 추가
+                    인증 없이 바로 통과됩니다.
+                  </li>
+                  <li>
+                    <strong>Challenge</strong> — 행동 점수가 애매하여 추가
+                    인증(이미지 선택)이 발동된 경우. 사람도 해당될 수 있으며 봇
+                    의심 수준입니다.
+                  </li>
+                  <li>
+                    <strong>Block</strong> — LSTM + KNN 합의 기반으로 봇으로
+                    판정되어 차단된 경우. 점진적 잠금(30초 → 5분 → 10분 → 24시간
+                    BAN)이 적용됩니다.
+                  </li>
+                  <li>
+                    <strong>이상적 비율</strong> — Pass 30~40% / Challenge
+                    50~60% / Block 5~15%. Block이 너무 높으면 오탐 가능성을
+                    점검하세요.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1">
+                  2. 가중치 조정 가이드
+                </h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs leading-relaxed">
+                  <li>
+                    <strong>Rule (기본 0.1)</strong> — 규칙 기반 점수. 마우스
+                    속도, 직선 비율, 클릭 패턴 등 15차원 피처 분석. 단독
+                    정확도가 낮아 보조 역할로 사용합니다.
+                  </li>
+                  <li>
+                    <strong>KNN (기본 0.2)</strong> — 기존 인간/봇 벡터와 코사인
+                    유사도 비교. 임베딩 데이터가 많을수록 정확도가 올라갑니다.
+                  </li>
+                  <li>
+                    <strong>LSTM (기본 0.7)</strong> — BiLSTM 2층 모델(F1
+                    98.85%). 마우스 시퀀스를 시계열 분석하여 봇 판별. 핵심
+                    판별기입니다.
+                  </li>
+                  <li>
+                    <strong>조정 원칙</strong> — 세 가중치 합이 1.0이어야
+                    합니다. LSTM 정확도가 높으므로 0.5 이상 유지를 권장합니다.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1">
+                  3. Shadow Mode
+                </h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs leading-relaxed">
+                  <li>
+                    <strong>ON</strong> — LSTM 점수를 로그에만 기록하고, 최종
+                    점수(final_score)에 반영하지 않습니다. 모델 배포 전 안전
+                    검증용입니다.
+                  </li>
+                  <li>
+                    <strong>OFF</strong> — LSTM 점수가 실제 판정에 반영됩니다.
+                    충분한 검증 후 OFF로 전환하세요.
+                  </li>
+                  <li>
+                    <strong>권장 절차</strong> — 모델 업데이트 시 Shadow ON →
+                    1~2일 로그 확인 → 오탐 없으면 OFF 전환.
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1">
+                  4. 이미지 생성 / 비활성화
+                </h4>
+                <ul className="list-disc pl-5 space-y-1 text-xs leading-relaxed">
+                  <li>
+                    <strong>이미지 생성</strong> — GPU 서버에서 FastGAN 모델로
+                    동물 이모지를 생성합니다. 카테고리당 생성 수와 세트 수를
+                    설정 후 실행하세요. ERROR CODE 1은 GPU 메모리 부족
+                    문제입니다. 다른 프로세스를 종료 후 재시도하세요.
+                  </li>
+                  <li>
+                    <strong>비활성화</strong> — 품질이 낮은 이미지를 체크박스로
+                    선택하여 일괄 비활성화할 수 있습니다. 비활성화된 이미지는
+                    캡챠 문제에 출제되지 않습니다.
+                  </li>
+                  <li>
+                    <strong>주의</strong> — 이미지를 비활성화하면 해당 이미지를
+                    포함한 캡챠 세트(captcha_sets)도 함께 비활성화해야 합니다.
+                    그렇지 않으면 비활성화된 이미지가 포함된 세트가 출제될 수
+                    있습니다.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </details>
 
           {/* ── 탭 바 ── */}
           <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
@@ -1270,30 +1385,7 @@ export default function AdminCaptcha() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={async () => {
-                      if (
-                        !confirm(
-                          'MinIO 버킷의 기존 이미지를 DB에 동기화합니다.\n진행하시겠습니까?',
-                        )
-                      )
-                        return;
-                      setSyncing(true);
-                      try {
-                        const result = await syncMinioImages();
-                        alert(result.message);
-                        void loadImages(imgTab, imgCategory, 1);
-                      } catch {
-                        alert('동기화 실패');
-                      } finally {
-                        setSyncing(false);
-                      }
-                    }}
-                    disabled={syncing}
-                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 md:py-1.5 text-[11px] md:text-xs font-bold text-blue-600 hover:bg-blue-100 transition disabled:opacity-50 active:scale-95"
-                  >
-                    {syncing ? '동기화 중...' : 'MinIO 동기화'}
-                  </button>
+                  {/* MinIO 동기화 버튼 제거됨 */}
                 </div>
 
                 {/* 이모지 자동 생성 스태킹 */}

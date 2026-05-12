@@ -8,15 +8,23 @@ import {
   formatCurrency,
 } from '../ChatConstants';
 
-function useDeadlineCountdown(deadline: string | null | undefined): string | null {
+function useDeadlineCountdown(
+  deadline: string | null | undefined,
+): string | null {
   const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!deadline) { setLabel(null); return; }
+    if (!deadline) {
+      setLabel(null);
+      return;
+    }
 
     const update = () => {
       const diff = new Date(deadline).getTime() - Date.now();
-      if (diff <= 0) { setLabel('마감'); return; }
+      if (diff <= 0) {
+        setLabel('마감');
+        return;
+      }
       const totalMinutes = Math.floor(diff / 60000);
       const d = Math.floor(totalMinutes / 1440);
       const h = Math.floor((totalMinutes % 1440) / 60);
@@ -41,6 +49,7 @@ interface ChatSidebarProps {
     is_quick_match: boolean;
     quick_match_fee_rate: number;
   } | null;
+  onRenameTitle?: () => void;
   onMemberClick: (
     event: MouseEvent<HTMLElement>,
     user: ProfileDrawerUser,
@@ -52,6 +61,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({
   partyInfo,
   paymentPreview,
+  onRenameTitle,
   onMemberClick,
   className = '',
   onClose,
@@ -143,9 +153,21 @@ export function ChatSidebar({
           )}
         </div>
 
-        <p className="mb-3 text-sm font-bold text-foreground">파티 정보</p>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-bold text-foreground">파티 정보</p>
+          {partyInfo?.is_leader && onRenameTitle && (
+            <button
+              type="button"
+              onClick={onRenameTitle}
+              className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50"
+            >
+              파티명 변경
+            </button>
+          )}
+        </div>
 
         <div className="space-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <DetailRow label="파티명" value={partyInfo?.title ?? '-'} />
           <DetailRow label="서비스명" value={partyInfo?.service_name ?? '-'} />
           <DetailRow label="파티장" value={partyInfo?.host_nickname ?? '-'} />
           <DetailRow
@@ -191,6 +213,14 @@ export function ChatSidebar({
               partyInfo?.max_members ?? '-'
             }`}
           />
+          <DetailRow
+            label="최소 신뢰도"
+            value={
+              partyInfo?.min_trust_score != null
+                ? `${partyInfo.min_trust_score.toFixed(1)}점`
+                : '-'
+            }
+          />
 
           {deadlineLabel && (
             <div className="flex items-center justify-between border-t border-slate-100 pt-2">
@@ -209,4 +239,3 @@ export function ChatSidebar({
     </aside>
   );
 }
-

@@ -12,7 +12,6 @@ const SESSION_EXPIRED_MESSAGE = '로그인이 만료되었습니다. 다시 로�
 const NO_REFRESH_RETRY_PATHS = new Set([
   '/api/login',
   '/api/refresh',
-  // '/api/me',
   '/api/users',
   '/api/users/find-id',
   '/api/users/find-password',
@@ -60,9 +59,12 @@ api.interceptors.response.use(
     const detail = error.response?.data?.detail ?? '';
 
     if (status === 403 && BAN_DETAILS.has(detail)) {
-      const banType = detail === '이용이 제한된 계정입니다.' ? 'ip_ban' : 'manual';
-      window.location.replace(`/login?reason=banned&ban_type=${banType}`);
-      return Promise.reject(error);
+      // 이의제기 경로는 정지 유저도 접근 가능해야 하므로 리디렉트 제외
+      if (!url?.startsWith('/api/appeals')) {
+        const banType = detail === '이용이 제한된 계정입니다.' ? 'ip_ban' : 'manual';
+        window.location.replace(`/login?reason=banned&ban_type=${banType}`);
+        return Promise.reject(error);
+      }
     }
 
     if (status === 401 && !shouldSkipRefreshRetry(url)) {
