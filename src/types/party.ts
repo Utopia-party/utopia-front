@@ -1,4 +1,4 @@
-export type PartyStatus = 'recruiting' | 'full' | 'completed' | 'canceled' | 'active' | 'ended' | 'closed';
+export type PartyStatus = 'recruiting' | 'full' | 'completed' | 'active' | 'ended';
 
 export type MyMemberStatus =
   | 'leader'
