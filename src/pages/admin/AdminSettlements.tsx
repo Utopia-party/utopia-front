@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import AdminHeader from './components/AdminHeader';
 import FilterTabs from './components/FilterTabs';
 import Pagination from './components/Pagination';
@@ -19,6 +20,204 @@ const FILTER_TABS = ['전체', '대기', '승인', '거절'];
 
 const formatWon = (amount: number) => `₩ ${amount.toLocaleString()}`;
 
+// ── 정산 관리 메뉴얼 ─────────────────────────────────────
+
+type SettlementManualItem = { title: string; badge?: string; badgeColor?: string; content: ReactNode };
+
+function SettlementManualAccordion({ items }: { items: SettlementManualItem[] }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  return (
+    <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      {items.map((item, idx) => {
+        const isOpen = openIdx === idx;
+        return (
+          <div key={idx}>
+            <button
+              type="button"
+              onClick={() => setOpenIdx(isOpen ? null : idx)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-sm font-semibold text-slate-800 truncate">{item.title}</span>
+                {item.badge && (
+                  <span className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${item.badgeColor ?? 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"
+                className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {isOpen && (
+              <div className="px-5 pb-5 text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/40">
+                <div className="pt-4">{item.content}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const SETTLEMENT_MANUAL_ITEMS: SettlementManualItem[] = [
+  {
+    title: '이 페이지의 역할',
+    badge: '개요',
+    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+    content: (
+      <div className="space-y-2">
+        <p className="text-xs text-slate-500">파티 단위 정산 요청을 검토하고 승인·거절로 처리하는 운영 화면입니다.</p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600">
+            <p className="font-semibold text-slate-700 mb-1">파티 정산 관리 (이 페이지)</p>
+            <p>파티 단위 정산 요청 처리. 승인/거절 판단.</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600">
+            <p className="font-semibold text-slate-700 mb-1">매출내역 관리</p>
+            <p>전체 결제 흐름·수수료 확인. 개별 결제 상태 조회.</p>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: '정산 상태 종류',
+    badge: '상태',
+    badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+    content: (
+      <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <table className="w-full text-xs">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-3 py-2 text-left font-semibold text-slate-600">상태</th>
+              <th className="px-3 py-2 text-left font-semibold text-slate-600">의미</th>
+              <th className="px-3 py-2 text-left font-semibold text-slate-600">처리</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            <tr>
+              <td className="px-3 py-2.5"><span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-50">대기</span></td>
+              <td className="px-3 py-2.5 text-slate-600">정산 요청 접수, 검토 전</td>
+              <td className="px-3 py-2.5 text-slate-500">승인 또는 거절 처리 필요</td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2.5"><span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50">승인</span></td>
+              <td className="px-3 py-2.5 text-slate-600">정산 완료 처리</td>
+              <td className="px-3 py-2.5 text-slate-500">파티장에게 승인 알림 발송됨</td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2.5"><span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-red-500 bg-red-50">거절</span></td>
+              <td className="px-3 py-2.5 text-slate-600">정산 불가 판정</td>
+              <td className="px-3 py-2.5 text-slate-500">사유 확인 후 재요청 안내</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    ),
+  },
+  {
+    title: '정산 검토 및 처리 방법',
+    badge: '처리',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    content: (
+      <ol className="text-xs text-slate-600 space-y-2 list-none">
+        {[
+          { n: '1', t: '키워드(파티명·파티장)나 날짜 범위를 입력하고 조회합니다.' },
+          { n: '2', t: '대기 탭에서 처리 대기 중인 건만 필터링합니다.' },
+          { n: '3', t: '상세를 눌러 정산 ID, 총액, 멤버 수, 청구월, 참여자 결제 상태를 확인합니다.' },
+          { n: '4', t: '금액·결제 상태가 정상이면 승인, 이상이 있으면 거절로 처리합니다.' },
+          { n: '5', t: '결제 상세가 필요하면 매출내역 관리와 파티 관리 화면을 함께 참고합니다.' },
+        ].map((item) => (
+          <li key={item.n} className="flex items-start gap-2.5">
+            <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[10px]">{item.n}</span>
+            <span>{item.t}</span>
+          </li>
+        ))}
+      </ol>
+    ),
+  },
+  {
+    title: '목록 조회 및 새로고침',
+    badge: '조회',
+    badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+    content: (
+      <div className="space-y-2.5">
+        <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+          <li>페이지 진입 시 전체 목록을 한 번 자동 조회합니다.</li>
+          <li>자동 새로고침은 동작하지 않습니다. 최신 데이터가 필요하면 우측 상단 새로고침 버튼을 누르세요.</li>
+          <li>조회 버튼은 키워드·날짜 조건을 적용해 다시 불러옵니다.</li>
+          <li>초기화 버튼은 모든 필터를 지우고 전체 목록을 다시 조회합니다.</li>
+        </ul>
+        <div className="rounded-lg border border-slate-100 bg-white px-3 py-2.5 text-xs text-slate-500">
+          탭 필터(대기·승인·거절)는 이미 불러온 목록을 클라이언트에서 분류합니다. 탭 전환 시 서버 재조회 없이 즉시 반응합니다.
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: '승인 전 확인 사항',
+    badge: '주의',
+    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+    content: (
+      <ul className="text-xs text-slate-600 space-y-2 list-none">
+        {[
+          '참여자 결제 상태에서 미결제(대기) 멤버가 없는지 확인하세요.',
+          '총 정산 금액이 멤버 수 × 1인 부담금과 일치하는지 검토하세요.',
+          '최근 파티 운영 이슈(강퇴, 분쟁 등)가 있다면 파티 관리 화면을 먼저 확인하세요.',
+          '승인 처리는 되돌릴 수 없습니다. 파티장에게 즉시 승인 알림이 발송됩니다.',
+        ].map((text, i) => (
+          <li key={i} className="flex items-start gap-2.5 bg-white rounded-lg border border-slate-100 px-3 py-2.5">
+            <span>{text}</span>
+          </li>
+        ))}
+      </ul>
+    ),
+  },
+];
+
+function SettlementManual() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-slate-50 shadow-sm">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 border border-emerald-200 shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </span>
+          <div>
+            <p className="text-sm font-bold text-emerald-800">파티 정산 관리 운영 메뉴얼</p>
+            <p className="text-xs text-emerald-500 mt-0.5">정산 상태 · 검토 방법 · 조회 안내</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="hidden sm:inline text-xs font-semibold text-emerald-500 bg-emerald-100 rounded-full px-2.5 py-0.5 border border-emerald-200">
+            {SETTLEMENT_MANUAL_ITEMS.length}개 항목
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5"
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+      {isOpen && (
+        <div className="px-5 pb-5 border-t border-emerald-100">
+          <p className="text-xs text-slate-500 py-3">항목을 클릭해 내용을 펼쳐보세요.</p>
+          <SettlementManualAccordion items={SETTLEMENT_MANUAL_ITEMS} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminSettlements() {
   const [activeTab, setActiveTab] = useState('전체');
   const [search, setSearch] = useState('');
@@ -32,7 +231,6 @@ export default function AdminSettlements() {
   const [error, setError] = useState('');
   const [busySettlementId, setBusySettlementId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const loadSettlements = async (params?: {
     keyword?: string;
@@ -53,12 +251,6 @@ export default function AdminSettlements() {
 
   useEffect(() => {
     void loadSettlements();
-
-    const timer = setInterval(() => {
-      void loadSettlements();
-    }, 30_000);
-
-    return () => clearInterval(timer);
   }, []);
 
   const handleSearch = () => {
@@ -127,17 +319,31 @@ export default function AdminSettlements() {
       <main className="w-full min-w-0 flex-1 overflow-x-hidden bg-[#f5f5f5] p-4 sm:p-6 md:p-8">
         <div className="mx-auto w-full min-w-0 max-w-7xl space-y-5 md:space-y-6">
           <section className="min-w-0">
-            <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
-              파티 정산 관리
-            </h1>
-
-            <p className="mt-1 max-w-4xl text-xs leading-relaxed text-gray-500 break-keep md:text-sm">
-              파티별 정산 요청, 정산월, 파티장, 총 정산 금액을 한 화면에서
-              확인하고 각 파티의 정산 진행 상태를 관리할 수 있게 구성했습니다.
-              매출내역 관리가 전체 결제 흐름을 보는 화면이라면, 이 페이지는 파티
-              단위 정산 건을 처리하는 운영 화면입니다.
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
+                  파티 정산 관리
+                </h1>
+                <p className="mt-1 max-w-4xl text-xs leading-relaxed text-gray-500 break-keep md:text-sm">
+                  파티별 정산 요청, 정산월, 파티장, 총 정산 금액을 한 화면에서
+                  확인하고 각 파티의 정산 진행 상태를 관리할 수 있게 구성했습니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={reloadSettlements}
+                disabled={loading}
+                className="shrink-0 flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 active:scale-95 transition"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                새로고침
+              </button>
+            </div>
           </section>
+
+          <SettlementManual />
 
           <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end">
@@ -208,100 +414,6 @@ export default function AdminSettlements() {
               onTabChange={handleTabChange}
             />
           </div>
-
-          <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm md:rounded-2xl">
-            <button
-              type="button"
-              onClick={() => setIsGuideOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between gap-3 text-left"
-            >
-              <div className="text-[11px] font-semibold text-slate-500 md:text-xs">
-                파티 정산 관리 메뉴얼
-              </div>
-              <span className="shrink-0 text-xs font-bold text-slate-500">
-                {isGuideOpen ? '접기' : '펼치기'}
-              </span>
-            </button>
-
-            {isGuideOpen && (
-              <div className="mt-3 space-y-3 text-[11px] text-slate-600 md:text-xs">
-                <div className="rounded-xl border border-white bg-white px-4 py-4">
-                  <div className="text-sm font-bold text-slate-900">
-                    파티 정산 관리 메뉴얼
-                  </div>
-                  <p className="mt-2 leading-relaxed">
-                    이 페이지는 파티별 정산 요청을 검토하고 처리하는 운영
-                    화면입니다. 전체 결제 흐름과 수익 확인은 매출내역 관리에서
-                    보고, 실제로 어느 파티의 정산을 승인하거나 보류할지는 여기서
-                    판단하면 됩니다.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <div className="rounded-xl border border-white bg-white px-4 py-4">
-                    <div className="font-bold text-slate-800">
-                      이 페이지에서 할 수 있는 기능
-                    </div>
-                    <div className="mt-2 space-y-2 leading-relaxed">
-                      <p>
-                        1. 파티명, 파티장, 청구월 기준으로 정산 대상을 찾아볼 수
-                        있습니다.
-                      </p>
-                      <p>
-                        2. 대기, 승인, 거절 상태별로 파티 정산 요청을 분류해서
-                        볼 수 있습니다.
-                      </p>
-                      <p>
-                        3. 각 파티의 총 정산 금액, 멤버 수, 청구월, 생성 시각을
-                        확인할 수 있습니다.
-                      </p>
-                      <p>
-                        4. 대기 중인 파티 정산 건을 승인 또는 거절로 처리할 수
-                        있습니다.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-white bg-white px-4 py-4">
-                    <div className="font-bold text-slate-800">사용 방법</div>
-                    <div className="mt-2 space-y-2 leading-relaxed">
-                      <p>
-                        1. 먼저 파티명이나 파티장 이름으로 정산 대상을 좁혀서
-                        필요한 건만 확인합니다.
-                      </p>
-                      <p>
-                        2. 목록에서 `상세`를 눌러 파티 정산 ID, 총액, 멤버 수,
-                        청구월을 다시 검토합니다.
-                      </p>
-                      <p>
-                        3. 운영 검토가 끝난 건은 `승인`, 문제가 있는 건은
-                        `거절`로 처리합니다.
-                      </p>
-                      <p>
-                        4. 금액 근거나 결제 상태를 더 확인해야 하면 매출내역
-                        관리와 파티관리 화면을 함께 보고 판단합니다.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
-                  <div className="font-bold text-slate-800">운영 시 참고</div>
-                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
-                    <p>
-                      매출내역 관리는 전체 결제와 수수료 흐름을 확인하는
-                      화면이고, 파티 정산 관리는 파티 단위 정산 요청을 처리하는
-                      화면입니다.
-                    </p>
-                    <p>
-                      정산 승인 전에는 해당 파티의 결제 상태와 최근 운영 이슈를
-                      함께 확인하는 것이 안전합니다.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
 
           {loading && (
             <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 shadow-sm md:px-5 md:py-4 md:text-sm">
