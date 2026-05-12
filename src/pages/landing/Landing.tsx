@@ -9,6 +9,9 @@ import FeaturesSection from './components/FeaturesSection';
 import SecuritySection from './components/SecuritySection';
 import AITechSection from './components/AITechSection';
 import MLResultSection from './components/MLResultSection';
+import CaptchaMLSection from './components/CaptchaMLSection';
+import QuickMatchMLSection from './components/QuickMatchMLSection';
+import HandOCRSection from './components/HandOCRSection';
 import TrustScoreVisualSection from './components/TrustScoreVisualSection';
 import BusinessModelSection from './components/BusinessModelSection';
 import ArchSection from './components/ArchSection';
@@ -52,12 +55,29 @@ export default function Landing() {
         <AITechSection />
       </Container>
 
-      {/* 7. ML 학습 결과 */}
+      {/* 7. ML 학습 결과 — 욕설 탐지 */}
       <div className="bg-gray-50/50 w-full">
         <Container className="py-4">
           <MLResultSection />
         </Container>
       </div>
+
+      {/* 7-1. 캡챠 AI 학습 결과 (FastGAN / CLIP / BiLSTM) */}
+      <Container>
+        <CaptchaMLSection />
+      </Container>
+
+      {/* 7-2. 빠른매칭 학습 파이프라인 */}
+      <div className="bg-gray-50/50 w-full">
+        <Container className="py-4">
+          <QuickMatchMLSection />
+        </Container>
+      </div>
+
+      {/* 7-3. HandOCR AI 학습 결과 */}
+      <Container>
+        <HandOCRSection />
+      </Container>
 
       {/* 8. 신뢰도 시스템 */}
       <Container>
