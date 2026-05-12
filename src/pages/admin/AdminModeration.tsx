@@ -163,6 +163,284 @@ function StageBadge({ stage }: { stage: number }) {
   );
 }
 
+// ── 메뉴얼 아이템 ────────────────────────────────────────
+type ManualItem = { title: string; badge?: string; badgeColor?: string; content: React.ReactNode };
+
+function ManualAccordion({ items }: { items: ManualItem[] }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  return (
+    <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+      {items.map((item, idx) => {
+        const isOpen = openIdx === idx;
+        return (
+          <div key={idx}>
+            <button
+              type="button"
+              onClick={() => setOpenIdx(isOpen ? null : idx)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50/70 transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-sm font-semibold text-slate-800 truncate">{item.title}</span>
+                {item.badge && (
+                  <span className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${item.badgeColor ?? 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <svg
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"
+                className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {isOpen && (
+              <div className="px-5 pb-5 text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/40">
+                <div className="pt-4">{item.content}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const MANUAL_ITEMS: ManualItem[] = [
+  {
+    title: '탐지 파이프라인 개요 — 3단계 구조',
+    badge: '설정',
+    badgeColor: 'bg-violet-50 text-violet-700 border-violet-200',
+    content: (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">모든 채팅 메시지는 아래 3단계를 순서대로 통과하며, 각 단계에서 판정이 나면 이후 단계는 건너뜁니다.</p>
+        <div className="grid sm:grid-cols-3 gap-3">
+          {[
+            { num: '1', label: '규칙 기반', color: 'border-emerald-200 bg-emerald-50', text: 'text-emerald-700', time: '0ms', desc: '화이트리스트·블랙리스트 단어 일치 여부를 즉시 판별합니다. 가장 빠르며 오탐이 없습니다.' },
+            { num: '2', label: 'ML 모델', color: 'border-blue-200 bg-blue-50', text: 'text-blue-700', time: '10~30ms', desc: 'KR-ELECTRA 모델이 문장 전체를 분석해 신뢰도 점수를 산출합니다. 임계값 이내면 3단계로 넘깁니다.' },
+            { num: '3', label: 'Ollama AI', color: 'border-violet-200 bg-violet-50', text: 'text-violet-700', time: '500ms~3s', desc: 'LLM이 문맥을 고려해 최종 판단합니다. Few-shot 예시로 판단 품질을 개선할 수 있습니다.' },
+          ].map((s) => (
+            <div key={s.num} className={`rounded-xl border p-3 ${s.color}`}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${s.color} ${s.text}`}>{s.num}단계</span>
+                <span className={`text-xs font-bold ${s.text}`}>{s.label}</span>
+                <span className="ml-auto font-mono text-[10px] text-slate-400">{s.time}</span>
+              </div>
+              <p className="text-xs text-slate-600">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 단계를 비활성화하면 해당 단계를 건너뛰고 다음 단계로 진행됩니다. 1단계만 켜면 규칙 기반만 동작합니다.</p>
+      </div>
+    ),
+  },
+  {
+    title: '화이트리스트 / 블랙리스트 관리',
+    badge: '설정 › 규칙 단어',
+    badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+    content: (
+      <div className="space-y-3">
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-xs font-bold text-emerald-700 mb-1">✅ 화이트리스트</p>
+            <p className="text-xs text-slate-600">포함된 단어가 있으면 <strong>무조건 정상 통과</strong>합니다. ML/AI 오탐지가 잦은 표현을 등록하세요.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">예) 게임 용어, 서비스 고유 명사, 별명 등</p>
+          </div>
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+            <p className="text-xs font-bold text-red-700 mb-1">🚫 블랙리스트</p>
+            <p className="text-xs text-slate-600">포함된 단어가 있으면 <strong>무조건 즉시 차단</strong>합니다. 명백한 욕설이나 유해 표현을 등록하세요.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">예) 비속어 축약형, 변형 욕설, 차별 표현 등</p>
+          </div>
+        </div>
+        <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+          <li>쉼표(,) 또는 줄바꿈으로 여러 단어를 한 번에 추가할 수 있습니다.</li>
+          <li>단어 옆 <span className="font-bold">×</span> 버튼으로 즉시 삭제됩니다 (저장 불필요).</li>
+          <li>화이트리스트와 블랙리스트에 같은 단어가 있으면 <strong>화이트리스트 우선</strong>입니다.</li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    title: 'ML 임계값 조정 방법',
+    badge: '설정 › 파이프라인',
+    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+    content: (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">ML 신뢰도 점수(0~1)를 기준으로 3구간으로 나뉩니다.</p>
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">구간</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">조건</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">처리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              <tr><td className="px-3 py-2 text-emerald-700 font-semibold">통과 구간</td><td className="px-3 py-2 text-slate-600">점수 ≥ 통과 임계값</td><td className="px-3 py-2 text-slate-600">정상으로 즉시 통과</td></tr>
+              <tr><td className="px-3 py-2 text-amber-700 font-semibold">Ollama 구간</td><td className="px-3 py-2 text-slate-600">통과값 {'>'} 점수 {'>'} 차단값</td><td className="px-3 py-2 text-slate-600">3단계 Ollama로 전달</td></tr>
+              <tr><td className="px-3 py-2 text-red-700 font-semibold">차단 구간</td><td className="px-3 py-2 text-slate-600">점수 ≥ 차단 임계값</td><td className="px-3 py-2 text-slate-600">위반으로 즉시 차단</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-2 text-xs text-slate-600">
+          <div className="bg-blue-50 rounded-lg px-3 py-2 border border-blue-100">
+            <p className="font-semibold text-blue-700 mb-0.5">오탐지가 많을 때</p>
+            <p>통과 임계값을 <strong>낮추세요</strong> (더 많이 통과).</p>
+          </div>
+          <div className="bg-red-50 rounded-lg px-3 py-2 border border-red-100">
+            <p className="font-semibold text-red-700 mb-0.5">놓치는 욕설이 많을 때</p>
+            <p>차단 임계값을 <strong>낮추세요</strong> (더 많이 차단).</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 두 임계값 사이 범위가 넓을수록 Ollama 판단 비중이 늘어 정확도는 높아지지만 응답 속도가 느려집니다.</p>
+      </div>
+    ),
+  },
+  {
+    title: '탐지 로그 검토 및 상태 변경',
+    badge: '로그',
+    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+    content: (
+      <div className="space-y-3">
+        <div className="grid sm:grid-cols-2 gap-3">
+          {[
+            { label: '차단', color: 'bg-red-50 border-red-200 text-red-700', desc: '메시지가 전송 차단됨. 심각한 위반.' },
+            { label: '경고', color: 'bg-amber-50 border-amber-200 text-amber-700', desc: '메시지는 전송되었으나 경고 처리됨.' },
+            { label: '오탐지', color: 'bg-slate-100 border-slate-200 text-slate-600', desc: '관리자가 정상으로 수정한 항목. 파인튜닝 데이터로 활용.' },
+            { label: '검토 중', color: 'bg-blue-50 border-blue-200 text-blue-700', desc: 'AI가 판단을 보류 중. 관리자 수동 처리 필요.' },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-lg border px-3 py-2 ${s.color}`}>
+              <p className="text-[10px] font-bold mb-0.5">{s.label}</p>
+              <p className="text-xs text-slate-600">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+        <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+          <li><strong>상세</strong> 버튼을 누르면 탐지 단계, ML 신뢰도, 원본 메시지, 유저 위반 패턴을 확인할 수 있습니다.</li>
+          <li><strong>오탐지</strong> 버튼을 누르면 상태가 변경되고, 해당 데이터가 파인튜닝 학습 데이터로 누적됩니다.</li>
+          <li>상세 패널에서 차단 → 경고, 경고 → 차단 등 <strong>자유롭게 상태를 재분류</strong>할 수 있습니다.</li>
+          <li><strong>패턴 분석</strong>을 실행하면 해당 유저의 누적 위반 통계를 볼 수 있습니다.</li>
+        </ul>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 오탐지를 꾸준히 수집해 라벨별 100건 이상이 되면 파인튜닝을 실행해 ML 모델 정확도를 높일 수 있습니다.</p>
+      </div>
+    ),
+  },
+  {
+    title: 'Ollama Few-shot 예시 추가 방법',
+    badge: '설정 › 프롬프트',
+    badgeColor: 'bg-violet-50 text-violet-700 border-violet-200',
+    content: (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">Few-shot 예시는 Ollama AI 단계에서 판단 기준으로 사용됩니다. 오탐지가 잦은 표현을 등록하면 판단 품질이 개선됩니다.</p>
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">레이블</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">의미</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">사용 예</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              <tr><td className="px-3 py-2 text-emerald-700 font-semibold">정상</td><td className="px-3 py-2 text-slate-600">욕설이 아닌 일반 표현</td><td className="px-3 py-2 text-slate-400">게임 용어, 감탄사, 은어 등</td></tr>
+              <tr><td className="px-3 py-2 text-amber-700 font-semibold">경고</td><td className="px-3 py-2 text-slate-600">경고 처리가 적합한 표현</td><td className="px-3 py-2 text-slate-400">가벼운 비속어, 불쾌한 표현</td></tr>
+              <tr><td className="px-3 py-2 text-red-700 font-semibold">즉시차단</td><td className="px-3 py-2 text-slate-600">즉시 차단이 필요한 표현</td><td className="px-3 py-2 text-slate-400">심한 욕설, 혐오 표현</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+          <li>텍스트 입력 후 레이블을 선택하고 <strong>추가</strong>를 누르세요.</li>
+          <li>추가 후 반드시 <strong>저장</strong> 버튼을 눌러야 적용됩니다.</li>
+          <li>예시가 많을수록 정확도가 높아지지만 응답 속도가 약간 느려질 수 있습니다.</li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    title: 'IP 차단 및 해제',
+    badge: 'IP 벤',
+    badgeColor: 'bg-red-50 text-red-700 border-red-200',
+    content: (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">욕설 감지로 자동 차단된 IP 목록을 관리합니다.</p>
+        <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+          <li><strong>남은 시간</strong>이 표시된 IP는 시간이 지나면 자동 해제됩니다.</li>
+          <li><strong>영구</strong>로 표시된 IP는 수동으로만 해제 가능합니다.</li>
+          <li><strong>차단 해제</strong> 버튼을 누르면 해당 IP에서 즉시 재접속이 가능해집니다.</li>
+          <li>실수로 해제한 경우 해당 유저가 재위반 시 자동으로 다시 차단됩니다.</li>
+        </ul>
+        <p className="text-xs text-slate-400 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">⚠️ IP 차단은 동일 IP를 사용하는 다른 유저에게도 영향을 줄 수 있습니다. 해제 전 로그 탭에서 해당 IP의 위반 내역을 먼저 확인하세요.</p>
+      </div>
+    ),
+  },
+  {
+    title: 'ML 파인튜닝 실행 가이드',
+    badge: '설정 › 파인튜닝',
+    badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+    content: (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">로그 탭에서 오탐지로 수집한 데이터로 ML 모델을 재학습합니다.</p>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
+          <p className="font-semibold text-slate-700 mb-1.5">파인튜닝 전 체크리스트</p>
+          <p>☐ 정상(none) 라벨 100건 이상 수집</p>
+          <p>☐ 경고(offensive) 라벨 100건 이상 수집</p>
+          <p>☐ 차단(hate) 라벨 100건 이상 수집</p>
+          <p className="text-slate-400 pt-1">총 300건 이상이어야 파인튜닝 버튼이 활성화됩니다.</p>
+        </div>
+        <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+          <li>기반 모델은 <strong>klue/roberta-base</strong>이며 GPU 서버에서 실행됩니다.</li>
+          <li>파인튜닝 중에는 2단계 ML 탐지가 기존 모델로 계속 동작합니다.</li>
+          <li>완료 후 새 모델이 자동 적용됩니다. 통계 탭에서 성능 변화를 모니터링하세요.</li>
+        </ul>
+      </div>
+    ),
+  },
+];
+
+// ── 메뉴얼 래퍼 ───────────────────────────────────────────
+function ModerationManual() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-slate-50 shadow-[0_2px_12px_rgba(109,40,217,0.06)]">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-violet-100 border border-violet-200 shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </span>
+          <div>
+            <p className="text-sm font-bold text-violet-800">채팅 모더레이션 운영 메뉴얼</p>
+            <p className="text-xs text-violet-500 mt-0.5">설정 · 로그 · IP 벤 · 파인튜닝 운영 가이드</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="hidden sm:inline text-xs font-semibold text-violet-500 bg-violet-100 rounded-full px-2.5 py-0.5 border border-violet-200">
+            {MANUAL_ITEMS.length}개 항목
+          </span>
+          <svg
+            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5"
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+      {isOpen && (
+        <div className="px-5 pb-5 border-t border-violet-100">
+          <p className="text-xs text-slate-500 py-3">항목을 클릭해 내용을 펼쳐보세요.</p>
+          <ManualAccordion items={MANUAL_ITEMS} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminModeration() {
   const [mainTab, setMainTab] = useState<'설정' | '통계' | '로그' | 'IP 벤'>('설정');
   const [config, setConfig] = useState<Config | null>(null);
@@ -364,6 +642,9 @@ export default function AdminModeration() {
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">채팅 모더레이션</h1>
             <p className="mt-1 text-sm text-slate-400">탐지 파이프라인 설정 · 통계 분석 · AI 탐지 로그 관리</p>
           </div>
+
+          {/* ── 운영 메뉴얼 ── */}
+          <ModerationManual />
 
           {/* 메인 탭 */}
           <div className="flex gap-0 border-b-2 border-slate-100 overflow-x-auto [&::-webkit-scrollbar]:hidden">
