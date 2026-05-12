@@ -4,11 +4,15 @@ import BeforeStartSection from './components/BeforeStartSection';
 import LoginManualSection from './components/LoginManualSection';
 import FindPartyManualSection from './components/FindPartyManualSection';
 import JoinPartyManualSection from './components/JoinPartyManualSection';
+import QuickMatchManualSection from './components/QuickMatchManualSection';
 import MyPartyChatManualSection from './components/MyPartyChatManualSection';
+import PraiseManualSection from './components/PraiseManualSection';
 import PaymentManualSection from './components/PaymentManualSection';
 import CreatePartyManualSection from './components/CreatePartyManualSection';
 import MypageManualSection from './components/MypageManualSection';
 import ReportManualSection from './components/ReportManualSection';
+import AppealManualSection from './components/AppealManualSection';
+import TrustScoreManualSection from './components/TrustScoreManualSection';
 import StatusDictionarySection from './components/StatusDictionarySection';
 import TroubleshootingSection from './components/TroubleshootingSection';
 
@@ -23,11 +27,15 @@ export default function ManualPage() {
         <LoginManualSection />
         <FindPartyManualSection />
         <JoinPartyManualSection />
+        <QuickMatchManualSection />
         <MyPartyChatManualSection />
+        <PraiseManualSection />
         <PaymentManualSection />
         <CreatePartyManualSection />
         <MypageManualSection />
         <ReportManualSection />
+        <AppealManualSection />
+        <TrustScoreManualSection />
         <StatusDictionarySection />
         <TroubleshootingSection />
       </main>
