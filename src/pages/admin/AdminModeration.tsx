@@ -230,7 +230,7 @@ const MANUAL_ITEMS: ManualItem[] = [
             </div>
           ))}
         </div>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 단계를 비활성화하면 해당 단계를 건너뛰고 다음 단계로 진행됩니다. 1단계만 켜면 규칙 기반만 동작합니다.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">단계를 비활성화하면 해당 단계를 건너뛰고 다음 단계로 진행됩니다. 1단계만 켜면 규칙 기반만 동작합니다.</p>
       </div>
     ),
   },
@@ -242,12 +242,12 @@ const MANUAL_ITEMS: ManualItem[] = [
       <div className="space-y-3">
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-            <p className="text-xs font-bold text-emerald-700 mb-1">✅ 화이트리스트</p>
+            <p className="text-xs font-bold text-emerald-700 mb-1">화이트리스트</p>
             <p className="text-xs text-slate-600">포함된 단어가 있으면 <strong>무조건 정상 통과</strong>합니다. ML/AI 오탐지가 잦은 표현을 등록하세요.</p>
             <p className="text-[11px] text-slate-400 mt-1.5">예) 게임 용어, 서비스 고유 명사, 별명 등</p>
           </div>
           <div className="rounded-xl border border-red-200 bg-red-50 p-3">
-            <p className="text-xs font-bold text-red-700 mb-1">🚫 블랙리스트</p>
+            <p className="text-xs font-bold text-red-700 mb-1">블랙리스트</p>
             <p className="text-xs text-slate-600">포함된 단어가 있으면 <strong>무조건 즉시 차단</strong>합니다. 명백한 욕설이나 유해 표현을 등록하세요.</p>
             <p className="text-[11px] text-slate-400 mt-1.5">예) 비속어 축약형, 변형 욕설, 차별 표현 등</p>
           </div>
@@ -293,7 +293,7 @@ const MANUAL_ITEMS: ManualItem[] = [
             <p>차단 임계값을 <strong>낮추세요</strong> (더 많이 차단).</p>
           </div>
         </div>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 두 임계값 사이 범위가 넓을수록 Ollama 판단 비중이 늘어 정확도는 높아지지만 응답 속도가 느려집니다.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">두 임계값 사이 범위가 넓을수록 Ollama 판단 비중이 늘어 정확도는 높아지지만 응답 속도가 느려집니다.</p>
       </div>
     ),
   },
@@ -322,7 +322,7 @@ const MANUAL_ITEMS: ManualItem[] = [
           <li>상세 패널에서 차단 → 경고, 경고 → 차단 등 <strong>자유롭게 상태를 재분류</strong>할 수 있습니다.</li>
           <li><strong>패턴 분석</strong>을 실행하면 해당 유저의 누적 위반 통계를 볼 수 있습니다.</li>
         </ul>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 오탐지를 꾸준히 수집해 라벨별 100건 이상이 되면 파인튜닝을 실행해 ML 모델 정확도를 높일 수 있습니다.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">오탐지를 꾸준히 수집해 라벨별 100건 이상이 되면 파인튜닝을 실행해 ML 모델 정확도를 높일 수 있습니다.</p>
       </div>
     ),
   },
@@ -370,7 +370,7 @@ const MANUAL_ITEMS: ManualItem[] = [
           <li><strong>차단 해제</strong> 버튼을 누르면 해당 IP에서 즉시 재접속이 가능해집니다.</li>
           <li>실수로 해제한 경우 해당 유저가 재위반 시 자동으로 다시 차단됩니다.</li>
         </ul>
-        <p className="text-xs text-slate-400 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">⚠️ IP 차단은 동일 IP를 사용하는 다른 유저에게도 영향을 줄 수 있습니다. 해제 전 로그 탭에서 해당 IP의 위반 내역을 먼저 확인하세요.</p>
+        <p className="text-xs text-slate-400 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">IP 차단은 동일 IP를 사용하는 다른 유저에게도 영향을 줄 수 있습니다. 해제 전 로그 탭에서 해당 IP의 위반 내역을 먼저 확인하세요.</p>
       </div>
     ),
   },
@@ -383,9 +383,9 @@ const MANUAL_ITEMS: ManualItem[] = [
         <p className="text-xs text-slate-500">로그 탭에서 오탐지로 수집한 데이터로 ML 모델을 재학습합니다.</p>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
           <p className="font-semibold text-slate-700 mb-1.5">파인튜닝 전 체크리스트</p>
-          <p>☐ 정상(none) 라벨 100건 이상 수집</p>
-          <p>☐ 경고(offensive) 라벨 100건 이상 수집</p>
-          <p>☐ 차단(hate) 라벨 100건 이상 수집</p>
+          <p>· 정상(none) 라벨 100건 이상 수집</p>
+          <p>· 경고(offensive) 라벨 100건 이상 수집</p>
+          <p>· 차단(hate) 라벨 100건 이상 수집</p>
           <p className="text-slate-400 pt-1">총 300건 이상이어야 파인튜닝 버튼이 활성화됩니다.</p>
         </div>
         <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">

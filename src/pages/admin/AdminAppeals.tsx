@@ -33,7 +33,7 @@ const BAN_TYPE_LABEL: Record<string, string> = {
   manual: '수동 제재',
 };
 
-// ── 메뉴얼 ──────────────────────────────────────
+// ── 메뉴얼 아코디언 ──────────────────────────────────────
 type AppealsManualItem = { title: string; badge?: string; badgeColor?: string; content: React.ReactNode };
 
 function AppealsManualAccordion({ items }: { items: AppealsManualItem[] }) {
@@ -103,7 +103,7 @@ const APPEALS_MANUAL_ITEMS: AppealsManualItem[] = [
             )
           )}
         </div>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 승인 시 백엔드에서 제재 유형에 따라 자동으로 IP 차단 해제, 신뢰도 점수 복구 등이 처리됩니다.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">승인 시 백엔드에서 제재 유형에 따라 자동으로 IP 차단 해제, 신뢰도 점수 복구 등이 처리됩니다.</p>
       </div>
     ),
   },
@@ -141,7 +141,7 @@ const APPEALS_MANUAL_ITEMS: AppealsManualItem[] = [
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-slate-400 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">⚠️ 반복 위반 유저는 로그 탭에서 위반 이력을 먼저 확인한 뒤 신중하게 처리하세요.</p>
+        <p className="text-xs text-slate-400 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">반복 위반 유저는 로그 탭에서 위반 이력을 먼저 확인한 뒤 신중하게 처리하세요.</p>
       </div>
     ),
   },
@@ -166,7 +166,7 @@ const APPEALS_MANUAL_ITEMS: AppealsManualItem[] = [
             </li>
           ))}
         </ol>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 신뢰도 점수 제재의 경우, 모달에서 승인 시 몇 점이 복구되는지 미리 표시됩니다.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">신뢰도 점수 제재의 경우, 모달에서 승인 시 몇 점이 복구되는지 미리 표시됩니다.</p>
       </div>
     ),
   },
@@ -201,7 +201,7 @@ const APPEALS_MANUAL_ITEMS: AppealsManualItem[] = [
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 페이지 상단에 검토 대기 건수 알림이 표시됩니다. 매일 확인해 미처리 건이 쌓이지 않도록 관리하세요.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">페이지 상단에 검토 대기 건수 알림이 표시됩니다. 매일 확인해 미처리 건이 쌓이지 않도록 관리하세요.</p>
       </div>
     ),
   },
@@ -213,14 +213,13 @@ const APPEALS_MANUAL_ITEMS: AppealsManualItem[] = [
       <div className="space-y-2">
         <ul className="text-xs text-slate-600 space-y-2 list-none">
           {[
-            { icon: '🚫', text: '한 번 처리(승인/거부)한 이의제기는 상태를 되돌릴 수 없습니다. 신중하게 결정하세요.' },
-            { icon: '🔍', text: '동일 유저가 반복적으로 이의제기를 제출하는 경우, 이전 처리 이력을 먼저 확인하세요.' },
-            { icon: '📝', text: '거부 시 관리자 메모에 사유를 남기면 유저가 재신청 시 참고할 수 있고 추후 분쟁 방지에도 도움이 됩니다.' },
-            { icon: '⚡', text: '승인 즉시 제재가 해제됩니다. 해제 후 동일 행위가 반복되면 채팅 모더레이션 탭에서 재제재할 수 있습니다.' },
-            { icon: '🌐', text: 'IP 차단 이의제기 승인 시 공유 IP일 가능성이 있으므로 신청 IP와 위반 IP가 동일한지 반드시 확인하세요.' },
+            { text: '한 번 처리(승인/거부)한 이의제기는 상태를 되돌릴 수 없습니다. 신중하게 결정하세요.' },
+            { text: '동일 유저가 반복적으로 이의제기를 제출하는 경우, 이전 처리 이력을 먼저 확인하세요.' },
+            { text: '거부 시 관리자 메모에 사유를 남기면 유저가 재신청 시 참고할 수 있고 추후 분쟁 방지에도 도움이 됩니다.' },
+            { text: '승인 즉시 제재가 해제됩니다. 해제 후 동일 행위가 반복되면 채팅 모더레이션 탭에서 재제재할 수 있습니다.' },
+            { text: 'IP 차단 이의제기 승인 시 공유 IP일 가능성이 있으므로 신청 IP와 위반 IP가 동일한지 반드시 확인하세요.' },
           ].map((item, i) => (
             <li key={i} className="flex items-start gap-2.5 bg-white rounded-lg border border-slate-100 px-3 py-2.5">
-              <span className="shrink-0 text-base">{item.icon}</span>
               <span>{item.text}</span>
             </li>
           ))}
