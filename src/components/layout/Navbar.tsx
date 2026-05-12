@@ -1,9 +1,10 @@
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import Logo from '../ui/Logo';
 import Container from './Container';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavHashLink } from 'react-router-hash-link';
 import { IoClose, IoMenu } from 'react-icons/io5';
+import { FiArrowRight, FiChevronDown } from 'react-icons/fi';
 
 type SectionId = 'features' | 'security' | 'ai-tech' | 'ml-result' | 'arch' | 'team';
 
@@ -20,8 +21,11 @@ interface SectionState {
 }
 
 export default function Navbar() {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionId>('features');
+  const [manualOpen, setManualOpen] = useState(false);
+  const manualRef = useRef<HTMLDivElement>(null);
 
   const navItems: NavItem[] = useMemo(
     () => [
@@ -37,6 +41,17 @@ export default function Navbar() {
 
   const sectionStatesRef = useRef<Map<SectionId, SectionState>>(new Map());
   const toggleMenu = () => setIsOpen((prev) => !prev);
+
+  // 매뉴얼 드롭다운 외부 클릭 닫기
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (manualRef.current && !manualRef.current.contains(e.target as Node)) {
+        setManualOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   useEffect(() => {
     const sections = navItems
@@ -115,7 +130,17 @@ export default function Navbar() {
           </h1>
         </Link>
 
+        {/* 데스크톱 */}
         <div className="hidden md:flex items-center gap-3 md:gap-5">
+          {/* 데모 체험 버튼 */}
+          <button
+            onClick={() => navigate('/home')}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-purple-600 to-blue-500 text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity"
+          >
+            데모 체험
+            <FiArrowRight size={12} />
+          </button>
+
           {navItems.map((item) => (
             <NavHashLink
               key={item.id}
@@ -133,14 +158,41 @@ export default function Navbar() {
             </NavHashLink>
           ))}
 
-          <Link
-            to="/manual"
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            매뉴얼
-          </Link>
+          {/* 매뉴얼 드롭다운 */}
+          <div ref={manualRef} className="relative">
+            <button
+              onClick={() => setManualOpen((v) => !v)}
+              className="inline-flex items-center gap-1 px-4 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              매뉴얼
+              <FiChevronDown
+                size={12}
+                className={`transition-transform duration-200 ${manualOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {manualOpen && (
+              <div className="absolute right-0 mt-2 w-44 rounded-xl border border-gray-100 bg-white shadow-lg py-1.5 z-50">
+                <Link
+                  to="/manual"
+                  onClick={() => setManualOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                >
+                  사용자 매뉴얼
+                </Link>
+                <Link
+                  to="/admin/manual"
+                  onClick={() => setManualOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                >
+                  관리자 매뉴얼
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* 모바일 햄버거 */}
         <div className="md:hidden flex items-center">
           <button
             onClick={toggleMenu}
@@ -151,8 +203,16 @@ export default function Navbar() {
         </div>
       </Container>
 
+      {/* 모바일 메뉴 */}
       {isOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 pt-2 pb-4 space-y-2 shadow-lg">
+          <button
+            onClick={() => { navigate('/home'); toggleMenu(); }}
+            className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-500 text-white text-sm font-bold rounded-lg mb-2"
+          >
+            데모 체험 <FiArrowRight size={14} />
+          </button>
+
           {navItems.map((item) => (
             <NavHashLink
               key={item.id}
@@ -164,13 +224,23 @@ export default function Navbar() {
               {item.label}
             </NavHashLink>
           ))}
-          <Link
-            to="/manual"
-            onClick={toggleMenu}
-            className="block px-3 py-2 text-base font-medium rounded-md text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors"
-          >
-            매뉴얼
-          </Link>
+
+          <div className="border-t border-gray-100 pt-2 space-y-1">
+            <Link
+              to="/manual"
+              onClick={toggleMenu}
+              className="block px-3 py-2 text-base font-medium rounded-md text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors"
+            >
+              사용자 매뉴얼
+            </Link>
+            <Link
+              to="/admin/manual"
+              onClick={toggleMenu}
+              className="block px-3 py-2 text-base font-medium rounded-md text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors"
+            >
+              관리자 매뉴얼
+            </Link>
+          </div>
         </div>
       )}
     </nav>

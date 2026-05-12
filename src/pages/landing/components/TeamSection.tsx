@@ -35,13 +35,13 @@ export default function TeamSection() {
       email: 'rkdtlgn0@naver.com',
     },
     {
-      name: '박세영',
+      name: '김영훈',
       role: 'Full Stack Engineer',
       description: COMMON_DESCRIPTION,
       image,
       skills: COMMON_SKILLS,
-      github: 'https://github.com/zerose219',
-      email: 'seyoung.park219@gmail.com',
+      github: 'https://github.com/zeroh00n',
+      email: 'ahxh7647@gmail.com',
     },
     {
       name: '도상원',
@@ -53,13 +53,13 @@ export default function TeamSection() {
       email: 'do123195@gmail.com',
     },
     {
-      name: '김영훈',
+      name: '박세영',
       role: 'Full Stack Engineer',
       description: COMMON_DESCRIPTION,
       image,
       skills: COMMON_SKILLS,
-      github: 'https://github.com/zeroh00n',
-      email: 'ahxh7647@gmail.com',
+      github: 'https://github.com/zerose219',
+      email: 'seyoung.park219@gmail.com',
     },
     {
       name: '정재웅',

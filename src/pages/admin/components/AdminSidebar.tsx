@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router';
 import {
   BadgeCheck,
+  BookOpenCheck,
   CloudCog,
   CreditCard,
   FileText,
@@ -376,6 +377,24 @@ export default function AdminSidebar({
           </div>
 
           <div className="flex-1" />
+
+          <NavLink
+            to="/admin/manual"
+            title={displayCollapsed ? '관리자 매뉴얼' : undefined}
+            onClick={handleLinkClick}
+            className={({ isActive }) =>
+              `flex items-center border-l-4 py-3 text-sm font-medium no-underline transition-all active:scale-[0.98] ${
+                displayCollapsed ? 'justify-center px-0' : 'gap-3 px-5'
+              } ${
+                isActive
+                  ? 'border-blue-500 bg-blue-50 text-blue-600 font-bold'
+                  : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+              }`
+            }
+          >
+            <BookOpenCheck size={20} strokeWidth={2} className="shrink-0" />
+            {!displayCollapsed && <span>관리자 매뉴얼</span>}
+          </NavLink>
 
           <NavLink
             to="/home"

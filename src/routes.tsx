@@ -59,6 +59,7 @@ import AdminQuickMatch from './pages/admin/AdminQuickMatch';
 import AdminAppeals from './pages/admin/AdminAppeals';
 import AdminSaas from './pages/admin/AdminSaas';
 import AdminSaasV2 from './pages/admin/AdminSaasV2';
+import AdminManualPage from './pages/admin/manual/AdminManualPage';
 import ManualPage from './pages/manual/ManualPage';
 
 const router = createBrowserRouter([
@@ -320,6 +321,10 @@ const router = createBrowserRouter([
       {
         path: 'saas-v2',
         Component: AdminSaasV2,
+      },
+      {
+        path: 'manual',
+        Component: AdminManualPage,
       },
     ],
   },
