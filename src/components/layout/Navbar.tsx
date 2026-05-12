@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavHashLink } from 'react-router-hash-link';
 import { IoClose, IoMenu } from 'react-icons/io5';
 
-type SectionId = 'features' | 'security' | 'team';
+type SectionId = 'features' | 'security' | 'ml-result' | 'guide' | 'team';
 
 interface NavItem {
   label: string;
@@ -27,6 +27,8 @@ export default function Navbar() {
     () => [
       { label: '핵심 기능', href: '#features', id: 'features' },
       { label: '보안 시스템', href: '#security', id: 'security' },
+      { label: 'AI 학습결과', href: '#ml-result', id: 'ml-result' },
+      { label: '이용 가이드', href: '#guide', id: 'guide' },
       { label: '팀 소개', href: '#team', id: 'team' },
     ],
     [],
@@ -135,6 +137,13 @@ export default function Navbar() {
               />
             </NavHashLink>
           ))}
+
+          <Link
+            to="/manual"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            매뉴얼
+          </Link>
         </div>
 
         <div className="md:hidden flex items-center">
@@ -160,6 +169,13 @@ export default function Navbar() {
               {item.label}
             </NavHashLink>
           ))}
+          <Link
+            to="/manual"
+            onClick={toggleMenu}
+            className="block px-3 py-2 text-base font-medium rounded-md text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors"
+          >
+            매뉴얼
+          </Link>
         </div>
       )}
     </nav>

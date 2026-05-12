@@ -6,6 +6,8 @@ import TeamSection from './components/TeamSection';
 import Footer from '../../components/layout/Footer';
 import Navbar from '../../components/layout/Navbar';
 import DocumentShowcaseSection from './components/DocumentShowcaseSection';
+import MLResultSection from './components/MLResultSection';
+import QuickGuideSection from './components/QuickGuideSection';
 
 export default function Landing() {
   return (
@@ -25,6 +27,16 @@ export default function Landing() {
       <Container>
         <SecuritySection />
       </Container>
+
+      <Container>
+        <MLResultSection />
+      </Container>
+
+      <div className="bg-gray-50/50 w-full">
+        <Container className="py-4">
+          <QuickGuideSection />
+        </Container>
+      </div>
 
       <Container className="py-4">
         <DocumentShowcaseSection />
