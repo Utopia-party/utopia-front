@@ -42,7 +42,7 @@ export default function PraiseManualSection() {
   return (
     <ManualSection
       id="praise"
-      number="04-1"
+      number="06"
       title="칭찬하는 방법"
       description="함께한 파티원에게 칭찬을 보내면 상대방의 신뢰도 점수가 오릅니다. 칭찬 내역은 마이페이지에서 확인할 수 있습니다."
     >

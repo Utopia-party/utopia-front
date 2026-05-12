@@ -37,7 +37,7 @@ export default function ReportManualSection() {
   return (
     <ManualSection
       id="report"
-      number="08"
+      number="10"
       title="신고하는 방법"
       description="사기, 금전요구, 스팸, 욕설 등 문제가 발생하면 신고센터에서 신고를 접수할 수 있습니다."
     >

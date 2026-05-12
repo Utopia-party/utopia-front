@@ -53,7 +53,7 @@ export default function AppealManualSection() {
   return (
     <ManualSection
       id="appeal"
-      number="08-1"
+      number="11"
       title="이의신청 방법"
       description="계정 정지나 이용 제한이 부당하다고 생각될 경우 이의신청을 통해 관리자 재검토를 요청할 수 있습니다."
     >

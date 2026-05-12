@@ -27,7 +27,7 @@ export default function TrustScoreManualSection() {
   return (
     <ManualSection
       id="trust-score"
-      number="09-1"
+      number="12"
       title="신뢰도 점수 안내"
       description="모든 사용자는 0~99점의 신뢰도 점수를 가지며, 기본 시작 점수는 36.5점입니다. 점수에 따라 이용 가능한 기능이 달라집니다."
     >
