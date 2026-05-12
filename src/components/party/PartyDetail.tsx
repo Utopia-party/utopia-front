@@ -27,12 +27,10 @@ const CATEGORY_COLOR: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   recruiting: { label: '모집중',  className: 'bg-emerald-100 text-emerald-700' },
-  full:       { label: '모집마감', className: 'bg-slate-100 text-slate-500' },
+  full:       { label: '마감',    className: 'bg-slate-100 text-slate-500' },
   completed:  { label: '완료',    className: 'bg-slate-100 text-slate-500' },
-  canceled:   { label: '취소',    className: 'bg-red-100 text-red-500' },
   active:     { label: '운영중',  className: 'bg-blue-100 text-blue-700' },
   ended:      { label: '종료',    className: 'bg-red-100 text-red-500' },
-  closed:     { label: '종료',    className: 'bg-red-100 text-red-500' },
 };
 
 // ISO date(2026-03-01) → 2026.03.01 포맷
