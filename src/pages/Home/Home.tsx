@@ -370,7 +370,7 @@ export default function Home() {
                   <div className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl sm:rounded-2xl bg-slate-100 px-3 py-3 sm:py-2 text-sm font-semibold text-slate-700">
                     <span className="text-slate-400">총</span>
                     <span className="text-base font-black text-slate-900">
-                      {visibleParties.length}
+                      {partyData?.total ?? visibleParties.length}
                     </span>
                     <span className="text-slate-400">개</span>
                   </div>
