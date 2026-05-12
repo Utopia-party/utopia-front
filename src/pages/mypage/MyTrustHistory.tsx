@@ -71,6 +71,16 @@ function TrustScoreLineChart({
     })
     .join(' ');
 
+  const lastIndex = data.length - 1;
+  const xLabelStep = Math.max(1, Math.ceil(data.length / 8));
+  const valueLabelStep = Math.max(1, Math.ceil(data.length / 10));
+
+  const shouldShowXAxisLabel = (index: number) =>
+    index === 0 || index === lastIndex || index % xLabelStep === 0;
+
+  const shouldShowValueLabel = (index: number) =>
+    index === 0 || index === lastIndex || index % valueLabelStep === 0;
+
   const circles = data.map((item, index) => {
     const x =
       padding + (index * (width - padding * 2)) / Math.max(data.length - 1, 1);
@@ -81,16 +91,18 @@ function TrustScoreLineChart({
       <g key={`${item.label}-${index}`}>
         <circle cx={x} cy={y} r="5" fill="#2563eb" />
         <circle cx={x} cy={y} r="10" fill="#2563eb" fillOpacity="0.12" />
-        <text
-          x={x}
-          y={y - 14}
-          textAnchor="middle"
-          fontSize="11"
-          fill="#334155"
-          fontWeight="700"
-        >
-          {item.value}
-        </text>
+        {shouldShowValueLabel(index) && (
+          <text
+            x={x}
+            y={y - 14}
+            textAnchor="middle"
+            fontSize="11"
+            fill="#334155"
+            fontWeight="700"
+          >
+            {item.value}
+          </text>
+        )}
       </g>
     );
   });
@@ -98,6 +110,10 @@ function TrustScoreLineChart({
   const xLabels = data.map((item, index) => {
     const x =
       padding + (index * (width - padding * 2)) / Math.max(data.length - 1, 1);
+
+    if (!shouldShowXAxisLabel(index)) {
+      return null;
+    }
 
     return (
       <text
