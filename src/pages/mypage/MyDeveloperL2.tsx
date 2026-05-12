@@ -376,14 +376,20 @@ export default function MyDeveloperL2() {
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
                       <span>이번 달 사용량</span>
-                      <span>{key.current_month_usage.toLocaleString()} / {key.monthly_limit.toLocaleString()}</span>
+                      <span style={{ color: key.current_month_usage > key.monthly_limit * 0.9 ? '#d32f2f' : key.current_month_usage > key.monthly_limit * 0.7 ? '#f59e0b' : '#6b7280' }}>
+                        {Math.min(Math.round((key.current_month_usage / key.monthly_limit) * 100), 100)}%
+                      </span>
                     </div>
                     <div style={{ width: '100%', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{
                         height: '100%',
                         width: `${Math.min((key.current_month_usage / key.monthly_limit) * 100, 100)}%`,
-                        backgroundColor: key.current_month_usage > key.monthly_limit * 0.9 ? '#d32f2f' : '#4caf50',
+                        backgroundColor: key.current_month_usage > key.monthly_limit * 0.9 ? '#d32f2f' : key.current_month_usage > key.monthly_limit * 0.7 ? '#f59e0b' : '#4caf50',
+                        transition: 'width 0.3s ease',
                       }} />
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px', textAlign: 'right' }}>
+                      {key.current_month_usage.toLocaleString()} / {key.monthly_limit.toLocaleString()}건
                     </div>
                   </div>
 
