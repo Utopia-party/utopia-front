@@ -40,6 +40,270 @@ function planColor(plan: string) {
   return map[plan] ?? 'bg-gray-100 text-gray-700';
 }
 
+type SaasManualItem = { title: string; badge?: string; badgeColor?: string; content: React.ReactNode };
+
+function SaasManualAccordion({ items }: { items: SaasManualItem[] }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  return (
+    <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      {items.map((item, idx) => {
+        const isOpen = openIdx === idx;
+        return (
+          <div key={idx}>
+            <button
+              type="button"
+              onClick={() => setOpenIdx(isOpen ? null : idx)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-sm font-semibold text-slate-800 truncate">{item.title}</span>
+                {item.badge && (
+                  <span className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${item.badgeColor ?? 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"
+                className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {isOpen && (
+              <div className="px-5 pb-5 text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/40">
+                <div className="pt-4">{item.content}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const SAAS_MANUAL_ITEMS: SaasManualItem[] = [
+  {
+    title: '서비스 탭 구분 — L2 캡챠 vs 채팅 AI',
+    badge: '공통',
+    badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+    content: (
+      <div className="space-y-3">
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="rounded-xl border-2 border-violet-200 bg-violet-50 p-3.5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-bold text-violet-700 bg-violet-100 border border-violet-200 rounded-full px-2 py-0.5">캡챠 SaaS (L2)</span>
+            </div>
+            <p className="text-xs text-slate-600">외부 서비스에 <strong>고급 CAPTCHA 검증 API</strong>를 제공합니다. 봇 차단 및 자동화 방어에 사용됩니다.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">주 사용처: 회원가입, 로그인, 이벤트 참여 등</p>
+          </div>
+          <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3.5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-full px-2 py-0.5">채팅 AI SaaS</span>
+            </div>
+            <p className="text-xs text-slate-600">외부 서비스에 <strong>AI 채팅 필터링 API</strong>를 제공합니다. 욕설·혐오 표현 자동 탐지에 사용됩니다.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">주 사용처: 게임 채팅, 커뮤니티, 라이브 스트리밍 등</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 두 서비스는 API 키 풀이 완전히 분리됩니다. 탭을 전환하면 해당 서비스의 키 목록과 통계만 표시됩니다.</p>
+      </div>
+    ),
+  },
+  {
+    title: 'API 키 발급 절차',
+    badge: 'API 키',
+    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+    content: (
+      <div className="space-y-3">
+        <ol className="text-xs text-slate-600 space-y-2.5 list-none">
+          {[
+            { n: '1', text: '발급할 서비스 탭(L2 캡챠 또는 채팅 AI)을 선택합니다.' },
+            { n: '2', text: '우측 상단 새 키 발급 버튼을 클릭합니다.' },
+            { n: '3', text: '서비스명(파트너사 이름), 허용 도메인, 플랜, 월간 한도를 입력합니다.' },
+            { n: '4', text: '발급 버튼을 누르면 Site Key와 Secret Key가 생성됩니다.' },
+            { n: '5', text: 'Secret Key는 이 화면을 닫으면 다시 볼 수 없으므로 즉시 파트너사에 전달하세요.' },
+          ].map((item) => (
+            <li key={item.n} className="flex items-start gap-2.5">
+              <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px]">{item.n}</span>
+              <span>{item.text}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="grid sm:grid-cols-2 gap-3 mt-1">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="text-[10px] font-bold text-slate-500 mb-1">Site Key (공개)</p>
+            <p className="text-xs text-slate-600">파트너사 프론트엔드에서 사용. 외부 노출 가능.</p>
+          </div>
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+            <p className="text-[10px] font-bold text-red-500 mb-1">Secret Key (비공개)</p>
+            <p className="text-xs text-slate-600">파트너사 <strong>서버에서만</strong> 사용. 절대 프론트엔드 노출 금지.</p>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: '플랜별 한도 및 관리',
+    badge: '플랜',
+    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+    content: (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">플랜</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">기본 월간 한도</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">대상</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {[
+                { plan: 'Free', color: 'bg-gray-100 text-gray-700', limit: '10,000회', target: '테스트 및 소규모 개발' },
+                { plan: 'Starter', color: 'bg-blue-100 text-blue-700', limit: '50,000회', target: '소규모 서비스' },
+                { plan: 'Pro', color: 'bg-purple-100 text-purple-700', limit: '300,000회', target: '중규모 서비스' },
+                { plan: 'Enterprise', color: 'bg-amber-100 text-amber-700', limit: '별도 협의', target: '대규모 서비스' },
+              ].map((r) => (
+                <tr key={r.plan}>
+                  <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${r.color}`}>{r.plan}</span></td>
+                  <td className="px-3 py-2.5 text-slate-600 font-mono">{r.limit}</td>
+                  <td className="px-3 py-2.5 text-slate-500">{r.target}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+          <li>한도는 수정 모달에서 직접 조정 가능합니다. 플랜 변경 시 기본 한도로 자동 제안됩니다.</li>
+          <li>한도 초과 시 API가 <code className="bg-slate-100 px-1 rounded text-[10px]">429 Too Many Requests</code>를 반환합니다.</li>
+          <li>사용량 막대가 <span className="font-semibold text-amber-600">노란색(70%)</span> 또는 <span className="font-semibold text-red-600">빨간색(90%)</span>이면 파트너사에 업그레이드를 안내하세요.</li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    title: 'API 키 관리 — 수정·재발급·초기화',
+    badge: '키 관리',
+    badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+    content: (
+      <div className="space-y-3">
+        <div className="space-y-2">
+          {[
+            { icon: '🔑', label: '키 수정 (연필 아이콘)', desc: '서비스명, 허용 도메인, 플랜, 월간 한도, 활성 상태를 변경합니다. 변경 즉시 적용됩니다.' },
+            { icon: '↩️', label: 'Secret Key 재발급 (순환 아이콘)', desc: '키 유출 사고 발생 시 사용. 기존 Secret Key는 즉시 무효화되므로 파트너사에 새 키를 반드시 전달해야 합니다.' },
+            { icon: '🔄', label: '사용량 초기화 (새로고침 아이콘)', desc: '이번 달 사용량 카운터를 0으로 리셋합니다. 테스트 또는 예외 처리 시 사용하세요.' },
+            { icon: '🔍', label: '사용 로그 (돋보기 아이콘)', desc: '해당 키의 API 호출 기록을 확인합니다. 엔드포인트, 호출 도메인, IP, 상태 코드, 응답 시간을 볼 수 있습니다.' },
+            { icon: '🟢', label: '활성/비활성 토글 (상태 뱃지)', desc: '클릭 시 즉시 활성/비활성이 전환됩니다. 비활성 키는 모든 API 요청이 401로 거부됩니다.' },
+          ].map((item, i) => (
+            <div key={i} className="flex items-start gap-3 bg-white rounded-lg border border-slate-100 px-3 py-2.5">
+              <span className="shrink-0 text-base">{item.icon}</span>
+              <div>
+                <p className="text-xs font-semibold text-slate-800 mb-0.5">{item.label}</p>
+                <p className="text-xs text-slate-500">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400 bg-red-50 rounded-lg px-3 py-2 border border-red-100">⚠️ Secret Key 재발급은 되돌릴 수 없습니다. 파트너사가 새 키로 교체하기 전까지 서비스가 중단될 수 있으니 사전에 반드시 공지하세요.</p>
+      </div>
+    ),
+  },
+  {
+    title: '허용 도메인 설정',
+    badge: '보안',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    content: (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">허용 도메인을 설정하면 해당 도메인에서만 API 요청을 수락합니다. CORS 및 Origin 헤더 기반으로 검증됩니다.</p>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-mono text-slate-700 space-y-1">
+          <p className="text-slate-400 text-[10px] mb-1.5 font-sans font-semibold">입력 예시</p>
+          <p>techcorp.com</p>
+          <p>*.techcorp.com</p>
+          <p>api.partner.co.kr, dev.partner.co.kr</p>
+        </div>
+        <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+          <li>와일드카드 <code className="bg-slate-100 px-1 rounded text-[10px]">*.domain.com</code>으로 서브도메인 전체를 허용할 수 있습니다.</li>
+          <li>콤마(,)로 여러 도메인을 한 번에 입력합니다.</li>
+          <li>비워두면 모든 도메인에서 요청을 수락합니다 (테스트용 외 비권장).</li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    title: '플랜 업그레이드 문의 처리',
+    badge: '문의 탭',
+    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+    content: (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">파트너사가 현재 플랜보다 높은 플랜으로 업그레이드를 요청한 문의 목록입니다.</p>
+        <ol className="text-xs text-slate-600 space-y-2 list-none">
+          {[
+            { n: '1', text: '플랜 업그레이드 문의 탭을 클릭하면 대기 중인 문의 목록이 표시됩니다.' },
+            { n: '2', text: '파트너사명, 희망 플랜, 문의 메시지를 확인합니다.' },
+            { n: '3', text: '영업 또는 계약 확인 후 API 키 수정에서 플랜과 한도를 변경합니다.' },
+            { n: '4', text: '처리 완료 버튼을 눌러 문의 상태를 완료로 변경합니다.' },
+          ].map((item) => (
+            <li key={item.n} className="flex items-start gap-2.5">
+              <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold text-[10px]">{item.n}</span>
+              <span>{item.text}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 탭 이름 옆 빨간 숫자 뱃지가 대기 중인 문의 건수를 나타냅니다. 정기적으로 확인해 빠르게 처리하세요.</p>
+      </div>
+    ),
+  },
+];
+
+function SaasManual({ tab }: { tab: 'captcha_l2' | 'chat_filter' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const isChat = tab === 'chat_filter';
+  const borderColor = isChat ? 'border-emerald-200' : 'border-violet-200';
+  const bgGradient = isChat ? 'from-emerald-50 to-slate-50' : 'from-violet-50 to-slate-50';
+  const iconBg = isChat ? 'bg-emerald-100 border-emerald-200' : 'bg-violet-100 border-violet-200';
+  const iconStroke = isChat ? '#059669' : '#7c3aed';
+  const titleColor = isChat ? 'text-emerald-800' : 'text-violet-800';
+  const subColor = isChat ? 'text-emerald-500' : 'text-violet-500';
+  const badgeBg = isChat ? 'bg-emerald-100 border-emerald-200 text-emerald-500' : 'bg-violet-100 border-violet-200 text-violet-500';
+  const chevronColor = isChat ? '#059669' : '#7c3aed';
+  const serviceLabel = isChat ? '채팅 AI SaaS (Chat Filter)' : 'SaaS API (L2/Captcha)';
+
+  return (
+    <div className={`rounded-2xl border ${borderColor} bg-gradient-to-r ${bgGradient} shadow-sm`}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className={`flex items-center justify-center w-7 h-7 rounded-lg ${iconBg} shrink-0`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="2">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </span>
+          <div>
+            <p className={`text-sm font-bold ${titleColor}`}>{serviceLabel} 운영 메뉴얼</p>
+            <p className={`text-xs ${subColor} mt-0.5`}>키 발급 · 플랜 관리 · 도메인 설정 · 문의 처리 가이드</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`hidden sm:inline text-xs font-semibold rounded-full px-2.5 py-0.5 border ${badgeBg}`}>
+            {SAAS_MANUAL_ITEMS.length}개 항목
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={chevronColor} strokeWidth="2.5"
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+      {isOpen && (
+        <div className={`px-5 pb-5 border-t ${borderColor.replace('border-', 'border-t-')}`}>
+          <p className="text-xs text-slate-500 py-3">항목을 클릭해 내용을 펼쳐보세요.</p>
+          <SaasManualAccordion items={SAAS_MANUAL_ITEMS} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminSaasV2() {
   const [tab, setTab] = useState<Tab>('captcha_l2');
   const [pageTab, setPageTab] = useState<PageTab>('keys');
@@ -207,6 +471,9 @@ export default function AdminSaasV2() {
             );
           })}
         </div>
+
+        {/* 운영 메뉴얼 */}
+        <SaasManual tab={tab} />
 
         {/* 키관리 / 플랜문의 탭 */}
         <div className="flex gap-2 border-b">
