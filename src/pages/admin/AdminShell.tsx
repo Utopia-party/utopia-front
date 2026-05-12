@@ -8,6 +8,7 @@ import {
 } from '../../apis/admin';
 import { fetchAdminAppeals } from '../../apis/admin/adminAppeals';
 import { fetchAdminReportUnhandledCount } from '../../apis/admin-report';
+import { fetchSaasV2PlanInquiries } from '../../apis/admin/adminSaasV2';
 
 /**
  * 관리자 전용 레이아웃
@@ -23,6 +24,7 @@ export default function AdminShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [appealPendingCount, setAppealPendingCount] = useState(0);
   const [reportUnhandledCount, setReportUnhandledCount] = useState(0);
+  const [saasPendingCount, setSaasPendingCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -104,6 +106,18 @@ export default function AdminShell() {
       alive = false;
     };
   }, [location.pathname, permissions?.canManageReports]);
+
+  useEffect(() => {
+    if (!permissions?.canManageCaptcha) {
+      setSaasPendingCount(0);
+      return;
+    }
+    let alive = true;
+    fetchSaasV2PlanInquiries({ status: 'pending', size: 100 })
+      .then((res) => { if (alive) setSaasPendingCount(res.items.length); })
+      .catch(() => { if (alive) setSaasPendingCount(0); });
+    return () => { alive = false; };
+  }, [location.pathname, permissions?.canManageCaptcha]);
 
   const allowedByPath = useMemo(() => {
     const path = location.pathname;
@@ -203,6 +217,7 @@ export default function AdminShell() {
         onToggleCollapsed={() => setSidebarCollapsed((prev) => !prev)}
         appealPendingCount={appealPendingCount}
         reportUnhandledCount={reportUnhandledCount}
+        saasPendingCount={saasPendingCount}
       />
 
       <div
