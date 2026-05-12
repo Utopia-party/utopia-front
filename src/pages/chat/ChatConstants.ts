@@ -31,10 +31,10 @@ export const MEMBER_STATUS_LABEL: Record<string, string> = {
 
 export const PARTY_STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
-  full: '모집완료',
-  active: '진행중',
+  full: '마감',
+  active: '운영중',
   completed: '완료',
-  canceled: '취소',
+  ended: '종료',
 };
 
 export const CATEGORY_COLOR: Record<string, string> = {

@@ -10,10 +10,8 @@ export const STATUS_LABEL: Record<string, string> = {
   recruiting: '모집중',
   full: '마감',
   completed: '완료',
-  canceled: '취소',
   active: '운영중',
   ended: '종료',
-  closed: '종료',
 };
 
 export const CATEGORY_COLOR: Record<string, string> = {
