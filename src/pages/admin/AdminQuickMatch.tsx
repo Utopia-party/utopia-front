@@ -253,6 +253,57 @@ function CandidateList({
   );
 }
 
+function SelectedCandidateSummary({
+  candidate,
+}: {
+  candidate?: QuickMatchCandidateRow | null;
+}) {
+  if (!candidate) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-400">
+        선택 후보가 없습니다.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700/70">
+            Selected Candidate
+          </div>
+          <div className="mt-1 break-words text-base font-black text-slate-900">
+            #{candidate.rank ?? '-'} {candidate.partyName ?? '파티명 없음'}
+          </div>
+          <div className="mt-1 break-all text-xs text-slate-500">
+            {candidate.partyId}
+          </div>
+        </div>
+        <StatusBadge status={candidate.status} type="candidate" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <SummaryCell label="Rule" value={formatScore(candidate.ruleScore)} />
+        <SummaryCell
+          label="Probability"
+          value={formatScore(candidate.probabilityScore)}
+        />
+        <SummaryCell label="Final" value={formatScore(candidate.finalScore)} />
+      </div>
+
+      <details className="rounded-xl border border-emerald-100 bg-white p-3">
+        <summary className="cursor-pointer list-none text-xs font-bold text-slate-700">
+          점수/필터 근거 보기
+        </summary>
+        <div className="mt-3">
+          <JsonBox value={candidate.filterReasons} />
+        </div>
+      </details>
+    </div>
+  );
+}
+
 function RequestDetail({
   request,
   detailLoading,
@@ -311,13 +362,7 @@ function RequestDetail({
             선택 후보 / 결과
           </h3>
           <div className="mt-3">
-            {request.selectedCandidate ? (
-              <CandidateList candidates={[request.selectedCandidate]} />
-            ) : (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-400">
-                선택 후보가 없습니다.
-              </div>
-            )}
+            <SelectedCandidateSummary candidate={request.selectedCandidate} />
           </div>
         </section>
 
@@ -385,8 +430,6 @@ export default function AdminQuickMatch() {
     resetParams,
     updateEventParams,
     selectRequest,
-    retryRequest,
-    forceFailRequest,
     rebuildStats,
     runLabeling,
   } = useAdminQuickMatch();
@@ -550,8 +593,9 @@ export default function AdminQuickMatch() {
                         확인합니다.
                       </p>
                       <p>
-                        3. 실패 요청은 재시도하거나, 운영상 더 진행하지 않을
-                        요청은 강제 실패 처리합니다.
+                        3. 실패 요청은 실패 사유와 후보 제외 근거를 확인하고,
+                        재처리가 필요하면 사용자에게 새 빠른매칭 요청을 다시
+                        안내합니다.
                       </p>
                       <p>
                         4. 라벨 기준이나 집계 로직을 수정한 뒤에는 학습 통계
@@ -722,25 +766,21 @@ export default function AdminQuickMatch() {
                             <div className="flex justify-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => selectRequest(row.requestId)}
-                                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100 active:scale-95"
+                                onClick={() =>
+                                  selectedRequestId === row.requestId
+                                    ? selectRequest('')
+                                    : selectRequest(row.requestId)
+                                }
+                                className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition active:scale-95 ${
+                                  selectedRequestId === row.requestId
+                                    ? 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                }`}
                               >
-                                상세
+                                {selectedRequestId === row.requestId
+                                  ? '닫기'
+                                  : '상세'}
                               </button>
-                              {row.status === 'failed' && (
-                                <button
-                                  type="button"
-                                  disabled={actionLoading !== null}
-                                  onClick={() =>
-                                    handleAction(`retry-${row.requestId}`, () =>
-                                      retryRequest(row.requestId),
-                                    )
-                                  }
-                                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-100 disabled:opacity-50 active:scale-95"
-                                >
-                                  재시도
-                                </button>
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -766,89 +806,6 @@ export default function AdminQuickMatch() {
                   onChange={(nextPage) => updateParams({ page: nextPage })}
                 />
               </section>
-
-              {selectedRequest && (
-                <section className="space-y-4">
-                  <RequestDetail
-                    request={selectedRequest}
-                    detailLoading={detailLoading}
-                  />
-
-                  <div className="grid gap-4 xl:grid-cols-2">
-                    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <h3 className="text-sm font-black text-slate-900">
-                        결과 스냅샷
-                      </h3>
-                      <div className="mt-3">
-                        <JsonBox value={detail?.result ?? {}} />
-                      </div>
-                    </section>
-                    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-black text-slate-900">
-                          운영 액션
-                        </h3>
-                        <button
-                          type="button"
-                          disabled={actionLoading !== null}
-                          onClick={() =>
-                            handleAction(
-                              `force-fail-${selectedRequest.requestId}`,
-                              () =>
-                                forceFailRequest(
-                                  selectedRequest.requestId,
-                                  'ADMIN_FORCE_FAILED',
-                                ),
-                            )
-                          }
-                          className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50 active:scale-95"
-                        >
-                          강제 실패
-                        </button>
-                      </div>
-                      <p className="mt-3 text-sm leading-relaxed text-slate-500">
-                        재시도는 실패 요청에서만 목록 버튼으로 노출됩니다. 강제
-                        실패는 운영자가 더 이상 매칭 진행이 어렵다고 판단한
-                        요청에 사용하세요.
-                      </p>
-                    </section>
-                  </div>
-
-                  <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <h3 className="text-sm font-black text-slate-900">
-                      연결된 학습 이벤트
-                    </h3>
-                    <div className="mt-3 grid gap-2">
-                      {(detail?.trainingEvents ?? []).map((event) => (
-                        <div
-                          key={event.eventId}
-                          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="break-all text-xs font-bold text-slate-700">
-                              {event.eventId}
-                            </div>
-                            <StatusBadge
-                              status={event.labelStatus}
-                              type="label"
-                            />
-                          </div>
-                          <div className="mt-2 text-xs text-slate-500">
-                            selected {String(event.isSelected)} · joined{' '}
-                            {String(event.isJoined)} · reason{' '}
-                            {formatOptional(event.labelReason)}
-                          </div>
-                        </div>
-                      ))}
-                      {(detail?.trainingEvents ?? []).length === 0 && (
-                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-400">
-                          연결된 학습 이벤트가 없습니다.
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                </section>
-              )}
             </div>
           )}
 
@@ -1161,6 +1118,87 @@ export default function AdminQuickMatch() {
           )}
         </div>
       </div>
+
+      {activeMainTab === '요청 관리' && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/35 backdrop-blur-[2px]">
+          <button
+            type="button"
+            aria-label="상세 닫기"
+            className="hidden flex-1 cursor-default lg:block"
+            onClick={() => selectRequest('')}
+          />
+
+          <aside className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl lg:w-[min(92vw,980px)]">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4">
+              <div className="min-w-0">
+                <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                  Quick Match Detail
+                </div>
+                <h2 className="mt-1 truncate text-lg font-black text-slate-900">
+                  {selectedRequest.userNickname} · {selectedRequest.serviceName}
+                </h2>
+                <p className="mt-1 break-all text-xs text-slate-500">
+                  {selectedRequest.requestId}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => selectRequest('')}
+                className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 active:scale-95"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4 md:p-5">
+              <RequestDetail
+                request={selectedRequest}
+                detailLoading={detailLoading}
+              />
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900">
+                  결과 스냅샷
+                </h3>
+                <div className="mt-3">
+                  <JsonBox value={detail?.result ?? {}} />
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900">
+                  연결된 학습 이벤트
+                </h3>
+                <div className="mt-3 grid gap-2">
+                  {(detail?.trainingEvents ?? []).map((event) => (
+                    <div
+                      key={event.eventId}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="break-all text-xs font-bold text-slate-700">
+                          {event.eventId}
+                        </div>
+                        <StatusBadge status={event.labelStatus} type="label" />
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500">
+                        selected {String(event.isSelected)} · joined{' '}
+                        {String(event.isJoined)} · reason{' '}
+                        {formatOptional(event.labelReason)}
+                      </div>
+                    </div>
+                  ))}
+                  {(detail?.trainingEvents ?? []).length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-400">
+                      연결된 학습 이벤트가 없습니다.
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
