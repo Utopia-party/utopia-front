@@ -35,6 +35,7 @@ export default function BeforeStartSection() {
       number="00"
       title="시작 전 확인"
       description="Party-Up을 처음 이용하기 전에 아래 항목을 먼저 알아두면 이후 단계가 훨씬 쉽습니다."
+      defaultOpen={true}
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {checklist.map((item) => {
