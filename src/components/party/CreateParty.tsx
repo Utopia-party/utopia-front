@@ -150,7 +150,7 @@ export default function CreateParty({ onCreate }: CreatePartyProps) {
 
       captchaTokenStorage.clear();
       toast.success('파티가 생성되었습니다!');
-      navigate('/home');
+      navigate('/mypage/party');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : '파티 생성에 실패했습니다.');
     } finally {
