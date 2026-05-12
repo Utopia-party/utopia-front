@@ -27,10 +27,10 @@ interface ModalState {
 }
 
 const PLANS = [
-  { name: 'Free',       price: '무료',          limit: '월 1,000건',       color: '#6b7280' },
-  { name: 'Starter',    price: '₩10,000/월',    limit: '월 5,000건',       color: '#2563eb' },
-  { name: 'Pro',        price: '₩30,000/월',    limit: '월 30,000건',      color: '#7c3aed' },
-  { name: 'Enterprise', price: '₩300,000/월',   limit: '월 1,000,000건',   color: '#dc2626' },
+  { name: 'Free',       price: '무료',          limit: '월 500건',         rateLimit: '3 req/s',   color: '#6b7280' },
+  { name: 'Starter',    price: '₩10,000/월',    limit: '월 3,000건',       rateLimit: '5 req/s',   color: '#2563eb' },
+  { name: 'Pro',        price: '₩30,000/월',    limit: '월 15,000건',      rateLimit: '10 req/s',  color: '#7c3aed' },
+  { name: 'Enterprise', price: '₩200,000/월',   limit: '월 100,000건',     rateLimit: '30 req/s',  color: '#dc2626' },
 ];
 
 export default function MyDeveloperL2() {
@@ -259,7 +259,7 @@ export default function MyDeveloperL2() {
                   <div style={{ fontSize: '13px', fontWeight: '700', color: p.color, marginBottom: '3px' }}>{p.name}</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '3px' }}>{p.price}</div>
                   <div style={{ fontSize: '12px', color: '#6b7280' }}>{p.limit}</div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Rate Limit: 10 req/s</div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>Rate Limit: {p.rateLimit}</div>
                 </div>
               ))}
             </div>
@@ -538,9 +538,9 @@ export default function MyDeveloperL2() {
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>희망 플랜</label>
                 <select value={inquiryPlan} onChange={(e) => setInquiryPlan(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}>
-                  <option value="starter">Starter (₩10,000/월 · 월 5,000건)</option>
-                  <option value="pro">Pro (₩30,000/월 · 월 30,000건)</option>
-                  <option value="enterprise">Enterprise (₩300,000/월 · 월 1,000,000건)</option>
+                  <option value="starter">Starter (₩10,000/월 · 월 3,000건)</option>
+                  <option value="pro">Pro (₩30,000/월 · 월 15,000건)</option>
+                  <option value="enterprise">Enterprise (₩200,000/월 · 월 100,000건)</option>
                 </select>
               </div>
               <div style={{ marginBottom: '20px' }}>

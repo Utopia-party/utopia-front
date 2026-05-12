@@ -128,3 +128,36 @@ export async function fetchSaasV2Stats(
   });
   return data;
 }
+
+export type PlanInquiryItem = {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  service_type: ServiceType;
+  desired_plan: string;
+  message: string | null;
+  status: string;
+  created_at: string | null;
+};
+
+export type PlanInquiryListResponse = {
+  total: number;
+  items: PlanInquiryItem[];
+};
+
+export async function fetchSaasV2PlanInquiries(params?: {
+  service_type?: ServiceType;
+  status?: string;
+  size?: number;
+}): Promise<PlanInquiryListResponse> {
+  const { data } = await api.get(`${BASE}/plan-inquiries`, { params });
+  return data;
+}
+
+export async function updateSaasV2PlanInquiryStatus(
+  inquiryId: string,
+  status: string,
+): Promise<PlanInquiryItem> {
+  const { data } = await api.put(`${BASE}/plan-inquiries/${inquiryId}`, { status });
+  return data;
+}

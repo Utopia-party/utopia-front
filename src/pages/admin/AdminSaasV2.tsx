@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Copy, Eye, EyeOff, Key, MessageSquare,
-  Plus, RefreshCw, RotateCcw, Search, X,
+  Plus, RefreshCw, Search, X,
 } from 'lucide-react';
 import {
   fetchSaasV2Keys,
@@ -11,13 +11,17 @@ import {
   resetSaasV2Usage,
   fetchSaasV2Logs,
   fetchSaasV2Stats,
+  fetchSaasV2PlanInquiries,
+  updateSaasV2PlanInquiryStatus,
   type SaasKeyItem,
   type UsageLogItem,
   type SaasStats,
   type ServiceType,
+  type PlanInquiryItem,
 } from '../../apis/admin/adminSaasV2';
 
 type Tab = 'captcha_l2' | 'chat_filter';
+type PageTab = 'keys' | 'inquiries';
 type ModalState = { type: 'create' | 'edit' | 'rotate' | 'logs' | null; keyId?: string };
 
 function maskKey(key: string) {
@@ -38,8 +42,11 @@ function planColor(plan: string) {
 
 export default function AdminSaasV2() {
   const [tab, setTab] = useState<Tab>('captcha_l2');
+  const [pageTab, setPageTab] = useState<PageTab>('keys');
   const [keys, setKeys] = useState<SaasKeyItem[]>([]);
   const [stats, setStats] = useState<SaasStats | null>(null);
+  const [inquiries, setInquiries] = useState<PlanInquiryItem[]>([]);
+  const [inquiryLoading, setInquiryLoading] = useState(false);
   const [logs, setLogs] = useState<UsageLogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -76,6 +83,26 @@ export default function AdminSaasV2() {
   }, [tab, search, filterActive]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  const loadInquiries = useCallback(async () => {
+    setInquiryLoading(true);
+    try {
+      const res = await fetchSaasV2PlanInquiries({ service_type: tab, size: 50 });
+      setInquiries(res.items);
+    } catch { /* ignore */ } finally {
+      setInquiryLoading(false);
+    }
+  }, [tab]);
+
+  useEffect(() => { loadInquiries(); }, [loadInquiries]);
+
+  const handleCompleteInquiry = useCallback(async (id: string) => {
+    if (!window.confirm('이 문의를 처리 완료로 변경하시겠습니까?')) return;
+    try {
+      await updateSaasV2PlanInquiryStatus(id, 'completed');
+      void loadInquiries();
+    } catch { alert('상태 변경에 실패했습니다.'); }
+  }, [loadInquiries]);
 
   const handleCreate = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,7 +187,7 @@ export default function AdminSaasV2() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="mx-auto max-w-6xl space-y-6">
 
-        {/* 탭 */}
+        {/* 서비스 탭 */}
         <div className="flex gap-2">
           {(Object.entries(tabConfig) as [Tab, typeof tabConfig[Tab]][]).map(([key, cfg]) => {
             const Icon = cfg.icon;
@@ -181,12 +208,40 @@ export default function AdminSaasV2() {
           })}
         </div>
 
+        {/* 키관리 / 플랜문의 탭 */}
+        <div className="flex gap-2 border-b">
+          <button
+            onClick={() => setPageTab('keys')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              pageTab === 'keys' ? 'border-violet-600 text-violet-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            API 키 관리
+          </button>
+          <button
+            onClick={() => setPageTab('inquiries')}
+            className={`relative px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              pageTab === 'inquiries' ? 'border-violet-600 text-violet-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            플랜 업그레이드 문의
+            {inquiries.filter((i) => i.status === 'pending').length > 0 && (
+              <span className="ml-1.5 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
+                {inquiries.filter((i) => i.status === 'pending').length}
+              </span>
+            )}
+          </button>
+        </div>
+
         {error && (
           <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <span>{error}</span>
             <button onClick={() => setError(null)}><X className="h-4 w-4" /></button>
           </div>
         )}
+
+        {/* 키 관리 섹션 */}
+        {pageTab === 'keys' && (<>
 
         {/* 통계 카드 */}
         {stats && (
@@ -299,12 +354,8 @@ export default function AdminSaasV2() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(key)} className="rounded px-2 py-1 text-xs border hover:bg-gray-50">수정</button>
-                        <button onClick={() => handleRotate(key.id)} className="rounded px-2 py-1 text-xs border hover:bg-gray-50" title="Secret 재발급">
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => handleResetUsage(key.id)} className="rounded px-2 py-1 text-xs border hover:bg-gray-50" title="사용량 초기화">
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </button>
+                        <button onClick={() => handleRotate(key.id)} className="rounded px-2 py-1 text-xs border hover:bg-gray-50">재발급</button>
+                        <button onClick={() => handleResetUsage(key.id)} className="rounded px-2 py-1 text-xs border hover:bg-gray-50">초기화</button>
                         <button onClick={() => openLogs(key.id)} className="rounded px-2 py-1 text-xs border hover:bg-gray-50">로그</button>
                       </div>
                     </td>
@@ -315,6 +366,89 @@ export default function AdminSaasV2() {
           </div>
           <div className="border-t px-4 py-2 text-xs text-gray-400">총 {total}개</div>
         </div>
+
+        </>)} {/* end pageTab === 'keys' */}
+
+        {/* 플랜 문의 섹션 */}
+        {pageTab === 'inquiries' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">
+                플랜 업그레이드 문의
+                {inquiries.filter((i) => i.status === 'pending').length > 0 && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                    {inquiries.filter((i) => i.status === 'pending').length}건 대기
+                  </span>
+                )}
+              </h2>
+              <button
+                onClick={() => void loadInquiries()}
+                className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200"
+              >
+                <RefreshCw size={12} />
+                새로고침
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+              {inquiryLoading ? (
+                <div className="p-12 text-center text-sm text-gray-400">로딩 중...</div>
+              ) : inquiries.length === 0 ? (
+                <div className="p-12 text-center text-sm text-gray-400">접수된 문의가 없습니다.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b bg-gray-50 text-xs text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3">사용자</th>
+                        <th className="px-4 py-3">희망 플랜</th>
+                        <th className="px-4 py-3">메시지</th>
+                        <th className="px-4 py-3">상태</th>
+                        <th className="px-4 py-3">일시</th>
+                        <th className="px-4 py-3">액션</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inquiries.map((inq) => (
+                        <tr key={inq.id} className="border-b last:border-0 hover:bg-gray-50">
+                          <td className="px-4 py-4 font-medium text-gray-700">
+                            {inq.user_email || inq.user_id.slice(0, 8)}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${planColor(inq.desired_plan)}`}>
+                              {inq.desired_plan}
+                            </span>
+                          </td>
+                          <td className="max-w-[300px] truncate px-4 py-4 text-gray-500">
+                            {inq.message || '-'}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              inq.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                            }`}>
+                              {inq.status === 'pending' ? '대기' : '완료'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-gray-500">{inq.created_at?.slice(0, 10) || '-'}</td>
+                          <td className="px-4 py-4">
+                            {inq.status === 'pending' && (
+                              <button
+                                onClick={() => handleCompleteInquiry(inq.id)}
+                                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                              >
+                                처리 완료
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 발급 모달 */}
