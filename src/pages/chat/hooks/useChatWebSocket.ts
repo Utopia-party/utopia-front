@@ -150,6 +150,18 @@ export function useChatWebSocket({
           }
 
           const typedMsg = msg as Message;
+
+          // system 계열 메시지는 unread 카운트 처리 없이 그냥 추가
+          if (
+            typedMsg.type === 'system' ||
+            typedMsg.type === 'system_info' ||
+            typedMsg.type === 'warning' ||
+            typedMsg.type === 'error'
+          ) {
+            setMessages((prev) => [...prev, typedMsg]);
+            return;
+          }
+
           if (typedMsg.chat_id && typeof typedMsg.unread_count === 'number') {
             const adjusted =
               typedMsg.user_id !== currentUserId

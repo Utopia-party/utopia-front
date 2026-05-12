@@ -186,12 +186,14 @@ export default function AdminSidebar({
   onToggleCollapsed,
   appealPendingCount = 0,
   reportUnhandledCount = 0,
+  saasPendingCount = 0,
 }: {
   permissions: AdminPermissions | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   appealPendingCount?: number;
   reportUnhandledCount?: number;
+  saasPendingCount?: number;
 }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
@@ -230,14 +232,9 @@ export default function AdminSidebar({
   };
 
   const getBadgeCount = (path: string) => {
-    if (path === '/admin/appeals') {
-      return appealPendingCount;
-    }
-
-    if (path === '/admin/reports') {
-      return reportUnhandledCount;
-    }
-
+    if (path === '/admin/appeals') return appealPendingCount;
+    if (path === '/admin/reports') return reportUnhandledCount;
+    if (path === '/admin/saas-v2') return saasPendingCount;
     return 0;
   };
 
