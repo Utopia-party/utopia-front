@@ -74,16 +74,16 @@ export default function TeamSection() {
 
   const handleCopyEmail = async (email: string) => {
     if (!email) {
-      toast.error('등록된 이메일이 없습니다.');
+      toast.error('등록된 이메일이 없습니다');
       return;
     }
 
     try {
       await navigator.clipboard.writeText(email);
-      toast.success('이메일이 복사되었습니다.');
+      toast.success('이메일이 복사되었습니다');
     } catch (error) {
       console.error(error);
-      toast.error('이메일 복사에 실패했습니다.');
+      toast.error('이메일 복사에 실패했습니다');
     }
   };
 

@@ -62,9 +62,9 @@ const datasets = [
 ];
 
 const pipeline = [
-  { step: '1단계', name: '블랙리스트 필터', desc: '키워드 직접 매칭. 화이트리스트 포함 시 즉시 통과.', color: 'bg-green-100 text-green-700', borderColor: 'border-green-200' },
+  { step: '1단계', name: '블랙리스트 필터', desc: '키워드 직접 매칭 화이트리스트 포함 시 즉시 통과', color: 'bg-green-100 text-green-700', borderColor: 'border-green-200' },
   { step: '2단계', name: 'KR-ELECTRA (ML)', desc: 'none 확률 ≥ 0.95 → 통과 / score ≥ 0.97 → 즉시 차단. 평균 추론 24.4ms.', color: 'bg-blue-100 text-blue-700', borderColor: 'border-blue-200' },
-  { step: '3단계', name: 'Ollama LLM', desc: '2단계 경계 케이스 재판단. 자기비하·감탄 표현 등 문맥 파악.', color: 'bg-purple-100 text-purple-700', borderColor: 'border-purple-200' },
+  { step: '3단계', name: 'Ollama LLM', desc: '2단계 경계 케이스 재판단 자기비하·감탄 표현 등 문맥 파악', color: 'bg-purple-100 text-purple-700', borderColor: 'border-purple-200' },
 ];
 
 const falseCases = [

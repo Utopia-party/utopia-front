@@ -12,10 +12,10 @@ const rows = [
 ];
 
 const problems = [
-  { title: '먹튀 사기', desc: '입금 후 잠적. SNS 기반 거래에서 연간 20만 건 이상 발생.' },
-  { title: '노쇼 (No-show)', desc: '파티 참여 후 미결제, 미참여로 피해 발생.' },
-  { title: '봇 대량 계정', desc: '자동화 스크립트로 파티 독점, 어뷰징.' },
-  { title: '분쟁 해결 불가', desc: '개인 간 거래라 증거 없이 해결 방법이 없음.' },
+  { title: '먹튀 사기', desc: '입금 후 잠적 SNS 기반 거래에서 연간 20만 건 이상 발생' },
+  { title: '노쇼 (No-show)', desc: '파티 참여 후 미결제, 미참여로 피해 발생' },
+  { title: '봇 대량 계정', desc: '자동화 스크립트로 파티 독점, 어뷰징' },
+  { title: '분쟁 해결 불가', desc: '개인 간 거래라 증거 없이 해결 방법이 없음' },
 ];
 
 export default function CompareSection() {
