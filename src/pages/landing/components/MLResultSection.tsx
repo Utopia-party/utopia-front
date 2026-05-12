@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { FiCpu, FiTrendingUp, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiCpu, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 const experiments = [
