@@ -17,7 +17,7 @@ const SECURITY_CARDS: SecurityCardProps[] = [
   {
     step: 'L0 — 사전 단계',
     title: '비간섭 행동 분석',
-    description: '사용자가 인지하지 못하는 상태에서 수행되는 1차 분류. 정상/챌린지/차단을 자동 분기합니다.',
+    description: '사용자가 인지하지 못하는 상태에서 수행되는 1차 분류 정상/챌린지/차단을 자동 분기합니다',
     bullets: [
       'HTTP 헤더 · 브라우저 환경 분석',
       'LSTM으로 마우스 궤적 시계열 봇 탐지',
@@ -31,7 +31,7 @@ const SECURITY_CARDS: SecurityCardProps[] = [
   {
     step: 'L1 — 1단계',
     title: 'GAN 기반 이미지 캡챠',
-    description: '회원가입 자동화 · 봇 차단. AI가 자동으로 풀 수 없는 시각적 챌린지를 동적 생성합니다.',
+    description: '회원가입 자동화 · 봇 차단 AI가 자동으로 풀 수 없는 시각적 챌린지를 동적 생성합니다',
     bullets: [
       'FastGAN으로 동물 이모지 실시간 생성',
       'PGD 적대적 노이즈로 CLIP 분류 차단',
@@ -45,7 +45,7 @@ const SECURITY_CARDS: SecurityCardProps[] = [
   {
     step: 'L2 — 2단계',
     title: '멀티모달 실시간 인증',
-    description: '실제 사람이 실시간으로 수행하는 행동인지 검증. 자동화 우회를 원천 차단합니다.',
+    description: '실제 사람이 실시간으로 수행하는 행동인지 검증 자동화 우회를 원천 차단합니다',
     bullets: [
       'MediaPipe HandLandmarker 손 포즈 검출',
       'PaddleOCR 손글씨 5자리 문자 인식',
@@ -59,7 +59,7 @@ const SECURITY_CARDS: SecurityCardProps[] = [
   {
     step: 'L3 — 3단계',
     title: '자동 제재 (BAN)',
-    description: '신뢰도 점수(0~99) 기반 단계별 자동 제재. 반복 위반자를 선제적으로 차단합니다.',
+    description: '신뢰도 점수(0~99) 기반 단계별 자동 제재 반복 위반자를 선제적으로 차단합니다',
     bullets: [
       '누적 위험 점수 초과 시 자동 발동',
       '노쇼 · 신고 누적 · 이상 행동 탐지',

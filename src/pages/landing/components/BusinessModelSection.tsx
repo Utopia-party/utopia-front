@@ -6,7 +6,7 @@ const revenues = [
   {
     title: '중개 수수료',
     model: '파티 성사 대금의 30%',
-    desc: '플랫폼 신뢰도 확보 후 단계적 조정. 경쟁 플랫폼 대비 합리적 수준 유지.',
+    desc: '플랫폼 신뢰도 확보 후 단계적 조정 경쟁 플랫폼 대비 합리적 수준 유지',
     color: 'border-purple-200 bg-purple-50/50',
     tag: '핵심 수익',
     tagColor: 'bg-purple-100 text-purple-700',
@@ -14,7 +14,7 @@ const revenues = [
   {
     title: 'B2B 보안 API',
     model: 'SaaS 월정액 / API 호출량 과금',
-    desc: '3단계 AI 인증 모듈 라이선스. 예매·숙박·공유경제 플랫폼 대상.',
+    desc: '3단계 AI 인증 모듈 라이선스 예매·숙박·공유경제 플랫폼 대상',
     color: 'border-blue-200 bg-blue-50/50',
     tag: '확장 수익',
     tagColor: 'bg-blue-100 text-blue-700',
@@ -22,7 +22,7 @@ const revenues = [
   {
     title: '추천인 프로그램',
     model: '신규 가입자 유치 수수료 환급',
-    desc: '기존 유저 초대 시 수수료 일부 환급. 유저 수 증가 → 거래량 증가 선순환.',
+    desc: '기존 유저 초대 시 수수료 일부 환급 유저 수 증가 → 거래량 증가 선순환',
     color: 'border-green-200 bg-green-50/50',
     tag: '그로스',
     tagColor: 'bg-green-100 text-green-700',
@@ -30,7 +30,7 @@ const revenues = [
   {
     title: '플랫폼 광고',
     model: '구글 애드센스 기반 타겟 광고',
-    desc: '구독 서비스·엔터테인먼트 카테고리 타겟팅. 인증된 활성 유저 기반 CPM 우위.',
+    desc: '구독 서비스·엔터테인먼트 카테고리 타겟팅 인증된 활성 유저 기반 CPM 우위',
     color: 'border-orange-200 bg-orange-50/50',
     tag: '부가 수익',
     tagColor: 'bg-orange-100 text-orange-700',
@@ -38,10 +38,10 @@ const revenues = [
 ];
 
 const costs = [
-  { label: '인프라', detail: 'AWS/GCP AI 추론 GPU 서버. 탄력적 스케일링.', pct: 40 },
+  { label: '인프라', detail: 'AWS/GCP AI 추론 GPU 서버 탄력적 스케일링', pct: 40 },
   { label: '결제망', detail: 'PG사 수수료 1.5~3% + 에스크로 별도.', pct: 25 },
-  { label: '인건비', detail: '런칭 초기 최소 인력 → 점진 확대.', pct: 25 },
-  { label: '마케팅', detail: '추천인 인센티브 포함 그로스 해킹 중심.', pct: 10 },
+  { label: '인건비', detail: '런칭 초기 최소 인력 → 점진 확대', pct: 25 },
+  { label: '마케팅', detail: '추천인 인센티브 포함 그로스 해킹 중심', pct: 10 },
 ];
 
 export default function BusinessModelSection() {

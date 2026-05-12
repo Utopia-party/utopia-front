@@ -4,15 +4,15 @@ import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 // 9단계 처리 프로세스
 const processSteps = [
-  { step: '1', name: '이미지 업로드', desc: '사용자가 인증 이미지를 API로 업로드.', io: 'UploadFile' },
-  { step: '2', name: '입력 검증', desc: '빈 파일·디코딩 실패·최소 해상도(100px) 미달 여부 확인.', io: 'content_size / image_size' },
-  { step: '3', name: '이미지 리사이즈', desc: '최대 변 기준 2200px 초과 시 축소.', io: 'resize_info' },
-  { step: '4', name: '손 랜드마크 검출', desc: 'MediaPipe HandLandmarker로 손 위치와 21개 랜드마크 추출.', io: 'hand_landmarker.task' },
-  { step: '5', name: '포즈 feature 생성', desc: '손목 기준 상대 좌표로 63개 feature 생성.', io: 'pose_features (63차원)' },
-  { step: '6', name: '포즈 모델 추론', desc: 'RandomForestClassifier로 손 포즈 분류.', io: 'pose_classifier.pkl' },
-  { step: '7', name: 'OCR 전처리', desc: '확대·grayscale·sharpening·threshold 전처리 수행.', io: 'OCR variants' },
+  { step: '1', name: '이미지 업로드', desc: '사용자가 인증 이미지를 API로 업로드', io: 'UploadFile' },
+  { step: '2', name: '입력 검증', desc: '빈 파일·디코딩 실패·최소 해상도(100px) 미달 여부 확인', io: 'content_size / image_size' },
+  { step: '3', name: '이미지 리사이즈', desc: '최대 변 기준 2200px 초과 시 축소', io: 'resize_info' },
+  { step: '4', name: '손 랜드마크 검출', desc: 'MediaPipe HandLandmarker로 손 위치와 21개 랜드마크 추출', io: 'hand_landmarker.task' },
+  { step: '5', name: '포즈 feature 생성', desc: '손목 기준 상대 좌표로 63개 feature 생성', io: 'pose_features (63차원)' },
+  { step: '6', name: '포즈 모델 추론', desc: 'RandomForestClassifier로 손 포즈 분류', io: 'pose_classifier.pkl' },
+  { step: '7', name: 'OCR 전처리', desc: '확대·grayscale·sharpening·threshold 전처리 수행', io: 'OCR variants' },
   { step: '8', name: 'OCR 판독', desc: 'PaddleOCR로 5자리 영숫자 문자열 탐색. score 0.93 이상 즉시 채택.', io: 'detected_text' },
-  { step: '9', name: '결과 반환', desc: '포즈·OCR 텍스트·신뢰도·디버깅 정보 반환.', io: 'inspection JSON' },
+  { step: '9', name: '결과 반환', desc: '포즈·OCR 텍스트·신뢰도·디버깅 정보 반환', io: 'inspection JSON' },
 ];
 
 // 포즈별 데이터 분포

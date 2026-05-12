@@ -4,13 +4,13 @@ import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 // 7단계 처리 프로세스
 const steps = [
-  { step: '1', name: '요청 생성', desc: '사용자·서비스·이용 기간 저장. 중복 요청 및 활성 파티 가입 여부 검증.', table: 'quick_match_requests' },
-  { step: '2', name: '하드필터', desc: '정원 초과·이미 가입·신뢰도 미달·기간 불일치·신고/정지/비활성 상태 정책 필터링.', table: 'quick_match_candidates' },
-  { step: '3', name: '후보 점수 계산', desc: 'rule_score와 probability_score를 계산한 뒤 final_score로 정렬.', table: 'rule_score / final_score' },
-  { step: '4', name: '최종 후보 선택', desc: 'final_score 1위 후보를 선택하고 결과 스냅샷 저장.', table: 'quick_match_results' },
-  { step: '5', name: '실제 가입', desc: '선택 파티에 PartyMember를 생성하고 빠른매칭 가입 이벤트 기록.', table: 'party_members / training_events' },
-  { step: '6', name: '운영 결과 수집', desc: '정산·탈퇴·강퇴·신고·제재·유지기간 데이터 누적.', table: 'result_snapshot' },
-  { step: '7', name: '라벨링 / 통계 집계', desc: 'pending 이벤트를 success/failed/excluded로 확정 후 통계 테이블 재집계.', table: 'quick_match_training_stats' },
+  { step: '1', name: '요청 생성', desc: '사용자·서비스·이용 기간 저장 중복 요청 및 활성 파티 가입 여부 검증', table: 'quick_match_requests' },
+  { step: '2', name: '하드필터', desc: '정원 초과·이미 가입·신뢰도 미달·기간 불일치·신고/정지/비활성 상태 정책 필터링', table: 'quick_match_candidates' },
+  { step: '3', name: '후보 점수 계산', desc: 'rule_score와 probability_score를 계산한 뒤 final_score로 정렬', table: 'rule_score / final_score' },
+  { step: '4', name: '최종 후보 선택', desc: 'final_score 1위 후보를 선택하고 결과 스냅샷 저장', table: 'quick_match_results' },
+  { step: '5', name: '실제 가입', desc: '선택 파티에 PartyMember를 생성하고 빠른매칭 가입 이벤트 기록', table: 'party_members / training_events' },
+  { step: '6', name: '운영 결과 수집', desc: '정산·탈퇴·강퇴·신고·제재·유지기간 데이터 누적', table: 'result_snapshot' },
+  { step: '7', name: '라벨링 / 통계 집계', desc: 'pending 이벤트를 success/failed/excluded로 확정 후 통계 테이블 재집계', table: 'quick_match_training_stats' },
 ];
 
 // 점수 산식
@@ -51,11 +51,11 @@ const labels = [
 
 // 통계 집계 축
 const statAxes = [
-  { key: 'global', example: 'all', desc: '전체 평균 성공률. 표본 부족 bucket의 fallback 기준.' },
-  { key: 'service', example: 'service_id', desc: '서비스별 성공률 반영.' },
-  { key: 'trust_bucket', example: 'under_30 / 30_40 / 40_50 / 50_60 / over_60', desc: '신뢰도 구간별 성공률 반영.' },
-  { key: 'duration_match', example: 'exact / overlap / boundary / mismatch', desc: '선호 기간과 파티 기간 적합도별 성공률.' },
-  { key: 'capacity_bucket', example: 'high / medium / low / full', desc: '남은 자리 비율에 따른 성공률.' },
+  { key: 'global', example: 'all', desc: '전체 평균 성공률 표본 부족 bucket의 fallback 기준' },
+  { key: 'service', example: 'service_id', desc: '서비스별 성공률 반영' },
+  { key: 'trust_bucket', example: 'under_30 / 30_40 / 40_50 / 50_60 / over_60', desc: '신뢰도 구간별 성공률 반영' },
+  { key: 'duration_match', example: 'exact / overlap / boundary / mismatch', desc: '선호 기간과 파티 기간 적합도별 성공률' },
+  { key: 'capacity_bucket', example: 'high / medium / low / full', desc: '남은 자리 비율에 따른 성공률' },
 ];
 
 export default function QuickMatchMLSection() {
@@ -219,7 +219,7 @@ export default function QuickMatchMLSection() {
             {
               phase: '초기 (현재)',
               title: '하드필터 + 규칙 기반',
-              desc: 'rule_score 55% 비중. 실서비스 운영 후 success/failed 라벨 데이터 확보 시작.',
+              desc: 'rule_score 55% 비중 실서비스 운영 후 success/failed 라벨 데이터 확보 시작',
               color: 'border-gray-200 bg-gray-50',
               tag: 'rule_score 중심',
               tagColor: 'bg-gray-100 text-gray-600',
@@ -227,7 +227,7 @@ export default function QuickMatchMLSection() {
             {
               phase: '중기',
               title: '표본 충분한 bucket부터 반영',
-              desc: 'probability_score 신뢰도 점진적 향상. seed 데이터와 실제 운영 데이터 분리 관리.',
+              desc: 'probability_score 신뢰도 점진적 향상 seed 데이터와 실제 운영 데이터 분리 관리',
               color: 'border-green-200 bg-green-50',
               tag: 'probability 점진 반영',
               tagColor: 'bg-green-100 text-green-700',
@@ -235,7 +235,7 @@ export default function QuickMatchMLSection() {
             {
               phase: '장기',
               title: 'ML 확률매칭 모델 적용',
-              desc: '충분한 실제 데이터 누적 이후 ML 모델 적용 여부 검토. final_score 가중치 재조정.',
+              desc: '충분한 실제 데이터 누적 이후 ML 모델 적용 여부 검토 final_score 가중치 재조정',
               color: 'border-teal-200 bg-teal-50',
               tag: 'ML 모델 검토',
               tagColor: 'bg-teal-100 text-teal-700',

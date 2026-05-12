@@ -27,7 +27,7 @@ export default function FeaturesSection() {
       id: 1,
       title: 'AI 기반 보안',
       description:
-        'GAN 기반 CAPTCHA, OCR, YOLO, MediaPipe를 활용한 3단계 인증 시스템으로 봇과 악의적 사용자를 차단합니다.',
+        'GAN 기반 CAPTCHA, OCR, YOLO, MediaPipe를 활용한 3단계 인증 시스템으로 봇과 악의적 사용자를 차단합니다',
       icon: <FiShield className="text-2xl text-white" />,
       color: 'bg-purple-500',
     },
@@ -35,7 +35,7 @@ export default function FeaturesSection() {
       id: 2,
       title: '자동 제재 시스템',
       description:
-        'AI 위험 점수 기반으로 노쇼, 반복 위반자를 자동으로 감지하고 단계별 제재를 실행합니다.',
+        'AI 위험 점수 기반으로 노쇼, 반복 위반자를 자동으로 감지하고 단계별 제재를 실행합니다',
       icon: <FiCpu className="text-2xl text-white" />,
       color: 'bg-blue-500',
     },
@@ -43,7 +43,7 @@ export default function FeaturesSection() {
       id: 3,
       title: '신뢰도 평가',
       description:
-        '모든 사용자 활동을 점수화하여 신뢰도를 관리하고, 정상 활동 시 신뢰도가 상승합니다.',
+        '모든 사용자 활동을 점수화하여 신뢰도를 관리하고, 정상 활동 시 신뢰도가 상승합니다',
       icon: <FiTrendingUp className="text-2xl text-white" />,
       color: 'bg-green-500',
     },
@@ -51,7 +51,7 @@ export default function FeaturesSection() {
       id: 4,
       title: '파티 매칭',
       description:
-        'OTT, 음악, 클라우드 서비스 등 다양한 구독 서비스의 파티를 생성하고 신뢰할 수 있는 파티원과 매칭됩니다.',
+        'OTT, 음악, 클라우드 서비스 등 다양한 구독 서비스의 파티를 생성하고 신뢰할 수 있는 파티원과 매칭됩니다',
       icon: <FiUsers className="text-2xl text-white" />,
       color: 'bg-orange-500',
     },
@@ -59,7 +59,7 @@ export default function FeaturesSection() {
       id: 5,
       title: '실시간 채팅',
       description:
-        '파티원들과 실시간으로 소통하며 로그를 저장해 분쟁 발생 시 대응할 수 있습니다.',
+        '파티원들과 실시간으로 소통하며 로그를 저장해 분쟁 발생 시 대응할 수 있습니다',
       icon: <FiMessageSquare className="text-2xl text-white" />,
       color: 'bg-pink-500',
     },
@@ -67,7 +67,7 @@ export default function FeaturesSection() {
       id: 6,
       title: '안전한 정산',
       description:
-        '선불/후불 결제 시스템과 거래 로그 저장으로 정산 분쟁을 예방하고 투명하게 관리합니다.',
+        '선불/후불 결제 시스템과 거래 로그 저장으로 정산 분쟁을 예방하고 투명하게 관리합니다',
       icon: <FiDollarSign className="text-2xl text-white" />,
       color: 'bg-yellow-500',
     },
