@@ -44,6 +44,10 @@ const STORAGE_KEY = 'party_refresh_until';
 const VISIBLE_PARTY_STATUSES: Array<Party['status']> = [
   'recruiting',
   'completed',
+  'active',
+  'full',
+  'ended',
+  'closed',
   null,
 ];
 
