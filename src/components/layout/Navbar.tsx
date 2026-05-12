@@ -6,7 +6,7 @@ import { NavHashLink } from 'react-router-hash-link';
 import { IoClose, IoMenu } from 'react-icons/io5';
 import { FiArrowRight, FiChevronDown } from 'react-icons/fi';
 
-type SectionId = 'features' | 'security' | 'ai-tech' | 'ml-result' | 'arch' | 'team';
+type SectionId = 'compare' | 'features' | 'security' | 'ai-tech' | 'ml-result' | 'trust' | 'performance' | 'business' | 'arch' | 'team';
 
 interface NavItem {
   label: string;
@@ -29,10 +29,14 @@ export default function Navbar() {
 
   const navItems: NavItem[] = useMemo(
     () => [
+      { label: '비교 분석', href: '#compare', id: 'compare' },
       { label: '핵심 기능', href: '#features', id: 'features' },
       { label: '보안 시스템', href: '#security', id: 'security' },
       { label: 'AI 기술', href: '#ai-tech', id: 'ai-tech' },
       { label: 'ML 결과', href: '#ml-result', id: 'ml-result' },
+      { label: '신뢰도', href: '#trust', id: 'trust' },
+      { label: '성능 수치', href: '#performance', id: 'performance' },
+      { label: '비즈니스', href: '#business', id: 'business' },
       { label: '아키텍처', href: '#arch', id: 'arch' },
       { label: '팀 소개', href: '#team', id: 'team' },
     ],
