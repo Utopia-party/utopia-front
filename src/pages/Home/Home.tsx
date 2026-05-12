@@ -50,6 +50,221 @@ const VISIBLE_PARTY_STATUSES: Array<Party['status']> = [
   null,
 ];
 
+// ── 유저 이용 메뉴얼 ─────────────────────────────────────
+
+type GuideItem = { title: string; content: React.ReactNode };
+
+function GuideAccordion({ items }: { items: GuideItem[] }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  return (
+    <div className="divide-y divide-slate-100">
+      {items.map((item, idx) => {
+        const isOpen = openIdx === idx;
+        return (
+          <div key={idx}>
+            <button
+              type="button"
+              onClick={() => setOpenIdx(isOpen ? null : idx)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+            >
+              <span className="text-sm font-semibold text-slate-800">{item.title}</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"
+                className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {isOpen && (
+              <div className="px-4 pb-4 text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                <div className="pt-3">{item.content}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const GUIDE_ITEMS: GuideItem[] = [
+  {
+    title: '파티 카드 읽는 법',
+    content: (
+      <div className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: '모집중', color: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', desc: '참여 신청 가능' },
+            { label: '마감', color: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200', desc: '정원이 꽉 찬 상태' },
+            { label: '운영중', color: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200', desc: '파티 진행 중' },
+            { label: '완료', color: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200', desc: '정산까지 완료' },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2">
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${s.color}`}>{s.label}</span>
+              <span className="text-xs text-slate-500">{s.desc}</span>
+            </div>
+          ))}
+        </div>
+        <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+          <li>인원 막대의 검은 부분은 확정 멤버, 노란 부분은 승인 대기 중인 신청자입니다.</li>
+          <li>월 이용료 옆 빨간 뱃지는 정가 대비 절약 비율입니다.</li>
+          <li>조건 확인을 누르면 파티 상세 정보를 팝업으로 볼 수 있습니다.</li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    title: '파티 참여 신청하기',
+    content: (
+      <div className="space-y-2.5">
+        <ol className="text-xs text-slate-600 space-y-2 list-none">
+          {[
+            { n: '1', t: '모집중 상태의 파티 카드에서 참여 신청 버튼을 누릅니다.' },
+            { n: '2', t: '파티명, 호스트, 월 이용료를 확인한 뒤 신청하기를 누릅니다.' },
+            { n: '3', t: '신청 완료 후 카드 버튼이 승인 대기중으로 바뀝니다.' },
+            { n: '4', t: '호스트가 승인하면 채팅방 입장 버튼이 활성화됩니다.' },
+          ].map((item) => (
+            <li key={item.n} className="flex items-start gap-2">
+              <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[10px]">{item.n}</span>
+              <span>{item.t}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="rounded-lg border border-slate-100 bg-white px-3 py-2.5 text-xs text-slate-500">
+          로그인하지 않은 상태에서 신청 버튼을 누르면 로그인 페이지로 이동합니다.
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: '파티 직접 생성하기',
+    content: (
+      <div className="space-y-2.5">
+        <ol className="text-xs text-slate-600 space-y-2 list-none">
+          {[
+            { n: '1', t: '왼쪽 사이드바의 파티 생성하기 버튼을 누릅니다.' },
+            { n: '2', t: '핸드 캡챠 인증을 통과하면 파티 생성 폼으로 이동합니다.' },
+            { n: '3', t: '서비스, 제목, 최대 인원, 월 이용료 등을 입력하고 등록합니다.' },
+            { n: '4', t: '생성된 파티는 홈 목록에 바로 노출됩니다.' },
+          ].map((item) => (
+            <li key={item.n} className="flex items-start gap-2">
+              <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px]">{item.n}</span>
+              <span>{item.t}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
+          파티 생성은 핸드 캡챠 인증이 필요합니다. 스팸 방지를 위한 절차로 1~2분 내로 완료됩니다.
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: '빠른 매칭 이용하기',
+    content: (
+      <div className="space-y-2.5">
+        <p className="text-xs text-slate-500">카테고리와 서비스를 고르면 조건에 맞는 파티를 자동으로 찾아드립니다.</p>
+        <ol className="text-xs text-slate-600 space-y-2 list-none">
+          {[
+            { n: '1', t: '왼쪽 사이드바의 빠른 매칭 버튼을 누릅니다. (로그인 필요)' },
+            { n: '2', t: 'OTT / 교육·도서 / 음악·멤버십 / 생산성 중 카테고리를 선택합니다.' },
+            { n: '3', t: '세부 서비스(예: 넷플릭스, 스포티파이 등)와 희망 기간을 선택합니다.' },
+            { n: '4', t: '매칭 시작을 누르면 적합한 파티를 자동으로 찾아 연결합니다.' },
+          ].map((item) => (
+            <li key={item.n} className="flex items-start gap-2">
+              <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold text-[10px]">{item.n}</span>
+              <span>{item.t}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
+          빠른 매칭은 별도 수수료가 부과됩니다. 직접 파티를 찾아 신청하면 수수료 없이 이용할 수 있습니다.
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: '검색 및 카테고리 필터',
+    content: (
+      <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside">
+        <li>상단 검색창에 파티명, 서비스명을 입력하면 관련 파티만 표시됩니다.</li>
+        <li>인기 검색어 칩을 클릭하면 해당 키워드로 바로 검색됩니다.</li>
+        <li>왼쪽 카테고리(OTT, 교육/도서 등)를 선택하면 해당 유형만 필터링됩니다.</li>
+        <li>새로고침 버튼으로 목록을 갱신할 수 있습니다. 단, 10분 쿨다운이 적용됩니다.</li>
+      </ul>
+    ),
+  },
+  {
+    title: '신청 후 상태 안내',
+    content: (
+      <div className="space-y-2">
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">버튼 상태</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">의미</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {[
+                { state: '승인 대기중', color: 'bg-amber-100 text-amber-700', desc: '호스트의 승인을 기다리는 중' },
+                { state: '채팅방 입장', color: 'bg-indigo-600 text-white', desc: '승인 완료. 채팅방에 입장할 수 있습니다' },
+                { state: '재신청', color: 'bg-slate-900 text-white', desc: '이전 신청이 거절됨. 다시 신청 가능' },
+                { state: '참여 불가', color: 'bg-rose-100 text-rose-700', desc: '호스트에 의해 강퇴된 상태' },
+              ].map((r) => (
+                <tr key={r.state}>
+                  <td className="px-3 py-2.5">
+                    <span className={`rounded-xl px-2.5 py-1 text-[11px] font-bold ${r.color}`}>{r.state}</span>
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-500">{r.desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ),
+  },
+];
+
+function UserGuide() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+            </svg>
+          </span>
+          <div>
+            <p className="text-sm font-bold text-slate-800">서비스 이용 안내</p>
+            <p className="text-xs text-slate-400 mt-0.5">파티 참여·생성·매칭 이용 방법</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="hidden sm:inline text-xs font-semibold text-indigo-500 bg-indigo-50 rounded-full px-2.5 py-0.5 border border-indigo-100">
+            {GUIDE_ITEMS.length}개 항목
+          </span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+      {isOpen && (
+        <div className="border-t border-slate-100">
+          <GuideAccordion items={GUIDE_ITEMS} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -312,7 +527,9 @@ export default function Home() {
             />
 
             <section className="min-w-0 flex-1">
-              <div className="mb-5 flex flex-col gap-4 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
+              <UserGuide />
+
+              <div className="mt-4 mb-5 flex flex-col gap-4 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
                 <SectionTitle title={titleText} subtitle={subtitleText} />
 
                 <div className="flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
