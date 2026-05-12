@@ -13,7 +13,6 @@ interface TeamMember {
   image: string;
   skills: string[];
   github: string;
-  linkedin?: string;
   email: string;
 }
 
@@ -21,49 +20,53 @@ export default function TeamSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   useLandingAnimations(sectionRef);
 
+  const COMMON_DESCRIPTION =
+    'AI 기반 3단계 보안 캡챠(GAN·LSTM·MediaPipe·OCR), 파티 매칭·정산·채팅 플랫폼 설계 및 구현';
+  const COMMON_SKILLS = ['FastGAN', 'LSTM', 'KR-ELECTRA', 'FastAPI', 'React', 'TypeScript'];
+
   const members: TeamMember[] = [
     {
       name: '김성보',
-      role: 'Team Leader & AI Engineer',
-      description: 'AI 보안 시스템 설계 및 GAN 기반 CAPTCHA 개발 담당',
+      role: 'Team Leader & Full Stack Engineer',
+      description: COMMON_DESCRIPTION,
       image,
-      skills: ['Python', 'TensorFlow', 'PyTorch'],
+      skills: COMMON_SKILLS,
       github: 'https://github.com/seongbokim',
       email: 'rkdtlgn0@naver.com',
     },
     {
       name: '박세영',
-      role: 'Backend Developer',
-      description: 'FastAPI 백엔드 아키텍처 설계 및 위험 점수 시스템 구현',
+      role: 'Full Stack Engineer',
+      description: COMMON_DESCRIPTION,
       image,
-      skills: ['FastAPI', 'PostgreSQL', 'Redis'],
+      skills: COMMON_SKILLS,
       github: 'https://github.com/zerose219',
       email: 'seyoung.park219@gmail.com',
     },
     {
       name: '도상원',
-      role: 'Frontend Developer',
-      description: 'React 기반 UI/UX 구현 및 실시간 채팅 시스템 개발',
+      role: 'Full Stack Engineer',
+      description: COMMON_DESCRIPTION,
       image,
-      skills: ['React', 'TypeScript', 'Tailwind'],
+      skills: COMMON_SKILLS,
       github: 'https://github.com/aksdkdn',
       email: 'do123195@gmail.com',
     },
     {
       name: '김영훈',
-      role: 'ML Engineer',
-      description: 'FastGAN, LSTM, CLIP 모델 학습 및 캡챠 파이프라인 구축 담당',
+      role: 'Full Stack Engineer',
+      description: COMMON_DESCRIPTION,
       image,
-      skills: ['FastGAN', 'LSTM', 'CLIP'],
+      skills: COMMON_SKILLS,
       github: 'https://github.com/zeroh00n',
       email: 'ahxh7647@gmail.com',
     },
     {
       name: '정재웅',
-      role: 'Frontend & Backend',
-      description: 'MediaPipe + OCR을 이용한 Captcha 서비스 구현',
+      role: 'Full Stack Engineer',
+      description: COMMON_DESCRIPTION,
       image,
-      skills: ['React', 'FastAPI', 'MediaPipe', 'PaddleOCR'],
+      skills: COMMON_SKILLS,
       github: 'https://github.com/dixk3458',
       email: 'dixk3458@naver.com',
     },
@@ -113,7 +116,7 @@ export default function TeamSection() {
             <p className="text-sm font-semibold text-purple-600 mb-4">
               {member.role}
             </p>
-            <p className="text-sm text-gray-500 mb-6 leading-relaxed px-4">
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed px-2 text-left">
               {member.description}
             </p>
 
@@ -144,7 +147,7 @@ export default function TeamSection() {
           </div>
         ))}
 
-        <div className="hover-lift bg-linear-to-br from-primary to-secondary rounded-2xl p-8 flex flex-col items-center justify-center text-center text-white shadow-xl shadow-blue-200 will-change-transform">
+        <div className="hover-lift bg-gradient-to-br from-primary to-secondary rounded-2xl p-8 flex flex-col items-center justify-center text-center text-white shadow-xl shadow-blue-200 will-change-transform">
           <div className="text-5xl mb-6">🏆</div>
           <h3 className="text-xl font-bold mb-2">
             카카오 AIaaS 3기 팀 프로젝트
