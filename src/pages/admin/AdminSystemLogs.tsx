@@ -127,8 +127,40 @@ const ADMIN_ROUTE_DESCRIPTIONS: Array<{
     label: '빠른 매칭 요청 목록 조회',
   },
   {
-    pattern: /^\/api\/admin\/quick-match\/policy$/,
-    label: '빠른 매칭 정책 조회',
+    pattern: /^\/api\/admin\/quick-match\/summary$/,
+    label: '빠른 매칭 요약 조회',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/requests\/[^/]+$/,
+    label: '빠른 매칭 요청 상세 조회',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/requests\/[^/]+\/retry$/,
+    label: '빠른 매칭 요청 재시도',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/requests\/[^/]+\/force-fail$/,
+    label: '빠른 매칭 요청 강제 실패',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/training-events$/,
+    label: '빠른 매칭 학습 이벤트 조회',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/training-stats$/,
+    label: '빠른 매칭 학습 통계 조회',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/training-stats\/rebuild$/,
+    label: '빠른 매칭 학습 통계 재집계',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/training-label\/run$/,
+    label: '빠른 매칭 학습 라벨링 실행',
+  },
+  {
+    pattern: /^\/api\/admin\/quick-match\/quality$/,
+    label: '빠른 매칭 품질 지표 조회',
   },
   { pattern: /^\/api\/admin\/reports$/, label: '신고 목록 조회' },
   {

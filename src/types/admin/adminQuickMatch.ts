@@ -1,128 +1,117 @@
-export type QuickMatchStatus =
-  | 'REQUESTED'
-  | 'MATCHED'
-  | 'FAILED'
-  | 'EXPIRED'
-  | 'REMATCHING';
+export type QuickMatchStatus = 'requested' | 'matched' | 'failed' | 'expired';
 
-export type CandidateStatus = 'SELECTED' | 'PENDING' | 'REJECTED' | 'FAILED';
+export type CandidateStatus =
+  | 'selected'
+  | 'pending'
+  | 'rejected'
+  | 'failed'
+  | 'skipped';
 
-export type MainTab = '요청 관리' | '튜닝 설정';
+export type TrainingLabelStatus = 'pending' | 'success' | 'failed' | 'excluded';
 
-export type HardFilterResult = {
-  category_match?: boolean;
-  platform_match?: boolean;
-  duration_match?: boolean;
-  trust_threshold_pass?: boolean;
-  remaining_seat?: number;
-  user_trust_score?: number;
-  party_min_trust_score?: number;
-};
+export type MainTab = '요청 관리' | '학습 통계' | '학습 이벤트' | '품질 지표';
 
-export type RuleReason = {
-  trust_fit_score?: number;
-  capacity_score?: number;
-  duration_score?: number;
-};
-
-export type FilterReasons = {
-  score_basis?: string;
-  match_mode?: string;
-  vector_target?: boolean;
-  vector_target_limit?: number;
-  hard_filter?: HardFilterResult;
-  rule_reason?: RuleReason;
-  excluded_reason?: string;
-  normal_match_unavailable_reason?: string;
-  join_failure_reason?: string;
-  lock_key?: string;
-  retry_selected?: boolean;
-};
-
-export type StepTimings = {
-  validationMs: number;
-  profileEmbeddingMs: number;
-  hardFilterMs: number;
-  ruleScoringMs: number;
-  vectorScoringMs: number;
-  joinPartyMs: number;
-};
+export type JsonRecord = Record<string, unknown>;
 
 export type QuickMatchCandidateRow = {
   candidateId: string;
+  requestId: string;
   partyId: string;
-  partyName: string;
+  partyName: string | null;
   rank: number | null;
   status: CandidateStatus;
   ruleScore: number;
-  vectorScore: number;
+  probabilityScore: number;
   finalScore: number;
-  filterReasons: FilterReasons;
+  filterReasons: JsonRecord;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type QuickMatchRequestRow = {
   requestId: string;
-  requestedAt: string;
   userId: string;
   userNickname: string;
+  serviceId: string;
   serviceName: string;
   status: QuickMatchStatus;
+  retryCount: number;
+  preferredConditions: JsonRecord;
   matchedPartyId?: string | null;
   matchedPartyName?: string | null;
-  totalMatchSeconds?: number | null;
-  retryCount: number;
   failReason?: string | null;
-  stepTimings: StepTimings;
-  aiProfileSnapshot: {
-    trustScore: number;
-    preferredConditions: {
-      category?: string;
-      platform?: string;
-      durationPreference?: string;
-    };
-    activitySummary: {
-      totalPartyJoinCount: number;
-      servicePartyJoinCount: number;
-      activePartyCount: number;
-    };
-    paymentSummary: {
-      settlementSuccessCount: number;
-    };
-    riskSummary: {
-      reportCount: number;
-      leaveCount: number;
-      isCurrentlyBanned: boolean;
-    };
-  };
+  requestProfileSnapshot: JsonRecord;
+  requestedAt?: string | null;
+  matchedAt?: string | null;
+  expiredAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  isActive: boolean;
+  totalMatchSeconds?: number | null;
+  candidateCount: number;
+  selectedCandidate?: QuickMatchCandidateRow | null;
   candidates: QuickMatchCandidateRow[];
 };
 
-export type TuningPolicy = {
-  quickMatchEnabled: boolean;
-  topN: number;
-  maxCandidates: number;
-  minMatchScore: number;
-  vectorWeight: number;
-  trustWeight: number;
-  capacityWeight: number;
-  durationWeight: number;
-  joinPartyLockTtlSeconds: number;
-  maxRetry: number;
+export type AdminQuickMatchRequestResult = {
+  resultId: string;
+  selectedPartyId?: string | null;
+  selectedCandidateId?: string | null;
+  decisionReason?: string | null;
+  requestSnapshot?: JsonRecord;
+  candidateSnapshot?: JsonRecord;
+  finalScores?: JsonRecord;
+  createdAt?: string | null;
+};
+
+export type QuickMatchTrainingEvent = {
+  eventId: string;
+  requestId: string;
+  candidateId?: string | null;
+  userId: string;
+  serviceId: string;
+  partyId: string;
+  isSelected: boolean;
+  isJoined: boolean;
+  matchSuccess?: boolean | null;
+  labelStatus: TrainingLabelStatus;
+  labelReason?: string | null;
+  joinedAt?: string | null;
+  leftAt?: string | null;
+  labeledAt?: string | null;
+  featuresSnapshot: JsonRecord;
+  resultSnapshot: JsonRecord;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type AdminQuickMatchDetailResponse = {
+  request: QuickMatchRequestRow;
+  result?: AdminQuickMatchRequestResult | null;
+  trainingEvents: QuickMatchTrainingEvent[];
 };
 
 export type AdminQuickMatchSummary = {
-  total: number;
-  todayTotal: number;
-  matched: number;
-  successRate: number;
-  avgSeconds: number;
-  stepAvg: StepTimings;
+  requests: {
+    total: number;
+    todayTotal: number;
+    matched: number;
+    failed: number;
+    expired: number;
+    requested: number;
+    matchRate: number;
+  };
+  training: {
+    labelCounts: Partial<Record<TrainingLabelStatus, number>>;
+    successRate: number;
+    sampleCount: number;
+    lastGeneratedAt?: string | null;
+  };
 };
 
 export type AdminQuickMatchListParams = {
   keyword?: string;
-  status?: QuickMatchStatus | '전체';
-  serviceName?: string;
+  status?: QuickMatchStatus | 'all';
   dateFrom?: string;
   dateTo?: string;
   page?: number;
@@ -130,20 +119,76 @@ export type AdminQuickMatchListParams = {
 };
 
 export type AdminQuickMatchListResponse = {
-  summary: AdminQuickMatchSummary;
   rows: QuickMatchRequestRow[];
   total: number;
   page: number;
   pageSize: number;
 };
 
-export type AdminQuickMatchPolicyResponse = {
-  policy: TuningPolicy;
+export type TrainingEventListParams = {
+  labelStatus?: TrainingLabelStatus | 'all';
+  labelReason?: string;
+  seedOnly?: boolean;
+  page?: number;
+  pageSize?: number;
 };
 
-export type UpdateQuickMatchPolicyRequest = TuningPolicy;
+export type TrainingEventListResponse = {
+  rows: QuickMatchTrainingEvent[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type TrainingStatRow = {
+  statId: string;
+  statType: string;
+  statKey: string;
+  successCount: number;
+  failedCount: number;
+  totalCount: number;
+  successRate: number;
+  generatedAt?: string | null;
+  metadata: JsonRecord;
+};
+
+export type TrainingStatsResponse = {
+  summary: {
+    statCount: number;
+    globalSuccessRate: number;
+    globalSampleCount: number;
+    lastGeneratedAt?: string | null;
+  };
+  rows: TrainingStatRow[];
+};
+
+export type QuickMatchQualityResponse = {
+  summary: {
+    success: number;
+    failed: number;
+    pending: number;
+    excluded: number;
+    trainableTotal: number;
+    successRate: number;
+  };
+  reasonDistribution: Array<{
+    labelStatus: TrainingLabelStatus;
+    labelReason?: string | null;
+    count: number;
+  }>;
+};
 
 export type AdminQuickMatchActionResponse = {
   success: boolean;
   message?: string;
+  requestId?: string;
+  status?: string;
+  result?: unknown;
+  labelResult?: {
+    success: number;
+    failed: number;
+    pending: number;
+    excluded: number;
+  };
+  statsResult?: unknown;
 };
