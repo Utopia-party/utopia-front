@@ -1,10 +1,13 @@
 import type {
   AdminQuickMatchActionResponse,
+  AdminQuickMatchDetailResponse,
   AdminQuickMatchListParams,
   AdminQuickMatchListResponse,
-  AdminQuickMatchPolicyResponse,
-  QuickMatchRequestRow,
-  UpdateQuickMatchPolicyRequest,
+  AdminQuickMatchSummary,
+  QuickMatchQualityResponse,
+  TrainingEventListParams,
+  TrainingEventListResponse,
+  TrainingStatsResponse,
 } from '../../types/admin/adminQuickMatch';
 
 const API_BASE_URL =
@@ -22,29 +25,42 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const errorText = await res.text().catch(() => '');
-    throw new Error(errorText || `API 요청 실패: ${res.status}`);
+    let message = errorText || `API 요청 실패: ${res.status}`;
+
+    try {
+      const parsed = JSON.parse(errorText) as {
+        detail?: string;
+        message?: string;
+      };
+      message = parsed.detail || parsed.message || message;
+    } catch {
+      // Plain text error body.
+    }
+
+    throw new Error(message);
   }
 
   return res.json() as Promise<T>;
 }
 
-function buildQuery(params: AdminQuickMatchListParams) {
+function buildQuery(params: Record<string, unknown>) {
   const searchParams = new URLSearchParams();
 
-  if (params.keyword) searchParams.set('keyword', params.keyword);
-  if (params.status && params.status !== '전체') {
-    searchParams.set('status', params.status);
-  }
-  if (params.serviceName && params.serviceName !== '전체') {
-    searchParams.set('serviceName', params.serviceName);
-  }
-  if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
-  if (params.dateTo) searchParams.set('dateTo', params.dateTo);
-  if (params.page) searchParams.set('page', String(params.page));
-  if (params.pageSize) searchParams.set('pageSize', String(params.pageSize));
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (value === 'all') return;
+
+    const normalizedValue =
+      key === 'status' ? String(value).toUpperCase() : String(value);
+    searchParams.set(key, normalizedValue);
+  });
 
   const query = searchParams.toString();
   return query ? `?${query}` : '';
+}
+
+export async function getAdminQuickMatchSummary() {
+  return request<AdminQuickMatchSummary>('/api/admin/quick-match/summary');
 }
 
 export async function getAdminQuickMatchRequests(
@@ -56,26 +72,40 @@ export async function getAdminQuickMatchRequests(
 }
 
 export async function getAdminQuickMatchRequestDetail(requestId: string) {
-  return request<QuickMatchRequestRow>(
+  return request<AdminQuickMatchDetailResponse>(
     `/api/admin/quick-match/requests/${requestId}`,
   );
 }
 
-export async function getAdminQuickMatchPolicy() {
-  return request<AdminQuickMatchPolicyResponse>(
-    '/api/admin/quick-match/policy',
+export async function getAdminQuickMatchTrainingEvents(
+  params: TrainingEventListParams,
+) {
+  return request<TrainingEventListResponse>(
+    `/api/admin/quick-match/training-events${buildQuery(params)}`,
   );
 }
 
-export async function updateAdminQuickMatchPolicy(
-  body: UpdateQuickMatchPolicyRequest,
-) {
-  return request<AdminQuickMatchPolicyResponse>(
-    '/api/admin/quick-match/policy',
-    {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    },
+export async function getAdminQuickMatchTrainingStats(statType = 'all') {
+  return request<TrainingStatsResponse>(
+    `/api/admin/quick-match/training-stats${buildQuery({ statType })}`,
+  );
+}
+
+export async function getAdminQuickMatchQuality() {
+  return request<QuickMatchQualityResponse>('/api/admin/quick-match/quality');
+}
+
+export async function rebuildAdminQuickMatchTrainingStats() {
+  return request<AdminQuickMatchActionResponse>(
+    '/api/admin/quick-match/training-stats/rebuild',
+    { method: 'POST' },
+  );
+}
+
+export async function runAdminQuickMatchTrainingLabel(retentionDays = 30) {
+  return request<AdminQuickMatchActionResponse>(
+    `/api/admin/quick-match/training-label/run${buildQuery({ retentionDays })}`,
+    { method: 'POST' },
   );
 }
 
@@ -86,39 +116,12 @@ export async function retryAdminQuickMatchRequest(requestId: string) {
   );
 }
 
-export async function forceFailAdminQuickMatchRequest(requestId: string) {
+export async function forceFailAdminQuickMatchRequest(
+  requestId: string,
+  reason = 'ADMIN_FORCE_FAILED',
+) {
   return request<AdminQuickMatchActionResponse>(
-    `/api/admin/quick-match/requests/${requestId}/force-fail`,
-    { method: 'POST' },
-  );
-}
-
-export async function regenerateUserQuickMatchEmbedding(userId: string) {
-  return request<AdminQuickMatchActionResponse>(
-    `/api/admin/quick-match/users/${userId}/embedding/regenerate`,
-    { method: 'POST' },
-  );
-}
-
-export async function regeneratePartyQuickMatchEmbedding(partyId: string) {
-  return request<AdminQuickMatchActionResponse>(
-    `/api/admin/quick-match/parties/${partyId}/embedding/regenerate`,
-    { method: 'POST' },
-  );
-}
-
-// 파티 임베딩 백필
-export async function runQuickMatchEmbeddingBackfill() {
-  return request<AdminQuickMatchActionResponse>(
-    '/api/admin/quick-match/embedding-backfill',
-    { method: 'POST' },
-  );
-}
-
-// 사용자 임베딩 백필
-export async function runUserQuickMatchEmbeddingBackfill() {
-  return request<AdminQuickMatchActionResponse>(
-    '/api/admin/quick-match/users/embedding-backfill',
+    `/api/admin/quick-match/requests/${requestId}/force-fail${buildQuery({ reason })}`,
     { method: 'POST' },
   );
 }

@@ -4,8 +4,6 @@ import { fetchParty } from '../../../libs/partyapi';
 import { getPaymentPreview } from '../../../apis/quickMatchApi';
 import {
   useQuickMatchRequest,
-  useQuickMatchCandidates,
-  useQuickMatchSelect,
   useQuickMatchJoin,
 } from '../../../hooks/useQuickMatch';
 import type { PaymentPreviewResponse } from '../../../types/quickMatch';
@@ -14,7 +12,7 @@ import type { ApiError } from '../../../types/error';
 type MatchStep = 'idle' | 'requesting' | 'finding' | 'selecting' | 'joining';
 
 export type JoinResult = {
-  party_id?: number;
+  party_id?: string | number;
   party_title?: string;
   title?: string;
   service_name?: string;
@@ -60,14 +58,19 @@ function normalizeErrorCode(error: unknown): string {
     raw.includes('이미 참여 중인 활성 파티') ||
     raw.includes('이미 가입') ||
     raw.includes('활성 파티가 있습니다')
-  )
+  ) {
     return 'ALREADY_IN_ACTIVE_PARTY';
-  if (raw === 'ALREADY_REQUESTED' || raw.includes('이미 빠른매칭'))
+  }
+
+  if (raw === 'ALREADY_REQUESTED' || raw.includes('이미 빠른매칭')) {
     return 'ALREADY_REQUESTED';
+  }
+
   if (raw === 'NO_RECRUITING_PARTY') return 'NO_RECRUITING_PARTY';
   if (raw === 'NO_CANDIDATE') return 'NO_CANDIDATE';
   if (raw === 'USER_BANNED') return 'USER_BANNED';
   if (raw === 'USER_INACTIVE') return 'USER_INACTIVE';
+
   return raw || 'UNKNOWN_ERROR';
 }
 
@@ -82,8 +85,6 @@ export function useQuickMatchFlow() {
   const [matchErrorCode, setMatchErrorCode] = useState<string | null>(null);
 
   const requestMut = useQuickMatchRequest();
-  const candidatesMut = useQuickMatchCandidates();
-  const selectMut = useQuickMatchSelect();
   const joinMut = useQuickMatchJoin();
 
   const currentStepTitle = (() => {
@@ -117,20 +118,17 @@ export function useQuickMatchFlow() {
 
       const { request_id } = await requestMut.mutateAsync(payload);
 
-      setMatchStep('finding');
-      await candidatesMut.mutateAsync(request_id);
-
-      setMatchStep('selecting');
-      await selectMut.mutateAsync(request_id);
-
       setMatchStep('joining');
+
       const joinResponse = (await joinMut.mutateAsync(
         request_id,
       )) as unknown as JoinResult;
+
       const matchedPartyId = joinResponse?.party_id ?? joinResponse?.id;
 
-      if (!matchedPartyId)
+      if (!matchedPartyId) {
         throw new Error('매칭된 파티 정보를 찾을 수 없습니다.');
+      }
 
       let paymentPreview: PaymentPreviewResponse | null = null;
       try {
@@ -146,16 +144,13 @@ export function useQuickMatchFlow() {
           String(matchedPartyId),
         )) as PartyDetailResponse;
       } catch {
-        /* ignore */
+        // ignore
       }
 
       setMatchResult({
         ...joinResponse,
         ...(detailedParty ?? {}),
-        party_id: (() => {
-          const n = Number(joinResponse?.party_id ?? detailedParty?.id);
-          return Number.isNaN(n) ? undefined : n;
-        })(),
+        party_id: joinResponse?.party_id ?? detailedParty?.id,
         party_title:
           joinResponse?.party_title ?? detailedParty?.title ?? '매칭된 파티',
         title:
@@ -205,6 +200,7 @@ export function useQuickMatchFlow() {
     setMatchResult(null);
     setMatchPaymentPreview(null);
   };
+
   const clearError = () => {
     setMatchError(null);
     setMatchErrorCode(null);
