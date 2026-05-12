@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { FiX, FiCheck } from 'react-icons/fi';
+import { FiX, FiCheck, FiAlertTriangle } from 'react-icons/fi';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 const rows = [
