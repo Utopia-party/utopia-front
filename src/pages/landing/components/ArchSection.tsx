@@ -59,6 +59,12 @@ const flows = [
     titleColor: 'text-indigo-700',
     steps: ['메시지 전송', '→', '블랙리스트 필터', '→', 'KR-ELECTRA 분류', '→', 'Ollama 재판단'],
   },
+  {
+    title: '빠른매칭 플로우',
+    color: 'border-green-200 bg-green-50/50',
+    titleColor: 'text-green-700',
+    steps: ['서비스 선택', '→', '임베딩 유사도 계산', '→', 'pgvector KNN', '→', '파티 추천 · 참여 확정'],
+  },
 ];
 
 export default function ArchSection() {
@@ -106,7 +112,7 @@ export default function ArchSection() {
       {/* 주요 플로우 */}
       <div>
         <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">주요 데이터 흐름</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {flows.map((flow) => (
             <div
               key={flow.title}
