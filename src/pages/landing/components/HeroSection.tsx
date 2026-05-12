@@ -1,111 +1,109 @@
-import { FiArrowRight, FiZap, FiBox, FiUsers } from 'react-icons/fi';
+import { FiArrowRight, FiShield, FiCpu, FiDatabase, FiGitBranch } from 'react-icons/fi';
 import { useNavigate } from 'react-router';
 import { useRef } from 'react';
-
 import im from '../../../assets/logo.png';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
+
+const stats = [
+  { value: '3단계', label: 'AI 보안 파이프라인', icon: FiShield, color: 'text-purple-500' },
+  { value: '7종', label: 'AI 모델 통합', icon: FiCpu, color: 'text-blue-500' },
+  { value: '22만건', label: 'ML 학습 데이터', icon: FiDatabase, color: 'text-indigo-500' },
+  { value: 'F1 0.74', label: '욕설 탐지 정확도', icon: FiGitBranch, color: 'text-violet-500' },
+];
+
+const techBadges = [
+  'FastGAN', 'LSTM', 'pgvector', 'KR-ELECTRA',
+  'MediaPipe', 'PaddleOCR', 'Ollama LLM',
+];
 
 export default function HeroSection() {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLElement | null>(null);
-
   useLandingAnimations(sectionRef, { hero: true });
 
   return (
     <section
       ref={sectionRef}
       id="hero"
-      className="relative pt-8 pb-16 md:pt-12 md:pb-24 overflow-hidden"
+      className="relative pt-10 pb-20 md:pt-16 md:pb-28 overflow-hidden"
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
+        {/* 좌측 텍스트 */}
         <div className="flex flex-col items-start">
-          <div>
-            <div className="hero-badge inline-flex items-center px-4 py-1.5 rounded-full bg-purple-50 text-purple-600 text-sm font-bold mb-6">
-              AI Subscription Matching
-            </div>
-
-            <h1 className="hero-title text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-4">
-              Party-Up <br />
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-blue-500">
-                AI 기반 구독 파티 매칭
-              </span>
-            </h1>
-
-            <p className="hero-desc text-lg text-gray-600 leading-relaxed mb-6">
-              OTT, 음악, 클라우드 구독 서비스의 안전한 파티 매칭을 위해{' '}
-              <strong className="text-gray-900">
-                GAN 기반 CAPTCHA, OCR, YOLO, MediaPipe
-              </strong>
-              를 활용한 3단계 AI 보안 시스템을 설계했습니다.
-            </p>
-
-            <div className="hero-info w-full bg-blue-50/50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-8">
-              <p className="text-sm text-blue-800 leading-relaxed">
-                <span className="font-bold">🎯 프로젝트 목표:</span> 기존
-                플랫폼의 "문제 발생 후 대응" 구조를 넘어, AI 기반 사전 탐지 +
-                단계별 자동 제재로 봇과 악의적 사용자를 선제적으로 차단
-              </p>
-            </div>
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-50 text-purple-600 text-sm font-bold mb-6 border border-purple-100">
+            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+            카카오 AIaaS 3기 · 팀 유토피아
           </div>
 
-          <div className="hero-actions flex flex-wrap items-center gap-4">
+          <h1 className="hero-title text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-5">
+            Party-Up
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-500">
+              AI 보안 구독 파티
+            </span>
+            <br />
+            매칭 플랫폼
+          </h1>
+
+          <p className="hero-desc text-lg text-gray-600 leading-relaxed mb-5">
+            OTT·음악·클라우드 구독 공유 시 발생하는{' '}
+            <strong className="text-gray-900">사기·노쇼·봇 계정</strong>을 차단하기 위해
+            직접 설계한 <strong className="text-gray-900">3단계 AI 보안 시스템</strong>과
+            에스크로 정산 구조를 결합한 신뢰 중심 플랫폼입니다.
+          </p>
+
+          {/* AI 기술 뱃지 */}
+          <div className="hero-info flex flex-wrap gap-2 mb-8">
+            {techBadges.map((tech) => (
+              <span
+                key={tech}
+                className="px-3 py-1 bg-gray-900 text-white text-xs font-bold rounded-full"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
+
+          <div className="hero-actions flex flex-wrap items-center gap-3">
             <button
               onClick={() => navigate('/home')}
-              className="hero-demo-btn group inline-flex items-center gap-2 px-6 py-3.5 bg-linear-to-r from-purple-600 to-blue-500 text-white text-base font-semibold rounded-lg shadow-md hover:shadow-xl hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+              className="hero-demo-btn group inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-purple-600 to-blue-500 text-white text-base font-semibold rounded-xl shadow-lg shadow-purple-200 hover:shadow-xl hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
             >
-              심사위원용 데모 체험
+              데모 체험하기
               <FiArrowRight className="transition-transform duration-300 group-hover:translate-x-1" />
             </button>
-            {/* <button className="hero-arch-btn inline-flex items-center px-6 py-3.5 bg-white border border-gray-200 text-gray-700 text-base font-semibold rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300">
-              기술 아키텍처
-            </button> */}
+            <a
+              href="#security"
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-700 text-base font-semibold rounded-xl shadow-sm hover:bg-gray-50 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300"
+            >
+              보안 구조 보기
+            </a>
           </div>
 
-          <div className="mt-20 pt-10 mx-auto w-full">
-            <div className="hero-stats flex items-center justify-around w-full">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <FiZap className="text-yellow-500 text-xl" />
-                  <span className="text-2xl font-bold text-gray-900">
-                    3단계
-                  </span>
+          {/* 스탯 */}
+          <div className="hero-stats mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 w-full pt-10 border-t border-gray-100">
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className={`text-lg ${stat.color}`} />
+                    <span className="text-xl font-extrabold text-gray-900">{stat.value}</span>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500">{stat.label}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-500">
-                  AI 보안 시스템
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <FiBox className="text-green-500 text-xl" />
-                  <span className="text-2xl font-bold text-gray-900">4개</span>
-                </div>
-                <span className="text-sm font-medium text-gray-500">
-                  AI 모델 통합
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <FiUsers className="text-blue-500 text-xl" />
-                  <span className="text-2xl font-bold text-gray-900">
-                    실시간
-                  </span>
-                </div>
-                <span className="text-sm font-medium text-gray-500">
-                  위험도 분석
-                </span>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        <div className="hero-visual relative w-full">
-          <div className="hero-glow absolute -inset-4 bg-linear-to-b from-purple-200 to-blue-200 opacity-30 blur-2xl rounded-3xl -z-10" />
+        {/* 우측 이미지 */}
+        <div className="hero-visual relative w-full flex items-center justify-center">
+          <div className="hero-glow absolute -inset-6 bg-gradient-to-br from-purple-200 via-blue-200 to-indigo-200 opacity-40 blur-3xl rounded-3xl -z-10" />
           <img
             src={im}
-            alt="팀원 이미지"
-            className="hero-image w-full h-auto object-cover rounded-2xl shadow-xl border border-gray-100/50"
+            alt="Party-Up 로고"
+            className="hero-image w-3/4 h-auto object-contain rounded-2xl"
           />
         </div>
       </div>

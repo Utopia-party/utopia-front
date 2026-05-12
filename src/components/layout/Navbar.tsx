@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavHashLink } from 'react-router-hash-link';
 import { IoClose, IoMenu } from 'react-icons/io5';
 
-type SectionId = 'features' | 'security' | 'ml-result' | 'guide' | 'team';
+type SectionId = 'features' | 'security' | 'ai-tech' | 'ml-result' | 'arch' | 'team';
 
 interface NavItem {
   label: string;
@@ -27,15 +27,15 @@ export default function Navbar() {
     () => [
       { label: '핵심 기능', href: '#features', id: 'features' },
       { label: '보안 시스템', href: '#security', id: 'security' },
-      { label: 'AI 학습결과', href: '#ml-result', id: 'ml-result' },
-      { label: '이용 가이드', href: '#guide', id: 'guide' },
+      { label: 'AI 기술', href: '#ai-tech', id: 'ai-tech' },
+      { label: 'ML 결과', href: '#ml-result', id: 'ml-result' },
+      { label: '아키텍처', href: '#arch', id: 'arch' },
       { label: '팀 소개', href: '#team', id: 'team' },
     ],
     [],
   );
 
   const sectionStatesRef = useRef<Map<SectionId, SectionState>>(new Map());
-
   const toggleMenu = () => setIsOpen((prev) => !prev);
 
   useEffect(() => {
@@ -60,7 +60,6 @@ export default function Navbar() {
       (entries) => {
         entries.forEach((entry) => {
           const id = entry.target.id as SectionId;
-
           sectionStatesRef.current.set(id, {
             isIntersecting: entry.isIntersecting,
             top: entry.boundingClientRect.top,
@@ -73,7 +72,6 @@ export default function Navbar() {
           .sort((a, b) => {
             const aTop = Math.abs(a[1].top - navHeight);
             const bTop = Math.abs(b[1].top - navHeight);
-
             if (aTop !== bTop) return aTop - bTop;
             return b[1].ratio - a[1].ratio;
           });
@@ -90,16 +88,13 @@ export default function Navbar() {
     );
 
     sections.forEach((section) => observer.observe(section));
-
     return () => observer.disconnect();
   }, [navItems]);
 
   const getDesktopLinkClass = (id: SectionId) =>
     [
       'relative text-sm font-medium transition-colors',
-      activeSection === id
-        ? 'text-primary'
-        : 'text-gray-600 hover:text-gray-900',
+      activeSection === id ? 'text-primary' : 'text-gray-600 hover:text-gray-900',
     ].join(' ');
 
   const getMobileLinkClass = (id: SectionId) =>
@@ -120,7 +115,7 @@ export default function Navbar() {
           </h1>
         </Link>
 
-        <div className="hidden md:flex items-center gap-3 md:gap-6">
+        <div className="hidden md:flex items-center gap-3 md:gap-5">
           {navItems.map((item) => (
             <NavHashLink
               key={item.id}
