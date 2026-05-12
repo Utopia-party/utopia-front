@@ -33,7 +33,7 @@ const BAN_TYPE_LABEL: Record<string, string> = {
   manual: '수동 제재',
 };
 
-// ── 메뉴얼 아코디언 ──────────────────────────────────────
+// ── 메뉴얼 ──────────────────────────────────────
 type AppealsManualItem = { title: string; badge?: string; badgeColor?: string; content: React.ReactNode };
 
 function AppealsManualAccordion({ items }: { items: AppealsManualItem[] }) {
