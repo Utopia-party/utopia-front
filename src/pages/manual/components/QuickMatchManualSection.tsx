@@ -47,7 +47,7 @@ export default function QuickMatchManualSection() {
   return (
     <ManualSection
       id="quick-match"
-      number="03-1"
+      number="04"
       title="빠른매칭 이용 방법"
       description="조건에 맞는 파티를 직접 찾는 대신 AI가 자동으로 추천해주는 빠른매칭을 이용할 수 있습니다."
     >

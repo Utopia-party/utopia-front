@@ -32,7 +32,7 @@ export default function PaymentManualSection() {
   return (
     <ManualSection
       id="payment"
-      number="05"
+      number="07"
       title="정산요청과 결제 방법"
       description="파티 채팅방에서 정산요청을 진행하고, 카드 결제 또는 계좌 입금으로 결제할 수 있습니다."
     >

@@ -52,7 +52,7 @@ export default function CreatePartyManualSection() {
   return (
     <ManualSection
       id="create-party"
-      number="06"
+      number="08"
       title="파티 만드는 방법"
       description="파티를 만들기 전에는 안전한 이용을 위해 AI 행동 기반 인증을 먼저 진행합니다."
     >

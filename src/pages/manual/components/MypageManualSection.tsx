@@ -49,7 +49,7 @@ export default function MypageManualSection() {
   return (
     <ManualSection
       id="mypage"
-      number="07"
+      number="09"
       title="마이페이지 이용 방법"
       description="마이페이지에서는 내 프로필, 파티, 신뢰도, 칭찬, 결제, 신고 내역을 확인할 수 있습니다."
     >

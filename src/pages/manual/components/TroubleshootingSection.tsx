@@ -61,7 +61,7 @@ export default function TroubleshootingSection() {
   return (
     <ManualSection
       id="troubleshooting"
-      number="11"
+      number="14"
       title="문제 해결"
       description="이용 중 자주 발생할 수 있는 상황과 해결 방법입니다."
     >

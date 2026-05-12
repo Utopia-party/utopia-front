@@ -37,7 +37,7 @@ export default function MyPartyChatManualSection() {
   return (
     <ManualSection
       id="chat-payment"
-      number="04"
+      number="05"
       title="내 파티와 채팅방 이용 방법"
       description="참여한 파티는 마이페이지의 내 파티에서 확인하고, 채팅방에서 파티원들과 소통할 수 있습니다."
     >

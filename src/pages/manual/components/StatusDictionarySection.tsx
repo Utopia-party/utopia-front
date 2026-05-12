@@ -15,7 +15,7 @@ export default function StatusDictionarySection() {
   return (
     <ManualSection
       id="status"
-      number="09"
+      number="13"
       title="상태 표시 뜻"
       description="화면에서 자주 보이는 상태값의 의미입니다."
     >
