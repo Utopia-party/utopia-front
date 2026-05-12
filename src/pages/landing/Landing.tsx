@@ -10,7 +10,6 @@ import SecuritySection from './components/SecuritySection';
 import AITechSection from './components/AITechSection';
 import MLResultSection from './components/MLResultSection';
 import TrustScoreVisualSection from './components/TrustScoreVisualSection';
-import PerformanceSection from './components/PerformanceSection';
 import BusinessModelSection from './components/BusinessModelSection';
 import ArchSection from './components/ArchSection';
 import DocumentShowcaseSection from './components/DocumentShowcaseSection';
@@ -65,14 +64,7 @@ export default function Landing() {
         <TrustScoreVisualSection />
       </Container>
 
-      {/* 9. 성능 수치 */}
-      <div className="bg-gray-50/50 w-full">
-        <Container className="py-4">
-          <PerformanceSection />
-        </Container>
-      </div>
-
-      {/* 10. 비즈니스 모델 */}
+      {/* 9. 비즈니스 모델 */}
       <Container>
         <BusinessModelSection />
       </Container>

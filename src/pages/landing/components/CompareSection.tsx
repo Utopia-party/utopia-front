@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { FiX, FiCheck, FiAlertTriangle } from 'react-icons/fi';
+import { FiX, FiCheck } from 'react-icons/fi';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 const rows = [
@@ -12,10 +12,10 @@ const rows = [
 ];
 
 const problems = [
-  { icon: '💸', title: '먹튀 사기', desc: '입금 후 잠적. SNS 기반 거래에서 연간 20만 건 이상 발생.' },
-  { icon: '👻', title: '노쇼 (No-show)', desc: '파티 참여 후 미결제, 미참여로 피해 발생.' },
-  { icon: '🤖', title: '봇 대량 계정', desc: '자동화 스크립트로 파티 독점, 어뷰징.' },
-  { icon: '⚠️', title: '분쟁 해결 불가', desc: '개인 간 거래라 증거 없이 해결 방법이 없음.' },
+  { title: '먹튀 사기', desc: '입금 후 잠적. SNS 기반 거래에서 연간 20만 건 이상 발생.' },
+  { title: '노쇼 (No-show)', desc: '파티 참여 후 미결제, 미참여로 피해 발생.' },
+  { title: '봇 대량 계정', desc: '자동화 스크립트로 파티 독점, 어뷰징.' },
+  { title: '분쟁 해결 불가', desc: '개인 간 거래라 증거 없이 해결 방법이 없음.' },
 ];
 
 export default function CompareSection() {
@@ -25,9 +25,7 @@ export default function CompareSection() {
   return (
     <section ref={sectionRef} id="compare" className="py-20 md:py-32 bg-gray-50/50">
       <div className="section-header flex flex-col items-center text-center mb-16">
-        <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-red-50 text-red-500 text-sm font-bold mb-6">
-          <FiAlertTriangle size={13} /> 왜 만들었나
-        </div>
+
         <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">
           기존 플랫폼의 한계,
           <br />
@@ -44,11 +42,10 @@ export default function CompareSection() {
       {/* 기존 문제점 */}
       <div className="stagger-grid grid grid-cols-2 md:grid-cols-4 gap-4 mb-14">
         {problems.map((p) => (
-          <div key={p.title} className="hover-lift rounded-2xl bg-white border border-red-100 p-5 text-center will-change-transform">
-            <div className="text-3xl mb-3">{p.icon}</div>
-            <p className="font-black text-gray-900 mb-2">{p.title}</p>
-            <p className="text-xs text-gray-500 leading-relaxed">{p.desc}</p>
-          </div>
+          <div key={p.title} className="hover-lift rounded-2xl bg-white border border-red-100 p-5 will-change-transform">
+              <p className="font-black text-gray-900 mb-2">{p.title}</p>
+              <p className="text-xs text-gray-500 leading-relaxed">{p.desc}</p>
+            </div>
         ))}
       </div>
 

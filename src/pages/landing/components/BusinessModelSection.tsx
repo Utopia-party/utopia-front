@@ -1,10 +1,9 @@
 import { useRef } from 'react';
-import { FiDollarSign, FiArrowRight } from 'react-icons/fi';
+import { FiArrowRight } from 'react-icons/fi';
 import useLandingAnimations from '../../../hooks/useLandingAnimations';
 
 const revenues = [
   {
-    icon: '💰',
     title: '중개 수수료',
     model: '파티 성사 대금의 30%',
     desc: '플랫폼 신뢰도 확보 후 단계적 조정. 경쟁 플랫폼 대비 합리적 수준 유지.',
@@ -13,7 +12,6 @@ const revenues = [
     tagColor: 'bg-purple-100 text-purple-700',
   },
   {
-    icon: '🔌',
     title: 'B2B 보안 API',
     model: 'SaaS 월정액 / API 호출량 과금',
     desc: '3단계 AI 인증 모듈 라이선스. 예매·숙박·공유경제 플랫폼 대상.',
@@ -22,7 +20,6 @@ const revenues = [
     tagColor: 'bg-blue-100 text-blue-700',
   },
   {
-    icon: '🎁',
     title: '추천인 프로그램',
     model: '신규 가입자 유치 수수료 환급',
     desc: '기존 유저 초대 시 수수료 일부 환급. 유저 수 증가 → 거래량 증가 선순환.',
@@ -31,7 +28,6 @@ const revenues = [
     tagColor: 'bg-green-100 text-green-700',
   },
   {
-    icon: '📢',
     title: '플랫폼 광고',
     model: '구글 애드센스 기반 타겟 광고',
     desc: '구독 서비스·엔터테인먼트 카테고리 타겟팅. 인증된 활성 유저 기반 CPM 우위.',
@@ -55,8 +51,8 @@ export default function BusinessModelSection() {
   return (
     <section ref={sectionRef} id="business" className="py-20 md:py-32 bg-white">
       <div className="section-header flex flex-col items-center text-center mb-16">
-        <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-green-50 text-green-600 text-sm font-bold mb-6">
-          <FiDollarSign size={13} /> 비즈니스 모델
+        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-green-50 text-green-600 text-sm font-bold mb-6">
+          비즈니스 모델
         </div>
         <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">
           어떻게 수익을 만드나요
@@ -70,18 +66,15 @@ export default function BusinessModelSection() {
       <div className="stagger-grid grid grid-cols-1 md:grid-cols-2 gap-4 mb-14">
         {revenues.map((r) => (
           <div key={r.title} className={`hover-lift rounded-2xl border p-6 will-change-transform ${r.color}`}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{r.icon}</span>
+              <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="font-black text-gray-900">{r.title}</p>
                   <p className="text-sm text-gray-500 font-medium">{r.model}</p>
                 </div>
+                <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${r.tagColor}`}>{r.tag}</span>
               </div>
-              <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${r.tagColor}`}>{r.tag}</span>
+              <p className="text-sm text-gray-600 leading-relaxed">{r.desc}</p>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">{r.desc}</p>
-          </div>
         ))}
       </div>
 
