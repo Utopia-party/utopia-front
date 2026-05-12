@@ -65,6 +65,12 @@ const documents: DocumentItem[] = [
     previewUrl:
       'https://docs.google.com/spreadsheets/d/e/2PACX-1vQoX7pP6_sDfNSPRsIt0XdvFW416nC-nRxZBJjMb2fpjL3YoDdNZLRDrWnDhdh57A/pubhtml?gid=1088307676&single=true&widget=false&headers=false',
   },
+  {
+    id: 9,
+    title: '화면설계서',
+    href: 'https://www.figma.com/design/bTs94tvvNYwhQy1qkmPp7H/T1_%ED%8C%8C%ED%8B%B0%EC%97%85_%ED%99%94%EB%A9%B4%EC%84%A4%EA%B3%84?node-id=1-2&p=f&t=Kt6ghbC7tUm1Cdxc-0',
+    previewUrl: '',
+  },
 ];
 
 export default function DocumentShowcaseSection() {
@@ -109,14 +115,35 @@ export default function DocumentShowcaseSection() {
 
       {/* 프리뷰 영역 */}
       <div className="rounded-3xl border border-gray-200 bg-white overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-        <div className="h-[70vh] min-h-[520px] bg-gray-50">
-          <iframe
-            key={active.id}
-            src={active.previewUrl}
-            title={active.title}
-            className="w-full h-full"
-            loading="lazy"
-          />
+        <div className="h-[70vh] min-h-[520px] bg-gray-50 flex items-center justify-center">
+          {active.previewUrl ? (
+            <iframe
+              key={active.id}
+              src={active.previewUrl}
+              title={active.title}
+              className="w-full h-full"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-6 text-center px-8">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <FiExternalLink className="text-3xl text-blue-500" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-gray-900 mb-2">{active.title}</p>
+                <p className="text-gray-400 text-sm">이 문서는 외부 툴에서 확인할 수 있습니다.</p>
+              </div>
+              <a
+                href={active.href}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                Figma에서 열기
+                <FiExternalLink />
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-4 p-6 md:p-8">
