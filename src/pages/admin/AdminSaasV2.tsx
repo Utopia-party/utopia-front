@@ -103,7 +103,7 @@ const SAAS_MANUAL_ITEMS: SaasManualItem[] = [
             <p className="text-[11px] text-slate-400 mt-1.5">주 사용처: 게임 채팅, 커뮤니티, 라이브 스트리밍 등</p>
           </div>
         </div>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 두 서비스는 API 키 풀이 완전히 분리됩니다. 탭을 전환하면 해당 서비스의 키 목록과 통계만 표시됩니다.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">두 서비스는 API 키 풀이 완전히 분리됩니다. 탭을 전환하면 해당 서비스의 키 목록과 통계만 표시됩니다.</p>
       </div>
     ),
   },
@@ -151,20 +151,22 @@ const SAAS_MANUAL_ITEMS: SaasManualItem[] = [
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="px-3 py-2 text-left font-semibold text-slate-600">플랜</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">기본 월간 한도</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">기본 월간 한도 (L2 캡챠)</th>
+                <th className="px-3 py-2 text-left font-semibold text-slate-600">기본 월간 한도 (채팅 AI)</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-600">대상</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {[
-                { plan: 'Free', color: 'bg-gray-100 text-gray-700', limit: '10,000회', target: '테스트 및 소규모 개발' },
-                { plan: 'Starter', color: 'bg-blue-100 text-blue-700', limit: '50,000회', target: '소규모 서비스' },
-                { plan: 'Pro', color: 'bg-purple-100 text-purple-700', limit: '300,000회', target: '중규모 서비스' },
-                { plan: 'Enterprise', color: 'bg-amber-100 text-amber-700', limit: '별도 협의', target: '대규모 서비스' },
+                { plan: 'Free', color: 'bg-gray-100 text-gray-700', l2: '500회', chat: '5,000회', target: '테스트 및 소규모 개발' },
+                { plan: 'Starter', color: 'bg-blue-100 text-blue-700', l2: '관리자 설정', chat: '관리자 설정', target: '소규모 서비스' },
+                { plan: 'Pro', color: 'bg-purple-100 text-purple-700', l2: '관리자 설정', chat: '관리자 설정', target: '중규모 서비스' },
+                { plan: 'Enterprise', color: 'bg-amber-100 text-amber-700', l2: '별도 협의', chat: '별도 협의', target: '대규모 서비스' },
               ].map((r) => (
                 <tr key={r.plan}>
                   <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${r.color}`}>{r.plan}</span></td>
-                  <td className="px-3 py-2.5 text-slate-600 font-mono">{r.limit}</td>
+                  <td className="px-3 py-2.5 text-slate-600 font-mono">{r.l2}</td>
+                  <td className="px-3 py-2.5 text-slate-600 font-mono">{r.chat}</td>
                   <td className="px-3 py-2.5 text-slate-500">{r.target}</td>
                 </tr>
               ))}
@@ -172,7 +174,8 @@ const SAAS_MANUAL_ITEMS: SaasManualItem[] = [
           </table>
         </div>
         <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
-          <li>한도는 수정 모달에서 직접 조정 가능합니다. 플랜 변경 시 기본 한도로 자동 제안됩니다.</li>
+          <li>Free 플랜 한도는 발급 시 서비스 유형에 따라 자동 적용됩니다. Starter 이상은 발급 시 직접 입력하세요.</li>
+          <li>한도는 수정 모달에서 언제든 조정 가능합니다.</li>
           <li>한도 초과 시 API가 <code className="bg-slate-100 px-1 rounded text-[10px]">429 Too Many Requests</code>를 반환합니다.</li>
           <li>사용량 막대가 <span className="font-semibold text-amber-600">노란색(70%)</span> 또는 <span className="font-semibold text-red-600">빨간색(90%)</span>이면 파트너사에 업그레이드를 안내하세요.</li>
         </ul>
@@ -187,14 +190,13 @@ const SAAS_MANUAL_ITEMS: SaasManualItem[] = [
       <div className="space-y-3">
         <div className="space-y-2">
           {[
-            { icon: '🔑', label: '키 수정 (연필 아이콘)', desc: '서비스명, 허용 도메인, 플랜, 월간 한도, 활성 상태를 변경합니다. 변경 즉시 적용됩니다.' },
-            { icon: '↩️', label: 'Secret Key 재발급 (순환 아이콘)', desc: '키 유출 사고 발생 시 사용. 기존 Secret Key는 즉시 무효화되므로 파트너사에 새 키를 반드시 전달해야 합니다.' },
-            { icon: '🔄', label: '사용량 초기화 (새로고침 아이콘)', desc: '이번 달 사용량 카운터를 0으로 리셋합니다. 테스트 또는 예외 처리 시 사용하세요.' },
-            { icon: '🔍', label: '사용 로그 (돋보기 아이콘)', desc: '해당 키의 API 호출 기록을 확인합니다. 엔드포인트, 호출 도메인, IP, 상태 코드, 응답 시간을 볼 수 있습니다.' },
-            { icon: '🟢', label: '활성/비활성 토글 (상태 뱃지)', desc: '클릭 시 즉시 활성/비활성이 전환됩니다. 비활성 키는 모든 API 요청이 401로 거부됩니다.' },
+            { label: '키 수정', desc: '서비스명, 허용 도메인, 플랜, 월간 한도, 활성 상태를 변경합니다. 변경 즉시 적용됩니다.' },
+            { label: 'Secret Key 재발급', desc: '키 유출 사고 발생 시 사용. 기존 Secret Key는 즉시 무효화되므로 파트너사에 새 키를 반드시 전달해야 합니다.' },
+            { label: '사용량 초기화', desc: '이번 달 사용량 카운터를 0으로 리셋합니다. 테스트 또는 예외 처리 시 사용하세요.' },
+            { label: '사용 로그', desc: '해당 키의 API 호출 기록을 확인합니다. 엔드포인트, 호출 도메인, IP, 상태 코드, 응답 시간을 볼 수 있습니다.' },
+            { label: '활성/비활성 토글', desc: '클릭 시 즉시 활성/비활성이 전환됩니다. 비활성 키는 모든 API 요청이 401로 거부됩니다.' },
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-3 bg-white rounded-lg border border-slate-100 px-3 py-2.5">
-              <span className="shrink-0 text-base">{item.icon}</span>
               <div>
                 <p className="text-xs font-semibold text-slate-800 mb-0.5">{item.label}</p>
                 <p className="text-xs text-slate-500">{item.desc}</p>
@@ -202,7 +204,7 @@ const SAAS_MANUAL_ITEMS: SaasManualItem[] = [
             </div>
           ))}
         </div>
-        <p className="text-xs text-slate-400 bg-red-50 rounded-lg px-3 py-2 border border-red-100">⚠️ Secret Key 재발급은 되돌릴 수 없습니다. 파트너사가 새 키로 교체하기 전까지 서비스가 중단될 수 있으니 사전에 반드시 공지하세요.</p>
+        <p className="text-xs text-slate-400 bg-red-50 rounded-lg px-3 py-2 border border-red-100">Secret Key 재발급은 되돌릴 수 없습니다. 파트너사가 새 키로 교체하기 전까지 서비스가 중단될 수 있으니 사전에 반드시 공지하세요.</p>
       </div>
     ),
   },
@@ -247,7 +249,7 @@ const SAAS_MANUAL_ITEMS: SaasManualItem[] = [
             </li>
           ))}
         </ol>
-        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">💡 탭 이름 옆 빨간 숫자 뱃지가 대기 중인 문의 건수를 나타냅니다. 정기적으로 확인해 빠르게 처리하세요.</p>
+        <p className="text-xs text-slate-400 bg-slate-100 rounded-lg px-3 py-2">탭 이름 옆 빨간 숫자 뱃지가 대기 중인 문의 건수를 나타냅니다. 정기적으로 확인해 빠르게 처리하세요.</p>
       </div>
     ),
   },
