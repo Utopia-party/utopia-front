@@ -5,11 +5,13 @@ export interface Message {
     | 'system_info'
     | 'warning'
     | 'error'
+    | 'force_logout'
     | 'message_deleted'
     | 'notice_updated'
     | 'notice_deleted'
     | 'settlement_approved'
-    | 'party_updated';
+    | 'party_updated'
+    | 'read_update';
   chat_id?: string;
   chat_ids?: string[];
   party_id?: string;
