@@ -499,6 +499,7 @@ function SummaryCard({
 
 // ── 메인 컴포넌트 ──
 export default function AdminCloudMonitor() {
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [summary, setSummary] = useState<SummaryMetrics | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -731,6 +732,97 @@ export default function AdminCloudMonitor() {
               </button>
             </div>
           </div>
+
+          <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                클라우드 모니터링 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    클라우드 모니터링 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    클라우드 모니터링은 카카오클라우드 서버의 CPU, 메모리,
+                    네트워크, 디스크 사용량을 실시간으로 확인하는 화면입니다.
+                    인프라 상태를 빠르게 점검할 때 사용합니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 전체 서버의 평균 CPU, 메모리, 네트워크, 디스크 상태를
+                        요약 카드로 확인할 수 있습니다.
+                      </p>
+                      <p>
+                        2. 서버별 리소스 현황을 한 표에서 비교할 수 있습니다.
+                      </p>
+                      <p>
+                        3. 특정 서버와 특정 메트릭을 골라 기간별 추이 그래프를
+                        볼 수 있습니다.
+                      </p>
+                      <p>
+                        4. 실시간 갱신을 켜고 끄면서 현재 상태를 주기적으로
+                        확인할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 상단 요약 카드에서 전체 리소스 이상 여부를 먼저
+                        확인합니다.
+                      </p>
+                      <p>
+                        2. 특정 이슈가 보이면 서버별 리소스 현황 표에서 어느
+                        서버인지 좁힙니다.
+                      </p>
+                      <p>
+                        3. 이후 리소스 차트에서 서버, 메트릭, 기간을 선택해
+                        시간대별 변화를 확인합니다.
+                      </p>
+                      <p>
+                        4. 실시간 ON 상태에서는 주기적으로 갱신되므로 장애 상황
+                        점검에 활용할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      일부 메트릭이 비어 있으면 카카오클라우드 API 키 설정이나
+                      모니터링 에이전트 상태를 먼저 점검해 주세요.
+                    </p>
+                    <p>
+                      실시간 갱신 값은 순간 변동폭이 크기 때문에, 이상 징후는
+                      기간별 추이 그래프와 함께 확인하는 것이 좋습니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
 
           {/* 오류 배너 */}
           {errors.length > 0 && (
