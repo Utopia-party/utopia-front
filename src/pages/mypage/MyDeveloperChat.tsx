@@ -388,9 +388,7 @@ export default function MyDeveloperChat() {
                         transition: 'width 0.3s ease',
                       }} />
                     </div>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px', textAlign: 'right' }}>
-                      {key.current_month_usage.toLocaleString()} / {key.monthly_limit.toLocaleString()}건
-                    </div>
+
                   </div>
 
                   <div style={{ fontSize: '12px', color: '#999', marginBottom: '15px' }}>생성일: {key.created_at || '-'}</div>
