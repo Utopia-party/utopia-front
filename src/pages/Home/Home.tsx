@@ -47,7 +47,6 @@ const VISIBLE_PARTY_STATUSES: Array<Party['status']> = [
   'active',
   'full',
   'ended',
-  'closed',
   null,
 ];
 
