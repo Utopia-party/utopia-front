@@ -225,6 +225,7 @@ function getAdminActionDescription(message: string) {
 }
 
 export default function AdminSystemLogs() {
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [logType, setLogType] = useState('전체');
   const [actorType, setActorType] = useState('전체');
@@ -356,6 +357,96 @@ export default function AdminSystemLogs() {
             <p className="text-xs sm:text-sm text-gray-500 break-keep">
               에러 로깅 · 관리자 활동 로그 · 감사(Audit) 추적
             </p>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                시스템 로그 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    시스템 로그 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    시스템 로그 화면은 에러 로그, 관리자 활동 로그, 사용자 활동
+                    로그를 함께 확인하는 감사 추적 화면입니다. 장애 대응과 운영
+                    이력 확인에 사용합니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 사용자 이름, 유형, 주체, 기간 기준으로 로그를 검색할
+                        수 있습니다.
+                      </p>
+                      <p>
+                        2. 관리자 활동과 시스템 에러를 구분해서 볼 수 있습니다.
+                      </p>
+                      <p>
+                        3. 로그 메시지와 관리자 API 작업 설명을 함께 확인할 수
+                        있습니다.
+                      </p>
+                      <p>
+                        4. 현재 검색 결과를 CSV로 내려받아 별도 공유하거나
+                        보관할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 먼저 기간과 유형을 좁혀 필요한 로그 범위를 줄입니다.
+                      </p>
+                      <p>
+                        2. 에러나 경고가 있으면 시간, IP, 메시지를 같이
+                        확인합니다.
+                      </p>
+                      <p>
+                        3. 관리자 API 호출 로그는 어떤 화면에서 어떤 작업을
+                        했는지 같이 확인합니다.
+                      </p>
+                      <p>
+                        4. 필요한 경우 Export 버튼으로 현재 검색 결과를 파일로
+                        저장합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      시스템 로그는 검색 결과 기준으로만 내려받기 되므로, 먼저
+                      조건을 충분히 좁힌 뒤 Export 하는 것이 좋습니다.
+                    </p>
+                    <p>
+                      에러 확인 시에는 같은 시간대의 관리자 작업 로그와 함께
+                      보면 원인 파악이 더 빠릅니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* 💡 검색 폼 스태킹(세로 쌓기) 최적화 */}

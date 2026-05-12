@@ -298,6 +298,7 @@ function CompactStatCard({
 }
 
 export default function AdminDashboard() {
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -441,6 +442,100 @@ export default function AdminDashboard() {
               날짜 범위를 기준으로 회원, 매출, 신고, 정산 흐름을 한 화면에서
               확인합니다.
             </p>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-[11px] md:text-xs font-semibold text-slate-500">
+                통계대시보드 메뉴얼
+              </div>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {isGuideOpen ? '접기' : '펼치기'}
+              </span>
+            </button>
+
+            {isGuideOpen && (
+              <div className="mt-3 space-y-3 text-[11px] md:text-xs text-slate-600">
+                <div className="rounded-xl border border-white bg-white px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    통계대시보드 메뉴얼
+                  </div>
+                  <p className="mt-2 leading-relaxed">
+                    통계대시보드는 회원, 매출, 신고, 정산 흐름을 기간 기준으로
+                    한 번에 확인하는 화면입니다. 운영 지표를 빠르게 점검하고
+                    이상 징후를 먼저 찾는 용도로 사용합니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">
+                      이 페이지에서 할 수 있는 기능
+                    </div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 조회 기간을 바꿔 회원 수, 승인 매출, 신고 수, 정산
+                        수를 비교할 수 있습니다.
+                      </p>
+                      <p>
+                        2. 요약 카드와 차트로 현재 운영 상황을 빠르게 확인할 수
+                        있습니다.
+                      </p>
+                      <p>
+                        3. 최근 활동 영역에서 관리자 운영 이력과 주요 이벤트를
+                        함께 볼 수 있습니다.
+                      </p>
+                      <p>
+                        4. 상세 통계 패널에서 회원/매출/신고/정산 데이터를
+                        항목별로 나눠서 확인할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white px-4 py-4">
+                    <div className="font-bold text-slate-800">사용 방법</div>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        1. 먼저 시작일과 종료일을 지정해 기준 기간을 맞춘 뒤
+                        조회합니다.
+                      </p>
+                      <p>
+                        2. 요약 카드에서 수치 변화를 보고, 이상한 지표가 있으면
+                        아래 차트로 흐름을 확인합니다.
+                      </p>
+                      <p>
+                        3. 차트 탭을 바꿔 회원, 매출, 신고, 정산 항목을 각각
+                        확인합니다.
+                      </p>
+                      <p>
+                        4. 최근 활동과 상세 통계를 함께 보면서 어느 운영
+                        화면에서 추가 점검이 필요한지 판단합니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4">
+                  <div className="font-bold text-slate-800">운영 시 참고</div>
+                  <div className="mt-2 space-y-1.5 leading-relaxed text-slate-600">
+                    <p>
+                      대시보드 수치는 운영 현황을 빠르게 보는 요약 지표이므로,
+                      실제 처리 전에는 사용자관리·매출내역·신고관리 페이지에서
+                      상세 데이터를 다시 확인하는 것이 좋습니다.
+                    </p>
+                    <p>
+                      실시간 갱신 타이밍에 따라 수치가 바로 반영되지 않을 수
+                      있으니, 중요한 검수는 조회를 한 번 다시 실행한 뒤 판단해
+                      주세요.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:rounded-2xl">
