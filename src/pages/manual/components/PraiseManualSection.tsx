@@ -1,4 +1,4 @@
-import { Heart, Clock, AlertCircle } from 'lucide-react';
+import { Heart, Clock } from 'lucide-react';
 import InstructionSteps from './InstructionSteps';
 import ManualCallout from './ManualCallout';
 import ManualSection from './ManualSection';
