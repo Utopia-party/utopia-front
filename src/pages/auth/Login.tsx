@@ -1,5 +1,5 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { CaptchaWidget } from '../../components/captcha';
 import { useAuthStore } from '../../stores/authStore';
@@ -33,6 +33,7 @@ export default function Login() {
   const isDuplicateLogin = searchParams.get('reason') === 'duplicate';
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showCaptchaRequired, setShowCaptchaRequired] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showAppealModal, setShowAppealModal] = useState(false);
@@ -45,6 +46,7 @@ export default function Login() {
     password: '',
     rememberMe: false,
   });
+  const captchaSectionRef = useRef<HTMLDivElement>(null);
 
   const DEMO_ACCOUNTS = {
     user: {
@@ -115,7 +117,11 @@ export default function Login() {
     }
 
     if (!captchaToken) {
-      alert('캡챠 인증을 완료해주세요.');
+      setShowCaptchaRequired(true);
+      captchaSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
       return;
     }
 
@@ -373,17 +379,44 @@ export default function Login() {
           </Link>
         </div>
 
-        <div className="flex justify-center py-1">
-          <CaptchaWidget
-            onSuccess={(token) => setCaptchaToken(token)}
-            onError={() => setCaptchaToken(null)}
-            triggerType="new_ip_login"
-          />
+        <div
+          ref={captchaSectionRef}
+          className={`rounded-2xl px-3 py-3 transition ${
+            showCaptchaRequired && !captchaToken
+              ? 'border border-red-200 bg-red-50/80 ring-4 ring-red-100'
+              : 'border border-transparent'
+          }`}
+        >
+          {showCaptchaRequired && !captchaToken && (
+            <div
+              className="mb-3 flex items-start gap-2 rounded-xl border border-red-200 bg-white px-3 py-2.5 text-sm text-red-700"
+              role="alert"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">캡챠 인증이 필요합니다.</p>
+                <p className="mt-0.5 text-xs text-red-500">
+                  아래 인증을 완료한 뒤 로그인 버튼을 다시 눌러주세요.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-center">
+            <CaptchaWidget
+              onSuccess={(token) => {
+                setCaptchaToken(token);
+                setShowCaptchaRequired(false);
+              }}
+              onError={() => setCaptchaToken(null)}
+              triggerType="new_ip_login"
+            />
+          </div>
         </div>
 
         <button
           type="submit"
-          disabled={isSubmitting || !captchaToken}
+          disabled={isSubmitting}
           className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
           {isSubmitting ? '로그인 중...' : !captchaToken ? '로그인' : '로그인'}

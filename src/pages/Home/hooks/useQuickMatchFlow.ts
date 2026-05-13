@@ -51,13 +51,22 @@ function normalizeErrorCode(error: unknown): string {
   const rawCode = apiError.response?.data?.code;
   const detail = apiError.response?.data?.detail;
   const message = apiError.response?.data?.message || apiError.message;
+  const responseText = JSON.stringify(apiError.response?.data ?? {});
   const raw = String(rawCode || detail || message || '').trim();
+  const haystack = [rawCode, detail, message, responseText]
+    .filter(Boolean)
+    .join(' ');
 
   if (
     raw === 'ALREADY_IN_ACTIVE_PARTY' ||
-    raw.includes('이미 참여 중인 활성 파티') ||
-    raw.includes('이미 가입') ||
-    raw.includes('활성 파티가 있습니다')
+    haystack.includes('ALREADY_IN_ACTIVE_PARTY') ||
+    haystack.includes('이미 해당 서비스의 활성 파티에 참여 중') ||
+    haystack.includes('이미 참여 중인 활성 파티') ||
+    haystack.includes('이미 참여 중인 파티') ||
+    haystack.includes('이미 가입') ||
+    haystack.includes('활성 파티가 있습니다') ||
+    haystack.includes('already in active party') ||
+    haystack.includes('already joined')
   ) {
     return 'ALREADY_IN_ACTIVE_PARTY';
   }

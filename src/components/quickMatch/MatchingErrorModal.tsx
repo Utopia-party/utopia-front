@@ -22,7 +22,7 @@ function getErrorModalContent(
   switch (errorCode) {
     case 'ALREADY_IN_ACTIVE_PARTY':
       return {
-        title: '이미 이용 중인 서비스예요',
+        title: '이미 해당 서비스의 활성 파티에 참여 중입니다.',
         message: '해당 서비스에 이미 참여 중인 파티가 있습니다.',
         subMessage: '기존 파티를 확인하거나, 다른 서비스를 선택해주세요.',
         secondaryButtonText: '둘러보기',
@@ -56,7 +56,7 @@ function getErrorModalContent(
     case 'NO_CANDIDATE':
     default:
       return {
-        title: '아직 딱 맞는 파티를 찾지 못했어요',
+        title: '아직 딱 파티를 찾지 못했어요',
         message: fallbackMessage,
         subMessage: '조건을 조금 바꾸거나, 잠시 후 다시 시도해보세요.',
         secondaryButtonText: '둘러보기',
@@ -97,10 +97,6 @@ export default function MatchingErrorModal({
           <h3 className="mt-3 sm:mt-4 break-keep text-lg sm:text-xl font-extrabold text-slate-900">
             {content.title}
           </h3>
-
-          <p className="mt-2 sm:mt-3 break-keep text-xs sm:text-sm leading-relaxed sm:leading-6 text-slate-500">
-            {content.message}
-          </p>
 
           <p className="mt-1.5 sm:mt-2 break-keep text-[11px] sm:text-xs leading-relaxed sm:leading-5 text-slate-400">
             {content.subMessage}
