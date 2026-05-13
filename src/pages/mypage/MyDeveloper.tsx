@@ -4,7 +4,6 @@ import {
   fetchMyKeys,
   createMyKey,
   updateMyKey,
-  deleteMyKey,
   rotateMySecret,
   fetchMyUsageLogs,
   fetchMyUsageSummary,
@@ -184,24 +183,6 @@ export default function MyDeveloper() {
         await loadData();
       } catch (err) {
         setError((err as Error).message || 'Secret Key 재발급 실패');
-      }
-    },
-    [loadData],
-  );
-
-  // API 키 삭제
-  const handleDeleteKey = useCallback(
-    async (keyId: string, clientName: string) => {
-      const confirmed = window.confirm(
-        `"${clientName}" API 키를 삭제하시겠습니까?\n삭제된 키는 즉시 무효화되며 복구할 수 없습니다.`,
-      );
-      if (!confirmed) return;
-
-      try {
-        await deleteMyKey(keyId);
-        await loadData();
-      } catch (err) {
-        setError((err as Error).message || '키 삭제 실패');
       }
     },
     [loadData],
@@ -682,21 +663,6 @@ export default function MyDeveloper() {
                         }}
                       >
                         수정
-                      </button>
-                      <button
-                        onClick={() => handleDeleteKey(key.id, key.client_name)}
-                        style={{
-                          padding: '8px 15px',
-                          backgroundColor: '#ffebee',
-                          border: '1px solid #ef9a9a',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          color: '#c62828',
-                          fontWeight: '600',
-                        }}
-                      >
-                        삭제
                       </button>
                     </div>
                   </div>

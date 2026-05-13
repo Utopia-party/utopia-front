@@ -81,43 +81,59 @@ export async function fetchMyV2Keys(params?: {
   return data;
 }
 
-export async function createMyV2Key(payload: SaasKeyCreatePayload): Promise<SaasKeyItem> {
+export async function createMyV2Key(
+  payload: SaasKeyCreatePayload,
+): Promise<SaasKeyItem> {
   const { data } = await api.post('/api/developer-v2/keys', payload);
   return data;
 }
 
-export async function updateMyV2Key(keyId: string, payload: SaasKeyUpdatePayload): Promise<SaasKeyItem> {
+export async function updateMyV2Key(
+  keyId: string,
+  payload: SaasKeyUpdatePayload,
+): Promise<SaasKeyItem> {
   const { data } = await api.put(`/api/developer-v2/keys/${keyId}`, payload);
   return data;
 }
 
-export async function deleteMyV2Key(keyId: string): Promise<void> {
-  await api.delete(`/api/developer-v2/keys/${keyId}`);
-}
+// deleteMyV2Key 제거됨 — 관리자 전용으로 이관 (adminSaasV2.ts)
 
 export async function rotateMyV2Secret(keyId: string): Promise<SaasKeyItem> {
-  const { data } = await api.post(`/api/developer-v2/keys/${keyId}/rotate-secret`);
+  const { data } = await api.post(
+    `/api/developer-v2/keys/${keyId}/rotate-secret`,
+  );
   return data;
 }
 
-export async function fetchMyV2UsageLogs(keyId: string, params?: { page?: number; size?: number }): Promise<UsageLogListResponse> {
-  const { data } = await api.get(`/api/developer-v2/keys/${keyId}/usage`, { params });
+export async function fetchMyV2UsageLogs(
+  keyId: string,
+  params?: { page?: number; size?: number },
+): Promise<UsageLogListResponse> {
+  const { data } = await api.get(`/api/developer-v2/keys/${keyId}/usage`, {
+    params,
+  });
   return data;
 }
 
-export async function fetchMyV2UsageSummary(serviceType?: ServiceType): Promise<UsageSummary> {
+export async function fetchMyV2UsageSummary(
+  serviceType?: ServiceType,
+): Promise<UsageSummary> {
   const { data } = await api.get('/api/developer-v2/usage-summary', {
     params: serviceType ? { service_type: serviceType } : undefined,
   });
   return data;
 }
 
-export async function createV2PlanInquiry(payload: PlanInquiryCreatePayload): Promise<PlanInquiry> {
+export async function createV2PlanInquiry(
+  payload: PlanInquiryCreatePayload,
+): Promise<PlanInquiry> {
   const { data } = await api.post('/api/developer-v2/plan-inquiry', payload);
   return data;
 }
 
-export async function fetchMyV2PlanInquiries(serviceType?: ServiceType): Promise<PlanInquiryListResponse> {
+export async function fetchMyV2PlanInquiries(
+  serviceType?: ServiceType,
+): Promise<PlanInquiryListResponse> {
   const { data } = await api.get('/api/developer-v2/plan-inquiries', {
     params: serviceType ? { service_type: serviceType } : undefined,
   });

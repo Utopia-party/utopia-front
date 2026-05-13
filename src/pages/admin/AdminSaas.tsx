@@ -8,6 +8,7 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
+  Trash2,
   X,
 } from 'lucide-react';
 import {
@@ -17,6 +18,7 @@ import {
   fetchKeyUsageLogs,
   rotateSecretKey,
   resetKeyUsage,
+  deleteSaasKey,
   updateSaasKey,
   fetchPlanInquiries,
   updatePlanInquiryStatus,
@@ -646,6 +648,22 @@ export default function AdminSaas() {
     }
   };
 
+  const handleDeleteKey = async (item: ApiKeyItem) => {
+    if (
+      !confirm(
+        `"${item.client_name}" API 키를 삭제하시겠습니까?\n삭제된 키는 즉시 무효화되며 복구할 수 없습니다.\n관련 사용 로그도 함께 삭제됩니다.`,
+      )
+    )
+      return;
+    try {
+      await deleteSaasKey(item.id);
+      void loadKeys();
+      void loadStats();
+    } catch {
+      alert('삭제에 실패했습니다.');
+    }
+  };
+
   // 탭 상태
   const [activeTab, setActiveTab] = useState<'keys' | 'inquiries'>('keys');
 
@@ -1087,6 +1105,13 @@ export default function AdminSaas() {
                                 title="사용 로그"
                               >
                                 <Search size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteKey(item)}
+                                className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                title="키 삭제"
+                              >
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </td>
