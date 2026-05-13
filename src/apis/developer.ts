@@ -79,9 +79,7 @@ export async function updateMyKey(
   return data;
 }
 
-export async function deleteMyKey(keyId: string): Promise<void> {
-  await api.delete(`/api/developer/keys/${keyId}`);
-}
+// deleteMyKey 제거됨 — 관리자 전용으로 이관 (adminSaas.ts)
 
 export async function rotateMySecret(keyId: string): Promise<MyApiKey> {
   const { data } = await api.post(`/api/developer/keys/${keyId}/rotate-secret`);

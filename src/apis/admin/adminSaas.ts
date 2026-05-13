@@ -112,6 +112,10 @@ export async function resetKeyUsage(
   return data;
 }
 
+export async function deleteSaasKey(keyId: string): Promise<void> {
+  await api.delete(`/api/admin/saas/keys/${keyId}`);
+}
+
 export async function fetchKeyUsageLogs(
   keyId: string,
   params?: { page?: number; size?: number },
