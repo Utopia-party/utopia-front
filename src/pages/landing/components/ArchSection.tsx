@@ -8,28 +8,58 @@ const layers = [
     color: 'border-l-violet-400',
     bg: 'bg-violet-50',
     textColor: 'text-violet-700',
-    items: ['React 19', 'TypeScript', 'Tailwind CSS', 'Zustand', 'TanStack Query', 'GSAP', 'WebSocket'],
+    items: [
+      'React 19',
+      'TypeScript',
+      'Tailwind CSS',
+      'Zustand',
+      'TanStack Query',
+      'GSAP',
+      'WebSocket',
+    ],
   },
   {
     label: 'Backend',
     color: 'border-l-blue-400',
     bg: 'bg-blue-50',
     textColor: 'text-blue-700',
-    items: ['FastAPI', 'PostgreSQL', 'Redis', 'MinIO', 'WebSocket', 'JWT', 'OAuth 2.0', 'Toss Payments'],
+    items: [
+      'FastAPI',
+      'PostgreSQL',
+      'Redis',
+      'MinIO',
+      'WebSocket',
+      'JWT',
+      'OAuth 2.0',
+      'Toss Payments',
+    ],
   },
   {
     label: 'AI — 보안',
     color: 'border-l-purple-400',
     bg: 'bg-purple-50',
     textColor: 'text-purple-700',
-    items: ['FastGAN', 'PGD Adversarial', 'CLIP', 'LSTM', 'pgvector KNN', 'MediaPipe', 'PaddleOCR'],
+    items: [
+      'FastGAN',
+      'PGD Adversarial',
+      'CLIP',
+      'LSTM',
+      'pgvector KNN',
+      'MediaPipe',
+      'PaddleOCR',
+    ],
   },
   {
     label: 'AI — 채팅',
     color: 'border-l-indigo-400',
     bg: 'bg-indigo-50',
     textColor: 'text-indigo-700',
-    items: ['KR-ELECTRA (HuggingFace)', 'Ollama LLM', 'Blacklist Filter', 'PyTorch FP16'],
+    items: [
+      'KR-ELECTRA (HuggingFace)',
+      'Ollama LLM',
+      'Blacklist Filter',
+      'PyTorch FP16',
+    ],
   },
   {
     label: 'Infra',
@@ -45,25 +75,59 @@ const flows = [
     title: '회원가입 보안 플로우',
     color: 'border-purple-200 bg-purple-50/50',
     titleColor: 'text-purple-700',
-    steps: ['HTTP 헤더 수집', '→', 'LSTM 봇탐지', '→', 'GAN CAPTCHA', '→', '가입 완료'],
+    steps: [
+      'HTTP 헤더 수집',
+      '→',
+      'LSTM 봇탐지',
+      '→',
+      'GAN CAPTCHA',
+      '→',
+      '가입 완료',
+    ],
   },
   {
     title: '파티 생성 인증 플로우',
     color: 'border-blue-200 bg-blue-50/50',
     titleColor: 'text-blue-700',
-    steps: ['파티 생성 클릭', '→', 'MediaPipe 손 포즈', '→', 'PaddleOCR 문자 인식', '→', '파티 생성'],
+    steps: [
+      '파티 생성 클릭',
+      '→',
+      'MediaPipe 손 포즈',
+      '→',
+      'PaddleOCR 문자 인식',
+      '→',
+      '파티 생성',
+    ],
   },
   {
     title: '채팅 탐지 플로우',
     color: 'border-indigo-200 bg-indigo-50/50',
     titleColor: 'text-indigo-700',
-    steps: ['메시지 전송', '→', '블랙리스트 필터', '→', 'KR-ELECTRA 분류', '→', 'Ollama 재판단'],
+    steps: [
+      '메시지 전송',
+      '→',
+      '블랙리스트 필터',
+      '→',
+      'KR-ELECTRA 분류',
+      '→',
+      'Ollama 재판단',
+    ],
   },
   {
     title: '빠른매칭 플로우',
     color: 'border-green-200 bg-green-50/50',
     titleColor: 'text-green-700',
-    steps: ['서비스 선택', '→', '임베딩 유사도 계산', '→', 'pgvector KNN', '→', '파티 추천 · 참여 확정'],
+    steps: [
+      '서비스 선택',
+      '→',
+      '파티 후보 조회',
+      '→',
+      '파티 확정',
+      '→',
+      '학습 데이터 저장',
+      '→',
+      '통계 재집계',
+    ],
   },
 ];
 
@@ -72,7 +136,11 @@ export default function ArchSection() {
   useLandingAnimations(sectionRef);
 
   return (
-    <section ref={sectionRef} id="arch" className="py-20 md:py-32 bg-gray-50/50">
+    <section
+      ref={sectionRef}
+      id="arch"
+      className="py-20 md:py-32 bg-gray-50/50"
+    >
       <div className="section-header flex flex-col items-center text-center mb-16">
         <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-bold mb-6">
           <FiLayers /> 기술 아키텍처
@@ -81,7 +149,8 @@ export default function ArchSection() {
           전체 기술 스택 구조
         </h2>
         <p className="text-gray-500 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-          프론트엔드부터 AI 모델, 인프라까지 각 레이어별 사용 기술과 주요 데이터 흐름입니다.
+          프론트엔드부터 AI 모델, 인프라까지 각 레이어별 사용 기술과 주요 데이터
+          흐름입니다.
         </p>
       </div>
 
@@ -92,7 +161,9 @@ export default function ArchSection() {
             key={layer.label}
             className={`hover-lift rounded-2xl border-l-4 bg-white border border-gray-100 shadow-sm p-6 will-change-transform ${layer.color}`}
           >
-            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-black mb-4 ${layer.bg} ${layer.textColor}`}>
+            <span
+              className={`inline-flex px-3 py-1 rounded-full text-xs font-black mb-4 ${layer.bg} ${layer.textColor}`}
+            >
               {layer.label}
             </span>
             <div className="flex flex-wrap gap-2">
@@ -111,14 +182,18 @@ export default function ArchSection() {
 
       {/* 주요 플로우 */}
       <div>
-        <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">주요 데이터 흐름</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">
+          주요 데이터 흐름
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {flows.map((flow) => (
             <div
               key={flow.title}
               className={`rounded-2xl border p-6 ${flow.color}`}
             >
-              <p className={`text-sm font-black mb-4 ${flow.titleColor}`}>{flow.title}</p>
+              <p className={`text-sm font-black mb-4 ${flow.titleColor}`}>
+                {flow.title}
+              </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 {flow.steps.map((step, i) => (
                   <span
