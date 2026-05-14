@@ -101,20 +101,20 @@ const techLines = [
       },
     ],
   },
-  {
-    layer: 'Match',
-    label: '파티 빠른매칭',
-    color: 'bg-green-50 text-green-700 border-green-200',
-    dotColor: 'bg-green-400',
-    techs: [
-      {
-        name: '임베딩 유사도 매칭',
-        desc: '사용자·파티 임베딩 벡터 기반 유사도 계산 + 룰 기반 필터 조합으로 최적 파티 추천',
-        tag: 'pgvector',
-        tagColor: 'bg-green-50 text-green-600',
-      },
-    ],
-  },
+  // {
+  //   layer: 'Match',
+  //   label: '파티 빠른매칭',
+  //   color: 'bg-green-50 text-green-700 border-green-200',
+  //   dotColor: 'bg-green-400',
+  //   techs: [
+  //     {
+  //       name: '임베딩 유사도 매칭',
+  //       desc: '사용자·파티 임베딩 벡터 기반 유사도 계산 + 룰 기반 필터 조합으로 최적 파티 추천',
+  //       tag: 'pgvector',
+  //       tagColor: 'bg-green-50 text-green-600',
+  //     },
+  //   ],
+  // },
 ];
 
 export default function AITechSection() {
@@ -135,7 +135,8 @@ export default function AITechSection() {
           </span>
         </h2>
         <p className="text-gray-500 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-          보안 인증부터 채팅 탐지, 파티 매칭까지 각 레이어별로 직접 설계하고 구현한 AI 기술입니다.
+          보안 인증부터 채팅 탐지, 파티 매칭까지 각 레이어별로 직접 설계하고
+          구현한 AI 기술입니다.
         </p>
       </div>
 
@@ -147,11 +148,17 @@ export default function AITechSection() {
           >
             {/* 레이어 헤더 */}
             <div className="flex items-center gap-3 mb-6">
-              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-black border ${line.color}`}>
+              <span
+                className={`inline-flex px-3 py-1 rounded-full text-xs font-black border ${line.color}`}
+              >
                 {line.layer}
               </span>
-              <span className="text-lg font-bold text-gray-900">{line.label}</span>
-              <div className={`ml-auto w-2 h-2 rounded-full ${line.dotColor}`} />
+              <span className="text-lg font-bold text-gray-900">
+                {line.label}
+              </span>
+              <div
+                className={`ml-auto w-2 h-2 rounded-full ${line.dotColor}`}
+              />
             </div>
 
             {/* 기술 카드 */}
@@ -162,12 +169,18 @@ export default function AITechSection() {
                   className="rounded-xl bg-gray-50 border border-gray-100 p-5"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="font-black text-gray-900 text-sm">{tech.name}</p>
-                    <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold ${tech.tagColor}`}>
+                    <p className="font-black text-gray-900 text-sm">
+                      {tech.name}
+                    </p>
+                    <span
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold ${tech.tagColor}`}
+                    >
                       {tech.tag}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">{tech.desc}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    {tech.desc}
+                  </p>
                 </div>
               ))}
             </div>
